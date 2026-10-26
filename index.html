@@ -67,7 +67,7 @@ const st = {
   ok() { try { localStorage.setItem('_t', '1'); localStorage.removeItem('_t'); return true; } catch (e) { return false; } }
 };
 
-// YouTube Data Categories (Clean labels)
+// YouTube Data Categories
 const CATS = [
   ['', 'Tất cả lĩnh vực'],
   ['10', 'Âm nhạc'],
@@ -106,7 +106,6 @@ const REGIONS = [
 
 // Timeframe Options
 const PERIODS = [
-  [12, '12 giờ qua'],
   [24, '24 giờ qua (1 ngày)'],
   [48, '48 giờ qua (2 ngày)'],
   [168, '7 ngày qua (1 tuần)'],
@@ -127,27 +126,28 @@ const TYPES = [
 // Sorting Criteria
 const SORTS = [
   ['total', 'Trend Score cao nhất'],
-  ['vph', 'Views/Giờ (Viral)'],
+  ['vph', 'Views/Giờ (Tốc độ Viral)'],
   ['views', 'Lượt xem nhiều nhất'],
+  ['ts', 'Ngày đăng mới nhất'],
   ['eng', 'Tương tác cao nhất'],
-  ['ts', 'Mới nhất'],
-  ['dur', 'Thời lượng']
+  ['dur', 'Thời lượng video']
 ];
 
-// Quick Trending Preset Modes (No icon clutter)
+// Quick Trending Preset Modes
 const PRESETS = [
-  { id: 'trending', label: 'Thịnh hành', cat: '', period: 168, vtype: 'all', sort: 'total', minViews: '' },
-  { id: 'breakout', label: 'Siêu Viral', cat: '', period: 48, vtype: 'all', sort: 'vph', minViews: '5000' },
-  { id: 'realtime', label: 'Mới nhất (24h)', cat: '', period: 24, vtype: 'all', sort: 'ts', minViews: '' },
-  { id: 'shorts', label: 'Shorts Hot', cat: '', period: 72, vtype: 'short', sort: 'vph', minViews: '10000' },
-  { id: 'topview', label: 'Triệu View', cat: '', period: 720, vtype: 'all', sort: 'views', minViews: '500000' },
-  { id: 'music', label: 'Âm nhạc', cat: '10', period: 168, vtype: 'all', sort: 'total', minViews: '' },
-  { id: 'gaming', label: 'Gaming', cat: '20', period: 168, vtype: 'all', sort: 'total', minViews: '' }
+  { id: 'realtime', label: 'Mới nhất (24h)', period: 24, cat: '', sort: 'vph' },
+  { id: 'viral', label: 'Bứt phá 48h', period: 48, cat: '', sort: 'vph' },
+  { id: 'trending', label: 'Thịnh hành (7 ngày)', period: 168, cat: '', sort: 'total' },
+  { id: 'topview', label: 'Triệu View (30 ngày)', period: 720, cat: '', sort: 'views' },
+  { id: 'shorts', label: 'Shorts Hot', period: 48, cat: '', vtype: 'short', sort: 'vph' },
+  { id: 'music', label: 'Âm nhạc 24h', period: 24, cat: '10', sort: 'views' },
+  { id: 'gaming', label: 'Gaming 24h', period: 24, cat: '20', sort: 'views' }
 ];
 
 const QUICK_TAGS = ['Tin tức', 'AI công nghệ', 'Remix hot', 'Review phim', 'Highlight bóng đá', 'Podcast', 'Lập trình', 'MV mới'];
 
-const DEF = { cat: '', region: 'VN', period: 168, vtype: 'all', minViews: '', minVph: '' };
+// Default parameters: Default to 24h or 168h
+const DEF = { cat: '', region: 'VN', period: 24, vtype: 'all', minViews: '' };
 
 const clamp = x => Math.max(0, Math.min(1, x));
 const fmt = n => n == null ? 'N/A' : new Intl.NumberFormat('vi-VN').format(Math.round(n));
@@ -176,7 +176,7 @@ function getBestThumb(thumbnails) {
   );
 }
 
-// Trend Scoring Algorithm
+// Trend Scoring Algorithm (Calibrated for freshness & viral speed)
 function score(v) {
   const hours = Math.max((Date.now() - new Date(v.published).getTime()) / 36e5, 0.5);
   const vph = v.views / hours;
@@ -448,16 +448,12 @@ function App() {
   
   const [tab, setTab] = useState('search'); // 'search' | 'watch'
   const [kw, setKw] = useState('');
-  const [activePreset, setActivePreset] = useState('trending');
+  const [activePreset, setActivePreset] = useState('realtime');
   
-  // Compact / Advanced Filter Toggle State
-  const [showMoreFilter, setShowMoreFilter] = useState(false);
-  
-  // Filter States
+  // Filter States (Default period: 24h for fresh real-time videos)
   const [f, setF] = useState(DEF);
   const [applied, setApplied] = useState(DEF);
-  const [sort, setSort] = useState('total');
-  const [searchOrder, setSearchOrder] = useState('viewCount');
+  const [sort, setSort] = useState('vph');
   const [mode, setMode] = useState('grid');
   
   // Data States
@@ -508,23 +504,24 @@ function App() {
     showToast('Đã xóa API Key!');
   }
 
-  // Load YouTube Data
-  async function load(kind) {
+  // Load YouTube Data (High precision with maxResults: 50 & order: 'viewCount')
+  async function load(kind, overrideParams) {
     if (!key) {
       setError({ code: 'MISSING' });
       return;
     }
     const more = kind === 'more';
-    let p;
-    if (more || kind === 'refresh') {
-      p = lastQ.current;
+    let p = overrideParams;
+    if (!p) {
+      if (more || kind === 'refresh') {
+        p = lastQ.current;
+      }
     }
     if (!p) {
-      p = { kw: kw.trim(), cat: f.cat, region: f.region, period: f.period, order: searchOrder };
+      p = { kw: kw.trim(), cat: f.cat, region: f.region, period: f.period };
     }
     if (kind === 'new') {
-      p = { kw: kw.trim(), cat: f.cat, region: f.region, period: f.period, order: searchOrder };
-      setApplied(f);
+      setApplied(p);
     }
     lastQ.current = p;
 
@@ -537,13 +534,14 @@ function App() {
       let vids = [], next = '';
 
       if (p.kw) {
+        // Keyword Search: ALWAYS use order: 'viewCount' so top-viewed videos within publishedAfter are returned
         const searchParams = {
           part: 'snippet',
           type: 'video',
           q: p.kw,
-          maxResults: 24,
+          maxResults: 50,
           regionCode: p.region,
-          order: p.order || 'viewCount',
+          order: 'viewCount',
           pageToken: more ? token : ''
         };
         if (p.cat) searchParams.videoCategoryId = p.cat;
@@ -554,11 +552,12 @@ function App() {
         const ids = (s.items || []).map(i => i.id && i.id.videoId).filter(Boolean);
         vids = ids.length ? ((await yt('videos', { part: 'snippet,statistics,contentDetails', id: ids.join(',') }, key)).items || []) : [];
       } else {
+        // Most Popular Chart: Fetch up to 50 items so filtered cutoff contains plenty of fresh videos
         const vidParams = {
           part: 'snippet,statistics,contentDetails',
           chart: 'mostPopular',
           regionCode: p.region,
-          maxResults: 24,
+          maxResults: 50,
           pageToken: more ? token : ''
         };
         if (p.cat) vidParams.videoCategoryId = p.cat;
@@ -568,6 +567,7 @@ function App() {
         vids = (s.items || []).filter(i => cutoff === 0 || new Date(i.snippet.publishedAt).getTime() >= cutoff);
       }
 
+      // Fetch Channel Statistics for subscriber ratio
       const cids = [...new Set(vids.map(v => v.snippet.channelId))];
       const subs = {};
       if (cids.length) {
@@ -619,39 +619,45 @@ function App() {
       ...f,
       cat: preset.cat,
       period: preset.period,
-      vtype: preset.vtype,
-      minViews: preset.minViews || ''
+      vtype: preset.vtype || 'all'
     };
     setF(updated);
     setApplied(updated);
     if (preset.sort) setSort(preset.sort);
 
-    lastQ.current = {
+    load('new', {
       kw: kw.trim(),
       cat: preset.cat,
       region: f.region,
-      period: preset.period,
-      order: preset.id === 'realtime' ? 'date' : searchOrder
-    };
-    setTimeout(() => load('refresh'), 0);
+      period: preset.period
+    });
+  }
+
+  function handleFilterChange(field, val) {
+    const updated = { ...f, [field]: val };
+    setF(updated);
+    setApplied(updated);
+    load('new', {
+      kw: kw.trim(),
+      cat: updated.cat,
+      region: updated.region,
+      period: updated.period
+    });
   }
 
   function clearFilters() {
     setF(DEF);
     setApplied(DEF);
     setKw('');
-    setActivePreset('trending');
-    setSort('total');
-    lastQ.current = { kw: '', cat: DEF.cat, region: DEF.region, period: DEF.period, order: 'viewCount' };
-    setTimeout(() => load('refresh'), 0);
+    setActivePreset('realtime');
+    setSort('vph');
+    load('new', { kw: '', cat: DEF.cat, region: DEF.region, period: DEF.period });
   }
 
   const shown = useMemo(() => {
     const mv = Number(applied.minViews) || 0;
-    const mvph = Number(applied.minVph) || 0;
     return items
       .filter(v => v.views >= mv)
-      .filter(v => v.vph >= mvph)
       .filter(v => {
         if (applied.vtype === 'all') return true;
         if (applied.vtype === 'short') return v.dur <= 60;
@@ -664,8 +670,8 @@ function App() {
         if (sort === 'total') return b.total - a.total;
         if (sort === 'vph') return b.vph - a.vph;
         if (sort === 'views') return b.views - a.views;
-        if (sort === 'eng') return b.eng - a.eng;
         if (sort === 'ts') return b.ts - a.ts;
+        if (sort === 'eng') return b.eng - a.eng;
         if (sort === 'dur') return b.dur - a.dur;
         return 0;
       });
@@ -812,7 +818,7 @@ function App() {
         {tab === 'search' && (<>
           {/* Quick Preset Buttons Bar */}
           <section className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-semibold text-zinc-400 mr-1 hidden sm:inline">Chế độ:</span>
+            <span className="text-xs font-semibold text-zinc-400 mr-1 hidden sm:inline">Chế độ nhanh:</span>
             {PRESETS.map(p => {
               const isActive = activePreset === p.id;
               return (
@@ -832,7 +838,7 @@ function App() {
 
           {/* Compact Streamlined Search & Filter Section */}
           <section className="bg-brand-surface border border-brand-border rounded-xl p-3 sm:p-4 space-y-3 shadow-md">
-            {/* Unified Single Row: Input + Core Dropdowns + Action */}
+            {/* Unified Single Row: Input + Thời gian + Lĩnh vực + Quốc gia + Quét */}
             <div className="flex flex-col md:flex-row gap-2">
               <div className="relative flex-1">
                 <input
@@ -845,30 +851,34 @@ function App() {
               </div>
 
               <div className="flex flex-wrap sm:flex-nowrap gap-1.5">
+                {/* Thời gian đăng - PROMINENT DIRECT SELECTOR */}
                 <select
-                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[150px] truncate"
+                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[155px]"
+                  value={f.period}
+                  onChange={e => handleFilterChange('period', Number(e.target.value))}
+                  title="Khoảng thời gian video được đăng tải">
+                  {PERIODS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
+                </select>
+
+                {/* Lĩnh vực */}
+                <select
+                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[135px] truncate"
                   value={f.cat}
-                  onChange={e => {
-                    const upd = { ...f, cat: e.target.value };
-                    setF(upd);
-                    setApplied(upd);
-                    setTimeout(() => load('new'), 0);
-                  }}>
+                  onChange={e => handleFilterChange('cat', e.target.value)}
+                  title="Danh mục video">
                   {CATS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
                 </select>
 
+                {/* Quốc gia */}
                 <select
-                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[130px]"
+                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[115px]"
                   value={f.region}
-                  onChange={e => {
-                    const upd = { ...f, region: e.target.value };
-                    setF(upd);
-                    setApplied(upd);
-                    setTimeout(() => load('new'), 0);
-                  }}>
+                  onChange={e => handleFilterChange('region', e.target.value)}
+                  title="Khu vực quốc gia">
                   {REGIONS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
                 </select>
 
+                {/* Nút Quét */}
                 <button 
                   onClick={() => load('new')} 
                   disabled={loading} 
@@ -876,83 +886,46 @@ function App() {
                   {loading ? 'Đang quét...' : 'Quét'}
                 </button>
 
+                {/* Nút Đặt lại */}
                 <button
-                  onClick={() => setShowMoreFilter(!showMoreFilter)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center gap-1 whitespace-nowrap ${
-                    showMoreFilter 
-                      ? 'bg-red-600/20 text-red-400 border-red-500/40' 
-                      : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border'
-                  }`}
-                  title="Mở thêm tùy chọn lọc thời gian và độ dài video">
-                  Lọc thêm {showMoreFilter ? '▲' : '▼'}
+                  onClick={clearFilters}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-white bg-brand-card hover:bg-brand-hover border border-brand-border transition whitespace-nowrap"
+                  title="Đặt lại bộ lọc về mặc định (24h)">
+                  Đặt lại
                 </button>
               </div>
             </div>
 
-            {/* Quick Keyword Chips */}
-            <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-zinc-500 font-medium text-[11px]">Gợi ý:</span>
-              {QUICK_TAGS.map(tag => (
-                <button
-                  key={tag}
-                  onClick={() => { setKw(tag); setTimeout(() => load('new'), 0); }}
-                  className="px-2 py-0.5 rounded-md bg-brand-card hover:bg-brand-hover text-zinc-300 hover:text-white border border-brand-border transition text-[11px]">
-                  {tag}
-                </button>
-              ))}
-              {kw && (
-                <button onClick={() => { setKw(''); }} className="text-zinc-500 hover:text-red-400 ml-1 text-xs">
-                  Xóa
-                </button>
-              )}
-            </div>
-
-            {/* Collapsible Advanced Filters */}
-            {showMoreFilter && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t border-brand-border text-xs animate-in fade-in duration-150">
-                <label className="flex flex-col gap-1">
-                  <span className="text-zinc-400 font-medium">Thời gian đăng</span>
-                  <select 
-                    className={inp + ' py-1.5 text-xs'} 
-                    value={f.period} 
-                    onChange={e => { const upd = { ...f, period: Number(e.target.value) }; setF(upd); setApplied(upd); setTimeout(() => load('new'), 0); }}>
-                    {PERIODS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
-                  </select>
-                </label>
-
-                <label className="flex flex-col gap-1">
-                  <span className="text-zinc-400 font-medium">Độ dài video</span>
-                  <select 
-                    className={inp + ' py-1.5 text-xs'} 
-                    value={f.vtype} 
-                    onChange={e => { const upd = { ...f, vtype: e.target.value }; setF(upd); setApplied(upd); }}>
-                    {TYPES.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
-                  </select>
-                </label>
-
-                <label className="flex flex-col gap-1">
-                  <span className="text-zinc-400 font-medium">Lượt xem tối thiểu</span>
-                  <select 
-                    className={inp + ' py-1.5 text-xs'} 
-                    value={f.minViews} 
-                    onChange={e => { const upd = { ...f, minViews: e.target.value }; setF(upd); setApplied(upd); }}>
-                    <option value="">Tất cả lượt xem</option>
-                    <option value="1000">≥ 1.000 view</option>
-                    <option value="10000">≥ 10.000 view</option>
-                    <option value="50000">≥ 50.000 view</option>
-                    <option value="100000">≥ 100.000 view</option>
-                    <option value="500000">≥ 500.000 view</option>
-                    <option value="1000000">≥ 1.000.000 view</option>
-                  </select>
-                </label>
-
-                <div className="flex items-end">
-                  <button onClick={clearFilters} className={bSecondary + ' w-full py-1.5 text-xs'}>
-                    Đặt lại tất cả
+            {/* Sub-row: Quick Keyword Tags & Video Type Filter */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-brand-border/60 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-zinc-500 font-medium text-[11px]">Gợi ý từ khóa:</span>
+                {QUICK_TAGS.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => { setKw(tag); load('new', { kw: tag, cat: f.cat, region: f.region, period: f.period }); }}
+                    className="px-2 py-0.5 rounded-md bg-brand-card hover:bg-brand-hover text-zinc-300 hover:text-white border border-brand-border transition text-[11px]">
+                    {tag}
                   </button>
-                </div>
+                ))}
+                {kw && (
+                  <button onClick={() => { setKw(''); load('new', { kw: '', cat: f.cat, region: f.region, period: f.period }); }} className="text-zinc-500 hover:text-red-400 ml-1 text-xs">
+                    Xóa
+                  </button>
+                )}
               </div>
-            )}
+
+              {/* Quick Duration filter pills */}
+              <div className="flex items-center gap-1 text-[11px]">
+                <span className="text-zinc-500">Độ dài:</span>
+                <select
+                  className="bg-brand-card border border-brand-border rounded px-2 py-0.5 text-[11px] text-zinc-300 focus:outline-none"
+                  value={f.vtype}
+                  onChange={e => { const upd = { ...f, vtype: e.target.value }; setF(upd); setApplied(upd); }}>
+                  {TYPES.map(t => <option key={t[0]} value={t[0]}>{t[1]}</option>)}
+                </select>
+              </div>
+            </div>
           </section>
 
           {/* Quick Statistics Overview */}
@@ -1025,11 +998,11 @@ function App() {
             <div className="text-center border border-dashed border-brand-border rounded-2xl p-10 bg-brand-surface/40">
               <h3 className="font-bold text-base text-white">{loaded ? 'Không có video nào thỏa mãn bộ lọc' : 'Sẵn sàng quét xu hướng'}</h3>
               <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto mt-1">
-                {loaded ? 'Hãy thử nới rộng thời gian đăng hoặc bấm "Đặt lại tất cả" để xem thêm.' : 'Chọn một chế độ xu hướng nhanh ở trên để bắt đầu.'}
+                {loaded ? 'Hãy thử nới rộng thời gian đăng (ví dụ 48 giờ hoặc 7 ngày) để xem thêm.' : 'Chọn một chế độ xu hướng nhanh ở trên để bắt đầu.'}
               </p>
               {!loaded && (
                 <button onClick={() => load('new')} className={bPrimary + ' mx-auto mt-3'}>
-                  Quét ngay video thịnh hành
+                  Quét ngay video thịnh hành 24h
                 </button>
               )}
             </div>
@@ -1173,7 +1146,7 @@ function App() {
           {token && !loading && (
             <div className="text-center pt-4">
               <button onClick={() => load('more')} className={bPrimary + ' px-8 py-2 text-sm'}>
-                Tải thêm 24 video tiếp theo
+                Tải thêm 50 video tiếp theo
               </button>
             </div>
           )}
