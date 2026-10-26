@@ -3989,7 +3989,7 @@ const inp = 'w-full bg-brand-surface border border-brand-border hover:border-zin
 const scoreCls = t => t >= 75 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : t >= 45 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-zinc-800 text-zinc-400 border border-zinc-700';
 
 // Video Action Buttons Component (Direct redirection to YouTube)
-function Actions({ v, saved, onDetail, onDownload, onSave, onCopy, onNicheAnalyze, onAddCompetitor }) {
+function Actions({ v, saved, isCompetitor, onDetail, onDownload, onSave, onCopy, onNicheAnalyze, onToggleCompetitor }) {
   const ytUrl = 'https://www.youtube.com/watch?v=' + v.id;
   return (
     <div className="flex flex-wrap gap-1.5 mt-2">
@@ -4009,12 +4009,12 @@ function Actions({ v, saved, onDetail, onDownload, onSave, onCopy, onNicheAnalyz
           Kênh tương tự
         </button>
       )}
-      {onAddCompetitor && (
+      {onToggleCompetitor && (
         <button 
-          onClick={() => onAddCompetitor(v)} 
-          className="px-2 py-1.5 rounded-lg text-xs font-medium bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 transition flex items-center" 
-          title="Thêm kênh này vào danh sách Đối Thủ theo dõi">
-          + Đối thủ
+          onClick={() => onToggleCompetitor(v)} 
+          className={`px-2 py-1.5 rounded-lg text-xs font-bold border transition flex items-center ${isCompetitor ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40' : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border-purple-500/30'}`} 
+          title={isCompetitor ? "Hủy theo dõi kênh đối thủ này" : "Thêm kênh này vào danh sách Đối Thủ theo dõi"}>
+          {isCompetitor ? "- Đối thủ" : "+ Đối thủ"}
         </button>
       )}
       <button 
@@ -4749,7 +4749,7 @@ function CarSpeedometerGauge({ value = 0, max = 240, label = 'TỐC ĐỘ PHỦ 
 }
 
 // Niche Deep Saturation & Competitor Breakdown Modal
-function NicheDeepAnalyzeModal({ video, onClose, apiKey, onAddCompetitor, onCopy, showToast }) {
+function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onToggleCompetitor, onCopy, showToast }) {
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'success' | 'flop'
   const [loading, setLoading] = useState(false);
   const [queryInput, setQueryInput] = useState(() => {
@@ -5105,14 +5105,16 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, onAddCompetitor, onCopy
                               className="flex-1 py-1 px-2 rounded-lg text-center text-[11px] font-semibold bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 transition">
                               Xem trên YouTube
                             </a>
-                            <button
-                              onClick={() => {
-                                onAddCompetitor(item);
-                                if (showToast) showToast('Đã thêm kênh "' + item.channel + '" vào Kênh Đối Thủ!');
-                              }}
-                              className="py-1 px-2.5 rounded-lg text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 transition">
-                              + Theo dõi đối thủ
-                            </button>
+                            {(() => {
+                              const isComp = (competitors || []).some(c => (item.channelId && c.id === item.channelId) || (item.channel && c.title.toLowerCase() === item.channel.toLowerCase()));
+                              return (
+                                <button
+                                  onClick={() => onToggleCompetitor && onToggleCompetitor(item)}
+                                  className={`py-1 px-2.5 rounded-lg text-[11px] font-bold border transition ${isComp ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30 hover:bg-amber-500/30'}`}>
+                                  {isComp ? "- Hủy đối thủ" : "+ Theo dõi đối thủ"}
+                                </button>
+                              );
+                            })()}
                           </div>
                         </div>
                       ))}
@@ -5598,13 +5600,19 @@ function App() {
     }
   };
 
+  const isCompetitorChannel = (channelId, channelTitle) => {
+    if (!channelId && !channelTitle) return false;
+    return competitors.some(c => (channelId && c.id === channelId) || (channelTitle && c.title.toLowerCase() === channelTitle.toLowerCase()));
+  };
+
   const addCompetitorFromVideo = (v) => {
     if (!v) return;
     const chName = v.channel || 'Kênh YouTube';
     const chId = v.channelId || ('comp_' + Date.now());
-    const existing = competitors.find(c => c.id === chId || c.title.toLowerCase() === chName.toLowerCase());
-    if (existing) {
-      showToast('Kênh "' + chName + '" đã có trong danh sách theo dõi!');
+    const existingIndex = competitors.findIndex(c => (v.channelId && c.id === v.channelId) || c.title.toLowerCase() === chName.toLowerCase());
+    if (existingIndex !== -1) {
+      setCompetitors(prev => prev.filter((_, idx) => idx !== existingIndex));
+      showToast('Đã hủy theo dõi kênh đối thủ "' + chName + '"!');
       return;
     }
     const newComp = {
@@ -6989,12 +6997,13 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                         <Actions 
                           v={v} 
                           saved={!!watch[v.id]} 
+                          isCompetitor={isCompetitorChannel(v.channelId, v.channel)}
                           onDetail={setDetail} 
                           onDownload={setDownloadVideo} 
                           onSave={toggleWatch}
                           onCopy={copyText}
                           onNicheAnalyze={setNicheAnalyzeVideo}
-                          onAddCompetitor={addCompetitorFromVideo}
+                          onToggleCompetitor={addCompetitorFromVideo}
                         />
                       </div>
                     </div>
@@ -7042,12 +7051,13 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                           <Actions 
                             v={v} 
                             saved={!!watch[v.id]} 
+                            isCompetitor={isCompetitorChannel(v.channelId, v.channel)}
                             onDetail={setDetail} 
                             onDownload={setDownloadVideo} 
                             onSave={toggleWatch}
                             onCopy={copyText}
                             onNicheAnalyze={setNicheAnalyzeVideo}
-                            onAddCompetitor={addCompetitorFromVideo}
+                            onToggleCompetitor={addCompetitorFromVideo}
                           />
                         </td>
                       </tr>
@@ -7721,12 +7731,17 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                               className="py-1.5 px-3 rounded-lg text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30 transition">
                               Tải về
                             </button>
-                            <button
-                              onClick={() => addCompetitorFromVideo(v)}
-                              className="py-1.5 px-2.5 rounded-lg text-xs font-bold bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 transition"
-                              title="Thêm kênh này vào tab Kênh Đối Thủ để theo dõi hàng ngày">
-                              + Đối thủ
-                            </button>
+                            {(() => {
+                              const isComp = isCompetitorChannel(v.channelId, v.channel);
+                              return (
+                                <button
+                                  onClick={() => addCompetitorFromVideo(v)}
+                                  className={`py-1.5 px-2.5 rounded-lg text-xs font-bold border transition ${isComp ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30' : 'bg-purple-600/20 text-purple-300 border-purple-500/30 hover:bg-purple-600/30'}`}
+                                  title={isComp ? "Hủy theo dõi kênh đối thủ này" : "Thêm kênh này vào tab Kênh Đối Thủ để theo dõi hàng ngày"}>
+                                  {isComp ? "- Đối thủ" : "+ Đối thủ"}
+                                </button>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -8435,7 +8450,8 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           video={nicheAnalyzeVideo}
           onClose={() => setNicheAnalyzeVideo(null)}
           apiKey={key}
-          onAddCompetitor={addCompetitorFromVideo}
+          competitors={competitors}
+          onToggleCompetitor={addCompetitorFromVideo}
           onCopy={copyText}
           showToast={showToast}
         />
