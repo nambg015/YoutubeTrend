@@ -88,6 +88,7 @@ const CATS = [
 
 // Target Countries / Regions
 const REGIONS = [
+  ['', 'Tất cả khu vực'],
   ['VN', 'Việt Nam'],
   ['US', 'Hoa Kỳ (US)'],
   ['JP', 'Nhật Bản'],
@@ -871,7 +872,7 @@ function App() {
 
                 {/* Quốc gia */}
                 <select
-                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[115px]"
+                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[135px]"
                   value={f.region}
                   onChange={e => handleFilterChange('region', e.target.value)}
                   title="Khu vực quốc gia">
