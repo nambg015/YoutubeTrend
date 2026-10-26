@@ -145,9 +145,82 @@ const PRESETS = [
   { id: 'gaming', label: 'Gaming 24h', period: 24, cat: '20', sort: 'views' }
 ];
 
+// Dedicated High-RPM Niches for International Creators / Remake
+const RPM_NICHES = [
+  {
+    id: 'finance',
+    name: 'Tài chính & MMO',
+    rpmRange: '$18 - $45',
+    tag: 'RPM Cao nhất',
+    tagCls: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    desc: 'Kiếm tiền online, đầu tư, crypto, kinh doanh tự động.',
+    queries: ['how to make money online', 'investing for beginners', 'passive income ideas', 'crypto bull run', 'side hustle that works'],
+    difficulty: 'Dễ (Dùng AI Voice + Quay màn hình / slide)'
+  },
+  {
+    id: 'aitech',
+    name: 'AI & Công nghệ mới',
+    rpmRange: '$12 - $30',
+    tag: 'Đang bùng nổ',
+    tagCls: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    desc: 'Công cụ AI mới, mẹo ChatGPT, website tự động hóa, tin công nghệ.',
+    queries: ['best AI tools 2026', 'new AI website', 'ChatGPT prompt hacks', 'AI automations you need', 'future tech revolution'],
+    difficulty: 'Dễ (Review website / Demo tính năng)'
+  },
+  {
+    id: 'faceless',
+    name: 'Bí ẩn & Faceless',
+    rpmRange: '$8 - $18',
+    tag: 'Dễ triệu view',
+    tagCls: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    desc: 'Vụ án ly kỳ, bí ẩn chưa có lời giải, vũ trụ, lịch sử đen tối.',
+    queries: ['unsolved mysteries documentary', 'terrifying true stories', 'disturbing internet mysteries', 'space secrets revealed', 'history unexplained'],
+    difficulty: 'Rất dễ (AI Voice + B-roll ảnh/video)'
+  },
+  {
+    id: 'stoicism',
+    name: 'Tâm lý & Stoicism',
+    rpmRange: '$10 - $25',
+    tag: 'Giữ chân người xem lâu',
+    tagCls: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+    desc: 'Triết lý khắc kỷ, thao túng tâm lý, phát triển bản thân, kỷ luật.',
+    queries: ['stoicism rules for life', 'dark psychology tricks', 'habits that changed my life', 'how to become unrecognizable', 'rules to become disciplined'],
+    difficulty: 'Dễ (Quotes / Avatar AI / Voice trầm)'
+  },
+  {
+    id: 'business',
+    name: 'Kinh doanh & Case Study',
+    rpmRange: '$15 - $40',
+    tag: 'Xem siêu lâu',
+    tagCls: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    desc: 'Đế chế tỷ phú, vì sao công ty sụp đổ, góc khuất các tập đoàn.',
+    queries: ['business breakdown documentary', 'rise and fall of', 'how he built a billion dollar empire', 'why this company collapsed', 'dark side of industry'],
+    difficulty: 'Trung bình (Cần kịch bản tóm tắt lôi cuốn)'
+  },
+  {
+    id: 'health',
+    name: 'Sức khỏe & Biohacking',
+    rpmRange: '$12 - $28',
+    tag: 'Thị trường US lớn',
+    tagCls: 'bg-teal-500/20 text-teal-400 border-teal-500/30',
+    desc: 'Tối ưu cơ thể, thải độc dopamine, khoa học giấc ngủ, giảm mỡ.',
+    queries: ['what happens to your body if you stop', 'dopamine detox scientifically', 'foods destroying your brain', 'how to sleep better scientific', 'longevity secrets'],
+    difficulty: 'Dễ (Clip minh họa 2D / Infographic)'
+  },
+  {
+    id: 'viralshorts',
+    name: 'Viral Shorts Quốc tế',
+    rpmRange: '$0.20 - $0.40',
+    tag: 'Kéo Sub thần tốc',
+    tagCls: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+    desc: 'Sự thật giật mình, mẹo vặt cuộc sống, câu đố trong 60 giây.',
+    queries: ['facts that will blow your mind shorts', 'shocking facts you didnt know', 'things you didnt know 1 minute ago', 'crazy life hacks shorts'],
+    difficulty: 'Siêu dễ (CapCut 30-45 giây)'
+  }
+];
+
 const QUICK_TAGS = ['Tin tức', 'AI công nghệ', 'Remix hot', 'Review phim', 'Highlight bóng đá', 'Podcast', 'Lập trình', 'MV mới'];
 
-// Default parameters: Default to 24h or 168h
 const DEF = { cat: '', region: 'VN', period: 24, vtype: 'all', minViews: '' };
 
 const clamp = x => Math.max(0, Math.min(1, x));
@@ -177,7 +250,7 @@ function getBestThumb(thumbnails) {
   );
 }
 
-// Trend Scoring Algorithm (Calibrated for freshness & viral speed)
+// Trend Scoring Algorithm
 function score(v) {
   const hours = Math.max((Date.now() - new Date(v.published).getTime()) / 36e5, 0.5);
   const vph = v.views / hours;
@@ -447,25 +520,31 @@ function App() {
   const [showKeyBox, setShowKeyBox] = useState(false);
   const [showKey, setShowKey] = useState(false);
   
-  const [tab, setTab] = useState('search'); // 'search' | 'watch'
+  // Navigation Tabs: 'search' | 'rpm' | 'watch'
+  const [tab, setTab] = useState('search');
+  
+  // Search Tab States
   const [kw, setKw] = useState('');
   const [activePreset, setActivePreset] = useState('realtime');
-  
-  // Filter States (Default period: 24h for fresh real-time videos)
   const [f, setF] = useState(DEF);
   const [applied, setApplied] = useState(DEF);
   const [sort, setSort] = useState('vph');
   const [mode, setMode] = useState('grid');
   
-  // Data States
   const [items, setItems] = useState([]);
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+
+  // Dedicated High-RPM Tab States
+  const [activeRpmNiche, setActiveRpmNiche] = useState('finance');
+  const [rpmPeriod, setRpmPeriod] = useState(48); // 24h, 48h, 168h
+  const [rpmItems, setRpmItems] = useState([]);
+  const [rpmLoading, setRpmLoading] = useState(false);
   
-  // Modals
+  // Modals & Notifications
   const [detail, setDetail] = useState(null);
   const [downloadVideo, setDownloadVideo] = useState(null);
   const [toast, setToast] = useState(null);
@@ -489,6 +568,30 @@ function App() {
     showToast(msg);
   };
 
+  // Generate Remake Prompt for AI
+  const copyRemakePrompt = (video) => {
+    const prompt = `Bạn là một chuyên gia sáng tạo nội dung YouTube triệu view và chiến lược gia tăng tỷ lệ giữ chân khán giả (Retention).
+Hãy phân tích và viết lại kịch bản từ video YouTube đang viral này để tôi làm video ăn theo (Remake/Curate) đón đầu xu hướng:
+
+[THÔNG TIN VIDEO GỐC ĐANG HOT TẠI NƯỚC NGOÀI]
+- Tiêu đề gốc: "${video.title}"
+- Kênh phát hành: ${video.channel}
+- Lượt xem: ${fmt(video.views)} lượt xem (Tốc độ tăng trưởng: +${fmt(video.vph)} view/giờ)
+- Link video: https://www.youtube.com/watch?v=${video.id}
+- Thời lượng: ${fmtDur(video.dur)}
+
+[YÊU CẦU CHO KỊCH BẢN ĂN THEO]
+1. Đặt 5 TIÊU ĐỀ giật tít ăn theo cực kỳ thu hút click (High CTR) bằng cả tiếng Anh và tiếng Việt.
+2. Viết HOOK 5 - 10 GIÂY ĐẦU TIÊN để giữ chân người xem không lướt qua.
+3. Phác thảo KỊCH BẢN CHI TIẾT 100% MỚI (Unique, không sao chép nguyên văn, không dính bản quyền):
+   - Phù hợp làm kênh Faceless / lồng tiếng AI Voice (kèm chỉ dẫn hình ảnh/B-roll cho CapCut).
+   - Đưa ra góc nhìn hấp dẫn hơn, giải thích sinh động và dễ hiểu hơn video gốc.
+4. Gợi ý 5 TỪ KHÓA TÌM KIẾM chính và hashtag để ăn đề xuất theo video này.`;
+
+    navigator.clipboard.writeText(prompt);
+    showToast('Đã copy Prompt kịch bản Remake cho ChatGPT / Claude!');
+  };
+
   function saveKey() {
     const k = keyDraft.trim();
     setKey(k);
@@ -505,7 +608,7 @@ function App() {
     showToast('Đã xóa API Key!');
   }
 
-  // Load YouTube Data (High precision with maxResults: 50 & order: 'viewCount')
+  // Load General YouTube Data
   async function load(kind, overrideParams) {
     if (!key) {
       setError({ code: 'MISSING' });
@@ -535,7 +638,6 @@ function App() {
       let vids = [], next = '';
 
       if (p.kw) {
-        // Keyword Search: ALWAYS use order: 'viewCount' so top-viewed videos within publishedAfter are returned
         const searchParams = {
           part: 'snippet',
           type: 'video',
@@ -553,7 +655,6 @@ function App() {
         const ids = (s.items || []).map(i => i.id && i.id.videoId).filter(Boolean);
         vids = ids.length ? ((await yt('videos', { part: 'snippet,statistics,contentDetails', id: ids.join(',') }, key)).items || []) : [];
       } else {
-        // Most Popular Chart: Fetch up to 50 items so filtered cutoff contains plenty of fresh videos
         const vidParams = {
           part: 'snippet,statistics,contentDetails',
           chart: 'mostPopular',
@@ -568,7 +669,6 @@ function App() {
         vids = (s.items || []).filter(i => cutoff === 0 || new Date(i.snippet.publishedAt).getTime() >= cutoff);
       }
 
-      // Fetch Channel Statistics for subscriber ratio
       const cids = [...new Set(vids.map(v => v.snippet.channelId))];
       const subs = {};
       if (cids.length) {
@@ -611,6 +711,79 @@ function App() {
       setError(e);
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Load High-RPM International Trends for Remake / Content Arbitrage
+  async function loadRpm(nicheId, customPeriod) {
+    if (!key) {
+      setError({ code: 'MISSING' });
+      return;
+    }
+    const targetPeriod = customPeriod !== undefined ? customPeriod : rpmPeriod;
+    const niche = RPM_NICHES.find(n => n.id === nicheId) || RPM_NICHES[0];
+    setRpmLoading(true);
+    setError(null);
+    setRpmItems([]);
+
+    try {
+      const cutoff = Date.now() - targetPeriod * 36e5;
+      // Search with curated high-intent queries in US market
+      const q = niche.queries.slice(0, 3).join(' | ');
+      const s = await yt('search', {
+        part: 'snippet',
+        type: 'video',
+        q: q,
+        maxResults: 50,
+        regionCode: 'US', // Target US high-paying audience
+        order: 'viewCount',
+        publishedAfter: new Date(cutoff).toISOString()
+      }, key);
+
+      const ids = (s.items || []).map(i => i.id && i.id.videoId).filter(Boolean);
+      const vids = ids.length ? ((await yt('videos', { part: 'snippet,statistics,contentDetails', id: ids.join(',') }, key)).items || []) : [];
+
+      const cids = [...new Set(vids.map(v => v.snippet.channelId))];
+      const subs = {};
+      if (cids.length) {
+        const c = await yt('channels', { part: 'statistics', id: cids.join(',') }, key);
+        (c.items || []).forEach(x => {
+          subs[x.id] = x.statistics.hiddenSubscriberCount ? null : Number(x.statistics.subscriberCount);
+        });
+      }
+
+      const out = vids.map(v => {
+        const s = v.statistics || {};
+        const bestThumb = getBestThumb(v.snippet.thumbnails);
+        const durSeconds = parseDur(v.contentDetails && v.contentDetails.duration);
+        const o = {
+          id: v.id,
+          title: v.snippet.title,
+          channel: v.snippet.channelTitle,
+          channelId: v.snippet.channelId,
+          thumb: bestThumb,
+          published: v.snippet.publishedAt,
+          ts: new Date(v.snippet.publishedAt).getTime(),
+          views: Number(s.viewCount || 0),
+          likes: s.likeCount == null ? null : Number(s.likeCount),
+          comments: s.commentCount == null ? null : Number(s.commentCount),
+          dur: durSeconds,
+          subs: subs[v.snippet.channelId] === undefined ? null : subs[v.snippet.channelId],
+          niche: niche
+        };
+        const sc = score(o);
+        o.sc = sc;
+        o.total = sc.total;
+        o.vph = sc.vph;
+        o.eng = sc.eng;
+        return o;
+      }).sort((a, b) => b.vph - a.vph); // Sort by highest viral speed (Views per hour)
+
+      setRpmItems(out);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setRpmLoading(false);
     }
   }
 
@@ -770,6 +943,14 @@ function App() {
             <button onClick={() => setTab('search')} className={tab === 'search' ? bActive : 'px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white rounded-lg transition'}>
               Tìm xu hướng
             </button>
+            <button 
+              onClick={() => {
+                setTab('rpm');
+                if (!rpmItems.length) loadRpm(activeRpmNiche, rpmPeriod);
+              }} 
+              className={tab === 'rpm' ? bActive : 'px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white rounded-lg transition'}>
+              Trend RPM Cao (Ăn theo)
+            </button>
             <button onClick={() => setTab('watch')} className={tab === 'watch' ? bActive : 'px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white rounded-lg transition'}>
               Watchlist ({watchList.length})
             </button>
@@ -815,7 +996,7 @@ function App() {
           </div>
         )}
 
-        {/* SEARCH TAB CONTENT */}
+        {/* TAB 1: GENERAL SEARCH & TRENDS */}
         {tab === 'search' && (<>
           {/* Quick Preset Buttons Bar */}
           <section className="flex flex-wrap items-center gap-1.5">
@@ -852,7 +1033,7 @@ function App() {
               </div>
 
               <div className="flex flex-wrap sm:flex-nowrap gap-1.5">
-                {/* Thời gian đăng - PROMINENT DIRECT SELECTOR */}
+                {/* Thời gian đăng */}
                 <select
                   className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[155px]"
                   value={f.period}
@@ -1153,7 +1334,216 @@ function App() {
           )}
         </>)}
 
-        {/* WATCHLIST TAB CONTENT */}
+        {/* TAB 2: HIGH-RPM INTERNATIONAL TREND SPY & REMAKE (DÀNH CHO BẮT TREND ĂN THEO) */}
+        {tab === 'rpm' && (
+          <section className="space-y-4">
+            {/* Header Banner */}
+            <div className="bg-brand-surface border border-brand-border rounded-xl p-4 sm:p-5 shadow-lg space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-brand-border pb-3">
+                <div>
+                  <h2 className="font-extrabold text-base sm:text-lg text-white flex items-center gap-2">
+                    Khai Thác Trend RPM Cao & Bắt Trend Ăn Theo
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase">Thị trường Mỹ & Quốc tế</span>
+                  </h2>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Tự động dò tìm các video viral bứt phá ở các chủ đề có RPM cao nhất tại Mỹ (US). Không cần lọc thủ công, 1 click là lấy được kịch bản và góc độ ăn theo.
+                  </p>
+                </div>
+
+                {/* Quick Time Selector */}
+                <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                  <span className="text-xs font-semibold text-zinc-400">Đăng trong:</span>
+                  {[
+                    [24, '24 giờ'],
+                    [48, '48 giờ'],
+                    [168, '7 ngày']
+                  ].map(t => (
+                    <button
+                      key={t[0]}
+                      onClick={() => {
+                        setRpmPeriod(t[0]);
+                        loadRpm(activeRpmNiche, t[0]);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
+                        rpmPeriod === t[0]
+                          ? 'bg-red-600 text-white border-red-500'
+                          : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border'
+                      }`}>
+                      {t[1]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Niche Selection Pills */}
+              <div className="pt-1 space-y-1.5">
+                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  Chọn chủ đề Niche muốn ăn theo:
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                  {RPM_NICHES.map(niche => {
+                    const isSelected = activeRpmNiche === niche.id;
+                    return (
+                      <button
+                        key={niche.id}
+                        onClick={() => {
+                          setActiveRpmNiche(niche.id);
+                          loadRpm(niche.id, rpmPeriod);
+                        }}
+                        className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-brand-card border-red-500 shadow-md ring-1 ring-red-500/40'
+                            : 'bg-brand-surface hover:bg-brand-card border-brand-border'
+                        }`}>
+                        <div>
+                          <div className="font-bold text-xs text-white line-clamp-1">{niche.name}</div>
+                          <div className="text-[11px] text-emerald-400 font-semibold mt-0.5">RPM {niche.rpmRange}</div>
+                        </div>
+                        <div className={`mt-2 text-[9px] font-bold px-1.5 py-0.5 rounded border inline-block w-fit ${niche.tagCls}`}>
+                          {niche.tag}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Loading Indicator */}
+            {rpmLoading && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="bg-brand-surface border border-brand-border rounded-xl overflow-hidden animate-pulse">
+                    <div className="aspect-video bg-zinc-800"></div>
+                    <div className="p-4 space-y-2">
+                      <div className="h-4 bg-zinc-800 rounded w-5/6"></div>
+                      <div className="h-3 bg-zinc-800 rounded w-1/2"></div>
+                      <div className="h-8 bg-zinc-800 rounded w-full mt-3"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!rpmLoading && !rpmItems.length && (
+              <div className="text-center border border-dashed border-brand-border rounded-xl p-10 bg-brand-surface/40">
+                <h3 className="font-bold text-base text-white">Chưa tải dữ liệu Niche này</h3>
+                <p className="text-xs text-zinc-400 mt-1">Bấm nút bên dưới để quét các video đang viral mạnh nhất tại Mỹ.</p>
+                <button onClick={() => loadRpm(activeRpmNiche, rpmPeriod)} className={bPrimary + ' mx-auto mt-3'}>
+                  Quét ngay video RPM cao
+                </button>
+              </div>
+            )}
+
+            {/* RPM Video Cards Grid */}
+            {!rpmLoading && rpmItems.length > 0 && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {rpmItems.map((v, idx) => {
+                  const ytUrl = 'https://www.youtube.com/watch?v=' + v.id;
+                  const niche = v.niche || RPM_NICHES[0];
+                  return (
+                    <article key={v.id} className="bg-brand-surface border border-brand-border hover:border-zinc-700 rounded-xl overflow-hidden flex flex-col group transition shadow-md">
+                      {/* Thumbnail Container */}
+                      <a 
+                        href={ytUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="relative aspect-video bg-zinc-900 overflow-hidden block"
+                        title="Mở xem trên YouTube">
+                        <img src={v.thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
+                        
+                        {/* Top Rank Badge */}
+                        <div className="absolute top-2 left-2 text-[11px] font-black px-2 py-0.5 rounded bg-black/80 text-white backdrop-blur-sm border border-zinc-700">
+                          #{idx + 1} Viral
+                        </div>
+
+                        {/* Estimated RPM Badge */}
+                        <div className="absolute top-2 right-2 text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-600/90 text-white shadow-md">
+                          RPM {niche.rpmRange}
+                        </div>
+
+                        {/* Duration Badge */}
+                        <div className="absolute bottom-2 right-2 text-[11px] font-semibold px-2 py-0.5 rounded bg-black/85 text-white backdrop-blur-sm">
+                          {fmtDur(v.dur)}
+                        </div>
+                      </a>
+
+                      {/* Card Body */}
+                      <div className="p-3.5 flex flex-col gap-2.5 flex-1">
+                        <a 
+                          href={ytUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-snug hover:text-red-400 transition" 
+                          title={v.title}>
+                          {v.title}
+                        </a>
+
+                        <div className="text-xs text-zinc-400 flex items-center justify-between">
+                          <span className="truncate max-w-[170px] font-medium text-zinc-300">{v.channel}</span>
+                          <span className="text-[11px] text-zinc-500">{v.subs ? fmt(v.subs) + ' subs' : ''}</span>
+                        </div>
+
+                        {/* Key Metrics Pill */}
+                        <div className="grid grid-cols-2 gap-1.5 text-[11px] bg-brand-card p-2 rounded-lg border border-brand-border">
+                          <div>
+                            <span className="text-zinc-500">Lượt xem:</span> <b className="text-white">{fmt(v.views)}</b>
+                          </div>
+                          <div className="text-emerald-400 font-semibold">
+                            <span className="text-zinc-500 font-normal">Tốc độ:</span> +{fmt(v.vph)}/h
+                          </div>
+                          <div className="col-span-2 text-zinc-400 border-t border-brand-border/60 pt-1 mt-0.5 flex justify-between">
+                            <span>Đăng: {fmtD(v.published).split(' ')[0]}</span>
+                            <span className="text-amber-400">Score: {v.total}/100</span>
+                          </div>
+                        </div>
+
+                        {/* Remake Suggestions Note */}
+                        <div className="text-[11px] bg-zinc-900/80 p-2 rounded-lg border border-zinc-800 text-zinc-400">
+                          <div className="font-semibold text-zinc-300">Độ khó ăn theo:</div>
+                          <div className="text-zinc-400 mt-0.5">{niche.difficulty}</div>
+                        </div>
+
+                        {/* High-Converting Action Buttons */}
+                        <div className="mt-auto pt-2 space-y-1.5 border-t border-brand-border">
+                          {/* Super Useful Prompt Generator Button */}
+                          <button
+                            onClick={() => copyRemakePrompt(v)}
+                            className="w-full py-2 px-3 rounded-lg text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md transition flex items-center justify-center gap-1.5">
+                            Copy Prompt Kịch Bản Cho AI (ChatGPT)
+                          </button>
+
+                          <div className="flex flex-wrap gap-1.5">
+                            <a 
+                              href={ytUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-500 text-white transition text-center">
+                              Xem trên YouTube
+                            </a>
+                            <button 
+                              onClick={() => setDownloadVideo(v)} 
+                              className="py-1.5 px-3 rounded-lg text-xs font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
+                              Tải về
+                            </button>
+                            <button 
+                              onClick={() => copyText(v.title, 'Đã copy tiêu đề!')} 
+                              className="py-1.5 px-2 rounded-lg text-xs text-zinc-400 hover:text-white bg-brand-card hover:bg-brand-hover border border-brand-border">
+                              Copy Title
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* TAB 3: WATCHLIST CONTENT */}
         {tab === 'watch' && (
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-brand-surface border border-brand-border rounded-xl">
@@ -1170,7 +1560,7 @@ function App() {
               <div className="text-center border border-dashed border-brand-border rounded-xl p-10 bg-brand-surface/40">
                 <h3 className="font-bold text-base text-white">Chưa có video nào trong Watchlist</h3>
                 <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-sm mx-auto">
-                  Tại tab "Tìm xu hướng", hãy bấm nút <b>Theo dõi</b> ở bất kỳ video nào bạn muốn theo dõi.
+                  Tại tab "Tìm xu hướng" hoặc "Trend RPM Cao", bấm nút <b>Theo dõi</b> ở bất kỳ video nào bạn muốn lưu.
                 </p>
               </div>
             )}
