@@ -3,371 +3,1181 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>YouTrend Analytics</title>
+<title>YouTrend Pro - Phân Tích Xu Hướng & Tải Video YouTube</title>
+<meta name="description" content="Công cụ phân tích xu hướng YouTube chuyên nghiệp, tính điểm Trend Score, lọc video bứt phá và hỗ trợ tải video MP4, MP3 chất lượng cao.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
-<style>body{background:#09090b;color:#f4f4f5;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}</style>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        },
+        colors: {
+          brand: {
+            red: '#FF0000',
+            darkRed: '#CC0000',
+            dark: '#0B0C10',
+            surface: '#12141C',
+            card: '#181B26',
+            border: '#232738',
+            hover: '#202433'
+          }
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body {
+    background-color: #0b0c10;
+    color: #f1f5f9;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #0b0c10; }
+  ::-webkit-scrollbar-thumb { background: #232738; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3b4259; }
+  
+  .glass-header {
+    background: rgba(11, 12, 16, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .gradient-badge {
+    background: linear-gradient(135deg, #ff0000 0%, #ff4b4b 100%);
+  }
+</style>
 </head>
-<body>
+<body class="selection:bg-red-500/30 selection:text-white">
 <div id="root"></div>
-<script type="text/babel">
-const {useState,useMemo,useEffect,useRef}=React;
-const MEM={};
-const st={
-  get(k){try{return localStorage.getItem(k)}catch(e){return MEM[k]===undefined?null:MEM[k]}},
-  set(k,v){try{localStorage.setItem(k,v)}catch(e){MEM[k]=v}},
-  ok(){try{localStorage.setItem('_t','1');localStorage.removeItem('_t');return true}catch(e){return false}}
-};
-const CATS=[['','Tất cả'],['10','Âm nhạc'],['20','Gaming'],['24','Giải trí'],['28','Công nghệ'],['25','Tin tức'],['26','Đời sống'],['27','Giáo dục']];
-const REGIONS=['VN','US','JP','KR','GB'];
-const PERIODS=[[24,'24 giờ qua'],[168,'7 ngày qua'],[720,'30 ngày qua'],[2160,'90 ngày qua']];
-const TYPES=[['all','Tất cả'],['short','YouTube Shorts / video ngắn (< 4 phút)'],['long','Video dài']];
-const SORTS=[['total','Trend Score'],['vph','Views/Giờ ước lượng'],['views','Tổng lượt xem'],['ts','Ngày đăng mới nhất']];
-const DEF={cat:'',region:'VN',period:168,vtype:'all',minViews:''};
-const clamp=x=>Math.max(0,Math.min(1,x));
-const fmt=n=>n==null?'N/A':new Intl.NumberFormat('vi-VN').format(Math.round(n));
-const fmtD=s=>new Date(s).toLocaleString('vi-VN');
-const fmtDur=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60),c=s%60;const p=n=>String(n).padStart(2,'0');return (h?h+':'+p(m):m)+':'+p(c)};
-const parseDur=iso=>{const m=/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso||'')||[];return (m[1]|0)*86400+(m[2]|0)*3600+(m[3]|0)*60+(m[4]|0)};
 
-function score(v){
-  const hours=Math.max((Date.now()-new Date(v.published).getTime())/36e5,1);
-  const vph=v.views/hours;
-  const speed=40*clamp(Math.log10(vph+1)/5);
-  const fresh=20*(1-clamp(Math.log10(hours+1)/Math.log10(24*90+1)));
-  const inter=(v.likes==null?0:v.likes)+(v.comments==null?0:v.comments);
-  const rate=v.views>0?inter/v.views:0;
-  const eng=20*clamp(Math.log10(1+rate*100)/Math.log10(11));
-  const ratio=v.subs==null?null:v.views/Math.max(v.subs,1000);
-  const rel=ratio==null?0:20*clamp(Math.log10(ratio+1)/Math.log10(11));
-  const total=Math.round((speed+fresh+eng+rel)*10)/10;
-  return {hours,vph,speed,fresh,eng,rel,rate,ratio,total};
+<script type="text/babel">
+const { useState, useMemo, useEffect, useRef } = React;
+
+// Persistent Storage Helper
+const MEM = {};
+const st = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return MEM[k] === undefined ? null : MEM[k]; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { MEM[k] = v; } },
+  ok() { try { localStorage.setItem('_t', '1'); localStorage.removeItem('_t'); return true; } catch (e) { return false; } }
+};
+
+// YouTube Data Categories
+const CATS = [
+  ['', 'Tất cả lĩnh vực'],
+  ['10', '🎵 Âm nhạc'],
+  ['20', '🎮 Gaming'],
+  ['24', '🎬 Giải trí'],
+  ['28', '💡 Công nghệ & Khoa học'],
+  ['25', '📰 Tin tức & Thời sự'],
+  ['26', '🌱 Đời sống & Phong cách'],
+  ['27', '📚 Giáo dục & Kiến thức'],
+  ['23', '😂 Hài kịch & Giải trí'],
+  ['1', '🍿 Phim & Hoạt hình'],
+  ['17', '⚽ Thể thao'],
+  ['2', '🚗 Xe cộ & Đua xe'],
+  ['19', '✈️ Du lịch & Sự kiện'],
+  ['15', '🐶 Thú cưng & Động vật'],
+  ['22', '👥 Blog & Đời thường']
+];
+
+// Target Countries / Regions
+const REGIONS = [
+  ['VN', '🇻🇳 Việt Nam'],
+  ['US', '🇺🇸 Hoa Kỳ (US)'],
+  ['JP', '🇯🇵 Nhật Bản'],
+  ['KR', '🇰🇷 Hàn Quốc'],
+  ['GB', '🇬🇧 Vương quốc Anh'],
+  ['IN', '🇮🇳 Ấn Độ'],
+  ['TH', '🇹🇭 Thái Lan'],
+  ['ID', '🇮🇩 Indonesia'],
+  ['SG', '🇸🇬 Singapore'],
+  ['BR', '🇧🇷 Brazil'],
+  ['DE', '🇩🇪 Đức'],
+  ['FR', '🇫🇷 Pháp'],
+  ['AU', '🇦🇺 Úc'],
+  ['CA', '🇨🇦 Canada']
+];
+
+// Timeframe Options
+const PERIODS = [
+  [12, '12 giờ qua (Siêu mới)'],
+  [24, '24 giờ qua (1 ngày)'],
+  [48, '48 giờ qua (2 ngày)'],
+  [168, '7 ngày qua (1 tuần)'],
+  [720, '30 ngày qua (1 tháng)'],
+  [2160, '90 ngày qua (3 tháng)'],
+  [0, 'Tất cả thời gian']
+];
+
+// Video Duration Classification
+const TYPES = [
+  ['all', '🎬 Tất cả độ dài'],
+  ['short', '📱 Shorts (≤ 60s)'],
+  ['brief', '⏱️ Ngắn (1 - 5 phút)'],
+  ['medium', '🎬 Trung bình (5 - 20 phút)'],
+  ['long', '🎥 Dài (> 20 phút)']
+];
+
+// Sorting Criteria
+const SORTS = [
+  ['total', '🔥 Trend Score cao nhất'],
+  ['vph', '⚡ Tốc độ Views/Giờ (Viral)'],
+  ['views', '👁️ Tổng lượt xem nhiều nhất'],
+  ['eng', '💬 Tỷ lệ tương tác cao nhất'],
+  ['ts', '🆕 Ngày phát hành mới nhất'],
+  ['dur', '⏱️ Thời lượng video']
+];
+
+// Quick Trending Preset Modes
+const PRESETS = [
+  { id: 'trending', label: '🔥 Thịnh hành', icon: '🔥', desc: 'Video hot đang dẫn đầu bảng xếp hạng YouTube', cat: '', period: 168, vtype: 'all', sort: 'total', minViews: '' },
+  { id: 'breakout', label: '⚡ Siêu Viral / Bứt phá', icon: '⚡', desc: 'Video mới đăng có tốc độ views/giờ tăng đột biến', cat: '', period: 48, vtype: 'all', sort: 'vph', minViews: '5000' },
+  { id: 'realtime', label: '🆕 Mới nhất (24h)', icon: '🆕', desc: 'Video ra lò trong 24h qua', cat: '', period: 24, vtype: 'all', sort: 'ts', minViews: '' },
+  { id: 'shorts', label: '📱 Shorts Hot', icon: '📱', desc: 'YouTube Shorts ngắn đang có độ lan truyền cao', cat: '', period: 72, vtype: 'short', sort: 'vph', minViews: '10000' },
+  { id: 'topview', label: '🏆 Triệu View', icon: '🏆', desc: 'Video có tổng lượt xem khủng nhất', cat: '', period: 720, vtype: 'all', sort: 'views', minViews: '500000' },
+  { id: 'music', label: '🎵 Top Âm nhạc', icon: '🎵', desc: 'MV và bài hát thịnh hành', cat: '10', period: 168, vtype: 'all', sort: 'total', minViews: '' },
+  { id: 'gaming', label: '🎮 Top Gaming', icon: '🎮', desc: 'Video gameplay, stream hot nhất', cat: '20', period: 168, vtype: 'all', sort: 'total', minViews: '' }
+];
+
+const QUICK_TAGS = ['Tin tức hôm nay', 'AI công nghệ', 'Remix hot TikTok', 'Review phim', 'Highlight bóng đá', 'Podcast', 'Học lập trình', 'MV mới'];
+
+const DEF = { cat: '', region: 'VN', period: 168, vtype: 'all', minViews: '', minVph: '' };
+
+const clamp = x => Math.max(0, Math.min(1, x));
+const fmt = n => n == null ? 'N/A' : new Intl.NumberFormat('vi-VN').format(Math.round(n));
+const fmtD = s => new Date(s).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+const fmtDur = s => {
+  if (s == null || isNaN(s)) return '0:00';
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), c = s % 60;
+  const p = n => String(n).padStart(2, '0');
+  return (h ? h + ':' + p(m) : m) + ':' + p(c);
+};
+const parseDur = iso => {
+  const m = /P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || '') || [];
+  return (m[1] | 0) * 86400 + (m[2] | 0) * 3600 + (m[3] | 0) * 60 + (m[4] | 0);
+};
+
+// Best Thumbnail Extractor
+function getBestThumb(thumbnails) {
+  if (!thumbnails) return '';
+  return (
+    thumbnails.maxres?.url ||
+    thumbnails.standard?.url ||
+    thumbnails.high?.url ||
+    thumbnails.medium?.url ||
+    thumbnails.default?.url ||
+    ''
+  );
 }
 
-async function yt(path,params,key){
-  const u=new URL('https://www.googleapis.com/youtube/v3/'+path);
-  Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=='')u.searchParams.set(k,v)});
-  u.searchParams.set('key',key);
+// Sophisticated Trend Scoring Algorithm
+function score(v) {
+  const hours = Math.max((Date.now() - new Date(v.published).getTime()) / 36e5, 0.5);
+  const vph = v.views / hours;
+  const speed = 40 * clamp(Math.log10(vph + 1) / 5);
+  const fresh = 20 * (1 - clamp(Math.log10(hours + 1) / Math.log10(24 * 90 + 1)));
+  const inter = (v.likes == null ? 0 : v.likes) + (v.comments == null ? 0 : v.comments);
+  const rate = v.views > 0 ? inter / v.views : 0;
+  const eng = 20 * clamp(Math.log10(1 + rate * 100) / Math.log10(11));
+  const ratio = v.subs == null ? null : v.views / Math.max(v.subs, 1000);
+  const rel = ratio == null ? 0 : 20 * clamp(Math.log10(ratio + 1) / Math.log10(11));
+  const total = Math.round((speed + fresh + eng + rel) * 10) / 10;
+  return { hours, vph, speed, fresh, eng, rel, rate, ratio, total, engPercent: (rate * 100).toFixed(2) };
+}
+
+// YouTube Data API Client
+async function yt(path, params, key) {
+  const u = new URL('https://www.googleapis.com/youtube/v3/' + path);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') u.searchParams.set(k, v);
+  });
+  u.searchParams.set('key', key);
   let r;
-  try{r=await fetch(u.toString())}catch(e){throw {code:'NETWORK',msg:String(e)}}
-  const j=await r.json().catch(()=>({}));
-  if(!r.ok){
-    const e0=j.error&&j.error.errors&&j.error.errors[0];
-    throw {code:(e0&&e0.reason)||('HTTP'+r.status),msg:(j.error&&j.error.message)||''};
+  try {
+    r = await fetch(u.toString());
+  } catch (e) {
+    throw { code: 'NETWORK', msg: String(e) };
+  }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const e0 = j.error && j.error.errors && j.error.errors[0];
+    throw { code: (e0 && e0.reason) || ('HTTP' + r.status), msg: (j.error && j.error.message) || '' };
   }
   return j;
 }
 
-function errInfo(e){
-  const c=e.code;
-  if(c==='MISSING')return {t:'Chưa có API Key',s:['Bấm nút "API Key" ở góc trên bên phải.','Dán API Key YouTube Data API v3 của bạn rồi bấm "Lưu".','Làm theo hướng dẫn lấy key ở khung đỏ phía trên nếu bạn chưa có.']};
-  if(c==='quotaExceeded'||c==='dailyLimitExceeded'||c==='rateLimitExceeded')return {t:'Đã hết quota YouTube API trong ngày',s:['Mỗi lần tìm kiếm tốn 100 đơn vị, hạn mức mặc định là 10.000/ngày (khoảng 100 lần tìm).','Quota được đặt lại lúc 0h giờ Thái Bình Dương (khoảng 14h–15h giờ Việt Nam).','Để tiết kiệm: để trống từ khóa (dùng chế độ phổ biến, chỉ tốn 1 đơn vị) hoặc dùng key của project khác.']};
-  if(c==='keyInvalid'||c==='badRequest'||c==='HTTP400')return {t:'API Key không hợp lệ',s:['Kiểm tra bạn đã dán đủ và đúng key (không thừa khoảng trắng).','Vào Google Cloud Console > APIs & Services > Credentials để copy lại key.','Đảm bảo đã bật "YouTube Data API v3" cho project chứa key này.']};
-  if(c==='ipRefererBlocked'||c==='forbidden'||c==='HTTP403'||c==='accessNotConfigured')return {t:'Key bị từ chối (403)',s:['Nếu bạn đã giới hạn key theo HTTP referrer, hãy thêm đúng địa chỉ trang web này (ví dụ https://ten-ban.github.io/*).','Khi chạy thử trong Claude Artifact, referrer sẽ không khớp nên có thể bị chặn: hãy thử trên GitHub Pages.','Kiểm tra YouTube Data API v3 đã được bật (Enable) trong project.']};
-  if(c==='NETWORK')return {t:'Lỗi mạng hoặc bị trình duyệt chặn',s:['Kiểm tra kết nối Internet.','Khung xem trước của Claude Artifact có thể chặn gọi ra ngoài: hãy tải file về và mở bằng Chrome hoặc đưa lên GitHub Pages.','Tắt tiện ích chặn quảng cáo thử lại.']};
-  return {t:'Lỗi API: '+c,s:[e.msg||'Không rõ nguyên nhân, hãy thử lại sau ít phút.']};
+function errInfo(e) {
+  const c = e.code;
+  if (c === 'MISSING') return { t: 'Chưa nhập YouTube API Key', s: ['Bấm nút "🔑 Cấu hình API Key" ở góc trên bên phải.', 'Dán API Key YouTube Data API v3 của bạn rồi bấm "Lưu".', 'Key chỉ lưu trong trình duyệt của bạn (localStorage) và hoàn toàn an toàn.'] };
+  if (c === 'quotaExceeded' || c === 'dailyLimitExceeded' || c === 'rateLimitExceeded') return { t: 'Đã dùng hết Quota YouTube API trong ngày', s: ['Mỗi tài khoản Google mặc định được 10.000 đơn vị quota/ngày.', 'Mỗi lần tìm từ khóa tốn 100 đơn vị, trong khi xem bảng xếp hạng thịnh hành chỉ tốn 1 đơn vị.', 'Mẹo: Bạn có thể tạo thêm 1 project khác trên Google Cloud để lấy key phụ hoặc đợi quota reset (14h-15h VN).'] };
+  if (c === 'keyInvalid' || c === 'badRequest' || c === 'HTTP400') return { t: 'API Key không hợp lệ', s: ['Kiểm tra bạn đã copy đúng và đủ mã key (không thừa ký tự trắng).', 'Vào Google Cloud Console > Credentials để kiểm tra key.', 'Đảm bảo API "YouTube Data API v3" đã được bấm ENABLE trong project.'] };
+  if (c === 'ipRefererBlocked' || c === 'forbidden' || c === 'HTTP403' || c === 'accessNotConfigured') return { t: 'API Key bị từ chối truy cập (403)', s: ['Nếu bạn bật giới hạn Website Referrer, hãy tạm thời bỏ giới hạn hoặc thêm URL hiện tại.', 'Đảm bảo "YouTube Data API v3" đã được Bật trong Google Cloud Console.'] };
+  if (c === 'NETWORK') return { t: 'Lỗi mạng hoặc bị chặn', s: ['Kiểm tra kết nối mạng Internet của bạn.', 'Tắt các tiện ích chặn quảng cáo nếu có thể gây chặn kết nối Google API.'] };
+  return { t: 'Lỗi kết nối: ' + c, s: [e.msg || 'Vui lòng thử lại sau giây lát.'] };
 }
 
-const bAct='px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition';
-const bOn='px-3 py-1.5 rounded-lg text-xs font-medium bg-[#FF0000] hover:bg-red-600 text-white transition';
-const inp='w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#FF0000]';
-const scoreCls=t=>t>=70?'bg-green-600':t>=40?'bg-amber-600':'bg-zinc-600';
+// UI Buttons & Styles
+const bPrimary = 'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20 active:scale-95 transition-all duration-150 flex items-center justify-center gap-1.5';
+const bSecondary = 'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 hover:text-white border border-brand-border active:scale-95 transition-all duration-150 flex items-center justify-center gap-1.5';
+const bActive = 'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-red-600/15 text-red-400 border border-red-500/30 flex items-center justify-center gap-1.5';
+const inp = 'w-full bg-brand-surface border border-brand-border hover:border-zinc-600 rounded-xl px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all';
+const scoreCls = t => t >= 75 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : t >= 45 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-zinc-800 text-zinc-400 border border-zinc-700';
 
-function Actions({v,saved,onDetail,onSave}){
+// Video Action Buttons Component
+function Actions({ v, saved, onDetail, onDownload, onPlay, onSave, onCopy }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
-      <button onClick={()=>onDetail(v)} className={bAct}>Xem chi tiết</button>
-      <a href={'https://www.youtube.com/watch?v='+v.id} target="_blank" rel="noopener noreferrer" className={bAct}>Mở trên YouTube</a>
-      <button onClick={()=>onSave(v)} className={saved?bOn:bAct}>{saved?'★ Đã lưu':'☆ Lưu / Snapshot'}</button>
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      <button onClick={() => onPlay(v)} className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-500 text-white transition flex items-center gap-1" title="Xem video tại chỗ">
+        ▶ Xem
+      </button>
+      <button onClick={() => onDownload(v)} className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 transition flex items-center gap-1" title="Tải video độ phân giải cao, MP3, Thumbnail">
+        📥 Tải về
+      </button>
+      <button onClick={() => onDetail(v)} className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border transition" title="Xem chi tiết phân tích điểm Trend">
+        📊 Chỉ số
+      </button>
+      <button onClick={() => onSave(v)} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${saved ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-brand-card hover:bg-brand-hover text-zinc-400 border-brand-border'}`} title="Lưu vào danh sách theo dõi">
+        {saved ? '★ Đã lưu' : '☆ Theo dõi'}
+      </button>
+      <button onClick={() => onCopy('https://www.youtube.com/watch?v=' + v.id, 'Đã sao chép link video!')} className="px-2 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white bg-brand-card hover:bg-brand-hover border border-brand-border transition" title="Sao chép link">
+        📋
+      </button>
     </div>
   );
 }
 
-function App(){
-  const [key,setKey]=useState(()=>st.get('yt_key')||'');
-  const [keyDraft,setKeyDraft]=useState('');
-  const [showKeyBox,setShowKeyBox]=useState(false);
-  const [showKey,setShowKey]=useState(false);
-  const [tab,setTab]=useState('search');
-  const [kw,setKw]=useState('');
-  const [f,setF]=useState(DEF);
-  const [applied,setApplied]=useState(DEF);
-  const [sort,setSort]=useState('total');
-  const [mode,setMode]=useState('grid');
-  const [items,setItems]=useState([]);
-  const [token,setToken]=useState('');
-  const [loading,setLoading]=useState(false);
-  const [loaded,setLoaded]=useState(false);
-  const [busy,setBusy]=useState(false);
-  const [error,setError]=useState(null);
-  const [detail,setDetail]=useState(null);
-  const [watch,setWatch]=useState(()=>{try{return JSON.parse(st.get('yt_watch')||'{}')}catch(e){return {}}});
-  const lastQ=useRef(null);
-  const storageOk=useMemo(()=>st.ok(),[]);
+// Download Modal Component with Resolution & Format Options
+function DownloadModal({ video, onClose, onCopy }) {
+  const [downloadingThumb, setDownloadingThumb] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  useEffect(()=>{st.set('yt_watch',JSON.stringify(watch))},[watch]);
+  if (!video) return null;
 
-  function saveKey(){const k=keyDraft.trim();setKey(k);st.set('yt_key',k);setShowKeyBox(false);setError(null)}
-  function removeKey(){setKey('');setKeyDraft('');st.set('yt_key','')}
+  const ytUrl = `https://www.youtube.com/watch?v=${video.id}`;
+  const shortUrl = `https://youtu.be/${video.id}`;
 
-  async function load(kind){
-    if(!key){setError({code:'MISSING'});return}
-    const more=kind==='more';
+  const downloadThumbnail = async (quality = 'maxres') => {
+    setDownloadingThumb(true);
+    const thumbUrl = quality === 'maxres' 
+      ? `https://i.ytimg.com/vi/${video.id}/maxresdefault.jpg`
+      : `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
+    
+    try {
+      const res = await fetch(thumbUrl);
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${video.title.replace(/[/\\?%*:|"<>]/g, '').slice(0, 50)}_thumbnail.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      // Fallback: Open direct image in new window
+      window.open(thumbUrl, '_blank');
+    } finally {
+      setDownloadingThumb(false);
+    }
+  };
+
+  const openFastDownloader = (engine) => {
+    let url = '';
+    if (engine === '10downloader') {
+      url = `https://10downloader.com/download?v=${video.id}`;
+    } else if (engine === 'y2mate') {
+      url = `https://www.y2mate.com/youtube/${video.id}`;
+    } else if (engine === 'savefrom') {
+      url = `https://en.savefrom.net/1-youtube-video-downloader-386.html?url=${encodeURIComponent(ytUrl)}`;
+    } else if (engine === 'ssyoutube') {
+      url = `https://www.ssyoutube.com/watch?v=${video.id}`;
+    } else if (engine === 'ytmp3') {
+      url = `https://y2mate.nu/en/watch?v=${video.id}`;
+    }
+    window.open(url, '_blank');
+  };
+
+  const copyVideoLink = () => {
+    navigator.clipboard.writeText(ytUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto" onClick={onClose}>
+      <div className="bg-brand-surface border border-brand-border rounded-2xl w-full max-w-xl my-8 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="p-4 border-b border-brand-border flex items-center justify-between bg-brand-card/50">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">📥</span>
+            <div>
+              <h2 className="font-bold text-base text-white">Tải Video & Âm Thanh</h2>
+              <p className="text-xs text-zinc-400">Chọn định dạng, độ phân giải hoặc cổng tải tốc độ cao</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg bg-brand-surface hover:bg-brand-border text-zinc-400 hover:text-white flex items-center justify-center transition">✕</button>
+        </div>
+
+        {/* Video Preview Snapshot */}
+        <div className="p-4 bg-brand-surface space-y-4">
+          <div className="flex gap-3 bg-brand-card p-3 rounded-xl border border-brand-border items-center">
+            <img src={video.thumb} alt="" className="w-28 sm:w-36 aspect-video object-cover rounded-lg bg-zinc-900 flex-shrink-0" />
+            <div className="overflow-hidden">
+              <h3 className="text-xs sm:text-sm font-semibold text-white line-clamp-2 leading-snug">{video.title}</h3>
+              <div className="text-xs text-zinc-400 mt-1 flex flex-wrap gap-2">
+                <span>👤 {video.channel}</span>
+                <span>⏱️ {fmtDur(video.dur)}</span>
+                <span>👁️ {fmt(video.views)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Direct Fast Download Providers */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                ⚡ Tải nhanh đa độ phân giải (Khuyên dùng)
+              </span>
+              <span className="text-[11px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">An toàn & Miễn phí</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => openFastDownloader('10downloader')} className="p-3 rounded-xl bg-gradient-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/30 hover:to-teal-600/30 border border-emerald-500/30 text-left transition group">
+                <div className="font-bold text-xs sm:text-sm text-emerald-300 flex items-center justify-between">
+                  <span>🎬 10Downloader</span>
+                  <span className="text-xs group-hover:translate-x-0.5 transition">↗</span>
+                </div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">Tải MP4 1080p, 720p, 480p, 360p không quảng cáo độc</div>
+              </button>
+
+              <button onClick={() => openFastDownloader('y2mate')} className="p-3 rounded-xl bg-gradient-to-r from-red-600/20 to-rose-600/20 hover:from-red-600/30 hover:to-rose-600/30 border border-red-500/30 text-left transition group">
+                <div className="font-bold text-xs sm:text-sm text-red-300 flex items-center justify-between">
+                  <span>🎵 Y2Mate MP3/MP4</span>
+                  <span className="text-xs group-hover:translate-x-0.5 transition">↗</span>
+                </div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">Tải file âm thanh MP3 320kbps và video HD</div>
+              </button>
+
+              <button onClick={() => openFastDownloader('ssyoutube')} className="p-3 rounded-xl bg-brand-card hover:bg-brand-hover border border-brand-border text-left transition group">
+                <div className="font-bold text-xs sm:text-sm text-zinc-200 flex items-center justify-between">
+                  <span>🚀 SSYouTube Pro</span>
+                  <span className="text-xs group-hover:translate-x-0.5 transition">↗</span>
+                </div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">Hỗ trợ tải mọi độ phân giải trực tiếp</div>
+              </button>
+
+              <button onClick={() => openFastDownloader('savefrom')} className="p-3 rounded-xl bg-brand-card hover:bg-brand-hover border border-brand-border text-left transition group">
+                <div className="font-bold text-xs sm:text-sm text-zinc-200 flex items-center justify-between">
+                  <span>⚡ SaveFrom Net</span>
+                  <span className="text-xs group-hover:translate-x-0.5 transition">↗</span>
+                </div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">Tải video mượt cho điện thoại & máy tính</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Thumbnail Downloader (Direct Client-Side) */}
+          <div className="space-y-2 pt-1 border-t border-brand-border">
+            <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+              🖼️ Tải Ảnh Bìa (Thumbnail Gốc 1080p)
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <button 
+                onClick={() => downloadThumbnail('maxres')} 
+                disabled={downloadingThumb}
+                className="flex-1 py-2 px-3 rounded-xl text-xs font-medium bg-brand-card hover:bg-brand-hover border border-brand-border text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 transition">
+                <span>{downloadingThumb ? '⏳ Đang tải...' : '💾 Tải Thumbnail MaxRes (1920x1080)'}</span>
+              </button>
+              <a 
+                href={`https://i.ytimg.com/vi/${video.id}/maxresdefault.jpg`} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="py-2 px-3 rounded-xl text-xs font-medium bg-brand-card hover:bg-brand-hover border border-brand-border text-zinc-400 hover:text-white flex items-center justify-center gap-1 transition">
+                🔍 Xem ảnh gốc ↗
+              </a>
+            </div>
+          </div>
+
+          {/* Quick Copy Link Bar */}
+          <div className="space-y-1.5 pt-1 border-t border-brand-border">
+            <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+              🔗 Link Video để dán vào IDM / 4K Downloader / CapCut
+            </span>
+            <div className="flex gap-2">
+              <input readOnly value={ytUrl} className="w-full bg-brand-card border border-brand-border rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none" />
+              <button onClick={copyVideoLink} className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition ${copied ? 'bg-emerald-600 text-white' : 'bg-red-600 hover:bg-red-500 text-white'}`}>
+                {copied ? '✓ Đã Copy' : '📋 Copy Link'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-3 bg-brand-card/50 border-t border-brand-border text-center text-[11px] text-zinc-500">
+          Mẹo: Nếu dùng IDM hoặc phần mềm tải ngoài, bấm "Copy Link" rồi dán trực tiếp để tải tốc độ tối đa của đường truyền.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Embedded Video Player Modal
+function PlayerModal({ video, onClose }) {
+  if (!video) return null;
+  return (
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6" onClick={onClose}>
+      <div className="bg-brand-surface border border-brand-border rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="p-3 sm:p-4 border-b border-brand-border flex items-center justify-between bg-brand-card">
+          <div className="flex items-center gap-2 overflow-hidden pr-2">
+            <span className="text-red-500 text-lg">▶</span>
+            <h3 className="font-bold text-sm sm:text-base text-white truncate">{video.title}</h3>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg bg-brand-surface hover:bg-brand-border text-zinc-400 hover:text-white flex items-center justify-center transition flex-shrink-0">✕</button>
+        </div>
+        <div className="relative aspect-video w-full bg-black">
+          <iframe
+            src={`https://www.youtube.com/embed/${video.id}?autoplay=1&rel=0`}
+            title={video.title}
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+        <div className="p-3 bg-brand-surface border-t border-brand-border flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
+          <span>👤 {video.channel} · 🕒 {fmtD(video.published)}</span>
+          <div className="flex gap-2">
+            <a href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank" rel="noreferrer" className="text-red-400 hover:underline flex items-center gap-1">
+              Mở trên YouTube ↗
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Main Application Component
+function App() {
+  const [key, setKey] = useState(() => st.get('yt_key') || '');
+  const [keyDraft, setKeyDraft] = useState('');
+  const [showKeyBox, setShowKeyBox] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+  
+  const [tab, setTab] = useState('search'); // 'search' | 'watch'
+  const [kw, setKw] = useState('');
+  const [activePreset, setActivePreset] = useState('trending');
+  
+  // Advanced Filter States
+  const [f, setF] = useState(DEF);
+  const [applied, setApplied] = useState(DEF);
+  const [sort, setSort] = useState('total');
+  const [searchOrder, setSearchOrder] = useState('viewCount'); // 'date' | 'viewCount' | 'relevance' | 'rating'
+  const [mode, setMode] = useState('grid'); // 'grid' | 'table'
+  
+  // Data States
+  const [items, setItems] = useState([]);
+  const [token, setToken] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Modals
+  const [detail, setDetail] = useState(null);
+  const [downloadVideo, setDownloadVideo] = useState(null);
+  const [playerVideo, setPlayerVideo] = useState(null);
+  const [toast, setToast] = useState(null);
+  
+  const [watch, setWatch] = useState(() => {
+    try { return JSON.parse(st.get('yt_watch') || '{}'); } catch (e) { return {}; }
+  });
+
+  const lastQ = useRef(null);
+  const storageOk = useMemo(() => st.ok(), []);
+
+  useEffect(() => { st.set('yt_watch', JSON.stringify(watch)); }, [watch]);
+
+  // Toast notifier
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const copyText = (txt, msg = 'Đã sao chép vào bộ nhớ tạm!') => {
+    navigator.clipboard.writeText(txt);
+    showToast(msg);
+  };
+
+  function saveKey() {
+    const k = keyDraft.trim();
+    setKey(k);
+    st.set('yt_key', k);
+    setShowKeyBox(false);
+    setError(null);
+    showToast('Đã lưu API Key thành công!');
+  }
+
+  function removeKey() {
+    setKey('');
+    setKeyDraft('');
+    st.set('yt_key', '');
+    showToast('Đã xóa API Key!');
+  }
+
+  // Load YouTube Data with filters
+  async function load(kind) {
+    if (!key) {
+      setError({ code: 'MISSING' });
+      return;
+    }
+    const more = kind === 'more';
     let p;
-    if(more||kind==='refresh'){p=lastQ.current}
-    if(!p){p={kw:kw.trim(),cat:f.cat,region:f.region,period:f.period}}
-    if(kind==='new'){p={kw:kw.trim(),cat:f.cat,region:f.region,period:f.period};setApplied(f)}
-    lastQ.current=p;
-    setLoading(true);setError(null);
-    try{
-      const cutoff=Date.now()-p.period*36e5;
-      let vids,next;
-      if(p.kw){
-        const s=await yt('search',{part:'snippet',type:'video',q:p.kw,maxResults:24,regionCode:p.region,order:'viewCount',publishedAfter:new Date(cutoff).toISOString(),videoCategoryId:p.cat,pageToken:more?token:''},key);
-        next=s.nextPageToken||'';
-        const ids=(s.items||[]).map(i=>i.id&&i.id.videoId).filter(Boolean);
-        vids=ids.length?((await yt('videos',{part:'snippet,statistics,contentDetails',id:ids.join(',')},key)).items||[]):[];
-      }else{
-        const s=await yt('videos',{part:'snippet,statistics,contentDetails',chart:'mostPopular',regionCode:p.region,videoCategoryId:p.cat,maxResults:24,pageToken:more?token:''},key);
-        next=s.nextPageToken||'';
-        vids=(s.items||[]).filter(i=>new Date(i.snippet.publishedAt).getTime()>=cutoff);
-      }
-      const cids=[...new Set(vids.map(v=>v.snippet.channelId))];
-      const subs={};
-      if(cids.length){
-        const c=await yt('channels',{part:'statistics',id:cids.join(',')},key);
-        (c.items||[]).forEach(x=>{subs[x.id]=x.statistics.hiddenSubscriberCount?null:Number(x.statistics.subscriberCount)});
-      }
-      const out=vids.map(v=>{
-        const s=v.statistics||{};
-        const o={
-          id:v.id,title:v.snippet.title,channel:v.snippet.channelTitle,channelId:v.snippet.channelId,
-          thumb:(v.snippet.thumbnails.medium||v.snippet.thumbnails.default||{}).url,
-          published:v.snippet.publishedAt,ts:new Date(v.snippet.publishedAt).getTime(),
-          views:Number(s.viewCount||0),likes:s.likeCount==null?null:Number(s.likeCount),
-          comments:s.commentCount==null?null:Number(s.commentCount),
-          dur:parseDur(v.contentDetails&&v.contentDetails.duration),
-          subs:subs[v.snippet.channelId]===undefined?null:subs[v.snippet.channelId]
+    if (more || kind === 'refresh') {
+      p = lastQ.current;
+    }
+    if (!p) {
+      p = { kw: kw.trim(), cat: f.cat, region: f.region, period: f.period, order: searchOrder };
+    }
+    if (kind === 'new') {
+      p = { kw: kw.trim(), cat: f.cat, region: f.region, period: f.period, order: searchOrder };
+      setApplied(f);
+    }
+    lastQ.current = p;
+
+    setLoading(true);
+    setError(null);
+    if (!more) setItems([]);
+
+    try {
+      const cutoff = p.period > 0 ? Date.now() - p.period * 36e5 : 0;
+      let vids = [], next = '';
+
+      if (p.kw) {
+        // Keyword Search Flow
+        const searchParams = {
+          part: 'snippet',
+          type: 'video',
+          q: p.kw,
+          maxResults: 24,
+          regionCode: p.region,
+          order: p.order || 'viewCount',
+          pageToken: more ? token : ''
         };
-        const sc=score(o);o.sc=sc;o.total=sc.total;o.vph=sc.vph;return o;
+        if (p.cat) searchParams.videoCategoryId = p.cat;
+        if (cutoff > 0) searchParams.publishedAfter = new Date(cutoff).toISOString();
+
+        const s = await yt('search', searchParams, key);
+        next = s.nextPageToken || '';
+        const ids = (s.items || []).map(i => i.id && i.id.videoId).filter(Boolean);
+        vids = ids.length ? ((await yt('videos', { part: 'snippet,statistics,contentDetails', id: ids.join(',') }, key)).items || []) : [];
+      } else {
+        // Most Popular Chart Flow
+        const vidParams = {
+          part: 'snippet,statistics,contentDetails',
+          chart: 'mostPopular',
+          regionCode: p.region,
+          maxResults: 24,
+          pageToken: more ? token : ''
+        };
+        if (p.cat) vidParams.videoCategoryId = p.cat;
+
+        const s = await yt('videos', vidParams, key);
+        next = s.nextPageToken || '';
+        vids = (s.items || []).filter(i => cutoff === 0 || new Date(i.snippet.publishedAt).getTime() >= cutoff);
+      }
+
+      // Fetch Channel Statistics for subscriber ratio
+      const cids = [...new Set(vids.map(v => v.snippet.channelId))];
+      const subs = {};
+      if (cids.length) {
+        const c = await yt('channels', { part: 'statistics', id: cids.join(',') }, key);
+        (c.items || []).forEach(x => {
+          subs[x.id] = x.statistics.hiddenSubscriberCount ? null : Number(x.statistics.subscriberCount);
+        });
+      }
+
+      // Map and Score Items
+      const out = vids.map(v => {
+        const s = v.statistics || {};
+        const bestThumb = getBestThumb(v.snippet.thumbnails);
+        const durSeconds = parseDur(v.contentDetails && v.contentDetails.duration);
+        const o = {
+          id: v.id,
+          title: v.snippet.title,
+          channel: v.snippet.channelTitle,
+          channelId: v.snippet.channelId,
+          thumb: bestThumb,
+          published: v.snippet.publishedAt,
+          ts: new Date(v.snippet.publishedAt).getTime(),
+          views: Number(s.viewCount || 0),
+          likes: s.likeCount == null ? null : Number(s.likeCount),
+          comments: s.commentCount == null ? null : Number(s.commentCount),
+          dur: durSeconds,
+          subs: subs[v.snippet.channelId] === undefined ? null : subs[v.snippet.channelId]
+        };
+        const sc = score(o);
+        o.sc = sc;
+        o.total = sc.total;
+        o.vph = sc.vph;
+        o.eng = sc.eng;
+        return o;
       });
-      setItems(prev=>more?[...prev,...out.filter(o=>!prev.some(x=>x.id===o.id))]:out);
-      setToken(next);setLoaded(true);
-    }catch(e){setError(e)}finally{setLoading(false)}
+
+      setItems(prev => more ? [...prev, ...out.filter(o => !prev.some(x => x.id === o.id))] : out);
+      setToken(next);
+      setLoaded(true);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function serverChanged(){
-    const q=lastQ.current;
-    return !q||q.cat!==f.cat||q.region!==f.region||q.period!==f.period;
-  }
-  function applyFilters(){
-    if(loaded&&serverChanged()){load('new')}else{setApplied(f)}
-  }
-  function clearFilters(){
-    setF(DEF);
-    const q=lastQ.current;
-    if(loaded&&q&&(q.cat!==DEF.cat||q.region!==DEF.region||q.period!==DEF.period)){
-      lastQ.current={...q,cat:DEF.cat,region:DEF.region,period:DEF.period};
-      setApplied(DEF);
-      setTimeout(()=>load('refresh'),0);
-    }else{setApplied(DEF)}
-  }
-
-  const shown=useMemo(()=>{
-    const mv=Number(applied.minViews)||0;
-    return items
-      .filter(v=>v.views>=mv)
-      .filter(v=>applied.vtype==='all'?true:applied.vtype==='short'?v.dur<240:v.dur>=240)
-      .sort((a,b)=>b[sort]-a[sort]);
-  },[items,applied,sort]);
-
-  const stats=useMemo(()=>{
-    const n=shown.length;
-    return {
-      n,views:shown.reduce((a,v)=>a+v.views,0),
-      avg:n?shown.reduce((a,v)=>a+v.total,0)/n:0,
-      maxVph:n?Math.max(...shown.map(v=>v.vph)):0
+  // Handle Preset Switching
+  function applyPreset(preset) {
+    setActivePreset(preset.id);
+    const updated = {
+      ...f,
+      cat: preset.cat,
+      period: preset.period,
+      vtype: preset.vtype,
+      minViews: preset.minViews || ''
     };
-  },[shown]);
+    setF(updated);
+    setApplied(updated);
+    if (preset.sort) setSort(preset.sort);
 
-  function toggleWatch(v){
-    setWatch(w=>{
-      const n={...w};
-      if(n[v.id]){delete n[v.id]}
-      else{n[v.id]={id:v.id,title:v.title,channel:v.channel,thumb:v.thumb,published:v.published,snaps:[{t:Date.now(),v:v.views}]}}
+    // Trigger fresh load with the new parameters
+    lastQ.current = {
+      kw: kw.trim(),
+      cat: preset.cat,
+      region: f.region,
+      period: preset.period,
+      order: preset.id === 'realtime' ? 'date' : searchOrder
+    };
+    setTimeout(() => load('refresh'), 0);
+  }
+
+  function applyFilters() {
+    load('new');
+  }
+
+  function clearFilters() {
+    setF(DEF);
+    setApplied(DEF);
+    setKw('');
+    setActivePreset('trending');
+    setSort('total');
+    lastQ.current = { kw: '', cat: DEF.cat, region: DEF.region, period: DEF.period, order: 'viewCount' };
+    setTimeout(() => load('refresh'), 0);
+  }
+
+  // Client-Side Filtered & Sorted Videos
+  const shown = useMemo(() => {
+    const mv = Number(applied.minViews) || 0;
+    const mvph = Number(applied.minVph) || 0;
+    return items
+      .filter(v => v.views >= mv)
+      .filter(v => v.vph >= mvph)
+      .filter(v => {
+        if (applied.vtype === 'all') return true;
+        if (applied.vtype === 'short') return v.dur <= 60; // Standard YouTube Shorts <= 60s
+        if (applied.vtype === 'brief') return v.dur > 60 && v.dur <= 300; // 1-5 mins
+        if (applied.vtype === 'medium') return v.dur > 300 && v.dur <= 1200; // 5-20 mins
+        if (applied.vtype === 'long') return v.dur > 1200; // > 20 mins
+        return true;
+      })
+      .sort((a, b) => {
+        if (sort === 'total') return b.total - a.total;
+        if (sort === 'vph') return b.vph - a.vph;
+        if (sort === 'views') return b.views - a.views;
+        if (sort === 'eng') return b.eng - a.eng;
+        if (sort === 'ts') return b.ts - a.ts;
+        if (sort === 'dur') return b.dur - a.dur;
+        return 0;
+      });
+  }, [items, applied, sort]);
+
+  const stats = useMemo(() => {
+    const n = shown.length;
+    return {
+      n,
+      views: shown.reduce((a, v) => a + v.views, 0),
+      avg: n ? shown.reduce((a, v) => a + v.total, 0) / n : 0,
+      maxVph: n ? Math.max(...shown.map(v => v.vph)) : 0
+    };
+  }, [shown]);
+
+  function toggleWatch(v) {
+    setWatch(w => {
+      const n = { ...w };
+      if (n[v.id]) {
+        delete n[v.id];
+        showToast('Đã xóa khỏi Watchlist');
+      } else {
+        n[v.id] = { id: v.id, title: v.title, channel: v.channel, thumb: v.thumb, published: v.published, snaps: [{ t: Date.now(), v: v.views }] };
+        showToast('Đã thêm vào Watchlist theo dõi');
+      }
       return n;
     });
   }
 
-  async function updateSnaps(){
-    const ids=Object.keys(watch);
-    if(!ids.length)return;
-    if(!key){setError({code:'MISSING'});return}
-    setBusy(true);setError(null);
-    try{
-      const cur={};
-      for(let i=0;i<ids.length;i+=50){
-        const r=await yt('videos',{part:'statistics',id:ids.slice(i,i+50).join(',')},key);
-        (r.items||[]).forEach(x=>{cur[x.id]=Number(x.statistics.viewCount||0)});
+  async function updateSnaps() {
+    const ids = Object.keys(watch);
+    if (!ids.length) return;
+    if (!key) { setError({ code: 'MISSING' }); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      const cur = {};
+      for (let i = 0; i < ids.length; i += 50) {
+        const r = await yt('videos', { part: 'statistics', id: ids.slice(i, i + 50).join(',') }, key);
+        (r.items || []).forEach(x => { cur[x.id] = Number(x.statistics.viewCount || 0); });
       }
-      const t=Date.now();
-      setWatch(w=>{
-        const n={...w};
-        Object.keys(cur).forEach(id=>{if(n[id])n[id]={...n[id],snaps:[...n[id].snaps,{t,v:cur[id]}]}});
+      const t = Date.now();
+      setWatch(w => {
+        const n = { ...w };
+        Object.keys(cur).forEach(id => {
+          if (n[id]) n[id] = { ...n[id], snaps: [...n[id].snaps, { t, v: cur[id] }] };
+        });
         return n;
       });
-    }catch(e){setError(e)}finally{setBusy(false)}
+      showToast('Đã cập nhật snapshot mới nhất!');
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function exportCsv(){
-    const esc=x=>{const s=String(x==null?'':x);return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
-    const head=['Tiêu đề','Kênh','Link','Ngày đăng','Lượt xem','Lượt thích','Bình luận','Subscribers','Views/Giờ ước lượng','Trend Score'];
-    const rows=shown.map(v=>[v.title,v.channel,'https://www.youtube.com/watch?v='+v.id,fmtD(v.published),v.views,v.likes==null?'':v.likes,v.comments==null?'':v.comments,v.subs==null?'':v.subs,Math.round(v.vph),v.total]);
-    const csv='\uFEFF'+[head,...rows].map(r=>r.map(esc).join(',')).join('\r\n');
-    const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-    const a=document.createElement('a');a.href=url;a.download='youtrend-'+new Date().toISOString().slice(0,10)+'.csv';
-    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  function exportCsv() {
+    const esc = x => { const s = String(x == null ? '' : x); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const head = ['Tiêu đề', 'Kênh', 'Link', 'Ngày đăng', 'Lượt xem', 'Lượt thích', 'Bình luận', 'Subscribers', 'Views/Giờ', 'Trend Score'];
+    const rows = shown.map(v => [v.title, v.channel, 'https://www.youtube.com/watch?v=' + v.id, fmtD(v.published), v.views, v.likes == null ? '' : v.likes, v.comments == null ? '' : v.comments, v.subs == null ? '' : v.subs, Math.round(v.vph), v.total]);
+    const csv = '\uFEFF' + [head, ...rows].map(r => r.map(esc).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'youtrend-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('Đã xuất file Excel (CSV) thành công!');
   }
 
-  const ei=error?errInfo(error):null;
-  const watchList=Object.values(watch);
+  const ei = error ? errInfo(error) : null;
+  const watchList = Object.values(watch);
 
   return (
-    <div className="min-h-screen" style={{paddingTop:'env(safe-area-inset-top,0px)',paddingBottom:'env(safe-area-inset-bottom,0px)'}}>
-      <header className="border-b border-zinc-800 sticky top-0 bg-[#09090b]/95 backdrop-blur z-20">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
-          <div className="text-xl font-bold"><span className="text-[#FF0000]">▶</span> YouTrend Analytics</div>
-          <nav className="flex gap-1 ml-2">
-            <button onClick={()=>setTab('search')} className={tab==='search'?bOn:bAct}>🔎 Tìm xu hướng</button>
-            <button onClick={()=>setTab('watch')} className={tab==='watch'?bOn:bAct}>★ Watchlist & Theo dõi tăng trưởng ({watchList.length})</button>
+    <div className="min-h-screen flex flex-col bg-brand-dark text-slate-100">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs sm:text-sm font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <span>✓</span> {toast}
+        </div>
+      )}
+
+      {/* Top Header */}
+      <header className="border-b border-brand-border sticky top-0 glass-header z-30">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl gradient-badge flex items-center justify-center text-white font-black text-lg shadow-lg shadow-red-500/25">
+              ▶
+            </div>
+            <div>
+              <span className="font-extrabold text-base sm:text-lg tracking-tight text-white flex items-center gap-1.5">
+                YouTrend <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-red-600/20 text-red-400 border border-red-500/30">Pro Analytics</span>
+              </span>
+              <p className="text-[11px] text-zinc-400 hidden sm:block">Phân tích xu hướng YouTube & Tải video chất lượng cao</p>
+            </div>
+          </div>
+
+          {/* Navigation Tabs */}
+          <nav className="flex items-center gap-1.5 bg-brand-surface p-1 rounded-xl border border-brand-border">
+            <button onClick={() => setTab('search')} className={tab === 'search' ? bActive : 'px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white rounded-lg transition'}>
+              🔎 Tìm Xu Hướng
+            </button>
+            <button onClick={() => setTab('watch')} className={tab === 'watch' ? bActive : 'px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white rounded-lg transition'}>
+              ★ Watchlist ({watchList.length})
+            </button>
           </nav>
-          <button onClick={()=>{setKeyDraft(key);setShowKeyBox(true)}} className={(key?bAct:bOn)+' ml-auto'}>🔑 API Key {key?'(đã nhập)':'(chưa nhập)'}</button>
+
+          {/* API Key Status Button */}
+          <button 
+            onClick={() => { setKeyDraft(key); setShowKeyBox(true); }} 
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition ${key ? 'bg-brand-surface text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'bg-red-600/20 text-red-300 border-red-500/40 animate-pulse'}`}>
+            <span>🔑</span> {key ? 'API Key Đã Lưu' : 'Nhập API Key'}
+          </button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-5 space-y-5">
-        {!key&&(
-          <div className="border border-red-700 bg-red-950/40 rounded-xl p-4 text-sm space-y-2">
-            <div className="font-semibold text-red-300">⚠ Bạn chưa nhập YouTube API Key nên chưa thể lấy dữ liệu thật. Ứng dụng sẽ không tự bịa kết quả.</div>
-            <ol className="list-decimal ml-5 space-y-1 text-zinc-300">
-              <li>Vào <a className="underline text-red-300" href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">console.cloud.google.com</a>, đăng nhập Google và tạo một Project mới.</li>
-              <li>Vào <b>APIs & Services</b> &gt; <b>Library</b>, tìm <b>YouTube Data API v3</b> rồi bấm <b>Enable</b>.</li>
-              <li>Vào <b>APIs & Services</b> &gt; <b>Credentials</b> &gt; <b>Create credentials</b> &gt; <b>API key</b> và copy key.</li>
-              <li>Bấm vào key vừa tạo, chọn <b>Websites</b> và thêm địa chỉ trang của bạn (ví dụ https://ten-ban.github.io/*), phần API restrictions chọn <b>YouTube Data API v3</b>. Bước này giúp người khác không dùng trộm key.</li>
-              <li>Bấm nút <b>🔑 API Key</b> ở góc trên, dán key vào và bấm Lưu.</li>
-            </ol>
-            <div className="text-zinc-400">Lưu ý: key lưu trong trình duyệt của bạn. Đừng dán key vào file rồi đưa lên GitHub. Mỗi lần tìm bằng từ khóa tốn 100 đơn vị quota (mặc định 10.000/ngày).</div>
-          </div>
-        )}
-        {!storageOk&&<div className="border border-amber-700 bg-amber-950/40 rounded-xl p-3 text-sm text-amber-200">Trình duyệt đang chặn lưu trữ, API Key và Watchlist chỉ được giữ tạm và sẽ mất khi tải lại trang. Hãy mở file này bằng Chrome hoặc đưa lên GitHub Pages để lưu lâu dài.</div>}
-        {ei&&(
-          <div className="border border-red-700 bg-red-950/40 rounded-xl p-4 text-sm">
-            <div className="font-semibold text-red-300 mb-1">❌ {ei.t}</div>
-            <ul className="list-disc ml-5 space-y-1 text-zinc-300">{ei.s.map((x,i)=><li key={i}>{x}</li>)}</ul>
-            <button onClick={()=>setError(null)} className={bAct+' mt-3'}>Đóng thông báo</button>
+      {/* Main Body */}
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6 flex-1 w-full">
+        {/* Missing Key Banner */}
+        {!key && (
+          <div className="border border-red-500/40 bg-gradient-to-r from-red-950/60 to-zinc-950/80 rounded-2xl p-5 text-sm space-y-3 shadow-xl">
+            <div className="font-bold text-red-300 flex items-center gap-2 text-base">
+              <span>⚠</span> Bạn cần nhập YouTube API Key để tải dữ liệu xu hướng thực tế
+            </div>
+            <p className="text-zinc-300 text-xs sm:text-sm">
+              Ứng dụng lấy dữ liệu chuẩn 100% từ YouTube Data API v3 chính thống. Key được lưu an toàn trực tiếp trên trình duyệt của bạn (không gửi ra ngoài).
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button onClick={() => { setKeyDraft(key); setShowKeyBox(true); }} className={bPrimary}>
+                🔑 Bấm vào đây để nhập API Key
+              </button>
+              <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noreferrer" className={bSecondary}>
+                Lấy Key miễn phí trên Google Cloud ↗
+              </a>
+            </div>
           </div>
         )}
 
-        {tab==='search'&&(<>
-          <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input className={inp} placeholder="Nhập từ khóa (để trống để xem video đang phổ biến)" value={kw} onChange={e=>setKw(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')load('new')}}/>
-              <button onClick={()=>load('new')} disabled={loading} className={bOn+' sm:w-36 py-2 disabled:opacity-50'}>🔎 Tìm kiếm</button>
+        {/* Error Notification */}
+        {ei && (
+          <div className="border border-red-500/40 bg-red-950/50 rounded-2xl p-4 text-sm shadow-lg">
+            <div className="font-bold text-red-300 mb-1 flex items-center gap-1.5">❌ {ei.t}</div>
+            <ul className="list-disc ml-5 space-y-1 text-zinc-300 text-xs sm:text-sm">{ei.s.map((x, i) => <li key={i}>{x}</li>)}</ul>
+            <button onClick={() => setError(null)} className={bSecondary + ' mt-3 py-1.5'}>Đóng thông báo</button>
+          </div>
+        )}
+
+        {/* SEARCH TAB CONTENT */}
+        {tab === 'search' && (<>
+          {/* Preset Buttons Bar (Mới nhất, thịnh hành, viral, shorts...) */}
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                🎯 Lựa chọn nhanh chế độ xu hướng:
+              </span>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 text-xs text-zinc-400">
-              <label>Lĩnh vực<select className={inp+' mt-1'} value={f.cat} onChange={e=>setF({...f,cat:e.target.value})}>{CATS.map(c=><option key={c[0]} value={c[0]}>{c[1]}</option>)}</select></label>
-              <label>Quốc gia<select className={inp+' mt-1'} value={f.region} onChange={e=>setF({...f,region:e.target.value})}>{REGIONS.map(c=><option key={c} value={c}>{c}</option>)}</select></label>
-              <label>Khoảng thời gian đăng<select className={inp+' mt-1'} value={f.period} onChange={e=>setF({...f,period:Number(e.target.value)})}>{PERIODS.map(c=><option key={c[0]} value={c[0]}>{c[1]}</option>)}</select></label>
-              <label>Kiểu video<select className={inp+' mt-1'} value={f.vtype} onChange={e=>setF({...f,vtype:e.target.value})}>{TYPES.map(c=><option key={c[0]} value={c[0]}>{c[1]}</option>)}</select></label>
-              <label>Lượt xem tối thiểu<input type="number" min="0" className={inp+' mt-1'} placeholder="Ví dụ 10000" value={f.minViews} onChange={e=>setF({...f,minViews:e.target.value})}/></label>
-            </div>
-            <div className="flex flex-wrap gap-2 items-center">
-              <button onClick={applyFilters} className={bOn}>Áp dụng bộ lọc</button>
-              <button onClick={clearFilters} className={bAct}>Xóa bộ lọc</button>
-              <span className="text-xs text-zinc-500">Đổi Lĩnh vực / Quốc gia / Thời gian sẽ gọi lại YouTube. Kiểu video và Lượt xem tối thiểu lọc ngay trên kết quả đã tải. API không phân biệt được Shorts thật nên mình lọc theo thời lượng.</span>
+            <div className="flex flex-wrap gap-2">
+              {PRESETS.map(p => {
+                const isActive = activePreset === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => applyPreset(p)}
+                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 border ${
+                      isActive 
+                        ? 'bg-red-600 text-white border-red-500 shadow-md shadow-red-600/30' 
+                        : 'bg-brand-surface hover:bg-brand-card text-zinc-300 border-brand-border'
+                    }`}>
+                    <span>{p.icon}</span>
+                    <span>{p.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </section>
 
+          {/* Search Box & Advanced Filters */}
+          <section className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
+            {/* Search Input Bar */}
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <div className="relative flex-1">
+                <span className="absolute left-3.5 top-3 text-zinc-500">🔍</span>
+                <input
+                  className={inp + ' pl-9 text-base'}
+                  placeholder="Nhập từ khóa (để trống để xem video xu hướng hàng đầu)..."
+                  value={kw}
+                  onChange={e => setKw(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') load('new'); }}
+                />
+              </div>
+              <button onClick={() => load('new')} disabled={loading} className={bPrimary + ' sm:w-40 py-2.5 text-sm disabled:opacity-50'}>
+                {loading ? '⏳ Đang quét...' : '🔎 Quét Xu Hướng'}
+              </button>
+            </div>
+
+            {/* Quick Keyword Chips */}
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="text-zinc-500 font-medium">Gợi ý từ khóa:</span>
+              {QUICK_TAGS.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => { setKw(tag); }}
+                  className="px-2.5 py-1 rounded-lg bg-brand-card hover:bg-brand-hover text-zinc-300 hover:text-white border border-brand-border transition">
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            {/* Filter Controls Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs text-zinc-400 pt-2 border-t border-brand-border">
+              <label className="flex flex-col gap-1">
+                <span className="font-semibold text-zinc-300">Lĩnh vực</span>
+                <select className={inp} value={f.cat} onChange={e => setF({ ...f, cat: e.target.value })}>
+                  {CATS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="font-semibold text-zinc-300">Quốc gia</span>
+                <select className={inp} value={f.region} onChange={e => setF({ ...f, region: e.target.value })}>
+                  {REGIONS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="font-semibold text-zinc-300">Thời gian đăng</span>
+                <select className={inp} value={f.period} onChange={e => setF({ ...f, period: Number(e.target.value) })}>
+                  {PERIODS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="font-semibold text-zinc-300">Độ dài video</span>
+                <select className={inp} value={f.vtype} onChange={e => setF({ ...f, vtype: e.target.value })}>
+                  {TYPES.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="font-semibold text-zinc-300">Lượt xem tối thiểu</span>
+                <select className={inp} value={f.minViews} onChange={e => setF({ ...f, minViews: e.target.value })}>
+                  <option value="">Tất cả lượt xem</option>
+                  <option value="1000">≥ 1.000 view</option>
+                  <option value="10000">≥ 10.000 view</option>
+                  <option value="50000">≥ 50.000 view</option>
+                  <option value="100000">≥ 100.000 view</option>
+                  <option value="500000">≥ 500.000 view</option>
+                  <option value="1000000">≥ 1.000.000 view</option>
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="font-semibold text-zinc-300">VPH tối thiểu (Views/h)</span>
+                <select className={inp} value={f.minVph} onChange={e => setF({ ...f, minVph: e.target.value })}>
+                  <option value="">Mọi tốc độ</option>
+                  <option value="500">≥ 500 view/giờ</option>
+                  <option value="1000">≥ 1.000 view/giờ</option>
+                  <option value="5000">≥ 5.000 view/giờ</option>
+                  <option value="10000">≥ 10.000 view/giờ</option>
+                </select>
+              </label>
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-brand-border">
+              <div className="flex items-center gap-2">
+                <button onClick={applyFilters} className={bPrimary}>
+                  ✓ Áp dụng bộ lọc
+                </button>
+                <button onClick={clearFilters} className={bSecondary}>
+                  ✕ Đặt lại
+                </button>
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                Lọc theo độ dài Shorts, Lượt xem và Tốc độ VPH áp dụng tức thì trên kết quả.
+              </div>
+            </div>
+          </section>
+
+          {/* Quick Statistics Overview */}
           <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {[['Tổng số video tìm được',fmt(stats.n)],['Tổng lượt xem',fmt(stats.views)],['Trend Score trung bình',stats.avg.toFixed(1)],['Tốc độ Views/Giờ cao nhất',fmt(stats.maxVph)]].map(c=>(
-              <div key={c[0]} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <div className="text-xs text-zinc-400">{c[0]}</div>
-                <div className="text-2xl font-bold mt-1 text-[#FF0000]">{c[1]}</div>
+            {[
+              ['Tổng video phân tích', fmt(stats.n), '📹'],
+              ['Tổng lượt xem', fmt(stats.views), '👁️'],
+              ['Điểm Trend trung bình', stats.avg.toFixed(1) + ' / 100', '🎯'],
+              ['Tốc độ VPH cao nhất', fmt(stats.maxVph) + ' view/h', '⚡']
+            ].map(c => (
+              <div key={c[0]} className="bg-brand-surface border border-brand-border rounded-2xl p-4 shadow-sm hover:border-zinc-700 transition">
+                <div className="flex items-center justify-between text-xs text-zinc-400">
+                  <span>{c[0]}</span>
+                  <span>{c[2]}</span>
+                </div>
+                <div className="text-xl sm:text-2xl font-black mt-1 text-white tracking-tight">{c[1]}</div>
               </div>
             ))}
           </section>
 
-          <section className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-zinc-400">Sắp xếp theo:</span>
-            {SORTS.map(s=><button key={s[0]} onClick={()=>setSort(s[0])} className={sort===s[0]?bOn:bAct}>{s[1]}</button>)}
-            <span className="ml-auto flex flex-wrap gap-2">
-              <button onClick={()=>setMode('grid')} className={mode==='grid'?bOn:bAct}>▦ Thẻ</button>
-              <button onClick={()=>setMode('table')} className={mode==='table'?bOn:bAct}>☰ Bảng</button>
-              <button onClick={exportCsv} disabled={!shown.length} className={bAct+' disabled:opacity-40'}>⬇ Xuất Excel (CSV)</button>
-              <button onClick={()=>load('refresh')} disabled={loading} className={bAct+' disabled:opacity-40'}>⟳ Làm mới dữ liệu</button>
-            </span>
+          {/* Sorting & Views Toolbar */}
+          <section className="flex flex-wrap items-center justify-between gap-3 p-3 bg-brand-surface border border-brand-border rounded-xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-zinc-400">Sắp xếp:</span>
+              <div className="flex flex-wrap gap-1">
+                {SORTS.map(s => (
+                  <button
+                    key={s[0]}
+                    onClick={() => setSort(s[0])}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${sort === s[0] ? 'bg-red-600 text-white' : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border'}`}>
+                    {s[1]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <div className="flex bg-brand-card border border-brand-border rounded-lg p-0.5">
+                <button onClick={() => setMode('grid')} className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${mode === 'grid' ? 'bg-brand-border text-white' : 'text-zinc-400'}`}>
+                  ▦ Thẻ
+                </button>
+                <button onClick={() => setMode('table')} className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${mode === 'table' ? 'bg-brand-border text-white' : 'text-zinc-400'}`}>
+                  ☰ Bảng
+                </button>
+              </div>
+              <button onClick={exportCsv} disabled={!shown.length} className={bSecondary + ' py-1.5 text-xs disabled:opacity-40'}>
+                ⬇ Xuất Excel
+              </button>
+              <button onClick={() => load('refresh')} disabled={loading} className={bSecondary + ' py-1.5 text-xs disabled:opacity-40'}>
+                ⟳ Làm mới
+              </button>
+            </div>
           </section>
 
-          {loading&&!items.length&&(
+          {/* Loading Skeleton */}
+          {loading && !items.length && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {Array.from({length:8}).map((_,i)=>(
-                <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden animate-pulse">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden animate-pulse">
                   <div className="aspect-video bg-zinc-800"></div>
-                  <div className="p-3 space-y-2"><div className="h-4 bg-zinc-800 rounded"></div><div className="h-4 w-2/3 bg-zinc-800 rounded"></div><div className="h-3 w-1/2 bg-zinc-800 rounded"></div></div>
+                  <div className="p-4 space-y-2">
+                    <div className="h-4 bg-zinc-800 rounded w-5/6"></div>
+                    <div className="h-3 bg-zinc-800 rounded w-1/2"></div>
+                    <div className="h-3 bg-zinc-800 rounded w-2/3"></div>
+                  </div>
                 </div>
               ))}
             </div>
           )}
 
-          {!loading&&!shown.length&&(
-            <div className="text-center border border-dashed border-zinc-700 rounded-xl p-10 text-zinc-400">
-              <div className="text-4xl mb-2">📭</div>
-              <div className="font-semibold text-zinc-200">{loaded?'Không tìm thấy video nào phù hợp':'Chưa có dữ liệu'}</div>
-              <div className="text-sm mt-1">{loaded?'Hãy thử đổi từ khóa, nới khoảng thời gian, giảm lượt xem tối thiểu hoặc bấm "Xóa bộ lọc".':'Nhập từ khóa rồi bấm "Tìm kiếm" (hoặc để trống để xem video đang phổ biến).'}</div>
+          {/* Empty State */}
+          {!loading && !shown.length && (
+            <div className="text-center border border-dashed border-brand-border rounded-2xl p-12 bg-brand-surface/40">
+              <div className="text-5xl mb-3">📭</div>
+              <h3 className="font-bold text-lg text-white">{loaded ? 'Không có video nào thỏa mãn bộ lọc' : 'Sẵn sàng quét xu hướng'}</h3>
+              <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto mt-1">
+                {loaded ? 'Hãy thử nới rộng thời gian đăng, giảm lượt xem tối thiểu hoặc bấm "Đặt lại" để xem thêm.' : 'Chọn một chế độ xu hướng nhanh ở trên (Thịnh hành, Siêu Viral, Mới nhất, Shorts...) hoặc nhập từ khóa để bắt đầu.'}
+              </p>
+              {!loaded && (
+                <button onClick={() => load('new')} className={bPrimary + ' mx-auto mt-4'}>
+                  🚀 Bắt đầu quét xu hướng thịnh hành
+                </button>
+              )}
             </div>
           )}
 
-          {shown.length>0&&mode==='grid'&&(
+          {/* GRID VIEW */}
+          {shown.length > 0 && mode === 'grid' && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {shown.map(v=>(
-                <article key={v.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden flex flex-col">
-                  <div className="relative">
-                    <img src={v.thumb} alt="" className="w-full aspect-video object-cover bg-zinc-800"/>
-                    <span className={'absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded text-white '+scoreCls(v.total)}>{v.total}</span>
-                    <span className="absolute bottom-2 right-2 text-xs px-1.5 py-0.5 rounded bg-black/80">{fmtDur(v.dur)}</span>
-                  </div>
-                  <div className="p-3 flex flex-col gap-2 flex-1">
-                    <h3 className="text-sm font-semibold leading-snug line-clamp-2">{v.title}</h3>
-                    <div className="text-xs text-zinc-400">{v.channel}</div>
-                    <div className="text-xs text-zinc-400 grid grid-cols-2 gap-1">
-                      <span>👁 {fmt(v.views)}</span><span>⚡ {fmt(v.vph)}/giờ</span>
-                      <span className="col-span-2">🕒 {fmtD(v.published)}</span>
+              {shown.map(v => (
+                <article key={v.id} className="bg-brand-surface border border-brand-border hover:border-zinc-700 rounded-2xl overflow-hidden flex flex-col group transition duration-150 hover:shadow-xl hover:shadow-black/40">
+                  {/* Thumbnail Container */}
+                  <div className="relative aspect-video bg-zinc-900 cursor-pointer overflow-hidden" onClick={() => setPlayerVideo(v)}>
+                    <img src={v.thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
+                    
+                    {/* Trend Score Badge */}
+                    <div className={`absolute top-2.5 right-2.5 text-xs font-black px-2.5 py-1 rounded-lg backdrop-blur-md shadow-lg ${scoreCls(v.total)}`}>
+                      ★ {v.total}
                     </div>
-                    <div className="mt-auto pt-1"><Actions v={v} saved={!!watch[v.id]} onDetail={setDetail} onSave={toggleWatch}/></div>
+
+                    {/* Duration Badge */}
+                    <div className="absolute bottom-2.5 right-2.5 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-black/85 text-white backdrop-blur-sm">
+                      {v.dur <= 60 && <span className="text-red-400 font-bold mr-1">📱</span>}
+                      {fmtDur(v.dur)}
+                    </div>
+
+                    {/* Play Overlay Icon on Hover */}
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                      <div className="w-12 h-12 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg text-lg">
+                        ▶
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Content */}
+                  <div className="p-3.5 flex flex-col gap-2 flex-1">
+                    <h3 className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-red-400 transition" title={v.title}>
+                      {v.title}
+                    </h3>
+                    <div className="text-xs text-zinc-400 flex items-center justify-between">
+                      <span className="truncate max-w-[160px]">👤 {v.channel}</span>
+                      <span className="text-[11px] text-zinc-500">{v.subs ? fmt(v.subs) + ' subs' : ''}</span>
+                    </div>
+
+                    {/* Metric Pills */}
+                    <div className="grid grid-cols-2 gap-1.5 text-[11px] bg-brand-card p-2 rounded-xl border border-brand-border">
+                      <div className="text-zinc-300">
+                        <span className="text-zinc-500">Lượt xem:</span> <b className="text-white">{fmt(v.views)}</b>
+                      </div>
+                      <div className="text-emerald-400 font-semibold">
+                        <span className="text-zinc-500 font-normal">Tốc độ:</span> +{fmt(v.vph)}/h
+                      </div>
+                      <div className="text-zinc-400 col-span-2 flex justify-between border-t border-brand-border/60 pt-1 mt-0.5">
+                        <span>🕒 {fmtD(v.published).split(' ')[0]}</span>
+                        <span className="text-amber-400">💬 {v.sc.engPercent}% TT</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="mt-auto pt-1">
+                      <Actions 
+                        v={v} 
+                        saved={!!watch[v.id]} 
+                        onDetail={setDetail} 
+                        onDownload={setDownloadVideo} 
+                        onPlay={setPlayerVideo} 
+                        onSave={toggleWatch}
+                        onCopy={copyText}
+                      />
+                    </div>
                   </div>
                 </article>
               ))}
             </div>
           )}
 
-          {shown.length>0&&mode==='table'&&(
-            <div className="overflow-x-auto border border-zinc-800 rounded-xl">
-              <table className="w-full text-sm">
-                <thead className="bg-zinc-900 text-xs text-zinc-400"><tr>
-                  {['Video','Kênh','Lượt xem','Views/Giờ','Điểm','Ngày đăng','Hành động'].map(h=><th key={h} className="text-left p-3 whitespace-nowrap">{h}</th>)}
-                </tr></thead>
-                <tbody>
-                  {shown.map(v=>(
-                    <tr key={v.id} className="border-t border-zinc-800 align-top">
-                      <td className="p-3 min-w-[260px]"><div className="flex gap-2"><img src={v.thumb} alt="" className="w-24 aspect-video object-cover rounded bg-zinc-800"/><span className="font-medium">{v.title}</span></div></td>
-                      <td className="p-3">{v.channel}</td>
-                      <td className="p-3 whitespace-nowrap">{fmt(v.views)}</td>
-                      <td className="p-3 whitespace-nowrap">{fmt(v.vph)}</td>
-                      <td className="p-3"><span className={'text-xs font-bold px-2 py-1 rounded text-white '+scoreCls(v.total)}>{v.total}</span></td>
-                      <td className="p-3 whitespace-nowrap">{fmtD(v.published)}</td>
-                      <td className="p-3 min-w-[220px]"><Actions v={v} saved={!!watch[v.id]} onDetail={setDetail} onSave={toggleWatch}/></td>
+          {/* TABLE VIEW */}
+          {shown.length > 0 && mode === 'table' && (
+            <div className="overflow-x-auto border border-brand-border rounded-2xl bg-brand-surface shadow-xl">
+              <table className="w-full text-xs sm:text-sm">
+                <thead className="bg-brand-card border-b border-brand-border text-zinc-400">
+                  <tr>
+                    {['Video & Tiêu đề', 'Kênh', 'Lượt xem', 'Tốc độ Views/h', 'Trend Score', 'Ngày đăng', 'Hành động'].map(h => (
+                      <th key={h} className="text-left p-3.5 font-semibold whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-border">
+                  {shown.map(v => (
+                    <tr key={v.id} className="hover:bg-brand-card/40 transition">
+                      <td className="p-3 min-w-[280px]">
+                        <div className="flex gap-3 items-center">
+                          <div className="relative w-24 aspect-video rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 cursor-pointer" onClick={() => setPlayerVideo(v)}>
+                            <img src={v.thumb} alt="" className="w-full h-full object-cover" />
+                            <span className="absolute bottom-1 right-1 text-[10px] px-1 py-0.5 rounded bg-black/80 font-bold">{fmtDur(v.dur)}</span>
+                          </div>
+                          <span className="font-semibold text-white line-clamp-2 leading-snug cursor-pointer hover:text-red-400 transition" onClick={() => setPlayerVideo(v)}>
+                            {v.title}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-3 text-zinc-300 whitespace-nowrap">{v.channel}</td>
+                      <td className="p-3 text-white font-semibold whitespace-nowrap">{fmt(v.views)}</td>
+                      <td className="p-3 text-emerald-400 font-semibold whitespace-nowrap">+{fmt(v.vph)}/h</td>
+                      <td className="p-3 whitespace-nowrap">
+                        <span className={`px-2.5 py-1 rounded-lg font-black text-xs ${scoreCls(v.total)}`}>{v.total}</span>
+                      </td>
+                      <td className="p-3 text-zinc-400 whitespace-nowrap">{fmtD(v.published)}</td>
+                      <td className="p-3 min-w-[220px]">
+                        <Actions 
+                          v={v} 
+                          saved={!!watch[v.id]} 
+                          onDetail={setDetail} 
+                          onDownload={setDownloadVideo} 
+                          onPlay={setPlayerVideo} 
+                          onSave={toggleWatch}
+                          onCopy={copyText}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -375,45 +1185,70 @@ function App(){
             </div>
           )}
 
-          {loading&&items.length>0&&<div className="text-center text-sm text-zinc-400 animate-pulse">Đang tải dữ liệu...</div>}
-          {token&&!loading&&(
-            <div className="text-center"><button onClick={()=>load('more')} className={bOn+' px-6 py-2'}>Xem thêm</button></div>
+          {/* Load More Button */}
+          {token && !loading && (
+            <div className="text-center pt-4">
+              <button onClick={() => load('more')} className={bPrimary + ' px-8 py-3 text-sm'}>
+                Tải thêm 24 video tiếp theo ➔
+              </button>
+            </div>
           )}
         </>)}
 
-        {tab==='watch'&&(
+        {/* WATCHLIST TAB CONTENT */}
+        {tab === 'watch' && (
           <section className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <button onClick={updateSnaps} disabled={busy||!watchList.length} className={bOn+' disabled:opacity-40'}>{busy?'Đang cập nhật...':'⟳ Cập nhật snapshot'}</button>
-              <span className="text-xs text-zinc-500">Mỗi lần bấm sẽ ghi lại lượt xem hiện tại (chỉ tốn 1 đơn vị quota). Cần ít nhất 2 snapshot mới tính được tăng trưởng thực đo.</span>
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-brand-surface border border-brand-border rounded-2xl">
+              <div>
+                <h2 className="font-bold text-base text-white">Danh sách theo dõi tăng trưởng (Snapshot)</h2>
+                <p className="text-xs text-zinc-400">Ghi nhận sự tăng trưởng lượt xem thực tế theo từng thời điểm để biết video nào đang viral thật sự.</p>
+              </div>
+              <button onClick={updateSnaps} disabled={busy || !watchList.length} className={bPrimary + ' disabled:opacity-40'}>
+                {busy ? '⏳ Đang quét snapshot...' : '⟳ Cập nhật lượt xem mới'}
+              </button>
             </div>
-            {!watchList.length&&(
-              <div className="text-center border border-dashed border-zinc-700 rounded-xl p-10 text-zinc-400">
-                <div className="text-4xl mb-2">★</div>
-                <div className="font-semibold text-zinc-200">Watchlist đang trống</div>
-                <div className="text-sm mt-1">Ở tab "Tìm xu hướng", bấm "Lưu / Snapshot" ở video bạn muốn theo dõi.</div>
+
+            {!watchList.length && (
+              <div className="text-center border border-dashed border-brand-border rounded-2xl p-12 bg-brand-surface/40">
+                <div className="text-5xl mb-3">★</div>
+                <h3 className="font-bold text-base text-white">Chưa có video nào trong Watchlist</h3>
+                <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-sm mx-auto">
+                  Tại tab "Tìm Xu Hướng", hãy bấm nút <b>☆ Theo dõi</b> ở bất kỳ video nào bạn muốn theo dõi tốc độ tăng view.
+                </p>
               </div>
             )}
+
             <div className="grid md:grid-cols-2 gap-4">
-              {watchList.map(w=>{
-                const first=w.snaps[0],last=w.snaps[w.snaps.length-1];
-                const gain=last.v-first.v,hrs=(last.t-first.t)/36e5;
+              {watchList.map(w => {
+                const first = w.snaps[0], last = w.snaps[w.snaps.length - 1];
+                const gain = last.v - first.v;
+                const hrs = (last.t - first.t) / 36e5;
                 return (
-                  <article key={w.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex gap-3">
-                    <img src={w.thumb} alt="" className="w-32 aspect-video object-cover rounded bg-zinc-800 self-start"/>
-                    <div className="flex-1 space-y-1.5 text-sm">
-                      <h3 className="font-semibold leading-snug">{w.title}</h3>
-                      <div className="text-xs text-zinc-400">{w.channel} · Đăng {fmtD(w.published)}</div>
-                      <div className="text-xs">Lượt xem mới nhất: <b>{fmt(last.v)}</b> · Số snapshot: <b>{w.snaps.length}</b> · Lần cuối: {fmtD(last.t)}</div>
-                      {w.snaps.length<2
-                        ?<div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800 rounded p-2">Chưa đủ dữ liệu lịch sử, hãy bấm cập nhật snapshot sau ít phút.</div>
-                        :<div className="text-xs bg-zinc-800 rounded p-2 space-y-0.5">
-                          <div>Số view tăng thêm: <b className="text-green-400">+{fmt(gain)}</b></div>
-                          <div>Views/Giờ thực đo: <b className="text-green-400">{hrs>0?fmt(gain/hrs):'N/A'}</b> (trong {hrs.toFixed(2)} giờ)</div>
-                        </div>}
-                      <div className="flex gap-1.5 pt-1">
-                        <a href={'https://www.youtube.com/watch?v='+w.id} target="_blank" rel="noopener noreferrer" className={bAct}>Mở trên YouTube</a>
-                        <button onClick={()=>setWatch(x=>{const n={...x};delete n[w.id];return n})} className={bAct}>Bỏ lưu</button>
+                  <article key={w.id} className="bg-brand-surface border border-brand-border rounded-2xl p-4 flex flex-col sm:flex-row gap-3">
+                    <img src={w.thumb} alt="" className="w-full sm:w-36 aspect-video object-cover rounded-xl bg-zinc-900 flex-shrink-0" />
+                    <div className="flex-1 space-y-2 text-xs">
+                      <h3 className="font-bold text-sm text-white line-clamp-2 leading-snug">{w.title}</h3>
+                      <div className="text-zinc-400">{w.channel} · Đăng {fmtD(w.published)}</div>
+                      <div className="bg-brand-card p-2.5 rounded-xl border border-brand-border space-y-1">
+                        <div>View hiện tại: <b className="text-white text-sm">{fmt(last.v)}</b> · Snapshot: <b>{w.snaps.length} lần</b></div>
+                        {w.snaps.length < 2 ? (
+                          <div className="text-amber-400 text-[11px]">Cần ít nhất 2 lần bấm "Cập nhật" sau ít phút để đo tốc độ tăng.</div>
+                        ) : (
+                          <div className="text-emerald-400 font-semibold text-[11px]">
+                            Tăng thêm: +{fmt(gain)} view trong {hrs.toFixed(2)} giờ ({hrs > 0 ? fmt(gain / hrs) : 'N/A'} view/giờ thực tế)
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        <button onClick={() => setDownloadVideo(w)} className="px-3 py-1.5 rounded-lg font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
+                          📥 Tải về
+                        </button>
+                        <a href={'https://www.youtube.com/watch?v=' + w.id} target="_blank" rel="noreferrer" className={bSecondary + ' py-1.5'}>
+                          Mở YouTube ↗
+                        </a>
+                        <button onClick={() => setWatch(x => { const n = { ...x }; delete n[w.id]; return n; })} className="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-red-400 bg-brand-card hover:bg-brand-hover border border-brand-border">
+                          Bỏ theo dõi
+                        </button>
                       </div>
                     </div>
                   </article>
@@ -422,67 +1257,141 @@ function App(){
             </div>
           </section>
         )}
-        <footer className="text-xs text-zinc-600 text-center pt-4">Trend Score là điểm ước lượng tự tính, không phải bảng xếp hạng chính thức của YouTube. Dữ liệu lấy trực tiếp từ YouTube Data API v3.</footer>
       </main>
 
-      {showKeyBox&&(
-        <div className="fixed inset-0 bg-black/70 z-30 flex items-center justify-center p-4" onClick={()=>setShowKeyBox(false)}>
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-5 w-full max-w-md space-y-3" onClick={e=>e.stopPropagation()}>
-            <h2 className="font-bold text-lg">🔑 Cấu hình API Key</h2>
-            <input className={inp} type={showKey?'text':'password'} placeholder="Dán YOUTUBE_API_KEY (bắt đầu bằng AIza...)" value={keyDraft} onChange={e=>setKeyDraft(e.target.value)}/>
-            <label className="text-xs text-zinc-400 flex items-center gap-2"><input type="checkbox" checked={showKey} onChange={e=>setShowKey(e.target.checked)}/> Hiện key</label>
-            <div className="text-xs text-zinc-500">Key chỉ lưu trong trình duyệt của bạn (localStorage), không gửi đi đâu ngoài YouTube.</div>
-            <div className="flex gap-2 justify-end">
-              {key&&<button onClick={removeKey} className={bAct}>Xóa key</button>}
-              <button onClick={()=>setShowKeyBox(false)} className={bAct}>Đóng</button>
-              <button onClick={saveKey} className={bOn}>Lưu</button>
+      {/* Footer */}
+      <footer className="border-t border-brand-border py-4 text-center text-xs text-zinc-500 bg-brand-surface/40">
+        YouTrend Pro Analytics · Tính toán Trend Score & Tốc độ viral dựa trên YouTube Data API v3 chính thống.
+      </footer>
+
+      {/* API Key Configuration Modal */}
+      {showKeyBox && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowKeyBox(false)}>
+          <div className="bg-brand-surface border border-brand-border rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-brand-border pb-3">
+              <h2 className="font-bold text-base text-white flex items-center gap-2">🔑 Cấu hình YouTube API Key</h2>
+              <button onClick={() => setShowKeyBox(false)} className="text-zinc-400 hover:text-white">✕</button>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-zinc-300 font-semibold">Dán Google API Key (bắt đầu bằng AIza...):</label>
+              <input 
+                className={inp} 
+                type={showKey ? 'text' : 'password'} 
+                placeholder="AIzaSy..." 
+                value={keyDraft} 
+                onChange={e => setKeyDraft(e.target.value)} 
+              />
+              <div className="flex items-center justify-between text-xs text-zinc-400">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={showKey} onChange={e => setShowKey(e.target.checked)} className="rounded bg-brand-card" />
+                  Hiện ký tự key
+                </label>
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="text-red-400 hover:underline">
+                  Lấy key ở đâu? ↗
+                </a>
+              </div>
+            </div>
+            <div className="text-[11px] text-zinc-400 bg-brand-card p-3 rounded-xl border border-brand-border">
+              🔒 Key chỉ lưu duy nhất trong bộ nhớ trình duyệt của bạn (localStorage), không bao giờ gửi về bất kỳ máy chủ bên thứ 3 nào.
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              {key && <button onClick={removeKey} className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-red-950 text-red-400 hover:bg-red-900 border border-red-800 transition">Xóa key</button>}
+              <button onClick={() => setShowKeyBox(false)} className={bSecondary}>Đóng</button>
+              <button onClick={saveKey} className={bPrimary}>Lưu API Key</button>
             </div>
           </div>
         </div>
       )}
 
-      {detail&&(()=>{
-        const v=detail,s=v.sc;
-        const rows=[
-          ['Tốc độ xem ước lượng',s.speed,40,fmt(s.vph)+' lượt xem/giờ (tổng view ÷ số giờ từ lúc đăng, tối thiểu 1 giờ). Công thức: 40 × log10(views/giờ + 1) ÷ 5.'],
-          ['Độ mới (Freshness)',s.fresh,20,'Video đăng cách đây '+s.hours.toFixed(1)+' giờ. Công thức: 20 × (1 − log10(giờ + 1) ÷ log10(2161)); càng mới điểm càng cao, hết điểm sau 90 ngày.'],
-          ['Tỷ lệ tương tác',s.eng,20,'(Like + Bình luận) ÷ View = '+(s.rate*100).toFixed(2)+'%'+(v.likes==null?' (video ẩn lượt thích nên chỉ tính bình luận)':'')+'. Công thức: 20 × log10(1 + tỷ lệ% ) ÷ log10(11).'],
-          ['Hiệu suất so với kênh',s.rel,20,s.ratio==null?'N/A: kênh ẩn số subscriber nên thành phần này = 0.':'View ÷ Subscribers = '+s.ratio.toFixed(2)+' lần (dùng tối thiểu 1.000 sub). Công thức: 20 × log10(tỷ lệ + 1) ÷ log10(11).']
+      {/* Analytics Breakdown Modal */}
+      {detail && (() => {
+        const v = detail, s = v.sc;
+        const rows = [
+          ['Tốc độ xem ước lượng (Speed)', s.speed, 40, fmt(s.vph) + ' view/giờ. Đánh giá tốc độ gia tăng lượt xem so với thời gian phát hành.'],
+          ['Độ mới (Freshness)', s.fresh, 20, 'Video đăng cách đây ' + s.hours.toFixed(1) + ' giờ. Càng mới điểm càng cao.'],
+          ['Tỷ lệ tương tác (Engagement)', s.eng, 20, 'Tương tác (Like + Bình luận)/View = ' + s.engPercent + '%. Video có tương tác cao hơn dễ viral.'],
+          ['Hiệu suất so với kênh (Relative)', s.rel, 20, s.ratio == null ? 'Kênh ẩn số subscribers.' : 'Lượt xem gấp ' + s.ratio.toFixed(2) + ' lần lượng sub của kênh (Tín hiệu bứt phá khỏi tệp fan cũ).']
         ];
         return (
-          <div className="fixed inset-0 bg-black/70 z-30 flex items-start justify-center p-4 overflow-y-auto" onClick={()=>setDetail(null)}>
-            <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-5 w-full max-w-2xl space-y-4 my-6" onClick={e=>e.stopPropagation()}>
-              <div className="flex gap-3">
-                <img src={v.thumb} alt="" className="w-40 aspect-video object-cover rounded bg-zinc-800 self-start"/>
-                <div className="flex-1"><h2 className="font-bold leading-snug">{v.title}</h2><div className="text-xs text-zinc-400 mt-1">{v.channel} · {fmtD(v.published)}</div></div>
-                <button onClick={()=>setDetail(null)} className={bAct+' self-start'}>✕</button>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={() => setDetail(null)}>
+            <div className="bg-brand-surface border border-brand-border rounded-2xl p-6 w-full max-w-2xl space-y-5 my-8 shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="flex gap-3 items-start justify-between border-b border-brand-border pb-4">
+                <div className="flex gap-3">
+                  <img src={v.thumb} alt="" className="w-28 sm:w-36 aspect-video object-cover rounded-xl bg-zinc-900" />
+                  <div>
+                    <h2 className="font-bold text-sm sm:text-base text-white line-clamp-2 leading-snug">{v.title}</h2>
+                    <div className="text-xs text-zinc-400 mt-1">👤 {v.channel} · 🕒 {fmtD(v.published)}</div>
+                  </div>
+                </div>
+                <button onClick={() => setDetail(null)} className="w-8 h-8 rounded-lg bg-brand-card hover:bg-brand-hover text-zinc-400 hover:text-white flex items-center justify-center">✕</button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                {[['Lượt xem',fmt(v.views)],['Lượt thích',fmt(v.likes)],['Bình luận',fmt(v.comments)],['Subscribers',fmt(v.subs)],['Thời lượng',fmtDur(v.dur)],['Views/Giờ ước lượng',fmt(s.vph)]].map(x=>(
-                  <div key={x[0]} className="bg-zinc-800 rounded-lg p-2"><div className="text-zinc-400">{x[0]}</div><div className="font-bold text-sm">{x[1]}</div></div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                {[
+                  ['Lượt xem', fmt(v.views)],
+                  ['Lượt thích', fmt(v.likes)],
+                  ['Bình luận', fmt(v.comments)],
+                  ['Subscribers kênh', fmt(v.subs)],
+                  ['Thời lượng', fmtDur(v.dur)],
+                  ['Tốc độ VPH', fmt(s.vph) + ' / giờ']
+                ].map(x => (
+                  <div key={x[0]} className="bg-brand-card rounded-xl p-3 border border-brand-border">
+                    <div className="text-zinc-400 text-[11px]">{x[0]}</div>
+                    <div className="font-black text-sm text-white mt-0.5">{x[1]}</div>
+                  </div>
                 ))}
               </div>
+
+              {/* Trend Score Factors */}
               <div>
-                <div className="flex items-center justify-between mb-2"><h3 className="font-semibold">Điểm Trend Score</h3><span className={'px-3 py-1 rounded font-bold text-white '+scoreCls(s.total)}>{s.total} / 100</span></div>
-                <div className="space-y-3">
-                  {rows.map(r=>(
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-sm text-white">Chỉ số Trend Score chi tiết</h3>
+                  <span className={`px-3 py-1 rounded-xl font-black text-sm ${scoreCls(s.total)}`}>{s.total} / 100</span>
+                </div>
+                <div className="space-y-3 bg-brand-card p-4 rounded-xl border border-brand-border">
+                  {rows.map(r => (
                     <div key={r[0]}>
-                      <div className="flex justify-between text-sm"><span>{r[0]}</span><b>{r[1].toFixed(1)} / {r[2]}</b></div>
-                      <div className="h-2 bg-zinc-800 rounded mt-1"><div className="h-2 bg-[#FF0000] rounded" style={{width:(r[1]/r[2]*100)+'%'}}></div></div>
-                      <div className="text-xs text-zinc-400 mt-1">{r[3]}</div>
+                      <div className="flex justify-between text-xs text-zinc-300 font-semibold">
+                        <span>{r[0]}</span>
+                        <b className="text-white">{r[1].toFixed(1)} / {r[2]}</b>
+                      </div>
+                      <div className="h-2 bg-brand-border rounded-full mt-1.5 overflow-hidden">
+                        <div className="h-full bg-red-600 rounded-full" style={{ width: (r[1] / r[2] * 100) + '%' }}></div>
+                      </div>
+                      <div className="text-[11px] text-zinc-400 mt-1">{r[3]}</div>
                     </div>
                   ))}
                 </div>
               </div>
-              <Actions v={v} saved={!!watch[v.id]} onDetail={()=>{}} onSave={toggleWatch}/>
+
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-brand-border justify-end">
+                <button onClick={() => { setDetail(null); setDownloadVideo(v); }} className={bPrimary}>
+                  📥 Mở bảng tải video
+                </button>
+                <button onClick={() => { setDetail(null); setPlayerVideo(v); }} className={bSecondary}>
+                  ▶ Xem video
+                </button>
+              </div>
             </div>
           </div>
         );
       })()}
+
+      {/* Download Video Modal */}
+      {downloadVideo && (
+        <DownloadModal video={downloadVideo} onClose={() => setDownloadVideo(null)} onCopy={copyText} />
+      )}
+
+      {/* Player Modal */}
+      {playerVideo && (
+        <PlayerModal video={playerVideo} onClose={() => setPlayerVideo(null)} />
+      )}
     </div>
   );
 }
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 </body>
 </html>
