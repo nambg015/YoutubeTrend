@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YouTrend Analytics</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<style>body{background:#09090b;color:#f4f4f5;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useMemo,useEffect,useRef}=React;
+const MEM={};
+const st={
+  get(k){try{return localStorage.getItem(k)}catch(e){return MEM[k]===undefined?null:MEM[k]}},
+  set(k,v){try{localStorage.setItem(k,v)}catch(e){MEM[k]=v}},
+  ok(){try{localStorage.setItem('_t','1');localStorage.removeItem('_t');return true}catch(e){return false}}
+};
+const CATS=[['','Tất cả'],['10','Âm nhạc'],['20','Gaming'],['24','Giải trí'],['28','Công nghệ'],['25','Tin tức'],['26','Đời sống'],['27','Giáo dục']];
+const REGIONS=['VN','US','JP','KR','GB'];
+const PERIODS=[[24,'24 giờ qua'],[168,'7 ngày qua'],[720,'30 ngày qua'],[2160,'90 ngày qua']];
+const TYPES=[['all','Tất cả'],['short','YouTube Shorts / video ngắn (< 4 phút)'],['long','Video dài']];
+const SORTS=[['total','Trend Score'],['vph','Views/Giờ ước lượng'],['views','Tổng lượt xem'],['ts','Ngày đăng mới nhất']];
+const DEF={cat:'',region:'VN',period:168,vtype:'all',minViews:''};
+const clamp=x=>Math.max(0,Math.min(1,x));
+const fmt=n=>n==null?'N/A':new Intl.NumberFormat('vi-VN').format(Math.round(n));
+const fmtD=s=>new Date(s).toLocaleString('vi-VN');
+const fmtDur=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60),c=s%60;const p=n=>String(n).padStart(2,'0');return (h?h+':'+p(m):m)+':'+p(c)};
+const parseDur=iso=>{const m=/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso||'')||[];return (m[1]|0)*86400+(m[2]|0)*3600+(m[3]|0)*60+(m[4]|0)};
+
+function score(v){
+  const hours=Math.max((Date.now()-new Date(v.published).getTime())/36e5,1);
+  const vph=v.views/hours;
+  const speed=40*clamp(Math.log10(vph+1)/5);
+  const fresh=20*(1-clamp(Math.log10(hours+1)/Math.log10(24*90+1)));
+  const inter=(v.likes==null?0:v.likes)+(v.comments==null?0:v.comments);
+  const rate=v.views>0?inter/v.views:0;
+  const eng=20*clamp(Math.log10(1+rate*100)/Math.log10(11));
+  const ratio=v.subs==null?null:v.views/Math.max(v.subs,1000);
+  const rel=ratio==null?0:20*clamp(Math.log10(ratio+1)/Math.log10(11));
+  const total=Math.round((speed+fresh+eng+rel)*10)/10;
+  return {hours,vph,speed,fresh,eng,rel,rate,ratio,total};
+}
+
+async function yt(path,params,key){
+  const u=new URL('https://www.googleapis.com/youtube/v3/'+path);
+  Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=='')u.searchParams.set(k,v)});
+  u.searchParams.set('key',key);
+  let r;
+  try{r=await fetch(u.toString())}catch(e){throw {code:'NETWORK',msg:String(e)}}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){
+    const e0=j.error&&j.error.errors&&j.error.errors[0];
+    throw {code:(e0&&e0.reason)||('HTTP'+r.status),msg:(j.error&&j.error.message)||''};
+  }
+  return j;
+}
+
+function errInfo(e){
+  const c=e.code;
+  if(c==='MISSING')return {t:'Chưa có API Key',s:['Bấm nút "API Key" ở góc trên bên phải.','Dán API Key YouTube Data API v3 của bạn rồi bấm "Lưu".','Làm theo hướng dẫn lấy key ở khung đỏ phía trên nếu bạn chưa có.']};
+  if(c==='quotaExceeded'||c==='dailyLimitExceeded'||c==='rateLimitExceeded')return {t:'Đã hết quota YouTube API trong ngày',s:['Mỗi lần tìm kiếm tốn 100 đơn vị, hạn mức mặc định là 10.000/ngày (khoảng 100 lần tìm).','Quota được đặt lại lúc 0h giờ Thái Bình Dương (khoảng 14h–15h giờ Việt Nam).','Để tiết kiệm: để trống từ khóa (dùng chế độ phổ biến, chỉ tốn 1 đơn vị) hoặc dùng key của project khác.']};
+  if(c==='keyInvalid'||c==='badRequest'||c==='HTTP400')return {t:'API Key không hợp lệ',s:['Kiểm tra bạn đã dán đủ và đúng key (không thừa khoảng trắng).','Vào Google Cloud Console > APIs & Services > Credentials để copy lại key.','Đảm bảo đã bật "YouTube Data API v3" cho project chứa key này.']};
+  if(c==='ipRefererBlocked'||c==='forbidden'||c==='HTTP403'||c==='accessNotConfigured')return {t:'Key bị từ chối (403)',s:['Nếu bạn đã giới hạn key theo HTTP referrer, hãy thêm đúng địa chỉ trang web này (ví dụ https://ten-ban.github.io/*).','Khi chạy thử trong Claude Artifact, referrer sẽ không khớp nên có thể bị chặn: hãy thử trên GitHub Pages.','Kiểm tra YouTube Data API v3 đã được bật (Enable) trong project.']};
+  if(c==='NETWORK')return {t:'Lỗi mạng hoặc bị trình duyệt chặn',s:['Kiểm tra kết nối Internet.','Khung xem trước của Claude Artifact có thể chặn gọi ra ngoài: hãy tải file về và mở bằng Chrome hoặc đưa lên GitHub Pages.','Tắt tiện ích chặn quảng cáo thử lại.']};
+  return {t:'Lỗi API: '+c,s:[e.msg||'Không rõ nguyên nhân, hãy thử lại sau ít phút.']};
+}
+
+const bAct='px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition';
+const bOn='px-3 py-1.5 rounded-lg text-xs font-medium bg-[#FF0000] hover:bg-red-600 text-white transition';
+const inp='w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#FF0000]';
+const scoreCls=t=>t>=70?'bg-green-600':t>=40?'bg-amber-600':'bg-zinc-600';
+
+function Actions({v,saved,onDetail,onSave}){
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      <button onClick={()=>onDetail(v)} className={bAct}>Xem chi tiết</button>
+      <a href={'https://www.youtube.com/watch?v='+v.id} target="_blank" rel="noopener noreferrer" className={bAct}>Mở trên YouTube</a>
+      <button onClick={()=>onSave(v)} className={saved?bOn:bAct}>{saved?'★ Đã lưu':'☆ Lưu / Snapshot'}</button>
+    </div>
+  );
+}
+
+function App(){
+  const [key,setKey]=useState(()=>st.get('yt_key')||'');
+  const [keyDraft,setKeyDraft]=useState('');
+  const [showKeyBox,setShowKeyBox]=useState(false);
+  const [showKey,setShowKey]=useState(false);
+  const [tab,setTab]=useState('search');
+  const [kw,setKw]=useState('');
+  const [f,setF]=useState(DEF);
+  const [applied,setApplied]=useState(DEF);
+  const [sort,setSort]=useState('total');
+  const [mode,setMode]=useState('grid');
+  const [items,setItems]=useState([]);
+  const [token,setToken]=useState('');
+  const [loading,setLoading]=useState(false);
+  const [loaded,setLoaded]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState(null);
+  const [detail,setDetail]=useState(null);
+  const [watch,setWatch]=useState(()=>{try{return JSON.parse(st.get('yt_watch')||'{}')}catch(e){return {}}});
+  const lastQ=useRef(null);
+  const storageOk=useMemo(()=>st.ok(),[]);
+
+  useEffect(()=>{st.set('yt_watch',JSON.stringify(watch))},[watch]);
+
+  function saveKey(){const k=keyDraft.trim();setKey(k);st.set('yt_key',k);setShowKeyBox(false);setError(null)}
+  function removeKey(){setKey('');setKeyDraft('');st.set('yt_key','')}
+
+  async function load(kind){
+    if(!key){setError({code:'MISSING'});return}
+    const more=kind==='more';
+    let p;
+    if(more||kind==='refresh'){p=lastQ.current}
+    if(!p){p={kw:kw.trim(),cat:f.cat,region:f.region,period:f.period}}
+    if(kind==='new'){p={kw:kw.trim(),cat:f.cat,region:f.region,period:f.period};setApplied(f)}
+    lastQ.current=p;
+    setLoading(true);setError(null);
+    try{
+      const cutoff=Date.now()-p.period*36e5;
+      let vids,next;
+      if(p.kw){
+        const s=await yt('search',{part:'snippet',type:'video',q:p.kw,maxResults:24,regionCode:p.region,order:'viewCount',publishedAfter:new Date(cutoff).toISOString(),videoCategoryId:p.cat,pageToken:more?token:''},key);
+        next=s.nextPageToken||'';
+        const ids=(s.items||[]).map(i=>i.id&&i.id.videoId).filter(Boolean);
+        vids=ids.length?((await yt('videos',{part:'snippet,statistics,contentDetails',id:ids.join(',')},key)).items||[]):[];
+      }else{
+        const s=await yt('videos',{part:'snippet,statistics,contentDetails',chart:'mostPopular',regionCode:p.region,videoCategoryId:p.cat,maxResults:24,pageToken:more?token:''},key);
+        next=s.nextPageToken||'';
+        vids=(s.items||[]).filter(i=>new Date(i.snippet.publishedAt).getTime()>=cutoff);
+      }
+      const cids=[...new Set(vids.map(v=>v.snippet.channelId))];
+      const subs={};
+      if(cids.length){
+        const c=await yt('channels',{part:'statistics',id:cids.join(',')},key);
+        (c.items||[]).forEach(x=>{subs[x.id]=x.statistics.hiddenSubscriberCount?null:Number(x.statistics.subscriberCount)});
+      }
+      const out=vids.map(v=>{
+        const s=v.statistics||{};
+        const o={
+          id:v.id,title:v.snippet.title,channel:v.snippet.channelTitle,channelId:v.snippet.channelId,
+          thumb:(v.snippet.thumbnails.medium||v.snippet.thumbnails.default||{}).url,
+          published:v.snippet.publishedAt,ts:new Date(v.snippet.publishedAt).getTime(),
+          views:Number(s.viewCount||0),likes:s.likeCount==null?null:Number(s.likeCount),
+          comments:s.commentCount==null?null:Number(s.commentCount),
+          dur:parseDur(v.contentDetails&&v.contentDetails.duration),
+          subs:subs[v.snippet.channelId]===undefined?null:subs[v.snippet.channelId]
+        };
+        const sc=score(o);o.sc=sc;o.total=sc.total;o.vph=sc.vph;return o;
+      });
+      setItems(prev=>more?[...prev,...out.filter(o=>!prev.some(x=>x.id===o.id))]:out);
+      setToken(next);setLoaded(true);
+    }catch(e){setError(e)}finally{setLoading(false)}
+  }
+
+  function serverChanged(){
+    const q=lastQ.current;
+    return !q||q.cat!==f.cat||q.region!==f.region||q.period!==f.period;
+  }
+  function applyFilters(){
+    if(loaded&&serverChanged()){load('new')}else{setApplied(f)}
+  }
+  function clearFilters(){
+    setF(DEF);
+    const q=lastQ.current;
+    if(loaded&&q&&(q.cat!==DEF.cat||q.region!==DEF.region||q.period!==DEF.period)){
+      lastQ.current={...q,cat:DEF.cat,region:DEF.region,period:DEF.period};
+      setApplied(DEF);
+      setTimeout(()=>load('refresh'),0);
+    }else{setApplied(DEF)}
+  }
+
+  const shown=useMemo(()=>{
+    const mv=Number(applied.minViews)||0;
+    return items
+      .filter(v=>v.views>=mv)
+      .filter(v=>applied.vtype==='all'?true:applied.vtype==='short'?v.dur<240:v.dur>=240)
+      .sort((a,b)=>b[sort]-a[sort]);
+  },[items,applied,sort]);
+
+  const stats=useMemo(()=>{
+    const n=shown.length;
+    return {
+      n,views:shown.reduce((a,v)=>a+v.views,0),
+      avg:n?shown.reduce((a,v)=>a+v.total,0)/n:0,
+      maxVph:n?Math.max(...shown.map(v=>v.vph)):0
+    };
+  },[shown]);
+
+  function toggleWatch(v){
+    setWatch(w=>{
+      const n={...w};
+      if(n[v.id]){delete n[v.id]}
+      else{n[v.id]={id:v.id,title:v.title,channel:v.channel,thumb:v.thumb,published:v.published,snaps:[{t:Date.now(),v:v.views}]}}
+      return n;
+    });
+  }
+
+  async function updateSnaps(){
+    const ids=Object.keys(watch);
+    if(!ids.length)return;
+    if(!key){setError({code:'MISSING'});return}
+    setBusy(true);setError(null);
+    try{
+      const cur={};
+      for(let i=0;i<ids.length;i+=50){
+        const r=await yt('videos',{part:'statistics',id:ids.slice(i,i+50).join(',')},key);
+        (r.items||[]).forEach(x=>{cur[x.id]=Number(x.statistics.viewCount||0)});
+      }
+      const t=Date.now();
+      setWatch(w=>{
+        const n={...w};
+        Object.keys(cur).forEach(id=>{if(n[id])n[id]={...n[id],snaps:[...n[id].snaps,{t,v:cur[id]}]}});
+        return n;
+      });
+    }catch(e){setError(e)}finally{setBusy(false)}
+  }
+
+  function exportCsv(){
+    const esc=x=>{const s=String(x==null?'':x);return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+    const head=['Tiêu đề','Kênh','Link','Ngày đăng','Lượt xem','Lượt thích','Bình luận','Subscribers','Views/Giờ ước lượng','Trend Score'];
+    const rows=shown.map(v=>[v.title,v.channel,'https://www.youtube.com/watch?v='+v.id,fmtD(v.published),v.views,v.likes==null?'':v.likes,v.comments==null?'':v.comments,v.subs==null?'':v.subs,Math.round(v.vph),v.total]);
+    const csv='\uFEFF'+[head,...rows].map(r=>r.map(esc).join(',')).join('\r\n');
+    const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    const a=document.createElement('a');a.href=url;a.download='youtrend-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+
+  const ei=error?errInfo(error):null;
+  const watchList=Object.values(watch);
+
+  return (
+    <div className="min-h-screen" style={{paddingTop:'env(safe-area-inset-top,0px)',paddingBottom:'env(safe-area-inset-bottom,0px)'}}>
+      <header className="border-b border-zinc-800 sticky top-0 bg-[#09090b]/95 backdrop-blur z-20">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+          <div className="text-xl font-bold"><span className="text-[#FF0000]">▶</span> YouTrend Analytics</div>
+          <nav className="flex gap-1 ml-2">
+            <button onClick={()=>setTab('search')} className={tab==='search'?bOn:bAct}>🔎 Tìm xu hướng</button>
+            <button onClick={()=>setTab('watch')} className={tab==='watch'?bOn:bAct}>★ Watchlist & Theo dõi tăng trưởng ({watchList.length})</button>
+          </nav>
+          <button onClick={()=>{setKeyDraft(key);setShowKeyBox(true)}} className={(key?bAct:bOn)+' ml-auto'}>🔑 API Key {key?'(đã nhập)':'(chưa nhập)'}</button>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-5 space-y-5">
+        {!key&&(
+          <div className="border border-red-700 bg-red-950/40 rounded-xl p-4 text-sm space-y-2">
+            <div className="font-semibold text-red-300">⚠ Bạn chưa nhập YouTube API Key nên chưa thể lấy dữ liệu thật. Ứng dụng sẽ không tự bịa kết quả.</div>
+            <ol className="list-decimal ml-5 space-y-1 text-zinc-300">
+              <li>Vào <a className="underline text-red-300" href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer">console.cloud.google.com</a>, đăng nhập Google và tạo một Project mới.</li>
+              <li>Vào <b>APIs & Services</b> &gt; <b>Library</b>, tìm <b>YouTube Data API v3</b> rồi bấm <b>Enable</b>.</li>
+              <li>Vào <b>APIs & Services</b> &gt; <b>Credentials</b> &gt; <b>Create credentials</b> &gt; <b>API key</b> và copy key.</li>
+              <li>Bấm vào key vừa tạo, chọn <b>Websites</b> và thêm địa chỉ trang của bạn (ví dụ https://ten-ban.github.io/*), phần API restrictions chọn <b>YouTube Data API v3</b>. Bước này giúp người khác không dùng trộm key.</li>
+              <li>Bấm nút <b>🔑 API Key</b> ở góc trên, dán key vào và bấm Lưu.</li>
+            </ol>
+            <div className="text-zinc-400">Lưu ý: key lưu trong trình duyệt của bạn. Đừng dán key vào file rồi đưa lên GitHub. Mỗi lần tìm bằng từ khóa tốn 100 đơn vị quota (mặc định 10.000/ngày).</div>
+          </div>
+        )}
+        {!storageOk&&<div className="border border-amber-700 bg-amber-950/40 rounded-xl p-3 text-sm text-amber-200">Trình duyệt đang chặn lưu trữ, API Key và Watchlist chỉ được giữ tạm và sẽ mất khi tải lại trang. Hãy mở file này bằng Chrome hoặc đưa lên GitHub Pages để lưu lâu dài.</div>}
+        {ei&&(
+          <div className="border border-red-700 bg-red-950/40 rounded-xl p-4 text-sm">
+            <div className="font-semibold text-red-300 mb-1">❌ {ei.t}</div>
+            <ul className="list-disc ml-5 space-y-1 text-zinc-300">{ei.s.map((x,i)=><li key={i}>{x}</li>)}</ul>
+            <button onClick={()=>setError(null)} className={bAct+' mt-3'}>Đóng thông báo</button>
+          </div>
+        )}
+
+        {tab==='search'&&(<>
+          <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input className={inp} placeholder="Nhập từ khóa (để trống để xem video đang phổ biến)" value={kw} onChange={e=>setKw(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')load('new')}}/>
+              <button onClick={()=>load('new')} disabled={loading} className={bOn+' sm:w-36 py-2 disabled:opacity-50'}>🔎 Tìm kiếm</button>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 text-xs text-zinc-400">
+              <label>Lĩnh vực<select className={inp+' mt-1'} value={f.cat} onChange={e=>setF({...f,cat:e.target.value})}>{CATS.map(c=><option key={c[0]} value={c[0]}>{c[1]}</option>)}</select></label>
+              <label>Quốc gia<select className={inp+' mt-1'} value={f.region} onChange={e=>setF({...f,region:e.target.value})}>{REGIONS.map(c=><option key={c} value={c}>{c}</option>)}</select></label>
+              <label>Khoảng thời gian đăng<select className={inp+' mt-1'} value={f.period} onChange={e=>setF({...f,period:Number(e.target.value)})}>{PERIODS.map(c=><option key={c[0]} value={c[0]}>{c[1]}</option>)}</select></label>
+              <label>Kiểu video<select className={inp+' mt-1'} value={f.vtype} onChange={e=>setF({...f,vtype:e.target.value})}>{TYPES.map(c=><option key={c[0]} value={c[0]}>{c[1]}</option>)}</select></label>
+              <label>Lượt xem tối thiểu<input type="number" min="0" className={inp+' mt-1'} placeholder="Ví dụ 10000" value={f.minViews} onChange={e=>setF({...f,minViews:e.target.value})}/></label>
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              <button onClick={applyFilters} className={bOn}>Áp dụng bộ lọc</button>
+              <button onClick={clearFilters} className={bAct}>Xóa bộ lọc</button>
+              <span className="text-xs text-zinc-500">Đổi Lĩnh vực / Quốc gia / Thời gian sẽ gọi lại YouTube. Kiểu video và Lượt xem tối thiểu lọc ngay trên kết quả đã tải. API không phân biệt được Shorts thật nên mình lọc theo thời lượng.</span>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[['Tổng số video tìm được',fmt(stats.n)],['Tổng lượt xem',fmt(stats.views)],['Trend Score trung bình',stats.avg.toFixed(1)],['Tốc độ Views/Giờ cao nhất',fmt(stats.maxVph)]].map(c=>(
+              <div key={c[0]} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                <div className="text-xs text-zinc-400">{c[0]}</div>
+                <div className="text-2xl font-bold mt-1 text-[#FF0000]">{c[1]}</div>
+              </div>
+            ))}
+          </section>
+
+          <section className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-zinc-400">Sắp xếp theo:</span>
+            {SORTS.map(s=><button key={s[0]} onClick={()=>setSort(s[0])} className={sort===s[0]?bOn:bAct}>{s[1]}</button>)}
+            <span className="ml-auto flex flex-wrap gap-2">
+              <button onClick={()=>setMode('grid')} className={mode==='grid'?bOn:bAct}>▦ Thẻ</button>
+              <button onClick={()=>setMode('table')} className={mode==='table'?bOn:bAct}>☰ Bảng</button>
+              <button onClick={exportCsv} disabled={!shown.length} className={bAct+' disabled:opacity-40'}>⬇ Xuất Excel (CSV)</button>
+              <button onClick={()=>load('refresh')} disabled={loading} className={bAct+' disabled:opacity-40'}>⟳ Làm mới dữ liệu</button>
+            </span>
+          </section>
+
+          {loading&&!items.length&&(
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({length:8}).map((_,i)=>(
+                <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden animate-pulse">
+                  <div className="aspect-video bg-zinc-800"></div>
+                  <div className="p-3 space-y-2"><div className="h-4 bg-zinc-800 rounded"></div><div className="h-4 w-2/3 bg-zinc-800 rounded"></div><div className="h-3 w-1/2 bg-zinc-800 rounded"></div></div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading&&!shown.length&&(
+            <div className="text-center border border-dashed border-zinc-700 rounded-xl p-10 text-zinc-400">
+              <div className="text-4xl mb-2">📭</div>
+              <div className="font-semibold text-zinc-200">{loaded?'Không tìm thấy video nào phù hợp':'Chưa có dữ liệu'}</div>
+              <div className="text-sm mt-1">{loaded?'Hãy thử đổi từ khóa, nới khoảng thời gian, giảm lượt xem tối thiểu hoặc bấm "Xóa bộ lọc".':'Nhập từ khóa rồi bấm "Tìm kiếm" (hoặc để trống để xem video đang phổ biến).'}</div>
+            </div>
+          )}
+
+          {shown.length>0&&mode==='grid'&&(
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {shown.map(v=>(
+                <article key={v.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden flex flex-col">
+                  <div className="relative">
+                    <img src={v.thumb} alt="" className="w-full aspect-video object-cover bg-zinc-800"/>
+                    <span className={'absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded text-white '+scoreCls(v.total)}>{v.total}</span>
+                    <span className="absolute bottom-2 right-2 text-xs px-1.5 py-0.5 rounded bg-black/80">{fmtDur(v.dur)}</span>
+                  </div>
+                  <div className="p-3 flex flex-col gap-2 flex-1">
+                    <h3 className="text-sm font-semibold leading-snug line-clamp-2">{v.title}</h3>
+                    <div className="text-xs text-zinc-400">{v.channel}</div>
+                    <div className="text-xs text-zinc-400 grid grid-cols-2 gap-1">
+                      <span>👁 {fmt(v.views)}</span><span>⚡ {fmt(v.vph)}/giờ</span>
+                      <span className="col-span-2">🕒 {fmtD(v.published)}</span>
+                    </div>
+                    <div className="mt-auto pt-1"><Actions v={v} saved={!!watch[v.id]} onDetail={setDetail} onSave={toggleWatch}/></div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {shown.length>0&&mode==='table'&&(
+            <div className="overflow-x-auto border border-zinc-800 rounded-xl">
+              <table className="w-full text-sm">
+                <thead className="bg-zinc-900 text-xs text-zinc-400"><tr>
+                  {['Video','Kênh','Lượt xem','Views/Giờ','Điểm','Ngày đăng','Hành động'].map(h=><th key={h} className="text-left p-3 whitespace-nowrap">{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {shown.map(v=>(
+                    <tr key={v.id} className="border-t border-zinc-800 align-top">
+                      <td className="p-3 min-w-[260px]"><div className="flex gap-2"><img src={v.thumb} alt="" className="w-24 aspect-video object-cover rounded bg-zinc-800"/><span className="font-medium">{v.title}</span></div></td>
+                      <td className="p-3">{v.channel}</td>
+                      <td className="p-3 whitespace-nowrap">{fmt(v.views)}</td>
+                      <td className="p-3 whitespace-nowrap">{fmt(v.vph)}</td>
+                      <td className="p-3"><span className={'text-xs font-bold px-2 py-1 rounded text-white '+scoreCls(v.total)}>{v.total}</span></td>
+                      <td className="p-3 whitespace-nowrap">{fmtD(v.published)}</td>
+                      <td className="p-3 min-w-[220px]"><Actions v={v} saved={!!watch[v.id]} onDetail={setDetail} onSave={toggleWatch}/></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {loading&&items.length>0&&<div className="text-center text-sm text-zinc-400 animate-pulse">Đang tải dữ liệu...</div>}
+          {token&&!loading&&(
+            <div className="text-center"><button onClick={()=>load('more')} className={bOn+' px-6 py-2'}>Xem thêm</button></div>
+          )}
+        </>)}
+
+        {tab==='watch'&&(
+          <section className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <button onClick={updateSnaps} disabled={busy||!watchList.length} className={bOn+' disabled:opacity-40'}>{busy?'Đang cập nhật...':'⟳ Cập nhật snapshot'}</button>
+              <span className="text-xs text-zinc-500">Mỗi lần bấm sẽ ghi lại lượt xem hiện tại (chỉ tốn 1 đơn vị quota). Cần ít nhất 2 snapshot mới tính được tăng trưởng thực đo.</span>
+            </div>
+            {!watchList.length&&(
+              <div className="text-center border border-dashed border-zinc-700 rounded-xl p-10 text-zinc-400">
+                <div className="text-4xl mb-2">★</div>
+                <div className="font-semibold text-zinc-200">Watchlist đang trống</div>
+                <div className="text-sm mt-1">Ở tab "Tìm xu hướng", bấm "Lưu / Snapshot" ở video bạn muốn theo dõi.</div>
+              </div>
+            )}
+            <div className="grid md:grid-cols-2 gap-4">
+              {watchList.map(w=>{
+                const first=w.snaps[0],last=w.snaps[w.snaps.length-1];
+                const gain=last.v-first.v,hrs=(last.t-first.t)/36e5;
+                return (
+                  <article key={w.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex gap-3">
+                    <img src={w.thumb} alt="" className="w-32 aspect-video object-cover rounded bg-zinc-800 self-start"/>
+                    <div className="flex-1 space-y-1.5 text-sm">
+                      <h3 className="font-semibold leading-snug">{w.title}</h3>
+                      <div className="text-xs text-zinc-400">{w.channel} · Đăng {fmtD(w.published)}</div>
+                      <div className="text-xs">Lượt xem mới nhất: <b>{fmt(last.v)}</b> · Số snapshot: <b>{w.snaps.length}</b> · Lần cuối: {fmtD(last.t)}</div>
+                      {w.snaps.length<2
+                        ?<div className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800 rounded p-2">Chưa đủ dữ liệu lịch sử, hãy bấm cập nhật snapshot sau ít phút.</div>
+                        :<div className="text-xs bg-zinc-800 rounded p-2 space-y-0.5">
+                          <div>Số view tăng thêm: <b className="text-green-400">+{fmt(gain)}</b></div>
+                          <div>Views/Giờ thực đo: <b className="text-green-400">{hrs>0?fmt(gain/hrs):'N/A'}</b> (trong {hrs.toFixed(2)} giờ)</div>
+                        </div>}
+                      <div className="flex gap-1.5 pt-1">
+                        <a href={'https://www.youtube.com/watch?v='+w.id} target="_blank" rel="noopener noreferrer" className={bAct}>Mở trên YouTube</a>
+                        <button onClick={()=>setWatch(x=>{const n={...x};delete n[w.id];return n})} className={bAct}>Bỏ lưu</button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
+        <footer className="text-xs text-zinc-600 text-center pt-4">Trend Score là điểm ước lượng tự tính, không phải bảng xếp hạng chính thức của YouTube. Dữ liệu lấy trực tiếp từ YouTube Data API v3.</footer>
+      </main>
+
+      {showKeyBox&&(
+        <div className="fixed inset-0 bg-black/70 z-30 flex items-center justify-center p-4" onClick={()=>setShowKeyBox(false)}>
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-5 w-full max-w-md space-y-3" onClick={e=>e.stopPropagation()}>
+            <h2 className="font-bold text-lg">🔑 Cấu hình API Key</h2>
+            <input className={inp} type={showKey?'text':'password'} placeholder="Dán YOUTUBE_API_KEY (bắt đầu bằng AIza...)" value={keyDraft} onChange={e=>setKeyDraft(e.target.value)}/>
+            <label className="text-xs text-zinc-400 flex items-center gap-2"><input type="checkbox" checked={showKey} onChange={e=>setShowKey(e.target.checked)}/> Hiện key</label>
+            <div className="text-xs text-zinc-500">Key chỉ lưu trong trình duyệt của bạn (localStorage), không gửi đi đâu ngoài YouTube.</div>
+            <div className="flex gap-2 justify-end">
+              {key&&<button onClick={removeKey} className={bAct}>Xóa key</button>}
+              <button onClick={()=>setShowKeyBox(false)} className={bAct}>Đóng</button>
+              <button onClick={saveKey} className={bOn}>Lưu</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {detail&&(()=>{
+        const v=detail,s=v.sc;
+        const rows=[
+          ['Tốc độ xem ước lượng',s.speed,40,fmt(s.vph)+' lượt xem/giờ (tổng view ÷ số giờ từ lúc đăng, tối thiểu 1 giờ). Công thức: 40 × log10(views/giờ + 1) ÷ 5.'],
+          ['Độ mới (Freshness)',s.fresh,20,'Video đăng cách đây '+s.hours.toFixed(1)+' giờ. Công thức: 20 × (1 − log10(giờ + 1) ÷ log10(2161)); càng mới điểm càng cao, hết điểm sau 90 ngày.'],
+          ['Tỷ lệ tương tác',s.eng,20,'(Like + Bình luận) ÷ View = '+(s.rate*100).toFixed(2)+'%'+(v.likes==null?' (video ẩn lượt thích nên chỉ tính bình luận)':'')+'. Công thức: 20 × log10(1 + tỷ lệ% ) ÷ log10(11).'],
+          ['Hiệu suất so với kênh',s.rel,20,s.ratio==null?'N/A: kênh ẩn số subscriber nên thành phần này = 0.':'View ÷ Subscribers = '+s.ratio.toFixed(2)+' lần (dùng tối thiểu 1.000 sub). Công thức: 20 × log10(tỷ lệ + 1) ÷ log10(11).']
+        ];
+        return (
+          <div className="fixed inset-0 bg-black/70 z-30 flex items-start justify-center p-4 overflow-y-auto" onClick={()=>setDetail(null)}>
+            <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-5 w-full max-w-2xl space-y-4 my-6" onClick={e=>e.stopPropagation()}>
+              <div className="flex gap-3">
+                <img src={v.thumb} alt="" className="w-40 aspect-video object-cover rounded bg-zinc-800 self-start"/>
+                <div className="flex-1"><h2 className="font-bold leading-snug">{v.title}</h2><div className="text-xs text-zinc-400 mt-1">{v.channel} · {fmtD(v.published)}</div></div>
+                <button onClick={()=>setDetail(null)} className={bAct+' self-start'}>✕</button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                {[['Lượt xem',fmt(v.views)],['Lượt thích',fmt(v.likes)],['Bình luận',fmt(v.comments)],['Subscribers',fmt(v.subs)],['Thời lượng',fmtDur(v.dur)],['Views/Giờ ước lượng',fmt(s.vph)]].map(x=>(
+                  <div key={x[0]} className="bg-zinc-800 rounded-lg p-2"><div className="text-zinc-400">{x[0]}</div><div className="font-bold text-sm">{x[1]}</div></div>
+                ))}
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2"><h3 className="font-semibold">Điểm Trend Score</h3><span className={'px-3 py-1 rounded font-bold text-white '+scoreCls(s.total)}>{s.total} / 100</span></div>
+                <div className="space-y-3">
+                  {rows.map(r=>(
+                    <div key={r[0]}>
+                      <div className="flex justify-between text-sm"><span>{r[0]}</span><b>{r[1].toFixed(1)} / {r[2]}</b></div>
+                      <div className="h-2 bg-zinc-800 rounded mt-1"><div className="h-2 bg-[#FF0000] rounded" style={{width:(r[1]/r[2]*100)+'%'}}></div></div>
+                      <div className="text-xs text-zinc-400 mt-1">{r[3]}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Actions v={v} saved={!!watch[v.id]} onDetail={()=>{}} onSave={toggleWatch}/>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
