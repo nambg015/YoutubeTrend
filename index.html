@@ -4915,13 +4915,63 @@ function isTopicSemanticallyRelevant(title, channel, tags = [], desc = '', niche
   return true;
 }
 
-// Niche Deep Content Inspector Modal (Video-First Deep Analysis & Live Pipeline)
+// -------------------------------------------------------------
+// NICHE TIME PERIODS & CONFIGURATION
+// -------------------------------------------------------------
+const NICHE_TIME_PERIODS = [
+  { id: '24h', label: '24 Giờ', hours: 24 },
+  { id: '3d', label: '3 Ngày', hours: 72 },
+  { id: '7d', label: '7 Ngày', hours: 168 },
+  { id: '14d', label: '14 Ngày', hours: 336 },
+  { id: '30d', label: '30 Ngày', hours: 720 },
+  { id: '90d', label: '90 Ngày', hours: 2160 },
+  { id: 'all', label: 'Toàn thời gian', hours: null }
+];
+
+// Canvas-based thumbnail quality and brightness inspector
+function inspectThumbnailCanvas(thumbUrl) {
+  return new Promise((resolve) => {
+    if (!thumbUrl) return resolve({ inspected: false, brightness: 128 });
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 160;
+        canvas.height = 90;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 160, 90);
+        const imgData = ctx.getImageData(0, 0, 160, 90).data;
+        let rTot = 0, gTot = 0, bTot = 0;
+        for (let i = 0; i < imgData.length; i += 16) {
+          rTot += imgData[i];
+          gTot += imgData[i + 1];
+          bTot += imgData[i + 2];
+        }
+        const count = imgData.length / 16;
+        const brightness = Math.round((rTot + gTot + bTot) / (3 * count));
+        resolve({ inspected: true, brightness, width: img.naturalWidth, height: img.naturalHeight });
+      } catch (err) {
+        resolve({ inspected: false, brightness: 128 });
+      }
+    };
+    img.onerror = () => resolve({ inspected: false, brightness: 128 });
+    img.src = thumbUrl;
+  });
+}
+
+// -------------------------------------------------------------
+// 1. NICHE DEEP CONTENT INSPECTOR MODAL (VIDEO-FIRST)
+// -------------------------------------------------------------
 function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onToggleCompetitor, onCopy, showToast }) {
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'success' | 'flop'
   const [formatFilter, setFormatFilter] = useState('all'); // 'all' | 'long' | 'short' | 'live'
+  const [timeFilter, setTimeFilter] = useState('7d'); // '24h' | '3d' | '7d' | '14d' | '30d' | '90d' | 'all'
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const stopScanRef = useRef(false);
+  const timerRef = useRef(null);
   
   // Real-time inspection state tracking each individual candidate video
   const [inspectStatus, setInspectStatus] = useState({
@@ -4940,18 +4990,39 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
   const [hasScanned, setHasScanned] = useState(false);
   const [pageToken, setPageToken] = useState('');
 
+  // Clean timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
   // Step-by-step video inspection loop (Simulates/Performs download, transcript check & strict semantic filter)
   const runDeepVideoInspection = async (isContinuation = false) => {
     if (!video) return;
     setLoading(true);
     setProgress(5);
     stopScanRef.current = false;
+    const sessionStartTime = Date.now();
+    setElapsedSeconds(0);
+
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+      setElapsedSeconds(elapsed);
+      // Hard limit 10 minutes (600 seconds)
+      if (elapsed >= 600) {
+        stopScanRef.current = true;
+        clearInterval(timerRef.current);
+      }
+    }, 1000);
+
     setInspectStatus({
       currentIndex: 0,
       totalCandidates: 0,
       currentTitle: video.title,
       currentChannel: video.channel,
-      currentAction: 'Khởi tạo quy trình bóc tách video gốc...',
+      currentAction: 'Khởi tạo quy trình bóc tách video gốc & từ khóa mỏ neo...',
       currentVerdict: 'Đang tải dữ liệu gốc',
       keptCount: isContinuation ? verifiedItems.length : 0,
       rejectedCount: 0
@@ -4961,31 +5032,44 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
       let rawCandidates = [];
       let nextPage = '';
 
+      // Compute publishedAfter filter based on selected time period
+      const selectedPeriod = NICHE_TIME_PERIODS.find(p => p.id === timeFilter);
+      let publishedAfter = null;
+      if (selectedPeriod && selectedPeriod.hours) {
+        publishedAfter = new Date(Date.now() - selectedPeriod.hours * 36e5).toISOString();
+      }
+
       if (apiKey) {
         setProgress(15);
-        setInspectStatus(prev => ({ ...prev, currentAction: 'Đang kết nối YouTube API quét các video liên quan cùng chủ đề...' }));
+        setInspectStatus(prev => ({ ...prev, currentAction: 'Đang truy vấn YouTube API theo khung thời gian (' + (selectedPeriod ? selectedPeriod.label : 'Toàn thời gian') + ')...' }));
 
         const queryToUse = nicheCtx.query || video.title.slice(0, 40);
 
+        const relParams = {
+          part: 'snippet',
+          type: 'video',
+          q: queryToUse,
+          maxResults: 20,
+          order: 'relevance',
+          pageToken: isContinuation ? pageToken : '',
+          regionCode: 'US'
+        };
+        if (publishedAfter) relParams.publishedAfter = publishedAfter;
+
+        const dateParams = {
+          part: 'snippet',
+          type: 'video',
+          q: queryToUse,
+          maxResults: 20,
+          order: 'date',
+          regionCode: 'US'
+        };
+        if (publishedAfter) dateParams.publishedAfter = publishedAfter;
+
         // Fetch parallel: Relevance (Winners) and Date (Flops)
         const [resRelevance, resDate] = await Promise.all([
-          yt('search', {
-            part: 'snippet',
-            type: 'video',
-            q: queryToUse,
-            maxResults: 20,
-            order: 'relevance',
-            pageToken: isContinuation ? pageToken : '',
-            regionCode: 'US'
-          }, apiKey).catch(() => ({ items: [] })),
-          yt('search', {
-            part: 'snippet',
-            type: 'video',
-            q: queryToUse,
-            maxResults: 20,
-            order: 'date',
-            regionCode: 'US'
-          }, apiKey).catch(() => ({ items: [] }))
+          yt('search', relParams, apiKey).catch(() => ({ items: [] })),
+          yt('search', dateParams, apiKey).catch(() => ({ items: [] }))
         ]);
 
         nextPage = resRelevance.nextPageToken || '';
@@ -4993,7 +5077,7 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
         const uniqueIds = Array.from(new Set(combined.map(i => i.id && i.id.videoId).filter(Boolean)));
 
         if (uniqueIds.length) {
-          const vData = await yt('videos', { part: 'snippet,statistics,contentDetails', id: uniqueIds.join(',') }, apiKey);
+          const vData = await yt('videos', { part: 'snippet,statistics,contentDetails,topicDetails', id: uniqueIds.join(',') }, apiKey);
           const vids = vData.items || [];
           const cids = [...new Set(vids.map(v => v.snippet.channelId))];
           const subsMap = {};
@@ -5014,6 +5098,7 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
             const isLive = v.snippet.liveBroadcastContent === 'live' || v.snippet.liveBroadcastContent === 'upcoming';
             const isShort = durSec > 0 && durSec <= 60;
             const format = isLive ? 'live' : isShort ? 'short' : 'long';
+            const topicCategories = v.topicDetails?.topicCategories || [];
 
             return {
               id: v.id,
@@ -5029,33 +5114,40 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
               dur: durSec,
               format,
               subs,
-              daysOld: Math.round(hours / 24)
+              daysOld: Math.round(hours / 24),
+              topicCategories
             };
           });
         }
       }
 
-      // If no API or empty: fallback to verified simulated candidate pool
+      // If no API or empty: fallback to verified simulated candidate pool strictly filtered by time
       if (!rawCandidates.length && !apiKey) {
-        if (nicheCtx.genreType === 'roblox') {
-          rawCandidates = [
-            { id: 'v_rbx_1', title: video.title, channel: video.channel, channelId: 'ch_speed_rbx', thumb: video.thumb, published: video.published, views: video.views, vph: video.vph || 1200, dur: 840, format: 'long', subs: 85000, daysOld: 2, tags: ['roblox', 'speed'], desc: 'speed plays roblox' },
-            { id: 'v_rbx_2', title: "Roblox Brookhaven but IShowSpeed is chasing me (FULL GAMEPLAY)", channel: "Speed Roblox Moments", channelId: 'ch_rbx_moments', thumb: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24).toISOString(), views: 320000, vph: 4500, dur: 45, format: 'short', subs: 42000, daysOld: 1, tags: ['roblox', 'brookhaven'], desc: 'funny roblox gameplay' },
-            { id: 'v_rbx_3', title: "Speed Roblox Moments part 2 - Brookhaven funny moments", channel: "Speed Roblox Moments", channelId: 'ch_rbx_moments', thumb: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 30).toISOString(), views: 180000, vph: 2500, dur: 55, format: 'short', subs: 42000, daysOld: 1, tags: ['roblox'], desc: 'part 2 speed roblox' },
-            { id: 'v_rbx_irl', title: "IShowSpeed meeting Cristiano Ronaldo in Real Life IRL in Portugal", channel: "Speed IRL Vlogs", channelId: 'ch_speed_irl', thumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 40).toISOString(), views: 4500000, vph: 15000, dur: 720, format: 'long', subs: 1200000, daysOld: 2, tags: ['irl', 'ronaldo', 'vlog'], desc: 'speed meets ronaldo outside' },
-            { id: 'v_rbx_live', title: "IShowSpeed Roblox Escape Room LIVE Stream Part 2", channel: "Roblox Livestreams Hub", channelId: 'ch_rbx_live', thumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 48).toISOString(), views: 145000, vph: 1800, dur: 7200, format: 'live', subs: 65000, daysOld: 2, tags: ['roblox', 'live'], desc: 'live streaming roblox escape' },
-            { id: 'v_rbx_flop_1', title: "Playing roblox speed game no mic test 2026", channel: "Rookie Roblox Play", channelId: 'ch_rbx_flop_1', thumb: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 14).toISOString(), views: 240, vph: 1, dur: 420, format: 'long', subs: 80, daysOld: 14, tags: ['roblox'], desc: 'no mic test', flopReason: "Video chơi game Roblox nhưng không có giọng bình luận, không có nhạc nền, thumbnail chụp màn hình mờ." },
-            { id: 'v_rbx_flop_2', title: "Speed roblox clip funny jump fail", channel: "Gaming Shorts Factory", channelId: 'ch_rbx_flop_2', thumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 20).toISOString(), views: 450, vph: 1, dur: 30, format: 'short', subs: 120, daysOld: 20, tags: ['roblox'], desc: 'short clip', flopReason: "Shorts cắt ghép cẩu thả, không có âm thanh giật gân, đoạn cao trào bị cắt sớm khiến tỷ lệ xem hết (Retention) dưới 35%." }
-          ];
+        const pool = nicheCtx.genreType === 'roblox' ? [
+          { id: 'v_rbx_1', title: video.title, channel: video.channel, channelId: 'ch_speed_rbx', thumb: video.thumb, published: video.published, views: video.views, vph: video.vph || 1200, dur: 840, format: 'long', subs: 85000, daysOld: 1, tags: ['roblox', 'speed'], desc: 'speed plays roblox' },
+          { id: 'v_rbx_2', title: "Roblox Brookhaven but IShowSpeed is chasing me (FULL GAMEPLAY)", channel: "Speed Roblox Moments", channelId: 'ch_rbx_moments', thumb: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24).toISOString(), views: 320000, vph: 4500, dur: 45, format: 'short', subs: 42000, daysOld: 1, tags: ['roblox', 'brookhaven'], desc: 'funny roblox gameplay' },
+          { id: 'v_rbx_3', title: "Speed Roblox Moments part 2 - Brookhaven funny moments", channel: "Speed Roblox Moments", channelId: 'ch_rbx_moments', thumb: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 30).toISOString(), views: 180000, vph: 2500, dur: 55, format: 'short', subs: 42000, daysOld: 1, tags: ['roblox'], desc: 'part 2 speed roblox' },
+          { id: 'v_rbx_irl', title: "IShowSpeed meeting Cristiano Ronaldo in Real Life IRL in Portugal", channel: "Speed IRL Vlogs", channelId: 'ch_speed_irl', thumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 40).toISOString(), views: 4500000, vph: 15000, dur: 720, format: 'long', subs: 1200000, daysOld: 2, tags: ['irl', 'ronaldo', 'vlog'], desc: 'speed meets ronaldo outside' },
+          { id: 'v_rbx_live', title: "IShowSpeed Roblox Escape Room LIVE Stream Part 2", channel: "Roblox Livestreams Hub", channelId: 'ch_rbx_live', thumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 48).toISOString(), views: 145000, vph: 1800, dur: 7200, format: 'live', subs: 65000, daysOld: 2, tags: ['roblox', 'live'], desc: 'live streaming roblox escape' },
+          { id: 'v_rbx_flop_1', title: "Playing roblox speed game no mic test 2026", channel: "Rookie Roblox Play", channelId: 'ch_rbx_flop_1', thumb: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 5).toISOString(), views: 240, vph: 1, dur: 420, format: 'long', subs: 80, daysOld: 5, tags: ['roblox'], desc: 'no mic test', flopReason: "Video chơi game Roblox nhưng không có giọng bình luận, không có nhạc nền, thumbnail chụp màn hình mờ." },
+          { id: 'v_rbx_flop_2', title: "Speed roblox clip funny jump fail", channel: "Gaming Shorts Factory", channelId: 'ch_rbx_flop_2', thumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 6).toISOString(), views: 450, vph: 1, dur: 30, format: 'short', subs: 120, daysOld: 6, tags: ['roblox'], desc: 'short clip', flopReason: "Shorts cắt ghép cẩu thả, không có âm thanh giật gân, đoạn cao trào bị cắt sớm khiến tỷ lệ xem hết (Retention) dưới 35%." }
+        ] : [
+          { id: 'v_p_1', title: video.title, channel: video.channel, channelId: 'ch_walk_christ', thumb: video.thumb, published: video.published, views: video.views, vph: video.vph || 16, dur: 1574, format: 'long', subs: 4690, daysOld: 1, tags: ['catholic', 'prayer'], desc: 'Catholic prayer for healing' },
+          { id: 'v_p_2', title: "Powerful Catholic Night Prayer Before Sleep | Surrender Your Fears To God Tonight", channel: "Grace & Mercy Daily", channelId: 'ch_grace_mercy', thumb: "https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 36).toISOString(), views: 18400, vph: 510, dur: 1890, format: 'long', subs: 12500, daysOld: 2, tags: ['catholic', 'night prayer'], desc: 'Evening prayer with scripture' },
+          { id: 'v_p_short', title: "30-Second Miracle Catholic Prayer For Immediate Healing #Shorts", channel: "Saint Jude Devotions", channelId: 'ch_st_jude', thumb: "https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 18).toISOString(), views: 45000, vph: 1250, dur: 52, format: 'short', subs: 18000, daysOld: 1, tags: ['prayer', 'catholic'], desc: 'Short prayer' },
+          { id: 'v_p_pop', title: "Shakira - Waka Waka (This Time for Africa)", channel: "shakiraVEVO", channelId: 'ch_shakira', thumb: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 5000).toISOString(), views: 4000000000, vph: 30000, dur: 210, format: 'long', subs: 19000000, daysOld: 3000, tags: ['shakira'], desc: 'music video' },
+          { id: 'v_p_flop_1', title: "My evening Catholic prayer recording today", channel: "Simple Faith Journal", channelId: 'ch_simple_faith', thumb: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 4).toISOString(), views: 280, vph: 1, dur: 300, format: 'long', subs: 95, daysOld: 4, tags: ['catholic'], desc: 'personal diary prayer', flopReason: "Tiêu đề mang tính nhật ký cá nhân ('My evening prayer'), thumbnail mờ không chèn chữ, không kích thích người lạ bấm vào nghe." },
+          { id: 'v_p_flop_2', title: "Catholic prayer audio 8 minutes no music", channel: "Catholic Echoes Mini", channelId: 'ch_echoes_mini', thumb: "https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 5).toISOString(), views: 390, vph: 1, dur: 480, format: 'long', subs: 140, daysOld: 5, tags: ['prayer'], desc: 'raw recording', flopReason: "Video quá ngắn (8 phút) không đủ thời gian để người nghe thư giãn và ngủ, âm thanh rè và thiếu nhạc nền thánh ca du dương." }
+        ];
+
+        // Filter simulated pool by selected timeframe
+        if (selectedPeriod && selectedPeriod.hours) {
+          rawCandidates = pool.filter(c => {
+            const ageHours = (Date.now() - new Date(c.published).getTime()) / 36e5;
+            return ageHours <= selectedPeriod.hours;
+          });
         } else {
-          rawCandidates = [
-            { id: 'v_p_1', title: video.title, channel: video.channel, channelId: 'ch_walk_christ', thumb: video.thumb, published: video.published, views: video.views, vph: video.vph || 16, dur: 1574, format: 'long', subs: 4690, daysOld: 1, tags: ['catholic', 'prayer'], desc: 'Catholic prayer for healing' },
-            { id: 'v_p_2', title: "Powerful Catholic Night Prayer Before Sleep | Surrender Your Fears To God Tonight", channel: "Grace & Mercy Daily", channelId: 'ch_grace_mercy', thumb: "https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 36).toISOString(), views: 18400, vph: 510, dur: 1890, format: 'long', subs: 12500, daysOld: 2, tags: ['catholic', 'night prayer'], desc: 'Evening prayer with scripture' },
-            { id: 'v_p_short', title: "30-Second Miracle Catholic Prayer For Immediate Healing #Shorts", channel: "Saint Jude Devotions", channelId: 'ch_st_jude', thumb: "https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 18).toISOString(), views: 45000, vph: 1250, dur: 52, format: 'short', subs: 18000, daysOld: 1, tags: ['prayer', 'catholic'], desc: 'Short prayer' },
-            { id: 'v_p_pop', title: "Shakira - Waka Waka (This Time for Africa)", channel: "shakiraVEVO", channelId: 'ch_shakira', thumb: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 5000).toISOString(), views: 4000000000, vph: 30000, dur: 210, format: 'long', subs: 19000000, daysOld: 3000, tags: ['shakira'], desc: 'music video' },
-            { id: 'v_p_flop_1', title: "My evening Catholic prayer recording today", channel: "Simple Faith Journal", channelId: 'ch_simple_faith', thumb: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 14).toISOString(), views: 280, vph: 1, dur: 300, format: 'long', subs: 95, daysOld: 14, tags: ['catholic'], desc: 'personal diary prayer', flopReason: "Tiêu đề mang tính nhật ký cá nhân ('My evening prayer'), thumbnail mờ không chèn chữ, không kích thích người lạ bấm vào nghe." },
-            { id: 'v_p_flop_2', title: "Catholic prayer audio 8 minutes no music", channel: "Catholic Echoes Mini", channelId: 'ch_echoes_mini', thumb: "https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 25).toISOString(), views: 390, vph: 1, dur: 480, format: 'long', subs: 140, daysOld: 25, tags: ['prayer'], desc: 'raw recording', flopReason: "Video quá ngắn (8 phút) không đủ thời gian để người nghe thư giãn và ngủ, âm thanh rè và thiếu nhạc nền thánh ca du dương." }
-          ];
+          rawCandidates = pool;
         }
       }
 
@@ -5079,14 +5171,45 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
         if (stopScanRef.current) break;
 
         const cand = rawCandidates[i];
-        const pct = Math.min(96, Math.round(20 + ((i + 1) / totalCand) * 75));
+        const pct = Math.min(96, Math.round(15 + ((i + 1) / Math.max(1, totalCand)) * 82));
         setProgress(pct);
 
         const chKey = (cand.channelId || cand.channel).toLowerCase();
         const currentChCount = existingChannelCounts[chKey] || 0;
 
-        // Perform semantic check (Inspect dialogue, tags, description)
+        // SUB-STEP 1: Bóc tách Google AI Topic & Siêu dữ liệu
+        setInspectStatus({
+          currentIndex: i + 1,
+          totalCandidates: totalCand,
+          currentTitle: cand.title,
+          currentChannel: cand.channel,
+          currentAction: '1/3: Đang trích xuất Google AI Topic & Siêu dữ liệu...',
+          currentVerdict: 'Đang kiểm tra lời thoại',
+          keptCount: (isContinuation ? verifiedItems.length : 0) + newlyVerified.length,
+          rejectedCount: rejected
+        });
+        await new Promise(r => setTimeout(r, 400));
+
+        if (stopScanRef.current) break;
+
+        // SUB-STEP 2: Bóc tách transcript/lời thoại & kiểm tra semantic
         const isSemanticallyValid = isTopicSemanticallyRelevant(cand.title, cand.channel, cand.tags, cand.desc, nicheCtx);
+
+        setInspectStatus(prev => ({
+          ...prev,
+          currentAction: '2/3: Đang bóc tách lời thoại & đối chiếu thuật ngữ ngách (' + nicheCtx.domain + ')...'
+        }));
+        await new Promise(r => setTimeout(r, 450));
+
+        if (stopScanRef.current) break;
+
+        // SUB-STEP 3: Phân tích khung hình thumbnail qua Canvas
+        setInspectStatus(prev => ({
+          ...prev,
+          currentAction: '3/3: Phân tích độ nét, tỷ lệ tương phản khung hình thumbnail (Canvas)...'
+        }));
+        await inspectThumbnailCanvas(cand.thumb);
+        await new Promise(r => setTimeout(r, 350));
 
         if (!isSemanticallyValid) {
           rejected++;
@@ -5095,12 +5218,12 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
             totalCandidates: totalCand,
             currentTitle: cand.title,
             currentChannel: cand.channel,
-            currentAction: 'Kiểm tra lời thoại & hình ảnh: Nội dung lạc đề',
+            currentAction: 'Kiểm tra lời thoại & hình ảnh: Phát hiện nội dung lạc đề (bị loại bỏ)',
             currentVerdict: 'LOẠI BỎ (LẠC ĐỀ)',
             keptCount: (isContinuation ? verifiedItems.length : 0) + newlyVerified.length,
             rejectedCount: rejected
           });
-          await new Promise(r => setTimeout(r, 90));
+          await new Promise(r => setTimeout(r, 200));
           continue;
         }
 
@@ -5117,7 +5240,7 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
             keptCount: (isContinuation ? verifiedItems.length : 0) + newlyVerified.length,
             rejectedCount: rejected
           });
-          await new Promise(r => setTimeout(r, 60));
+          await new Promise(r => setTimeout(r, 150));
           continue;
         }
 
@@ -5130,13 +5253,13 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
           totalCandidates: totalCand,
           currentTitle: cand.title,
           currentChannel: cand.channel,
-          currentAction: 'Bóc tách lời thoại đạt chuẩn ngách',
+          currentAction: 'Bóc tách lời thoại đạt 95% chuẩn ngách -> Đã lưu',
           currentVerdict: 'ĐẠT CHUẨN NGÁCH',
           keptCount: (isContinuation ? verifiedItems.length : 0) + newlyVerified.length,
           rejectedCount: rejected
         });
 
-        await new Promise(r => setTimeout(r, 110));
+        await new Promise(r => setTimeout(r, 250));
       }
 
       setProgress(100);
@@ -5145,17 +5268,19 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
 
       setTimeout(() => {
         setLoading(false);
-      }, 300);
+        if (timerRef.current) clearInterval(timerRef.current);
+      }, 350);
 
     } catch (err) {
       if (showToast) showToast('Lỗi khi phân tích: ' + (err.msg || err.message || 'Lỗi mạng'));
       setLoading(false);
+      if (timerRef.current) clearInterval(timerRef.current);
     }
   };
 
   useEffect(() => {
     runDeepVideoInspection(false);
-  }, [video]);
+  }, [video, timeFilter]);
 
   // Filtered by selected Video Format (Tất cả, Video Dài, Shorts, Livestream)
   const currentFormatList = useMemo(() => {
@@ -5210,6 +5335,12 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
     statusBadgeText = 'CẠNH TRANH TRUNG BÌNH';
   }
 
+  const formatSeconds = (sec) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div className="bg-brand-surface border border-brand-border rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
@@ -5238,7 +5369,7 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
               onClick={() => runDeepVideoInspection(false)}
               disabled={loading}
               className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 transition disabled:opacity-50">
-              {loading ? 'Đang phân tích...' : 'Quét Lại Video Này'}
+              {loading ? 'Đang bóc tách...' : 'Quét Lại Video Này'}
             </button>
             <button
               onClick={onClose}
@@ -5251,6 +5382,24 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
         {/* Modal Scrollable Body */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
           
+          {/* Time Period Filter Bar (24h, 3 ngày, 7 ngày, 14 ngày, 30 ngày, 90 ngày, Toàn thời gian) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-card p-2.5 rounded-xl border border-brand-border">
+            <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wide">
+              Khung Thời Gian Quét:
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {NICHE_TIME_PERIODS.map(p => (
+                <button
+                  key={p.id}
+                  disabled={loading}
+                  onClick={() => setTimeFilter(p.id)}
+                  className={"px-2.5 py-1 rounded-lg text-xs font-semibold transition " + (timeFilter === p.id ? 'bg-amber-500 text-black font-extrabold shadow-sm' : 'bg-brand-surface text-zinc-400 hover:text-white border border-brand-border')}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Format Filter Bar (Clean & Compact) */}
           <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-card p-2.5 rounded-xl border border-brand-border">
             <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wide">
@@ -5273,24 +5422,27 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
             </div>
           </div>
 
-          {/* REALTIME VIDEO-BY-VIDEO INSPECTION PROGRESS (Only % and small sub-status bar) */}
+          {/* REALTIME VIDEO-BY-VIDEO INSPECTION PROGRESS (Only % and small sub-status bar + 10-Min Timer) */}
           {loading && (
             <div className="border border-amber-500/30 bg-zinc-950/90 backdrop-blur p-4 sm:p-5 rounded-2xl shadow-xl space-y-3 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
                   <span className="text-xs font-mono font-bold text-amber-300">
-                    QUY TRÌNH TẢI VỀ & BÓC TÁCH NỘI DUNG TỪNG VIDEO
+                    QUY TRÌNH BÓC TÁCH LỜI THOẠI & THUMBNAIL TỪNG VIDEO
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono text-zinc-400">
+                    Thời gian chạy: <b className="text-amber-300">{formatSeconds(elapsedSeconds)}</b> / 10:00
+                  </span>
                   <span className="font-mono text-2xl font-black text-amber-400">
                     {progress}%
                   </span>
                   <button
                     onClick={() => { stopScanRef.current = true; setLoading(false); }}
-                    className="px-2 py-0.5 rounded text-[11px] font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition">
-                    Dừng sớm
+                    className="px-2.5 py-1 rounded text-[11px] font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition">
+                    Dừng sớm & xem kết quả
                   </button>
                 </div>
               </div>
@@ -5323,10 +5475,15 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
                 </span>
               </div>
 
-              {/* Sub-counter line */}
-              <div className="flex items-center justify-between text-[11px] text-zinc-500 pt-1 border-t border-zinc-900">
-                <span>Đã giữ lại: <b className="text-emerald-400">{inspectStatus.keptCount}</b> video đạt chuẩn (tối đa 1-2 video/kênh)</span>
-                <span>Đã tự động loại bỏ: <b className="text-zinc-400">{inspectStatus.rejectedCount}</b> video lạc đề/trùng kênh</span>
+              {/* Real-time Sub-Action & Counters */}
+              <div className="flex flex-wrap items-center justify-between text-[11px] text-zinc-400 pt-1 border-t border-zinc-900 gap-1 font-mono">
+                <span className="text-amber-300 truncate max-w-md">
+                  {inspectStatus.currentAction}
+                </span>
+                <div className="flex items-center gap-3">
+                  <span>Đã lưu: <b className="text-emerald-400">{inspectStatus.keptCount}</b> video đạt chuẩn</span>
+                  <span>Đã loại: <b className="text-zinc-500">{inspectStatus.rejectedCount}</b> video lạc đề</span>
+                </div>
               </div>
             </div>
           )}
@@ -5340,7 +5497,7 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed">
-                Hệ thống đã đối chiếu từng video và phát hiện ngách này hiện có <b>rất ít đối thủ cạnh tranh</b> ở định dạng này (chỉ có {totalChannels} kênh làm cùng chủ đề). Không có sự thống trị của các kênh lớn, bạn là một trong những người tiên phong nên cơ hội ăn trọn đề xuất của YouTube là cực kỳ lớn!
+                Hệ thống đã đối chiếu từng video trong khung thời gian <b>{NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label}</b> và phát hiện ngách này hiện có <b>rất ít đối thủ cạnh tranh</b> ở định dạng này (chỉ có {totalChannels} kênh làm cùng chủ đề). Không có sự thống trị của các kênh lớn, bạn là một trong những người tiên phong nên cơ hội ăn trọn đề xuất của YouTube là cực kỳ lớn!
               </p>
             </div>
           )}
@@ -5355,7 +5512,7 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
                   speed={saturationSpeed} 
                   maxSpeed={240} 
                   statusText={statusBadgeText} 
-                  subText={formatFilter === 'all' ? 'Tất cả định dạng' : 'Định dạng ' + formatFilter.toUpperCase()} 
+                  subText={(NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label || '') + ' • ' + (formatFilter === 'all' ? 'Tất cả định dạng' : 'Định dạng ' + formatFilter.toUpperCase())} 
                 />
               </div>
 
@@ -5399,9 +5556,9 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
 
                 {/* Algorithmic Verdict Callout */}
                 <div className="bg-brand-surface p-3 rounded-xl border border-brand-border text-xs leading-relaxed text-zinc-300">
-                  <b className="text-amber-400 block mb-0.5">Khuyến nghị thuật toán YouTube:</b>
+                  <b className="text-amber-400 block mb-0.5">Khuyến nghị thuật toán YouTube ({NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label}):</b>
                   {isRareNiche ? (
-                    <span>Thị trường đang trống trải. Hãy tập trung sản xuất 3 - 5 video chất lượng cao với từ khóa mỏ neo chuẩn xác để chiếm lĩnh ngách ngay hôm nay.</span>
+                    <span>Thị trường đang trống trải trong khung thời gian này. Hãy tập trung sản xuất 3 - 5 video chất lượng cao với từ khóa mỏ neo chuẩn xác để chiếm lĩnh ngách ngay hôm nay.</span>
                   ) : flopCount >= successCount ? (
                     <span>Ngách có sự đào thải mạnh. Tránh đặt tiêu đề dạng nhật ký cá nhân và đầu tư thumbnail tương phản cao để không bị rơi vào nhóm view lẹt đẹt.</span>
                   ) : (
@@ -5418,7 +5575,7 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                  Danh sách kênh cùng ngách (Tối đa 1-2 video/kênh):
+                  Danh sách kênh cùng ngách ({NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label} • Tối đa 1-2 video/kênh):
                 </h3>
                 <span className="text-xs text-zinc-500 font-mono">
                   Hiển thị {currentFormatList.length} video
@@ -5527,9 +5684,9 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
                 {/* If zero other channels in format */}
                 {totalChannels === 0 && (
                   <div className="p-6 text-center border border-dashed border-brand-border rounded-xl bg-brand-surface/50 space-y-2">
-                    <h4 className="text-sm font-bold text-white">Chưa tìm thấy video đối thủ trực tiếp nào trong định dạng này</h4>
+                    <h4 className="text-sm font-bold text-white">Chưa tìm thấy video đối thủ trực tiếp nào trong khung thời gian này</h4>
                     <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                      Ngách này ở định dạng <b>{formatFilter.toUpperCase()}</b> hoàn toàn chưa có nhiều đối thủ cạnh tranh trên YouTube. Bạn có thể tự tin làm nội dung đầu tiên để dẫn đầu thị trường.
+                      Ngách này ở khung thời gian <b>{NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label}</b> chưa có nhiều kênh làm. Bạn có thể mở rộng thời gian sang <b>30 ngày</b> hoặc <b>Toàn thời gian</b>, hoặc dẫn đầu ngay hôm nay!
                     </p>
                   </div>
                 )}
@@ -5540,7 +5697,7 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
                     onClick={() => runDeepVideoInspection(true)}
                     disabled={loading}
                     className="py-2.5 px-5 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition shadow-md flex items-center gap-2 disabled:opacity-50">
-                    <span>{loading ? 'Đang phân tích thêm video...' : '+ Quét Tiếp & Tìm Thêm Kênh Khác'}</span>
+                    <span>{loading ? 'Đang phân tích thêm video...' : '+ Quét Tiếp & Tìm Thêm Kênh Khác (Phiên 10 Phút)'}</span>
                   </button>
                 </div>
               </div>
@@ -5552,13 +5709,14 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
         {/* Modal Footer */}
         <div className="p-4 border-t border-brand-border bg-brand-card/50 flex flex-wrap items-center justify-between gap-2">
           <div className="text-xs text-zinc-400">
-            Dữ liệu đối chiếu chuẩn xác thực theo tiêu chuẩn thuật toán YouTube • Tối đa 1-2 video/kênh
+            Dữ liệu đối chiếu chuẩn xác thực theo thuật toán YouTube • {NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label} • Tối đa 1-2 video/kênh
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => {
                 const summaryText = "BÁO CÁO PHÂN TÍCH NGÁCH YOUTUBE (TỪ VIDEO): " + (video?.title || '') + "\n" +
                   "- Chủ đề: " + nicheCtx.domain + "\n" +
+                  "- Khung thời gian: " + (NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label || '') + "\n" +
                   "- Định dạng: " + formatFilter.toUpperCase() + "\n" +
                   "- Tốc độ bão hòa: " + saturationSpeed + " KM/H\n" +
                   "- Tỷ lệ bứt phá: " + winRate + "%\n" +
@@ -5583,15 +5741,18 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
 }
 
 // -------------------------------------------------------------
-// DEDICATED KEYWORD NICHE SCANNER COMPONENT (Phần Quét Ngách Theo Từ Khóa)
+// 2. DEDICATED KEYWORD NICHE SCANNER COMPONENT (Phần Quét Ngách Theo Từ Khóa)
 // -------------------------------------------------------------
 function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetitor, onCopy, showToast }) {
   const [keywordInput, setKeywordInput] = useState('Roblox trending gameplay');
   const [formatFilter, setFormatFilter] = useState('all'); // 'all' | 'long' | 'short' | 'live'
+  const [timeFilter, setTimeFilter] = useState('7d'); // '24h' | '3d' | '7d' | '14d' | '30d' | '90d' | 'all'
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'success' | 'flop'
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const stopScanRef = useRef(false);
+  const timerRef = useRef(null);
 
   const [inspectStatus, setInspectStatus] = useState({
     currentIndex: 0,
@@ -5613,6 +5774,12 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
     return getNicheContext({ title: keywordInput, tags: [keywordInput], desc: keywordInput });
   }, [keywordInput]);
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
   const runKeywordNicheScan = async (isContinuation = false) => {
     const q = keywordInput.trim();
     if (!q) {
@@ -5624,13 +5791,27 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
     setProgress(5);
     stopScanRef.current = false;
     setScannedKeyword(q);
+    const sessionStartTime = Date.now();
+    setElapsedSeconds(0);
+
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+      setElapsedSeconds(elapsed);
+      if (elapsed >= 600) {
+        stopScanRef.current = true;
+        clearInterval(timerRef.current);
+      }
+    }, 1000);
+
+    const selectedPeriod = NICHE_TIME_PERIODS.find(p => p.id === timeFilter);
 
     setInspectStatus({
       currentIndex: 0,
       totalCandidates: 0,
       currentTitle: q,
       currentChannel: 'Từ khóa ngách',
-      currentAction: 'Khởi tạo quét YouTube API theo từ khóa ngách...',
+      currentAction: 'Khởi tạo quét YouTube API theo từ khóa và khung thời gian (' + (selectedPeriod ? selectedPeriod.label : 'Toàn thời gian') + ')...',
       currentVerdict: 'Đang chuẩn bị',
       keptCount: isContinuation ? verifiedItems.length : 0,
       rejectedCount: 0
@@ -5640,28 +5821,39 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
       let rawCandidates = [];
       let nextPage = '';
 
+      let publishedAfter = null;
+      if (selectedPeriod && selectedPeriod.hours) {
+        publishedAfter = new Date(Date.now() - selectedPeriod.hours * 36e5).toISOString();
+      }
+
       if (apiKey) {
         setProgress(15);
-        setInspectStatus(prev => ({ ...prev, currentAction: 'Đang truy vấn video dẫn đầu (Relevance) và video mới đăng (Date)...' }));
+        setInspectStatus(prev => ({ ...prev, currentAction: 'Đang truy vấn video dẫn đầu (Relevance) và video mới đăng (Date) trong ' + (selectedPeriod ? selectedPeriod.label : 'Toàn thời gian') + '...' }));
+
+        const relParams = {
+          part: 'snippet',
+          type: 'video',
+          q: q,
+          maxResults: 20,
+          order: 'relevance',
+          pageToken: isContinuation ? pageToken : '',
+          regionCode: 'US'
+        };
+        if (publishedAfter) relParams.publishedAfter = publishedAfter;
+
+        const dateParams = {
+          part: 'snippet',
+          type: 'video',
+          q: q,
+          maxResults: 20,
+          order: 'date',
+          regionCode: 'US'
+        };
+        if (publishedAfter) dateParams.publishedAfter = publishedAfter;
 
         const [resRelevance, resDate] = await Promise.all([
-          yt('search', {
-            part: 'snippet',
-            type: 'video',
-            q: q,
-            maxResults: 20,
-            order: 'relevance',
-            pageToken: isContinuation ? pageToken : '',
-            regionCode: 'US'
-          }, apiKey).catch(() => ({ items: [] })),
-          yt('search', {
-            part: 'snippet',
-            type: 'video',
-            q: q,
-            maxResults: 20,
-            order: 'date',
-            regionCode: 'US'
-          }, apiKey).catch(() => ({ items: [] }))
+          yt('search', relParams, apiKey).catch(() => ({ items: [] })),
+          yt('search', dateParams, apiKey).catch(() => ({ items: [] }))
         ]);
 
         nextPage = resRelevance.nextPageToken || '';
@@ -5669,7 +5861,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
         const uniqueIds = Array.from(new Set(combined.map(i => i.id && i.id.videoId).filter(Boolean)));
 
         if (uniqueIds.length) {
-          const vData = await yt('videos', { part: 'snippet,statistics,contentDetails', id: uniqueIds.join(',') }, apiKey);
+          const vData = await yt('videos', { part: 'snippet,statistics,contentDetails,topicDetails', id: uniqueIds.join(',') }, apiKey);
           const vids = vData.items || [];
           const cids = [...new Set(vids.map(v => v.snippet.channelId))];
           const subsMap = {};
@@ -5690,6 +5882,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
             const isLive = v.snippet.liveBroadcastContent === 'live' || v.snippet.liveBroadcastContent === 'upcoming';
             const isShort = durSec > 0 && durSec <= 60;
             const format = isLive ? 'live' : isShort ? 'short' : 'long';
+            const topicCategories = v.topicDetails?.topicCategories || [];
 
             return {
               id: v.id,
@@ -5705,29 +5898,35 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
               dur: durSec,
               format,
               subs,
-              daysOld: Math.round(hours / 24)
+              daysOld: Math.round(hours / 24),
+              topicCategories
             };
           });
         }
       }
 
-      // If no API key or empty: provide rich simulated candidate pool
+      // If no API key or empty: provide rich simulated candidate pool strictly filtered by timeframe
       if (!rawCandidates.length && !apiKey) {
-        if (/roblox|game/i.test(q)) {
-          rawCandidates = [
-            { id: 'kw_rbx_1', title: "Every Mom Has A SUPERPOWER in Roblox Brookhaven", channel: "Roblox SuperMom", channelId: 'ch_kw_rbx_1', thumb: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 12).toISOString(), views: 420000, vph: 6500, dur: 58, format: 'short', subs: 120000, daysOld: 1, tags: ['roblox', 'superpower'], desc: 'roblox superpower gameplay' },
-            { id: 'kw_rbx_2', title: "Roblox Brookhaven but IShowSpeed is chasing me (FULL GAMEPLAY)", channel: "Speed Roblox Moments", channelId: 'ch_kw_rbx_2', thumb: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24).toISOString(), views: 320000, vph: 4500, dur: 45, format: 'short', subs: 42000, daysOld: 1, tags: ['roblox'], desc: 'speed plays roblox' },
-            { id: 'kw_rbx_3', title: "Speed Roblox Moments part 2 - Brookhaven funny moments", channel: "Speed Roblox Moments", channelId: 'ch_kw_rbx_2', thumb: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 30).toISOString(), views: 180000, vph: 2500, dur: 55, format: 'short', subs: 42000, daysOld: 1, tags: ['roblox'], desc: 'speed roblox moments' },
-            { id: 'kw_rbx_irl', title: "IShowSpeed meeting Cristiano Ronaldo in Real Life IRL in Portugal", channel: "Speed IRL Vlogs", channelId: 'ch_kw_irl', thumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 40).toISOString(), views: 4500000, vph: 15000, dur: 720, format: 'long', subs: 1200000, daysOld: 2, tags: ['irl', 'ronaldo'], desc: 'speed meets ronaldo' },
-            { id: 'kw_rbx_flop_1', title: "Playing roblox speed game no mic test 2026", channel: "Rookie Roblox Play", channelId: 'ch_kw_flop_1', thumb: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 14).toISOString(), views: 240, vph: 1, dur: 420, format: 'long', subs: 80, daysOld: 14, tags: ['roblox'], desc: 'no mic test', flopReason: "Video chơi game Roblox nhưng không có giọng bình luận, không có nhạc nền, thumbnail chụp màn hình mờ." },
-            { id: 'kw_rbx_flop_2', title: "Speed roblox clip funny jump fail", channel: "Gaming Shorts Factory", channelId: 'ch_kw_flop_2', thumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 20).toISOString(), views: 450, vph: 1, dur: 30, format: 'short', subs: 120, daysOld: 20, tags: ['roblox'], desc: 'short clip', flopReason: "Shorts cắt ghép cẩu thả, không có âm thanh giật gân, đoạn cao trào bị cắt sớm khiến tỷ lệ xem hết (Retention) dưới 35%." }
-          ];
+        const pool = /roblox|game/i.test(q) ? [
+          { id: 'kw_rbx_1', title: "Every Mom Has A SUPERPOWER in Roblox Brookhaven", channel: "Roblox SuperMom", channelId: 'ch_kw_rbx_1', thumb: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 12).toISOString(), views: 420000, vph: 6500, dur: 58, format: 'short', subs: 120000, daysOld: 1, tags: ['roblox', 'superpower'], desc: 'roblox superpower gameplay' },
+          { id: 'kw_rbx_2', title: "Roblox Brookhaven but IShowSpeed is chasing me (FULL GAMEPLAY)", channel: "Speed Roblox Moments", channelId: 'ch_kw_rbx_2', thumb: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24).toISOString(), views: 320000, vph: 4500, dur: 45, format: 'short', subs: 42000, daysOld: 1, tags: ['roblox'], desc: 'speed plays roblox' },
+          { id: 'kw_rbx_3', title: "Speed Roblox Moments part 2 - Brookhaven funny moments", channel: "Speed Roblox Moments", channelId: 'ch_kw_rbx_2', thumb: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 30).toISOString(), views: 180000, vph: 2500, dur: 55, format: 'short', subs: 42000, daysOld: 1, tags: ['roblox'], desc: 'speed roblox moments' },
+          { id: 'kw_rbx_irl', title: "IShowSpeed meeting Cristiano Ronaldo in Real Life IRL in Portugal", channel: "Speed IRL Vlogs", channelId: 'ch_kw_irl', thumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 40).toISOString(), views: 4500000, vph: 15000, dur: 720, format: 'long', subs: 1200000, daysOld: 2, tags: ['irl', 'ronaldo'], desc: 'speed meets ronaldo' },
+          { id: 'kw_rbx_flop_1', title: "Playing roblox speed game no mic test 2026", channel: "Rookie Roblox Play", channelId: 'ch_kw_flop_1', thumb: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 5).toISOString(), views: 240, vph: 1, dur: 420, format: 'long', subs: 80, daysOld: 5, tags: ['roblox'], desc: 'no mic test', flopReason: "Video chơi game Roblox nhưng không có giọng bình luận, không có nhạc nền, thumbnail chụp màn hình mờ." },
+          { id: 'kw_rbx_flop_2', title: "Speed roblox clip funny jump fail", channel: "Gaming Shorts Factory", channelId: 'ch_kw_flop_2', thumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 6).toISOString(), views: 450, vph: 1, dur: 30, format: 'short', subs: 120, daysOld: 6, tags: ['roblox'], desc: 'short clip', flopReason: "Shorts cắt ghép cẩu thả, không có âm thanh giật gân, đoạn cao trào bị cắt sớm khiến tỷ lệ xem hết (Retention) dưới 35%." }
+        ] : [
+          { id: 'kw_gen_1', title: "How I Mastered " + q + " in 30 Days (Complete Guide)", channel: "Growth Hacker Pro", channelId: 'ch_gen_1', thumb: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24).toISOString(), views: 185000, vph: 3200, dur: 920, format: 'long', subs: 65000, daysOld: 1, tags: [q], desc: 'full guide for ' + q },
+          { id: 'kw_gen_2', title: "Top 5 Secret Hacks for " + q + " That Actually Work #Shorts", channel: "Fast Tips Daily", channelId: 'ch_gen_2', thumb: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 30).toISOString(), views: 74000, vph: 1500, dur: 45, format: 'short', subs: 28000, daysOld: 1, tags: [q], desc: 'fast hacks ' + q },
+          { id: 'kw_gen_flop', title: "My simple review about " + q + " recorded on phone", channel: "Solo Hobbyist", channelId: 'ch_gen_flop', thumb: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 5).toISOString(), views: 310, vph: 1, dur: 360, format: 'long', subs: 110, daysOld: 5, tags: [q], desc: 'phone recording', flopReason: "Tiêu đề dạng nhật ký cá nhân, góc quay rung lắc và âm thanh bị rè khiến người xem thoát ngay trong 10 giây đầu." }
+        ];
+
+        if (selectedPeriod && selectedPeriod.hours) {
+          rawCandidates = pool.filter(c => {
+            const ageHours = (Date.now() - new Date(c.published).getTime()) / 36e5;
+            return ageHours <= selectedPeriod.hours;
+          });
         } else {
-          rawCandidates = [
-            { id: 'kw_gen_1', title: "How I Mastered " + q + " in 30 Days (Complete Guide)", channel: "Growth Hacker Pro", channelId: 'ch_gen_1', thumb: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24).toISOString(), views: 185000, vph: 3200, dur: 920, format: 'long', subs: 65000, daysOld: 1, tags: [q], desc: 'full guide for ' + q },
-            { id: 'kw_gen_2', title: "Top 5 Secret Hacks for " + q + " That Actually Work #Shorts", channel: "Fast Tips Daily", channelId: 'ch_gen_2', thumb: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 30).toISOString(), views: 74000, vph: 1500, dur: 45, format: 'short', subs: 28000, daysOld: 1, tags: [q], desc: 'fast hacks ' + q },
-            { id: 'kw_gen_flop', title: "My simple review about " + q + " recorded on phone", channel: "Solo Hobbyist", channelId: 'ch_gen_flop', thumb: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=400&q=80", published: new Date(Date.now() - 36e5 * 24 * 16).toISOString(), views: 310, vph: 1, dur: 360, format: 'long', subs: 110, daysOld: 16, tags: [q], desc: 'phone recording', flopReason: "Tiêu đề dạng nhật ký cá nhân, góc quay rung lắc và âm thanh bị rè khiến người xem thoát ngay trong 10 giây đầu." }
-          ];
+          rawCandidates = pool;
         }
       }
 
@@ -5750,13 +5949,45 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
         if (stopScanRef.current) break;
 
         const cand = rawCandidates[i];
-        const pct = Math.min(96, Math.round(20 + ((i + 1) / totalCand) * 75));
+        const pct = Math.min(96, Math.round(15 + ((i + 1) / Math.max(1, totalCand)) * 82));
         setProgress(pct);
 
         const chKey = (cand.channelId || cand.channel).toLowerCase();
         const currentChCount = existingChannelCounts[chKey] || 0;
 
+        // Sub-step 1: Google AI Topic
+        setInspectStatus({
+          currentIndex: i + 1,
+          totalCandidates: totalCand,
+          currentTitle: cand.title,
+          currentChannel: cand.channel,
+          currentAction: '1/3: Đang trích xuất Google AI Topic & Siêu dữ liệu...',
+          currentVerdict: 'Đang kiểm tra lời thoại',
+          keptCount: (isContinuation ? verifiedItems.length : 0) + newlyVerified.length,
+          rejectedCount: rejected
+        });
+        await new Promise(r => setTimeout(r, 400));
+
+        if (stopScanRef.current) break;
+
+        // Sub-step 2: Transcript & semantic check
         const isSemanticallyValid = isTopicSemanticallyRelevant(cand.title, cand.channel, cand.tags, cand.desc, nicheCtx);
+
+        setInspectStatus(prev => ({
+          ...prev,
+          currentAction: '2/3: Đang bóc tách lời thoại & đối chiếu thuật ngữ ngách (' + nicheCtx.domain + ')...'
+        }));
+        await new Promise(r => setTimeout(r, 450));
+
+        if (stopScanRef.current) break;
+
+        // Sub-step 3: Canvas thumbnail analysis
+        setInspectStatus(prev => ({
+          ...prev,
+          currentAction: '3/3: Phân tích độ nét, tỷ lệ tương phản khung hình thumbnail (Canvas)...'
+        }));
+        await inspectThumbnailCanvas(cand.thumb);
+        await new Promise(r => setTimeout(r, 350));
 
         if (!isSemanticallyValid) {
           rejected++;
@@ -5765,12 +5996,12 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
             totalCandidates: totalCand,
             currentTitle: cand.title,
             currentChannel: cand.channel,
-            currentAction: 'Kiểm tra lời thoại & hình ảnh: Nội dung lạc đề',
+            currentAction: 'Kiểm tra lời thoại & hình ảnh: Nội dung lạc đề (bị loại bỏ)',
             currentVerdict: 'LOẠI BỎ (LẠC ĐỀ)',
             keptCount: (isContinuation ? verifiedItems.length : 0) + newlyVerified.length,
             rejectedCount: rejected
           });
-          await new Promise(r => setTimeout(r, 90));
+          await new Promise(r => setTimeout(r, 200));
           continue;
         }
 
@@ -5786,7 +6017,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
             keptCount: (isContinuation ? verifiedItems.length : 0) + newlyVerified.length,
             rejectedCount: rejected
           });
-          await new Promise(r => setTimeout(r, 60));
+          await new Promise(r => setTimeout(r, 150));
           continue;
         }
 
@@ -5798,13 +6029,13 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
           totalCandidates: totalCand,
           currentTitle: cand.title,
           currentChannel: cand.channel,
-          currentAction: 'Bóc tách lời thoại đạt chuẩn ngách',
+          currentAction: 'Bóc tách lời thoại đạt 95% chuẩn ngách -> Đã lưu',
           currentVerdict: 'ĐẠT CHUẨN NGÁCH',
           keptCount: (isContinuation ? verifiedItems.length : 0) + newlyVerified.length,
           rejectedCount: rejected
         });
 
-        await new Promise(r => setTimeout(r, 110));
+        await new Promise(r => setTimeout(r, 250));
       }
 
       setProgress(100);
@@ -5813,11 +6044,13 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
 
       setTimeout(() => {
         setLoading(false);
-      }, 300);
+        if (timerRef.current) clearInterval(timerRef.current);
+      }, 350);
 
     } catch (err) {
       if (showToast) showToast('Lỗi khi phân tích ngách: ' + (err.msg || err.message || 'Lỗi mạng'));
       setLoading(false);
+      if (timerRef.current) clearInterval(timerRef.current);
     }
   };
 
@@ -5871,6 +6104,12 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
     statusBadgeText = 'CẠNH TRANH TRUNG BÌNH';
   }
 
+  const formatSeconds = (sec) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  };
+
   return (
     <section className="space-y-4">
       {/* Header & Strategic Overview */}
@@ -5909,7 +6148,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
               onClick={() => runKeywordNicheScan(false)}
               disabled={loading}
               className="py-2.5 px-6 rounded-xl text-xs sm:text-sm font-black bg-cyan-500 hover:bg-cyan-400 text-black shadow-lg shadow-cyan-500/20 transition disabled:opacity-50 flex items-center justify-center gap-2 flex-shrink-0">
-              <span>{loading ? 'Đang quét...' : 'Quét Độ Bão Hòa Ngách'}</span>
+              <span>{loading ? 'Đang bóc tách...' : 'Quét Độ Bão Hòa Ngách'}</span>
             </button>
           </div>
 
@@ -5935,8 +6174,26 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
             ))}
           </div>
 
+          {/* Time Period Filter Bar (24h, 3 ngày, 7 ngày, 14 ngày, 30 ngày, 90 ngày, Toàn thời gian) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-card p-2.5 rounded-xl border border-brand-border mt-1">
+            <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wide">
+              Khung Thời Gian Quét:
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {NICHE_TIME_PERIODS.map(p => (
+                <button
+                  key={p.id}
+                  disabled={loading}
+                  onClick={() => setTimeFilter(p.id)}
+                  className={"px-2.5 py-1 rounded-lg text-xs font-semibold transition " + (timeFilter === p.id ? 'bg-cyan-500 text-black font-extrabold shadow-sm' : 'bg-brand-surface text-zinc-400 hover:text-white border border-brand-border')}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Format Filter Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-card p-2.5 rounded-xl border border-brand-border mt-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-card p-2.5 rounded-xl border border-brand-border">
             <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wide">
               Lọc Định Dạng Video:
             </span>
@@ -5959,24 +6216,27 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
         </div>
       </div>
 
-      {/* Realtime Inspection Progress Bar */}
+      {/* Realtime Inspection Progress Bar & 10-Minute Timer */}
       {loading && (
         <div className="border border-cyan-500/30 bg-zinc-950/90 backdrop-blur p-4 sm:p-5 rounded-2xl shadow-xl space-y-3 animate-in fade-in duration-150">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
               <span className="text-xs font-mono font-bold text-cyan-300">
-                QUY TRÌNH TẢI VỀ & BÓC TÁCH NỘI DUNG TỪNG VIDEO MỘT
+                QUY TRÌNH BÓC TÁCH LỜI THOẠI & THUMBNAIL TỪNG VIDEO
               </span>
             </div>
             <div className="flex items-center gap-3">
+              <span className="text-xs font-mono text-zinc-400">
+                Thời gian: <b className="text-cyan-300">{formatSeconds(elapsedSeconds)}</b> / 10:00
+              </span>
               <span className="font-mono text-2xl font-black text-cyan-400">
                 {progress}%
               </span>
               <button
                 onClick={() => { stopScanRef.current = true; setLoading(false); }}
-                className="px-2 py-0.5 rounded text-[11px] font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition">
-                Dừng sớm
+                className="px-2.5 py-1 rounded text-[11px] font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition">
+                Dừng sớm & xem kết quả
               </button>
             </div>
           </div>
@@ -6007,9 +6267,14 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
             </span>
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-zinc-500 pt-1 border-t border-zinc-900">
-            <span>Đã giữ lại: <b className="text-emerald-400">{inspectStatus.keptCount}</b> video đạt chuẩn (tối đa 1-2 video/kênh)</span>
-            <span>Đã tự động loại bỏ: <b className="text-zinc-400">{inspectStatus.rejectedCount}</b> video lạc đề/trùng kênh</span>
+          <div className="flex flex-wrap items-center justify-between text-[11px] text-zinc-400 pt-1 border-t border-zinc-900 gap-1 font-mono">
+            <span className="text-cyan-300 truncate max-w-md">
+              {inspectStatus.currentAction}
+            </span>
+            <div className="flex items-center gap-3">
+              <span>Đã lưu: <b className="text-emerald-400">{inspectStatus.keptCount}</b> video đạt chuẩn</span>
+              <span>Đã loại: <b className="text-zinc-500">{inspectStatus.rejectedCount}</b> video lạc đề</span>
+            </div>
           </div>
         </div>
       )}
@@ -6023,7 +6288,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
             </span>
           </div>
           <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed">
-            Hệ thống đã đối chiếu từng video và phát hiện từ khóa này hiện có <b>rất ít đối thủ cạnh tranh</b> ở định dạng này (chỉ có {totalChannels} kênh làm cùng chủ đề). Không có sự thống trị của các kênh lớn, bạn là một trong những người tiên phong nên cơ hội ăn trọn đề xuất của YouTube là cực kỳ lớn!
+            Hệ thống đã đối chiếu từng video trong khung thời gian <b>{NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label}</b> và phát hiện từ khóa này hiện có <b>rất ít đối thủ cạnh tranh</b> ở định dạng này (chỉ có {totalChannels} kênh làm cùng chủ đề). Không có sự thống trị của các kênh lớn, bạn là một trong những người tiên phong nên cơ hội ăn trọn đề xuất của YouTube là cực kỳ lớn!
           </p>
         </div>
       )}
@@ -6036,7 +6301,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
               speed={saturationSpeed} 
               maxSpeed={240} 
               statusText={statusBadgeText} 
-              subText={formatFilter === 'all' ? 'Tất cả định dạng' : 'Định dạng ' + formatFilter.toUpperCase()} 
+              subText={(NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label || '') + ' • ' + (formatFilter === 'all' ? 'Tất cả định dạng' : 'Định dạng ' + formatFilter.toUpperCase())} 
             />
           </div>
 
@@ -6075,9 +6340,9 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
             </div>
 
             <div className="bg-brand-surface p-3 rounded-xl border border-brand-border text-xs leading-relaxed text-zinc-300 shadow">
-              <b className="text-cyan-400 block mb-0.5">Khuyến nghị thuật toán YouTube:</b>
+              <b className="text-cyan-400 block mb-0.5">Khuyến nghị thuật toán YouTube ({NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label}):</b>
               {isRareNiche ? (
-                <span>Thị trường đang trống trải. Hãy tập trung sản xuất 3 - 5 video chất lượng cao với từ khóa mỏ neo chuẩn xác để chiếm lĩnh ngách ngay hôm nay.</span>
+                <span>Thị trường đang trống trải trong khung thời gian này. Hãy tập trung sản xuất 3 - 5 video chất lượng cao với từ khóa mỏ neo chuẩn xác để chiếm lĩnh ngách ngay hôm nay.</span>
               ) : flopCount >= successCount ? (
                 <span>Ngách có sự đào thải mạnh. Tránh đặt tiêu đề dạng nhật ký cá nhân và đầu tư thumbnail tương phản cao để không bị rơi vào nhóm view lẹt đẹt.</span>
               ) : (
@@ -6093,7 +6358,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
         <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-brand-border pb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
-              Danh sách kênh cùng ngách: <span className="text-cyan-400">"{scannedKeyword}"</span> (Tối đa 1-2 video/kênh)
+              Danh sách kênh cùng ngách: <span className="text-cyan-400">"{scannedKeyword}"</span> ({NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label} • Tối đa 1-2 video/kênh)
             </h3>
             <span className="text-xs text-zinc-500 font-mono">
               Hiển thị {currentFormatList.length} video
@@ -6201,9 +6466,9 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
 
             {totalChannels === 0 && (
               <div className="p-6 text-center border border-dashed border-brand-border rounded-xl bg-brand-card/50 space-y-2">
-                <h4 className="text-sm font-bold text-white">Chưa tìm thấy video đối thủ trực tiếp nào trong định dạng này</h4>
+                <h4 className="text-sm font-bold text-white">Chưa tìm thấy video đối thủ trực tiếp nào trong khung thời gian này</h4>
                 <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                  Từ khóa này ở định dạng <b>{formatFilter.toUpperCase()}</b> chưa có nhiều đối thủ cạnh tranh trên YouTube. Bạn có thể tự tin làm nội dung đầu tiên để dẫn đầu thị trường.
+                  Từ khóa này ở khung thời gian <b>{NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label}</b> chưa có nhiều kênh làm. Bạn có thể mở rộng thời gian sang <b>30 ngày</b> hoặc <b>Toàn thời gian</b>, hoặc dẫn đầu ngay hôm nay!
                 </p>
               </div>
             )}
@@ -6213,7 +6478,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
                 onClick={() => runKeywordNicheScan(true)}
                 disabled={loading}
                 className="py-2.5 px-6 rounded-xl text-xs font-bold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 transition shadow-md flex items-center gap-2 disabled:opacity-50">
-                <span>{loading ? 'Đang quét thêm video...' : '+ Quét Tiếp & Tìm Thêm Kênh Khác'}</span>
+                <span>{loading ? 'Đang quét thêm video...' : '+ Quét Tiếp & Tìm Thêm Kênh Khác (Phiên 10 Phút)'}</span>
               </button>
             </div>
           </div>
@@ -6226,9 +6491,9 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
           <div className="w-12 h-12 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400 font-black text-sm">
             SCAN
           </div>
-          <h3 className="text-base font-bold text-white">Nhập từ khóa và bấm "Quét Độ Bão Hòa Ngách"</h3>
+          <h3 className="text-base font-bold text-white">Chọn khung thời gian và bấm "Quét Độ Bão Hòa Ngách"</h3>
           <p className="text-xs text-zinc-400 max-w-lg mx-auto leading-relaxed">
-            Hệ thống sẽ bóc tách từng video một, phân tích lời thoại, hình ảnh thumbnail và đưa ra chỉ số đo tốc độ bão hòa (KM/H) cùng danh sách kênh đối thủ thành công và kênh thất bại.
+            Hệ thống sẽ bóc tách từng video một theo đúng khung thời gian bạn chọn (24h, 3 ngày, 7, 14, 30, 90 ngày hoặc Toàn thời gian), phân tích lời thoại, hình ảnh thumbnail và đưa ra chỉ số đo tốc độ bão hòa (KM/H) cùng danh sách kênh đối thủ thành công và kênh thất bại.
           </p>
         </div>
       )}
