@@ -41,7 +41,6 @@
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  /* Custom scrollbar */
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: #0b0c10; }
   ::-webkit-scrollbar-thumb { background: #232738; border-radius: 4px; }
@@ -84,7 +83,7 @@ const CATS = [
   ['23', '😂 Hài kịch & Giải trí'],
   ['1', '🍿 Phim & Hoạt hình'],
   ['17', '⚽ Thể thao'],
-  ['2', '🚗 Xe cộ & Đua xe'],
+  ['2', '🚗 Xe cộ'],
   ['19', '✈️ Du lịch & Sự kiện'],
   ['15', '🐶 Thú cưng & Động vật'],
   ['22', '👥 Blog & Đời thường']
@@ -132,9 +131,9 @@ const TYPES = [
 const SORTS = [
   ['total', '🔥 Trend Score cao nhất'],
   ['vph', '⚡ Tốc độ Views/Giờ (Viral)'],
-  ['views', '👁️ Tổng lượt xem nhiều nhất'],
-  ['eng', '💬 Tỷ lệ tương tác cao nhất'],
-  ['ts', '🆕 Ngày phát hành mới nhất'],
+  ['views', '👁️ Tổng lượt xem'],
+  ['eng', '💬 Tương tác cao nhất'],
+  ['ts', '🆕 Mới nhất'],
   ['dur', '⏱️ Thời lượng video']
 ];
 
@@ -180,7 +179,7 @@ function getBestThumb(thumbnails) {
   );
 }
 
-// Sophisticated Trend Scoring Algorithm
+// Trend Scoring Algorithm
 function score(v) {
   const hours = Math.max((Date.now() - new Date(v.published).getTime()) / 36e5, 0.5);
   const vph = v.views / hours;
@@ -230,26 +229,44 @@ function errInfo(e) {
 const bPrimary = 'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20 active:scale-95 transition-all duration-150 flex items-center justify-center gap-1.5';
 const bSecondary = 'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 hover:text-white border border-brand-border active:scale-95 transition-all duration-150 flex items-center justify-center gap-1.5';
 const bActive = 'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-red-600/15 text-red-400 border border-red-500/30 flex items-center justify-center gap-1.5';
-const inp = 'w-full bg-brand-surface border border-brand-border hover:border-zinc-600 rounded-xl px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all';
+const inp = 'w-full bg-brand-surface border border-brand-border hover:border-zinc-600 rounded-xl px-3 py-2 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all';
 const scoreCls = t => t >= 75 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : t >= 45 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-zinc-800 text-zinc-400 border border-zinc-700';
 
-// Video Action Buttons Component
-function Actions({ v, saved, onDetail, onDownload, onPlay, onSave, onCopy }) {
+// Video Action Buttons Component (Direct redirection to YouTube)
+function Actions({ v, saved, onDetail, onDownload, onSave, onCopy }) {
+  const ytUrl = 'https://www.youtube.com/watch?v=' + v.id;
   return (
     <div className="flex flex-wrap gap-1.5 mt-2">
-      <button onClick={() => onPlay(v)} className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-500 text-white transition flex items-center gap-1" title="Xem video tại chỗ">
-        ▶ Xem
-      </button>
-      <button onClick={() => onDownload(v)} className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 transition flex items-center gap-1" title="Tải video độ phân giải cao, MP3, Thumbnail">
+      <a 
+        href={ytUrl} 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-500 text-white transition flex items-center gap-1 shadow-sm"
+        title="Chuyển hướng mở video trực tiếp trên YouTube">
+        ▶ Xem trên YouTube ↗
+      </a>
+      <button 
+        onClick={() => onDownload(v)} 
+        className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 transition flex items-center gap-1" 
+        title="Tải video độ phân giải cao, MP3, Thumbnail">
         📥 Tải về
       </button>
-      <button onClick={() => onDetail(v)} className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border transition" title="Xem chi tiết phân tích điểm Trend">
+      <button 
+        onClick={() => onDetail(v)} 
+        className="px-2 py-1.5 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border transition" 
+        title="Xem chi tiết phân tích điểm Trend">
         📊 Chỉ số
       </button>
-      <button onClick={() => onSave(v)} className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${saved ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-brand-card hover:bg-brand-hover text-zinc-400 border-brand-border'}`} title="Lưu vào danh sách theo dõi">
+      <button 
+        onClick={() => onSave(v)} 
+        className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition ${saved ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-brand-card hover:bg-brand-hover text-zinc-400 border-brand-border'}`} 
+        title="Lưu vào danh sách theo dõi">
         {saved ? '★ Đã lưu' : '☆ Theo dõi'}
       </button>
-      <button onClick={() => onCopy('https://www.youtube.com/watch?v=' + v.id, 'Đã sao chép link video!')} className="px-2 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white bg-brand-card hover:bg-brand-hover border border-brand-border transition" title="Sao chép link">
+      <button 
+        onClick={() => onCopy(ytUrl, 'Đã sao chép link video!')} 
+        className="px-2 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-white bg-brand-card hover:bg-brand-hover border border-brand-border transition" 
+        title="Sao chép link">
         📋
       </button>
     </div>
@@ -264,7 +281,6 @@ function DownloadModal({ video, onClose, onCopy }) {
   if (!video) return null;
 
   const ytUrl = `https://www.youtube.com/watch?v=${video.id}`;
-  const shortUrl = `https://youtu.be/${video.id}`;
 
   const downloadThumbnail = async (quality = 'maxres') => {
     setDownloadingThumb(true);
@@ -285,7 +301,6 @@ function DownloadModal({ video, onClose, onCopy }) {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
-      // Fallback: Open direct image in new window
       window.open(thumbUrl, '_blank');
     } finally {
       setDownloadingThumb(false);
@@ -302,8 +317,6 @@ function DownloadModal({ video, onClose, onCopy }) {
       url = `https://en.savefrom.net/1-youtube-video-downloader-386.html?url=${encodeURIComponent(ytUrl)}`;
     } else if (engine === 'ssyoutube') {
       url = `https://www.ssyoutube.com/watch?v=${video.id}`;
-    } else if (engine === 'ytmp3') {
-      url = `https://y2mate.nu/en/watch?v=${video.id}`;
     }
     window.open(url, '_blank');
   };
@@ -358,7 +371,7 @@ function DownloadModal({ video, onClose, onCopy }) {
                   <span>🎬 10Downloader</span>
                   <span className="text-xs group-hover:translate-x-0.5 transition">↗</span>
                 </div>
-                <div className="text-[11px] text-zinc-400 mt-0.5">Tải MP4 1080p, 720p, 480p, 360p không quảng cáo độc</div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">Tải MP4 1080p, 720p, 480p, 360p</div>
               </button>
 
               <button onClick={() => openFastDownloader('y2mate')} className="p-3 rounded-xl bg-gradient-to-r from-red-600/20 to-rose-600/20 hover:from-red-600/30 hover:to-rose-600/30 border border-red-500/30 text-left transition group">
@@ -366,7 +379,7 @@ function DownloadModal({ video, onClose, onCopy }) {
                   <span>🎵 Y2Mate MP3/MP4</span>
                   <span className="text-xs group-hover:translate-x-0.5 transition">↗</span>
                 </div>
-                <div className="text-[11px] text-zinc-400 mt-0.5">Tải file âm thanh MP3 320kbps và video HD</div>
+                <div className="text-[11px] text-zinc-400 mt-0.5">Tải file âm thanh MP3 320kbps & video HD</div>
               </button>
 
               <button onClick={() => openFastDownloader('ssyoutube')} className="p-3 rounded-xl bg-brand-card hover:bg-brand-hover border border-brand-border text-left transition group">
@@ -425,42 +438,7 @@ function DownloadModal({ video, onClose, onCopy }) {
 
         {/* Footer */}
         <div className="p-3 bg-brand-card/50 border-t border-brand-border text-center text-[11px] text-zinc-500">
-          Mẹo: Nếu dùng IDM hoặc phần mềm tải ngoài, bấm "Copy Link" rồi dán trực tiếp để tải tốc độ tối đa của đường truyền.
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Embedded Video Player Modal
-function PlayerModal({ video, onClose }) {
-  if (!video) return null;
-  return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6" onClick={onClose}>
-      <div className="bg-brand-surface border border-brand-border rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="p-3 sm:p-4 border-b border-brand-border flex items-center justify-between bg-brand-card">
-          <div className="flex items-center gap-2 overflow-hidden pr-2">
-            <span className="text-red-500 text-lg">▶</span>
-            <h3 className="font-bold text-sm sm:text-base text-white truncate">{video.title}</h3>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg bg-brand-surface hover:bg-brand-border text-zinc-400 hover:text-white flex items-center justify-center transition flex-shrink-0">✕</button>
-        </div>
-        <div className="relative aspect-video w-full bg-black">
-          <iframe
-            src={`https://www.youtube.com/embed/${video.id}?autoplay=1&rel=0`}
-            title={video.title}
-            className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-        <div className="p-3 bg-brand-surface border-t border-brand-border flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
-          <span>👤 {video.channel} · 🕒 {fmtD(video.published)}</span>
-          <div className="flex gap-2">
-            <a href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank" rel="noreferrer" className="text-red-400 hover:underline flex items-center gap-1">
-              Mở trên YouTube ↗
-            </a>
-          </div>
+          Mẹo: Nếu dùng IDM hoặc phần mềm tải ngoài, bấm "Copy Link" rồi dán trực tiếp để tải tốc độ tối đa.
         </div>
       </div>
     </div>
@@ -478,12 +456,15 @@ function App() {
   const [kw, setKw] = useState('');
   const [activePreset, setActivePreset] = useState('trending');
   
-  // Advanced Filter States
+  // Compact / Advanced Filter Toggle State
+  const [showMoreFilter, setShowMoreFilter] = useState(false);
+  
+  // Filter States
   const [f, setF] = useState(DEF);
   const [applied, setApplied] = useState(DEF);
   const [sort, setSort] = useState('total');
-  const [searchOrder, setSearchOrder] = useState('viewCount'); // 'date' | 'viewCount' | 'relevance' | 'rating'
-  const [mode, setMode] = useState('grid'); // 'grid' | 'table'
+  const [searchOrder, setSearchOrder] = useState('viewCount');
+  const [mode, setMode] = useState('grid');
   
   // Data States
   const [items, setItems] = useState([]);
@@ -496,7 +477,6 @@ function App() {
   // Modals
   const [detail, setDetail] = useState(null);
   const [downloadVideo, setDownloadVideo] = useState(null);
-  const [playerVideo, setPlayerVideo] = useState(null);
   const [toast, setToast] = useState(null);
   
   const [watch, setWatch] = useState(() => {
@@ -508,7 +488,6 @@ function App() {
 
   useEffect(() => { st.set('yt_watch', JSON.stringify(watch)); }, [watch]);
 
-  // Toast notifier
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
@@ -535,7 +514,7 @@ function App() {
     showToast('Đã xóa API Key!');
   }
 
-  // Load YouTube Data with filters
+  // Load YouTube Data
   async function load(kind) {
     if (!key) {
       setError({ code: 'MISSING' });
@@ -564,7 +543,6 @@ function App() {
       let vids = [], next = '';
 
       if (p.kw) {
-        // Keyword Search Flow
         const searchParams = {
           part: 'snippet',
           type: 'video',
@@ -582,7 +560,6 @@ function App() {
         const ids = (s.items || []).map(i => i.id && i.id.videoId).filter(Boolean);
         vids = ids.length ? ((await yt('videos', { part: 'snippet,statistics,contentDetails', id: ids.join(',') }, key)).items || []) : [];
       } else {
-        // Most Popular Chart Flow
         const vidParams = {
           part: 'snippet,statistics,contentDetails',
           chart: 'mostPopular',
@@ -597,7 +574,6 @@ function App() {
         vids = (s.items || []).filter(i => cutoff === 0 || new Date(i.snippet.publishedAt).getTime() >= cutoff);
       }
 
-      // Fetch Channel Statistics for subscriber ratio
       const cids = [...new Set(vids.map(v => v.snippet.channelId))];
       const subs = {};
       if (cids.length) {
@@ -607,7 +583,6 @@ function App() {
         });
       }
 
-      // Map and Score Items
       const out = vids.map(v => {
         const s = v.statistics || {};
         const bestThumb = getBestThumb(v.snippet.thumbnails);
@@ -644,7 +619,6 @@ function App() {
     }
   }
 
-  // Handle Preset Switching
   function applyPreset(preset) {
     setActivePreset(preset.id);
     const updated = {
@@ -658,7 +632,6 @@ function App() {
     setApplied(updated);
     if (preset.sort) setSort(preset.sort);
 
-    // Trigger fresh load with the new parameters
     lastQ.current = {
       kw: kw.trim(),
       cat: preset.cat,
@@ -667,10 +640,6 @@ function App() {
       order: preset.id === 'realtime' ? 'date' : searchOrder
     };
     setTimeout(() => load('refresh'), 0);
-  }
-
-  function applyFilters() {
-    load('new');
   }
 
   function clearFilters() {
@@ -683,7 +652,6 @@ function App() {
     setTimeout(() => load('refresh'), 0);
   }
 
-  // Client-Side Filtered & Sorted Videos
   const shown = useMemo(() => {
     const mv = Number(applied.minViews) || 0;
     const mvph = Number(applied.minVph) || 0;
@@ -692,10 +660,10 @@ function App() {
       .filter(v => v.vph >= mvph)
       .filter(v => {
         if (applied.vtype === 'all') return true;
-        if (applied.vtype === 'short') return v.dur <= 60; // Standard YouTube Shorts <= 60s
-        if (applied.vtype === 'brief') return v.dur > 60 && v.dur <= 300; // 1-5 mins
-        if (applied.vtype === 'medium') return v.dur > 300 && v.dur <= 1200; // 5-20 mins
-        if (applied.vtype === 'long') return v.dur > 1200; // > 20 mins
+        if (applied.vtype === 'short') return v.dur <= 60;
+        if (applied.vtype === 'brief') return v.dur > 60 && v.dur <= 300;
+        if (applied.vtype === 'medium') return v.dur > 300 && v.dur <= 1200;
+        if (applied.vtype === 'long') return v.dur > 1200;
         return true;
       })
       .sort((a, b) => {
@@ -819,15 +787,15 @@ function App() {
       </header>
 
       {/* Main Body */}
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 py-5 space-y-4 flex-1 w-full">
         {/* Missing Key Banner */}
         {!key && (
-          <div className="border border-red-500/40 bg-gradient-to-r from-red-950/60 to-zinc-950/80 rounded-2xl p-5 text-sm space-y-3 shadow-xl">
+          <div className="border border-red-500/40 bg-gradient-to-r from-red-950/60 to-zinc-950/80 rounded-2xl p-4 text-sm space-y-2 shadow-xl">
             <div className="font-bold text-red-300 flex items-center gap-2 text-base">
               <span>⚠</span> Bạn cần nhập YouTube API Key để tải dữ liệu xu hướng thực tế
             </div>
             <p className="text-zinc-300 text-xs sm:text-sm">
-              Ứng dụng lấy dữ liệu chuẩn 100% từ YouTube Data API v3 chính thống. Key được lưu an toàn trực tiếp trên trình duyệt của bạn (không gửi ra ngoài).
+              Ứng dụng lấy dữ liệu trực tiếp từ YouTube Data API v3 chính thống. Key được lưu an toàn trực tiếp trên trình duyệt của bạn (không gửi ra ngoài).
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
               <button onClick={() => { setKeyDraft(key); setShowKeyBox(true); }} className={bPrimary}>
@@ -851,183 +819,200 @@ function App() {
 
         {/* SEARCH TAB CONTENT */}
         {tab === 'search' && (<>
-          {/* Preset Buttons Bar (Mới nhất, thịnh hành, viral, shorts...) */}
-          <section className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                🎯 Lựa chọn nhanh chế độ xu hướng:
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {PRESETS.map(p => {
-                const isActive = activePreset === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => applyPreset(p)}
-                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 border ${
-                      isActive 
-                        ? 'bg-red-600 text-white border-red-500 shadow-md shadow-red-600/30' 
-                        : 'bg-brand-surface hover:bg-brand-card text-zinc-300 border-brand-border'
-                    }`}>
-                    <span>{p.icon}</span>
-                    <span>{p.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+          {/* Quick Preset Buttons Bar */}
+          <section className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-bold text-zinc-400 mr-1 hidden sm:inline">Chế độ:</span>
+            {PRESETS.map(p => {
+              const isActive = activePreset === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => applyPreset(p)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 border ${
+                    isActive 
+                      ? 'bg-red-600 text-white border-red-500 shadow-md shadow-red-600/30' 
+                      : 'bg-brand-surface hover:bg-brand-card text-zinc-300 border-brand-border'
+                  }`}>
+                  <span>{p.icon}</span>
+                  <span>{p.label}</span>
+                </button>
+              );
+            })}
           </section>
 
-          {/* Search Box & Advanced Filters */}
-          <section className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
-            {/* Search Input Bar */}
-            <div className="flex flex-col sm:flex-row gap-2.5">
+          {/* Compact Streamlined Search & Filter Section */}
+          <section className="bg-brand-surface border border-brand-border rounded-2xl p-3 sm:p-4 space-y-3 shadow-lg">
+            {/* Unified Single Row: Input + Core Dropdowns + Action */}
+            <div className="flex flex-col md:flex-row gap-2">
               <div className="relative flex-1">
-                <span className="absolute left-3.5 top-3 text-zinc-500">🔍</span>
+                <span className="absolute left-3.5 top-2.5 text-zinc-500">🔍</span>
                 <input
-                  className={inp + ' pl-9 text-base'}
-                  placeholder="Nhập từ khóa (để trống để xem video xu hướng hàng đầu)..."
+                  className={inp + ' pl-9 py-2 text-xs sm:text-sm'}
+                  placeholder="Nhập từ khóa tìm kiếm (để trống để xem video thịnh hành)..."
                   value={kw}
                   onChange={e => setKw(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') load('new'); }}
                 />
               </div>
-              <button onClick={() => load('new')} disabled={loading} className={bPrimary + ' sm:w-40 py-2.5 text-sm disabled:opacity-50'}>
-                {loading ? '⏳ Đang quét...' : '🔎 Quét Xu Hướng'}
-              </button>
+
+              <div className="flex flex-wrap sm:flex-nowrap gap-1.5">
+                <select
+                  className="bg-brand-card border border-brand-border rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[150px] truncate"
+                  value={f.cat}
+                  onChange={e => {
+                    const upd = { ...f, cat: e.target.value };
+                    setF(upd);
+                    setApplied(upd);
+                    setTimeout(() => load('new'), 0);
+                  }}>
+                  {CATS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
+                </select>
+
+                <select
+                  className="bg-brand-card border border-brand-border rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[130px]"
+                  value={f.region}
+                  onChange={e => {
+                    const upd = { ...f, region: e.target.value };
+                    setF(upd);
+                    setApplied(upd);
+                    setTimeout(() => load('new'), 0);
+                  }}>
+                  {REGIONS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
+                </select>
+
+                <button 
+                  onClick={() => load('new')} 
+                  disabled={loading} 
+                  className={bPrimary + ' py-2 px-4 text-xs whitespace-nowrap disabled:opacity-50'}>
+                  {loading ? '⏳ Quét...' : '🔎 Quét'}
+                </button>
+
+                <button
+                  onClick={() => setShowMoreFilter(!showMoreFilter)}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold border transition flex items-center gap-1 whitespace-nowrap ${
+                    showMoreFilter 
+                      ? 'bg-red-600/20 text-red-400 border-red-500/40' 
+                      : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border'
+                  }`}
+                  title="Mở thêm tùy chọn lọc thời gian và độ dài video">
+                  ⚙️ Lọc thêm {showMoreFilter ? '▲' : '▼'}
+                </button>
+              </div>
             </div>
 
             {/* Quick Keyword Chips */}
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-zinc-500 font-medium">Gợi ý từ khóa:</span>
+              <span className="text-zinc-500 font-medium text-[11px]">Từ khóa hot:</span>
               {QUICK_TAGS.map(tag => (
                 <button
                   key={tag}
-                  onClick={() => { setKw(tag); }}
-                  className="px-2.5 py-1 rounded-lg bg-brand-card hover:bg-brand-hover text-zinc-300 hover:text-white border border-brand-border transition">
+                  onClick={() => { setKw(tag); setTimeout(() => load('new'), 0); }}
+                  className="px-2 py-0.5 rounded-lg bg-brand-card hover:bg-brand-hover text-zinc-300 hover:text-white border border-brand-border transition text-[11px]">
                   {tag}
                 </button>
               ))}
-            </div>
-
-            {/* Filter Controls Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs text-zinc-400 pt-2 border-t border-brand-border">
-              <label className="flex flex-col gap-1">
-                <span className="font-semibold text-zinc-300">Lĩnh vực</span>
-                <select className={inp} value={f.cat} onChange={e => setF({ ...f, cat: e.target.value })}>
-                  {CATS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="font-semibold text-zinc-300">Quốc gia</span>
-                <select className={inp} value={f.region} onChange={e => setF({ ...f, region: e.target.value })}>
-                  {REGIONS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="font-semibold text-zinc-300">Thời gian đăng</span>
-                <select className={inp} value={f.period} onChange={e => setF({ ...f, period: Number(e.target.value) })}>
-                  {PERIODS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="font-semibold text-zinc-300">Độ dài video</span>
-                <select className={inp} value={f.vtype} onChange={e => setF({ ...f, vtype: e.target.value })}>
-                  {TYPES.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="font-semibold text-zinc-300">Lượt xem tối thiểu</span>
-                <select className={inp} value={f.minViews} onChange={e => setF({ ...f, minViews: e.target.value })}>
-                  <option value="">Tất cả lượt xem</option>
-                  <option value="1000">≥ 1.000 view</option>
-                  <option value="10000">≥ 10.000 view</option>
-                  <option value="50000">≥ 50.000 view</option>
-                  <option value="100000">≥ 100.000 view</option>
-                  <option value="500000">≥ 500.000 view</option>
-                  <option value="1000000">≥ 1.000.000 view</option>
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="font-semibold text-zinc-300">VPH tối thiểu (Views/h)</span>
-                <select className={inp} value={f.minVph} onChange={e => setF({ ...f, minVph: e.target.value })}>
-                  <option value="">Mọi tốc độ</option>
-                  <option value="500">≥ 500 view/giờ</option>
-                  <option value="1000">≥ 1.000 view/giờ</option>
-                  <option value="5000">≥ 5.000 view/giờ</option>
-                  <option value="10000">≥ 10.000 view/giờ</option>
-                </select>
-              </label>
-            </div>
-
-            {/* Action Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-brand-border">
-              <div className="flex items-center gap-2">
-                <button onClick={applyFilters} className={bPrimary}>
-                  ✓ Áp dụng bộ lọc
+              {kw && (
+                <button onClick={() => { setKw(''); }} className="text-zinc-500 hover:text-red-400 ml-1 text-xs">
+                  ✕ Xóa
                 </button>
-                <button onClick={clearFilters} className={bSecondary}>
-                  ✕ Đặt lại
-                </button>
-              </div>
-              <div className="text-[11px] text-zinc-500">
-                Lọc theo độ dài Shorts, Lượt xem và Tốc độ VPH áp dụng tức thì trên kết quả.
-              </div>
+              )}
             </div>
+
+            {/* Collapsible Advanced Filters */}
+            {showMoreFilter && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t border-brand-border text-xs animate-in fade-in duration-150">
+                <label className="flex flex-col gap-1">
+                  <span className="text-zinc-400 font-medium">Thời gian đăng</span>
+                  <select 
+                    className={inp + ' py-1.5 text-xs'} 
+                    value={f.period} 
+                    onChange={e => { const upd = { ...f, period: Number(e.target.value) }; setF(upd); setApplied(upd); setTimeout(() => load('new'), 0); }}>
+                    {PERIODS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
+                  </select>
+                </label>
+
+                <label className="flex flex-col gap-1">
+                  <span className="text-zinc-400 font-medium">Độ dài video</span>
+                  <select 
+                    className={inp + ' py-1.5 text-xs'} 
+                    value={f.vtype} 
+                    onChange={e => { const upd = { ...f, vtype: e.target.value }; setF(upd); setApplied(upd); }}>
+                    {TYPES.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
+                  </select>
+                </label>
+
+                <label className="flex flex-col gap-1">
+                  <span className="text-zinc-400 font-medium">Lượt xem tối thiểu</span>
+                  <select 
+                    className={inp + ' py-1.5 text-xs'} 
+                    value={f.minViews} 
+                    onChange={e => { const upd = { ...f, minViews: e.target.value }; setF(upd); setApplied(upd); }}>
+                    <option value="">Tất cả lượt xem</option>
+                    <option value="1000">≥ 1.000 view</option>
+                    <option value="10000">≥ 10.000 view</option>
+                    <option value="50000">≥ 50.000 view</option>
+                    <option value="100000">≥ 100.000 view</option>
+                    <option value="500000">≥ 500.000 view</option>
+                    <option value="1000000">≥ 1.000.000 view</option>
+                  </select>
+                </label>
+
+                <div className="flex items-end">
+                  <button onClick={clearFilters} className={bSecondary + ' w-full py-1.5 text-xs'}>
+                    ✕ Đặt lại tất cả
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Quick Statistics Overview */}
-          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
             {[
               ['Tổng video phân tích', fmt(stats.n), '📹'],
               ['Tổng lượt xem', fmt(stats.views), '👁️'],
-              ['Điểm Trend trung bình', stats.avg.toFixed(1) + ' / 100', '🎯'],
-              ['Tốc độ VPH cao nhất', fmt(stats.maxVph) + ' view/h', '⚡']
+              ['Điểm Trend TB', stats.avg.toFixed(1) + ' / 100', '🎯'],
+              ['Tốc độ VPH đỉnh', fmt(stats.maxVph) + ' view/h', '⚡']
             ].map(c => (
-              <div key={c[0]} className="bg-brand-surface border border-brand-border rounded-2xl p-4 shadow-sm hover:border-zinc-700 transition">
-                <div className="flex items-center justify-between text-xs text-zinc-400">
+              <div key={c[0]} className="bg-brand-surface border border-brand-border rounded-xl p-3 shadow-sm hover:border-zinc-700 transition">
+                <div className="flex items-center justify-between text-[11px] text-zinc-400">
                   <span>{c[0]}</span>
                   <span>{c[2]}</span>
                 </div>
-                <div className="text-xl sm:text-2xl font-black mt-1 text-white tracking-tight">{c[1]}</div>
+                <div className="text-lg sm:text-xl font-black mt-0.5 text-white tracking-tight">{c[1]}</div>
               </div>
             ))}
           </section>
 
           {/* Sorting & Views Toolbar */}
-          <section className="flex flex-wrap items-center justify-between gap-3 p-3 bg-brand-surface border border-brand-border rounded-xl">
-            <div className="flex flex-wrap items-center gap-2">
+          <section className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-brand-surface border border-brand-border rounded-xl">
+            <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-semibold text-zinc-400">Sắp xếp:</span>
               <div className="flex flex-wrap gap-1">
                 {SORTS.map(s => (
                   <button
                     key={s[0]}
                     onClick={() => setSort(s[0])}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${sort === s[0] ? 'bg-red-600 text-white' : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border'}`}>
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${sort === s[0] ? 'bg-red-600 text-white' : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border'}`}>
                     {s[1]}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center gap-1.5 ml-auto">
               <div className="flex bg-brand-card border border-brand-border rounded-lg p-0.5">
-                <button onClick={() => setMode('grid')} className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${mode === 'grid' ? 'bg-brand-border text-white' : 'text-zinc-400'}`}>
+                <button onClick={() => setMode('grid')} className={`px-2 py-0.5 rounded-md text-xs font-medium transition ${mode === 'grid' ? 'bg-brand-border text-white' : 'text-zinc-400'}`}>
                   ▦ Thẻ
                 </button>
-                <button onClick={() => setMode('table')} className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${mode === 'table' ? 'bg-brand-border text-white' : 'text-zinc-400'}`}>
+                <button onClick={() => setMode('table')} className={`px-2 py-0.5 rounded-md text-xs font-medium transition ${mode === 'table' ? 'bg-brand-border text-white' : 'text-zinc-400'}`}>
                   ☰ Bảng
                 </button>
               </div>
-              <button onClick={exportCsv} disabled={!shown.length} className={bSecondary + ' py-1.5 text-xs disabled:opacity-40'}>
-                ⬇ Xuất Excel
+              <button onClick={exportCsv} disabled={!shown.length} className={bSecondary + ' py-1 px-2.5 text-xs disabled:opacity-40'}>
+                ⬇ Excel
               </button>
-              <button onClick={() => load('refresh')} disabled={loading} className={bSecondary + ' py-1.5 text-xs disabled:opacity-40'}>
+              <button onClick={() => load('refresh')} disabled={loading} className={bSecondary + ' py-1 px-2.5 text-xs disabled:opacity-40'}>
                 ⟳ Làm mới
               </button>
             </div>
@@ -1051,15 +1036,15 @@ function App() {
 
           {/* Empty State */}
           {!loading && !shown.length && (
-            <div className="text-center border border-dashed border-brand-border rounded-2xl p-12 bg-brand-surface/40">
-              <div className="text-5xl mb-3">📭</div>
-              <h3 className="font-bold text-lg text-white">{loaded ? 'Không có video nào thỏa mãn bộ lọc' : 'Sẵn sàng quét xu hướng'}</h3>
+            <div className="text-center border border-dashed border-brand-border rounded-2xl p-10 bg-brand-surface/40">
+              <div className="text-4xl mb-2">📭</div>
+              <h3 className="font-bold text-base text-white">{loaded ? 'Không có video nào thỏa mãn bộ lọc' : 'Sẵn sàng quét xu hướng'}</h3>
               <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto mt-1">
-                {loaded ? 'Hãy thử nới rộng thời gian đăng, giảm lượt xem tối thiểu hoặc bấm "Đặt lại" để xem thêm.' : 'Chọn một chế độ xu hướng nhanh ở trên (Thịnh hành, Siêu Viral, Mới nhất, Shorts...) hoặc nhập từ khóa để bắt đầu.'}
+                {loaded ? 'Hãy thử nới rộng thời gian đăng hoặc bấm "Đặt lại tất cả" để xem thêm.' : 'Chọn một chế độ xu hướng nhanh ở trên (Thịnh hành, Siêu Viral, Mới nhất, Shorts...) để bắt đầu.'}
               </p>
               {!loaded && (
-                <button onClick={() => load('new')} className={bPrimary + ' mx-auto mt-4'}>
-                  🚀 Bắt đầu quét xu hướng thịnh hành
+                <button onClick={() => load('new')} className={bPrimary + ' mx-auto mt-3'}>
+                  🚀 Quét ngay các video thịnh hành
                 </button>
               )}
             </div>
@@ -1068,70 +1053,82 @@ function App() {
           {/* GRID VIEW */}
           {shown.length > 0 && mode === 'grid' && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {shown.map(v => (
-                <article key={v.id} className="bg-brand-surface border border-brand-border hover:border-zinc-700 rounded-2xl overflow-hidden flex flex-col group transition duration-150 hover:shadow-xl hover:shadow-black/40">
-                  {/* Thumbnail Container */}
-                  <div className="relative aspect-video bg-zinc-900 cursor-pointer overflow-hidden" onClick={() => setPlayerVideo(v)}>
-                    <img src={v.thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
-                    
-                    {/* Trend Score Badge */}
-                    <div className={`absolute top-2.5 right-2.5 text-xs font-black px-2.5 py-1 rounded-lg backdrop-blur-md shadow-lg ${scoreCls(v.total)}`}>
-                      ★ {v.total}
-                    </div>
+              {shown.map(v => {
+                const ytUrl = 'https://www.youtube.com/watch?v=' + v.id;
+                return (
+                  <article key={v.id} className="bg-brand-surface border border-brand-border hover:border-zinc-700 rounded-2xl overflow-hidden flex flex-col group transition duration-150 hover:shadow-xl hover:shadow-black/40">
+                    {/* Thumbnail Container (Click opens directly on YouTube) */}
+                    <a 
+                      href={ytUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="relative aspect-video bg-zinc-900 overflow-hidden block"
+                      title="Mở xem trên YouTube">
+                      <img src={v.thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
+                      
+                      {/* Trend Score Badge */}
+                      <div className={`absolute top-2.5 right-2.5 text-xs font-black px-2 py-0.5 rounded-lg backdrop-blur-md shadow-lg ${scoreCls(v.total)}`}>
+                        ★ {v.total}
+                      </div>
 
-                    {/* Duration Badge */}
-                    <div className="absolute bottom-2.5 right-2.5 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-black/85 text-white backdrop-blur-sm">
-                      {v.dur <= 60 && <span className="text-red-400 font-bold mr-1">📱</span>}
-                      {fmtDur(v.dur)}
-                    </div>
+                      {/* Duration Badge */}
+                      <div className="absolute bottom-2.5 right-2.5 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-black/85 text-white backdrop-blur-sm">
+                        {v.dur <= 60 && <span className="text-red-400 font-bold mr-1">📱</span>}
+                        {fmtDur(v.dur)}
+                      </div>
 
-                    {/* Play Overlay Icon on Hover */}
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                      <div className="w-12 h-12 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg text-lg">
-                        ▶
+                      {/* Play Overlay Icon on Hover */}
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                        <div className="px-3 py-1.5 rounded-xl bg-red-600/95 text-white font-semibold text-xs flex items-center gap-1 shadow-lg">
+                          ▶ Xem trên YouTube ↗
+                        </div>
+                      </div>
+                    </a>
+
+                    {/* Card Content */}
+                    <div className="p-3.5 flex flex-col gap-2 flex-1">
+                      <a 
+                        href={ytUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-red-400 transition" 
+                        title={v.title}>
+                        {v.title}
+                      </a>
+                      <div className="text-xs text-zinc-400 flex items-center justify-between">
+                        <span className="truncate max-w-[160px]">👤 {v.channel}</span>
+                        <span className="text-[11px] text-zinc-500">{v.subs ? fmt(v.subs) + ' subs' : ''}</span>
+                      </div>
+
+                      {/* Metric Pills */}
+                      <div className="grid grid-cols-2 gap-1.5 text-[11px] bg-brand-card p-2 rounded-xl border border-brand-border">
+                        <div className="text-zinc-300">
+                          <span className="text-zinc-500">Lượt xem:</span> <b className="text-white">{fmt(v.views)}</b>
+                        </div>
+                        <div className="text-emerald-400 font-semibold">
+                          <span className="text-zinc-500 font-normal">Tốc độ:</span> +{fmt(v.vph)}/h
+                        </div>
+                        <div className="text-zinc-400 col-span-2 flex justify-between border-t border-brand-border/60 pt-1 mt-0.5">
+                          <span>🕒 {fmtD(v.published).split(' ')[0]}</span>
+                          <span className="text-amber-400">💬 {v.sc.engPercent}% TT</span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="mt-auto pt-1">
+                        <Actions 
+                          v={v} 
+                          saved={!!watch[v.id]} 
+                          onDetail={setDetail} 
+                          onDownload={setDownloadVideo} 
+                          onSave={toggleWatch}
+                          onCopy={copyText}
+                        />
                       </div>
                     </div>
-                  </div>
-
-                  {/* Card Content */}
-                  <div className="p-3.5 flex flex-col gap-2 flex-1">
-                    <h3 className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-red-400 transition" title={v.title}>
-                      {v.title}
-                    </h3>
-                    <div className="text-xs text-zinc-400 flex items-center justify-between">
-                      <span className="truncate max-w-[160px]">👤 {v.channel}</span>
-                      <span className="text-[11px] text-zinc-500">{v.subs ? fmt(v.subs) + ' subs' : ''}</span>
-                    </div>
-
-                    {/* Metric Pills */}
-                    <div className="grid grid-cols-2 gap-1.5 text-[11px] bg-brand-card p-2 rounded-xl border border-brand-border">
-                      <div className="text-zinc-300">
-                        <span className="text-zinc-500">Lượt xem:</span> <b className="text-white">{fmt(v.views)}</b>
-                      </div>
-                      <div className="text-emerald-400 font-semibold">
-                        <span className="text-zinc-500 font-normal">Tốc độ:</span> +{fmt(v.vph)}/h
-                      </div>
-                      <div className="text-zinc-400 col-span-2 flex justify-between border-t border-brand-border/60 pt-1 mt-0.5">
-                        <span>🕒 {fmtD(v.published).split(' ')[0]}</span>
-                        <span className="text-amber-400">💬 {v.sc.engPercent}% TT</span>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="mt-auto pt-1">
-                      <Actions 
-                        v={v} 
-                        saved={!!watch[v.id]} 
-                        onDetail={setDetail} 
-                        onDownload={setDownloadVideo} 
-                        onPlay={setPlayerVideo} 
-                        onSave={toggleWatch}
-                        onCopy={copyText}
-                      />
-                    </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
 
@@ -1147,39 +1144,41 @@ function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-border">
-                  {shown.map(v => (
-                    <tr key={v.id} className="hover:bg-brand-card/40 transition">
-                      <td className="p-3 min-w-[280px]">
-                        <div className="flex gap-3 items-center">
-                          <div className="relative w-24 aspect-video rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 cursor-pointer" onClick={() => setPlayerVideo(v)}>
-                            <img src={v.thumb} alt="" className="w-full h-full object-cover" />
-                            <span className="absolute bottom-1 right-1 text-[10px] px-1 py-0.5 rounded bg-black/80 font-bold">{fmtDur(v.dur)}</span>
+                  {shown.map(v => {
+                    const ytUrl = 'https://www.youtube.com/watch?v=' + v.id;
+                    return (
+                      <tr key={v.id} className="hover:bg-brand-card/40 transition">
+                        <td className="p-3 min-w-[280px]">
+                          <div className="flex gap-3 items-center">
+                            <a href={ytUrl} target="_blank" rel="noopener noreferrer" className="relative w-24 aspect-video rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 block group">
+                              <img src={v.thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition" />
+                              <span className="absolute bottom-1 right-1 text-[10px] px-1 py-0.5 rounded bg-black/80 font-bold">{fmtDur(v.dur)}</span>
+                            </a>
+                            <a href={ytUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-white line-clamp-2 leading-snug hover:text-red-400 transition">
+                              {v.title}
+                            </a>
                           </div>
-                          <span className="font-semibold text-white line-clamp-2 leading-snug cursor-pointer hover:text-red-400 transition" onClick={() => setPlayerVideo(v)}>
-                            {v.title}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-zinc-300 whitespace-nowrap">{v.channel}</td>
-                      <td className="p-3 text-white font-semibold whitespace-nowrap">{fmt(v.views)}</td>
-                      <td className="p-3 text-emerald-400 font-semibold whitespace-nowrap">+{fmt(v.vph)}/h</td>
-                      <td className="p-3 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-lg font-black text-xs ${scoreCls(v.total)}`}>{v.total}</span>
-                      </td>
-                      <td className="p-3 text-zinc-400 whitespace-nowrap">{fmtD(v.published)}</td>
-                      <td className="p-3 min-w-[220px]">
-                        <Actions 
-                          v={v} 
-                          saved={!!watch[v.id]} 
-                          onDetail={setDetail} 
-                          onDownload={setDownloadVideo} 
-                          onPlay={setPlayerVideo} 
-                          onSave={toggleWatch}
-                          onCopy={copyText}
-                        />
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="p-3 text-zinc-300 whitespace-nowrap">{v.channel}</td>
+                        <td className="p-3 text-white font-semibold whitespace-nowrap">{fmt(v.views)}</td>
+                        <td className="p-3 text-emerald-400 font-semibold whitespace-nowrap">+{fmt(v.vph)}/h</td>
+                        <td className="p-3 whitespace-nowrap">
+                          <span className={`px-2.5 py-1 rounded-lg font-black text-xs ${scoreCls(v.total)}`}>{v.total}</span>
+                        </td>
+                        <td className="p-3 text-zinc-400 whitespace-nowrap">{fmtD(v.published)}</td>
+                        <td className="p-3 min-w-[220px]">
+                          <Actions 
+                            v={v} 
+                            saved={!!watch[v.id]} 
+                            onDetail={setDetail} 
+                            onDownload={setDownloadVideo} 
+                            onSave={toggleWatch}
+                            onCopy={copyText}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1188,7 +1187,7 @@ function App() {
           {/* Load More Button */}
           {token && !loading && (
             <div className="text-center pt-4">
-              <button onClick={() => load('more')} className={bPrimary + ' px-8 py-3 text-sm'}>
+              <button onClick={() => load('more')} className={bPrimary + ' px-8 py-2.5 text-sm'}>
                 Tải thêm 24 video tiếp theo ➔
               </button>
             </div>
@@ -1223,6 +1222,7 @@ function App() {
                 const first = w.snaps[0], last = w.snaps[w.snaps.length - 1];
                 const gain = last.v - first.v;
                 const hrs = (last.t - first.t) / 36e5;
+                const ytUrl = 'https://www.youtube.com/watch?v=' + w.id;
                 return (
                   <article key={w.id} className="bg-brand-surface border border-brand-border rounded-2xl p-4 flex flex-col sm:flex-row gap-3">
                     <img src={w.thumb} alt="" className="w-full sm:w-36 aspect-video object-cover rounded-xl bg-zinc-900 flex-shrink-0" />
@@ -1240,12 +1240,12 @@ function App() {
                         )}
                       </div>
                       <div className="flex flex-wrap gap-1.5 pt-1">
+                        <a href={ytUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg font-semibold bg-red-600 hover:bg-red-500 text-white transition flex items-center gap-1">
+                          ▶ Xem trên YouTube ↗
+                        </a>
                         <button onClick={() => setDownloadVideo(w)} className="px-3 py-1.5 rounded-lg font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
                           📥 Tải về
                         </button>
-                        <a href={'https://www.youtube.com/watch?v=' + w.id} target="_blank" rel="noreferrer" className={bSecondary + ' py-1.5'}>
-                          Mở YouTube ↗
-                        </a>
                         <button onClick={() => setWatch(x => { const n = { ...x }; delete n[w.id]; return n; })} className="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-red-400 bg-brand-card hover:bg-brand-hover border border-brand-border">
                           Bỏ theo dõi
                         </button>
@@ -1261,7 +1261,7 @@ function App() {
 
       {/* Footer */}
       <footer className="border-t border-brand-border py-4 text-center text-xs text-zinc-500 bg-brand-surface/40">
-        YouTrend Pro Analytics · Tính toán Trend Score & Tốc độ viral dựa trên YouTube Data API v3 chính thống.
+        YouTrend Pro Analytics · Phân tích xu hướng dựa trên YouTube Data API v3 chính thống.
       </footer>
 
       {/* API Key Configuration Modal */}
@@ -1292,7 +1292,7 @@ function App() {
               </div>
             </div>
             <div className="text-[11px] text-zinc-400 bg-brand-card p-3 rounded-xl border border-brand-border">
-              🔒 Key chỉ lưu duy nhất trong bộ nhớ trình duyệt của bạn (localStorage), không bao giờ gửi về bất kỳ máy chủ bên thứ 3 nào.
+              🔒 Key chỉ lưu duy nhất trong bộ nhớ trình duyệt của bạn (localStorage), không gửi ra ngoài.
             </div>
             <div className="flex gap-2 justify-end pt-2">
               {key && <button onClick={removeKey} className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-red-950 text-red-400 hover:bg-red-900 border border-red-800 transition">Xóa key</button>}
@@ -1306,6 +1306,7 @@ function App() {
       {/* Analytics Breakdown Modal */}
       {detail && (() => {
         const v = detail, s = v.sc;
+        const ytUrl = 'https://www.youtube.com/watch?v=' + v.id;
         const rows = [
           ['Tốc độ xem ước lượng (Speed)', s.speed, 40, fmt(s.vph) + ' view/giờ. Đánh giá tốc độ gia tăng lượt xem so với thời gian phát hành.'],
           ['Độ mới (Freshness)', s.fresh, 20, 'Video đăng cách đây ' + s.hours.toFixed(1) + ' giờ. Càng mới điểm càng cao.'],
@@ -1366,11 +1367,11 @@ function App() {
               </div>
 
               <div className="flex flex-wrap gap-2 pt-2 border-t border-brand-border justify-end">
-                <button onClick={() => { setDetail(null); setDownloadVideo(v); }} className={bPrimary}>
-                  📥 Mở bảng tải video
-                </button>
-                <button onClick={() => { setDetail(null); setPlayerVideo(v); }} className={bSecondary}>
-                  ▶ Xem video
+                <a href={ytUrl} target="_blank" rel="noopener noreferrer" className={bPrimary + ' flex items-center gap-1.5'}>
+                  ▶ Xem trên YouTube ↗
+                </a>
+                <button onClick={() => { setDetail(null); setDownloadVideo(v); }} className={bSecondary}>
+                  📥 Tải video & MP3
                 </button>
               </div>
             </div>
@@ -1381,11 +1382,6 @@ function App() {
       {/* Download Video Modal */}
       {downloadVideo && (
         <DownloadModal video={downloadVideo} onClose={() => setDownloadVideo(null)} onCopy={copyText} />
-      )}
-
-      {/* Player Modal */}
-      {playerVideo && (
-        <PlayerModal video={playerVideo} onClose={() => setPlayerVideo(null)} />
       )}
     </div>
   );
