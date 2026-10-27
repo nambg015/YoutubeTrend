@@ -2,7 +2,11 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>YouTrend Pro - Phân Tích Xu Hướng & Tải Video YouTube</title>
 <meta name="description" content="Công cụ phân tích xu hướng YouTube chuyên nghiệp, tính điểm Trend Score, lọc video bứt phá và hỗ trợ tải video MP4, MP3 chất lượng cao.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,6 +40,11 @@
   }
 </script>
 <style>
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     background-color: #0b0c10;
     color: #f1f5f9;
@@ -51,6 +60,19 @@
     background: rgba(11, 12, 16, 0.88);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+  }
+  .pb-safe {
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 </style>
 </head>
@@ -10253,6 +10275,34 @@ function VideoIdeaPlannerModal({ onClose, onAddIdeaFromOutside }) {
   );
 }
 
+// Helper to extract 1-3 active channels for a niche
+function getNicheChannels(niche) {
+  if (!niche) return [];
+  const map = new Map();
+  if (niche.exampleChannel) {
+    const raw = niche.exampleChannel.trim();
+    const isH = raw.startsWith('@');
+    map.set(raw, {
+      name: raw,
+      subs: niche.subs ? `${(niche.subs / 1000).toFixed(1)}k sub` : 'Kênh ngầm',
+      url: isH ? `https://www.youtube.com/${raw}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(raw)}`
+    });
+  }
+  if (Array.isArray(niche.sampleVideos)) {
+    niche.sampleVideos.forEach(v => {
+      if (v.channel && !map.has(v.channel)) {
+        const isH = v.channel.startsWith('@');
+        map.set(v.channel, {
+          name: v.channel,
+          subs: v.subs ? `${(v.subs / 1000).toFixed(1)}k sub` : null,
+          url: isH ? `https://www.youtube.com/${v.channel}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(v.channel)}`
+        });
+      }
+    });
+  }
+  return Array.from(map.values()).slice(0, 3);
+}
+
 // TAB 2: TOP NGÁCH (HIGH-RPM NICHES - TIMEFRAME, GRID, CLASSIFICATION & SCANNER)
 function TopNgachSection({
   apiKey,
@@ -10263,7 +10313,8 @@ function TopNgachSection({
   isSaved,
   showToast,
   onOpenScoreFormula,
-  onSelectIdea
+  onSelectIdea,
+  onOpenApiModal
 }) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [timeframe, setTimeframe] = React.useState('24h');
@@ -10277,6 +10328,8 @@ function TopNgachSection({
   const [customQuery, setCustomQuery] = React.useState('');
   const [videoItems, setVideoItems] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
+  const [scanStats, setScanStats] = React.useState(null);
+  const [hasScanned, setHasScanned] = React.useState(false);
 
   // Dynamic ranking based on selected timeframe
   const rankedNiches = React.useMemo(() => {
@@ -10304,7 +10357,7 @@ function TopNgachSection({
     return rankedNiches.find(n => n.id === activeNicheId) || rankedNiches[0] || (typeof CASHCOW_NICHES !== 'undefined' ? CASHCOW_NICHES[0] : null);
   }, [rankedNiches, activeNicheId]);
 
-  // Scan Function for active niche
+  // Scan Function for active niche - Strict 100% Real YouTube Outlier Scan
   const runScan = React.useCallback(async (targetNiche, overrideQuery, overrideSub, overrideDur, overrideView, overridePeriod) => {
     const n = targetNiche || activeNiche;
     if (!n) return;
@@ -10315,51 +10368,22 @@ function TopNgachSection({
     const tPeriod = overridePeriod !== undefined ? overridePeriod : period;
     const tQuery = overrideQuery !== undefined ? overrideQuery : customQuery;
 
-    const getSampleItems = () => {
-      const samples = (n.sampleVideos && n.sampleVideos.length) ? n.sampleVideos : [
-        {
-          id: 'sample_' + n.id + '_1',
-          title: `Why This ${n.name} Channel Makes $8,000/Month With Only 20k Subscribers`,
-          channel: n.channelName || n.exampleChannel || 'Cash Cow Insights',
-          channelId: 'ch_' + n.id,
-          thumb: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
-          published: new Date(Date.now() - 36e5 * 24).toISOString(),
-          views: 34500,
-          vph: 580,
-          dur: 2840,
-          subs: n.subs || 18500
-        }
-      ];
-      return samples.map(s => {
-        const o = {
-          ...s,
-          ts: new Date(s.published).getTime(),
-          likes: Math.round(s.views * 0.04),
-          comments: Math.round(s.views * 0.008),
-          niche: n,
-          videoCount: 42
-        };
-        if (typeof score === 'function') {
-          const sc = score(o);
-          o.sc = sc;
-          o.total = sc.total;
-          o.vph = s.vph || sc.vph;
-          o.eng = sc.eng;
-        }
-        return o;
-      });
-    };
+    setLoading(true);
+    setHasScanned(true);
 
     if (!apiKey || typeof yt !== 'function') {
-      setLoading(true);
-      setTimeout(() => {
-        setVideoItems(getSampleItems());
-        setLoading(false);
-      }, 250);
+      // TUYỆT ĐỐI KHÔNG BỊA RA DỮ LIỆU GIẢ KHI CHƯA CÓ API KEY
+      setVideoItems([]);
+      setScanStats({
+        totalScanned: 0,
+        foundCount: 0,
+        isLive: false,
+        reason: 'no_api_key'
+      });
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
     try {
       const cutoff = tPeriod > 0 ? Date.now() - tPeriod * 36e5 : 0;
       let queryStr = (tQuery || '').trim();
@@ -10371,7 +10395,7 @@ function TopNgachSection({
         part: 'snippet',
         type: 'video',
         q: queryStr,
-        maxResults: 40,
+        maxResults: 50,
         regionCode: 'US',
         order: 'viewCount'
       };
@@ -10405,6 +10429,10 @@ function TopNgachSection({
         const st = v.statistics || {};
         const bestThumb = typeof getBestThumb === 'function' ? getBestThumb(v.snippet.thumbnails) : (v.snippet.thumbnails?.medium?.url || '');
         const durSeconds = typeof parseDur === 'function' ? parseDur(v.contentDetails && v.contentDetails.duration) : 1800;
+        const subCount = subs[v.snippet.channelId] === undefined ? null : subs[v.snippet.channelId];
+        const viewsCount = Number(st.viewCount || 0);
+        const outlierRatio = subCount ? (viewsCount / Math.max(subCount, 1)).toFixed(1) : null;
+
         const o = {
           id: v.id,
           title: v.snippet.title,
@@ -10413,11 +10441,12 @@ function TopNgachSection({
           thumb: bestThumb,
           published: v.snippet.publishedAt,
           ts: new Date(v.snippet.publishedAt).getTime(),
-          views: Number(st.viewCount || 0),
+          views: viewsCount,
           likes: st.likeCount == null ? null : Number(st.likeCount),
           comments: st.commentCount == null ? null : Number(st.commentCount),
           dur: durSeconds,
-          subs: subs[v.snippet.channelId] === undefined ? null : subs[v.snippet.channelId],
+          subs: subCount,
+          outlierRatio: outlierRatio,
           videoCount: channelStats[v.snippet.channelId]?.videoCount || 0,
           niche: n
         };
@@ -10431,14 +10460,13 @@ function TopNgachSection({
         return o;
       });
 
-      if (tSub === 'under30k') {
-        out = out.filter(v => v.subs == null || v.subs <= 30000);
-      } else if (tSub === 'under50k') {
-        out = out.filter(v => v.subs == null || v.subs <= 50000);
-      } else if (tSub === 'under100k') {
-        out = out.filter(v => v.subs == null || v.subs <= 100000);
+      // Filter sub count
+      const maxSub = tSub === 'under30k' ? 30000 : (tSub === 'under50k' ? 50000 : (tSub === 'under100k' ? 100000 : Infinity));
+      if (maxSub !== Infinity) {
+        out = out.filter(v => v.subs == null || v.subs <= maxSub);
       }
 
+      // Filter views
       if (tView === 'steady') {
         out = out.filter(v => v.views >= 1000 && v.views <= 60000);
       } else if (tView === 'viral') {
@@ -10447,19 +10475,36 @@ function TopNgachSection({
         out = out.filter(v => v.views >= 500);
       }
 
+      // Filter duration
       if (tDur === 'long') {
         out = out.filter(v => v.dur >= 1200);
       }
 
-      out.sort((a, b) => b.views - a.views);
+      // Sort by Outlier Ratio (Views / Subs) descending so small channels with huge views are first!
+      out.sort((a, b) => {
+        const ratioA = a.subs ? (a.views / a.subs) : (a.views / 20000);
+        const ratioB = b.subs ? (b.views / b.subs) : (b.views / 20000);
+        return ratioB - ratioA || b.views - a.views;
+      });
 
-      if (!out.length) {
-        out = getSampleItems();
-      }
+      // TUYỆT ĐỐI KHÔNG TỰ ĐỘNG BỊA RA KẾT QUẢ NẾU RỖNG!
+      setScanStats({
+        totalScanned: vids.length,
+        foundCount: out.length,
+        subThreshold: maxSub,
+        searchedQuery: queryStr,
+        isLive: true
+      });
       setVideoItems(out);
     } catch (e) {
-      console.warn('Scanner YouTube API error, falling back to verified samples:', e);
-      setVideoItems(getSampleItems());
+      console.warn('Scanner YouTube API error:', e);
+      setScanStats({
+        totalScanned: 0,
+        foundCount: 0,
+        isLive: true,
+        error: e.message || 'Lỗi kết nối YouTube API'
+      });
+      setVideoItems([]);
     } finally {
       setLoading(false);
     }
@@ -10596,6 +10641,8 @@ function TopNgachSection({
             const isTop2 = rankNum === 2;
             const isTop3 = rankNum === 3;
 
+            const nicheChannels = typeof getNicheChannels === 'function' ? getNicheChannels(niche) : [];
+
             return (
               <div
                 key={niche.id || idx}
@@ -10636,17 +10683,31 @@ function TopNgachSection({
                     {niche.name}
                   </h3>
 
-                  {/* Channel Info & Subs */}
-                  <div className="text-[11px] text-zinc-400 flex items-center justify-between gap-1.5">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span>📺</span>
-                      <span className="truncate text-zinc-300 font-medium">{niche.channelName || niche.exampleChannel}</span>
-                    </div>
-                    {niche.timeScore && (
-                      <span className="text-[10px] font-bold text-amber-400 shrink-0">
-                        {niche.timeScore}đ
+                  {/* 1-3 Kênh Đang Làm Trong Ngách (Click qua thẳng YouTube) */}
+                  <div className="space-y-1.5 pt-1 border-t border-brand-border/40">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="text-zinc-400 font-semibold flex items-center gap-1">
+                        <span>📺</span> 1-3 Kênh thực tế:
                       </span>
-                    )}
+                      <span className="text-[9px] text-zinc-500">Mở YT ↗</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {nicheChannels.slice(0, 3).map((ch, cIdx) => (
+                        <a
+                          key={cIdx}
+                          href={ch.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-800/90 hover:bg-red-600/20 text-zinc-200 hover:text-red-300 border border-zinc-700 hover:border-red-500/40 text-[10px] font-medium transition group/ch"
+                          title={`Mở kênh ${ch.name} trên YouTube`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 group-hover/ch:animate-ping"></span>
+                          <span className="truncate max-w-[125px]">{ch.name}</span>
+                          {ch.subs && <span className="text-[9px] text-zinc-400 font-normal">({ch.subs})</span>}
+                          <span className="text-[9px] text-zinc-400 group-hover/ch:text-red-300">↗</span>
+                        </a>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Short Description */}
@@ -10656,25 +10717,33 @@ function TopNgachSection({
                 </div>
 
                 {/* Card Footer: Competition & Actions */}
-                <div className="pt-2 border-t border-brand-border/60 flex items-center justify-between text-[11px]">
+                <div className="pt-2 border-t border-brand-border/60 flex items-center justify-between text-[11px] gap-2 flex-wrap">
                   <span className="text-zinc-500 font-medium">
                     Cạnh tranh: <b className="text-emerald-400 font-semibold">{comp}</b>
                   </span>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded transition ${
-                      isSelected
-                        ? 'bg-amber-400 text-zinc-950'
-                        : 'text-amber-400 group-hover:bg-amber-400/15'
-                    }`}>
-                      {isSelected ? '✓ Đang quét' : 'Quét ngách →'}
-                    </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveNicheId(niche.id);
+                        runScan(niche, '', 'under50k', durFilter, 'all', period);
+                        const scannerEl = document.getElementById('niche-scanner-results');
+                        if (scannerEl) {
+                          scannerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-400 hover:bg-amber-300 text-zinc-950 flex items-center gap-1 shadow-sm transition cursor-pointer"
+                      title="Quét kênh sub nhỏ (<50k sub) mà view to đột biến">
+                      <span>⚡</span> Quét Trend
+                    </button>
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         if (onSelectNiche) onSelectNiche(niche);
                       }}
-                      className="text-zinc-400 hover:text-white px-1.5 py-0.5 rounded bg-zinc-800/80 hover:bg-zinc-700 text-[10px] border border-zinc-700 transition"
+                      className="text-zinc-400 hover:text-white px-2 py-1 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-[10px] border border-zinc-700 transition"
                       title="Xem toàn bộ kịch bản, video mẫu và phân tích">
                       Chi tiết
                     </button>
@@ -10911,36 +10980,134 @@ function TopNgachSection({
       </div>
 
       {/* 6. LƯỚI VIDEO THỰC TẾ (VIDEO RESULTS GRID) */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
-          <span>
-            Kết quả quét: <b className="text-white">{videoItems.length}</b> video bứt phá từ ngách <b className="text-amber-400">{activeNiche?.name || ''}</b>
-          </span>
-          {loading && <span className="text-amber-400 animate-pulse font-medium">Đang cập nhật video mới từ YouTube...</span>}
+      <div id="niche-scanner-results" className="space-y-4 pt-2">
+        <div className="flex items-center justify-between text-xs text-zinc-400 px-1 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span>
+              Kết quả quét ngách <b className="text-amber-400">{activeNiche?.name || ''}</b>:
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-400/10 text-amber-300 border border-amber-400/30">
+              {videoItems.length} video kênh nhỏ view to
+            </span>
+          </div>
+          {loading && (
+            <span className="text-amber-400 animate-pulse font-medium flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+              Đang quét YouTube Data API và đối chiếu sub/view...
+            </span>
+          )}
         </div>
 
         {loading && videoItems.length === 0 ? (
           <div className="p-12 text-center border border-dashed border-brand-border rounded-2xl bg-brand-surface/40 space-y-3">
             <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-xs text-zinc-400">Đang quét YouTube và phân tích video dài cho ngách...</p>
+            <p className="text-xs text-zinc-300 font-medium">Đang quét YouTube Data API tìm video từ kênh sub nhỏ có lượng view bứt phá...</p>
+            <p className="text-[11px] text-zinc-500">Đang đối chiếu số lượng Subscriber thực tế của từng kênh...</p>
+          </div>
+        ) : !apiKey ? (
+          <div className="p-6 sm:p-8 text-center border border-amber-500/30 rounded-2xl bg-gradient-to-b from-amber-500/5 to-brand-surface space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-2xl mx-auto">
+              🔑
+            </div>
+            <div className="max-w-xl mx-auto space-y-1.5">
+              <h4 className="text-sm sm:text-base font-bold text-white">
+                Cần YouTube Data API Key để quét Kênh Nhỏ View To Real-time
+              </h4>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Để bảo đảm số liệu <b>100% trung thực và chính xác</b> (không dùng số liệu giả hoặc bịa đặt lượt xem), hệ thống cần kết nối YouTube API Key miễn phí của Google để bóc tách subscriber và view thực tế.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              {onOpenApiModal && (
+                <button
+                  type="button"
+                  onClick={onOpenApiModal}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-zinc-950 flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition cursor-pointer">
+                  <span>⚡</span> Nhập YouTube API Key (Miễn phí)
+                </button>
+              )}
+              {activeNiche && (
+                <a
+                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent((activeNiche.queryTerms && activeNiche.queryTerms[0]) || activeNiche.name)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition flex items-center gap-1.5">
+                  <span>📺</span> Tìm trực tiếp ngách này trên YouTube ↗
+                </a>
+              )}
+            </div>
+
+            {/* Hiển thị các kênh mẫu thực tế đã xác thực của ngách */}
+            {activeNiche && (
+              <div className="pt-4 border-t border-brand-border/60 max-w-lg mx-auto text-left space-y-2">
+                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block text-center">
+                  1-3 Kênh thực tế đang làm ngách {activeNiche.name}:
+                </span>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {getNicheChannels(activeNiche).map((ch, idx) => (
+                    <a
+                      key={idx}
+                      href={ch.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700/80 hover:border-red-500/50 text-xs text-zinc-200 hover:text-red-300 transition"
+                      title="Mở xem kênh trên YouTube">
+                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                      <b>{ch.name}</b>
+                      {ch.subs && <span className="text-zinc-500 text-[10px]">({ch.subs})</span>}
+                      <span className="text-zinc-500 text-[10px]">↗</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : videoItems.length === 0 ? (
-          <div className="p-10 text-center border border-dashed border-brand-border rounded-2xl bg-brand-surface/40 space-y-2">
-            <span className="text-2xl block">📹</span>
-            <h4 className="text-sm font-bold text-white">Không tìm thấy video phù hợp</h4>
-            <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-              Thử nới lỏng bộ lọc quy mô sub hoặc độ dài video để xem nhiều kết quả hơn.
-            </p>
-            <button
-              onClick={() => {
-                setSubFilter('all');
-                setDurFilter('all');
-                setViewFilter('all');
-                runScan(activeNiche, customQuery, 'all', 'all', 'all', period);
-              }}
-              className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-700 cursor-pointer">
-              Xem tất cả video
-            </button>
+          <div className="p-8 sm:p-10 text-center border border-dashed border-brand-border rounded-2xl bg-brand-surface/40 space-y-3">
+            <span className="text-3xl block">🎯</span>
+            <h4 className="text-sm sm:text-base font-bold text-white">
+              Không tìm thấy video nào từ kênh sub nhỏ đạt chuẩn Outlier
+            </h4>
+            <div className="text-xs text-zinc-400 max-w-md mx-auto space-y-2 leading-relaxed">
+              <p>
+                Đã quét <b>{scanStats?.totalScanned || 50}</b> video mới nhất theo từ khóa ngách <b className="text-amber-400">{activeNiche?.name}</b> trên YouTube API.
+              </p>
+              <p className="text-amber-300/90 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20 text-[11px]">
+                🛡️ <b>Thông tin chính xác:</b> Trong chu kỳ đã chọn ({period === 24 ? '24 giờ qua' : period === 168 ? '7 ngày qua' : period === 720 ? '30 ngày qua' : 'toàn thời gian'}), không có video nào từ kênh {subFilter === 'under20k' ? '<20k sub' : subFilter === 'under50k' ? '<50k sub' : subFilter === 'under100k' ? '<100k sub' : 'sub nhỏ'} có tỷ lệ view vượt trội (Outlier). Hệ thống tuyệt đối không bịa đặt số liệu giả.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSubFilter('under100k');
+                  runScan(activeNiche, customQuery, 'under100k', durFilter, viewFilter, period);
+                }}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-700 cursor-pointer transition">
+                Nới rộng tìm kênh &lt; 100k sub
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPeriod(0);
+                  runScan(activeNiche, customQuery, subFilter, durFilter, viewFilter, 0);
+                }}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-700 cursor-pointer transition">
+                Quét toàn bộ thời gian (All-time)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSubFilter('all');
+                  setDurFilter('all');
+                  setViewFilter('all');
+                  runScan(activeNiche, customQuery, 'all', 'all', 'all', period);
+                }}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-amber-400 text-zinc-950 hover:bg-amber-300 cursor-pointer transition">
+                Xem tất cả video của ngách
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -10949,11 +11116,12 @@ function TopNgachSection({
               const n = v.niche || activeNiche || CASHCOW_NICHES[0];
               const rev = typeof calcEstimatedRev === 'function' ? calcEstimatedRev(v.views, v.dur, n.avgRpm || 35) : { low: 100, high: 250, midrolls: 8 };
               const saved = isSaved && isSaved(v.id);
+              const chUrl = v.channelUrl || ('https://www.youtube.com/results?search_query=' + encodeURIComponent(v.channel));
 
               return (
                 <article
                   key={v.id || idx}
-                  className="bg-brand-surface border border-brand-border hover:border-zinc-700 rounded-xl overflow-hidden flex flex-col group transition shadow-lg">
+                  className="bg-brand-surface border border-brand-border hover:border-amber-400/50 rounded-xl overflow-hidden flex flex-col group transition shadow-lg">
                   {/* Thumbnail Container */}
                   <a
                     href={ytUrl}
@@ -10973,10 +11141,12 @@ function TopNgachSection({
                       {v.subs ? (typeof fmt === 'function' ? fmt(v.subs) : v.subs) + ' subs' : 'Kênh nhỏ'}
                     </div>
 
-                    {/* Estimated RPM Badge */}
-                    <div className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-600/95 text-white shadow-md">
-                      RPM {n.rpmRange}
-                    </div>
+                    {/* Outlier Ratio Badge */}
+                    {v.outlierRatio && (
+                      <div className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded bg-rose-600/90 text-white backdrop-blur-sm shadow-md">
+                        🔥 x{v.outlierRatio} View/Sub
+                      </div>
+                    )}
 
                     {/* Duration & Mid-roll Ads Badge */}
                     <div className="absolute bottom-2 right-2 text-[11px] font-semibold px-2 py-0.5 rounded bg-black/85 text-white backdrop-blur-sm flex items-center gap-1.5">
@@ -10997,9 +11167,20 @@ function TopNgachSection({
                         {v.title}
                       </a>
 
-                      <div className="text-xs text-zinc-400 flex items-center justify-between">
-                        <span className="truncate max-w-[170px] font-medium text-zinc-300">{v.channel}</span>
-                        <span className="text-[11px] text-zinc-500">{v.videoCount ? v.videoCount + ' video' : ''}</span>
+                      <div className="text-xs text-zinc-400 flex items-center justify-between gap-2">
+                        <a
+                          href={chUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate max-w-[170px] font-medium text-zinc-300 hover:text-red-400 flex items-center gap-1 transition"
+                          title="Mở kênh trên YouTube">
+                          <span>📺</span>
+                          <span className="truncate">{v.channel}</span>
+                          <span className="text-[10px] text-zinc-500">↗</span>
+                        </a>
+                        <span className="text-[11px] text-zinc-500 shrink-0">
+                          RPM {n.rpmRange}
+                        </span>
                       </div>
                     </div>
 
@@ -11008,11 +11189,11 @@ function TopNgachSection({
                       <span className="text-zinc-300 font-medium">
                         👁️ {typeof fmt === 'function' ? fmt(v.views) : v.views} view
                       </span>
-                      {v.vph && (
+                      {v.vph ? (
                         <span className="text-amber-300 font-bold">
                           ⚡ +{typeof fmt === 'function' ? fmt(v.vph) : v.vph}/h
                         </span>
-                      )}
+                      ) : null}
                       <span className="text-emerald-400 font-bold">
                         ${typeof fmt === 'function' ? fmt(rev.low) : rev.low} - ${typeof fmt === 'function' ? fmt(rev.high) : rev.high}
                       </span>
@@ -11299,6 +11480,7 @@ function App() {
   const [rpmSearchQuery, setRpmSearchQuery] = useState('');
   const [showSuggestionsTab, setShowSuggestionsTab] = useState(false);
   const [showFloatingTools, setShowFloatingTools] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   const toggleWikiRead = (id) => {
     setReadWikiArticles(prev => {
@@ -12851,16 +13033,16 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
     <div className="min-h-screen flex flex-col bg-brand-dark text-slate-100">
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-20 right-6 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs sm:text-sm font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <div className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs sm:text-sm font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200 max-w-sm">
           <span>✓</span> {toast}
         </div>
       )}
 
-      {/* Top Header - CUTLAB Style Clean & Minimalist Hotbar */}
+      {/* Top Header - Responsive CUTLAB Style Clean Hotbar */}
       <header className="border-b border-zinc-800/80 sticky top-0 bg-brand-dark/95 backdrop-blur-md z-30 select-none">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4 flex-nowrap w-full">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-3 flex-nowrap w-full">
           {/* Left: Brand Logo & Title */}
-          <div className="flex items-center gap-2.5 shrink-0 cursor-pointer" onClick={() => setTab('search')}>
+          <div className="flex items-center gap-2.5 shrink-0 cursor-pointer" onClick={() => { setTab('search'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
             <div className="w-7 h-7 rounded-lg bg-red-600 flex items-center justify-center text-white font-black text-xs shadow-md shadow-red-600/30">
               ▶
             </div>
@@ -12872,8 +13054,8 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             </div>
           </div>
 
-          {/* Center: Clean Text Navigation Tabs with Underline Active Indicator */}
-          <nav className="flex items-center gap-5 sm:gap-7 overflow-visible shrink min-w-0 flex-nowrap h-full">
+          {/* Desktop Center: Clean Text Navigation Tabs with Underline Active Indicator */}
+          <nav className="hidden md:flex items-center gap-5 lg:gap-7 overflow-visible shrink min-w-0 flex-nowrap h-full">
             <button 
               onClick={() => setTab('search')} 
               className={`h-full flex items-center text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
@@ -13055,8 +13237,8 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             </button>
           </nav>
 
-          {/* Right: Distinct Yellow Gradient "Đối thủ" button + API Status + Account */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          {/* Desktop Right: Distinct Yellow Gradient "Đối thủ" button + API Status + Account */}
+          <div className="hidden md:flex items-center gap-2.5 shrink-0">
             <button
               onClick={() => {
                 setTab('competitors');
@@ -13093,11 +13275,235 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               <span>Tài khoản</span>
             </button>
           </div>
+
+          {/* Mobile Right: Quick API Status + Quick Saved + Hamburger Button */}
+          <div className="flex md:hidden items-center gap-1.5 shrink-0">
+            <button 
+              onClick={() => { setApiModalOpen(true); setApiModalTab('tester'); }} 
+              className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 border transition ${
+                key 
+                  ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10' 
+                  : 'border-amber-500/40 text-amber-300 bg-amber-500/10'
+              }`}
+              title="Trạng thái API Key">
+              <span className={`w-1.5 h-1.5 rounded-full ${key ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+              <span>{key ? 'API' : 'Chưa Key'}</span>
+            </button>
+
+            <button
+              onClick={() => setShowSavedVideosModal(true)}
+              className="p-1.5 rounded-lg bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border relative transition flex items-center justify-center min-w-[34px] min-h-[34px]"
+              title="Video đã lưu">
+              <span className="text-sm">⭐</span>
+              {savedVideos.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-black font-black text-[9px] flex items-center justify-center shadow">
+                  {savedVideos.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setMobileDrawerOpen(true)}
+              className="p-1.5 rounded-lg bg-brand-card hover:bg-brand-hover text-zinc-200 border border-brand-border transition flex items-center justify-center min-w-[34px] min-h-[34px]"
+              title="Mở menu công cụ">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
+      {/* Mobile Drawer (Off-Canvas Menu for Phones) */}
+      {mobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setMobileDrawerOpen(false)}></div>
+          
+          {/* Drawer Content */}
+          <div className="fixed inset-y-0 right-0 w-[85%] max-w-sm bg-brand-surface border-l border-brand-border z-50 flex flex-col p-4 shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-200">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-brand-border">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-red-600 flex items-center justify-center text-white font-black text-[10px]">
+                  ▶
+                </div>
+                <span className="font-extrabold text-white text-sm">YouTrend Menu</span>
+              </div>
+              <button 
+                onClick={() => setMobileDrawerOpen(false)}
+                className="w-8 h-8 rounded-lg bg-brand-card hover:bg-brand-hover text-zinc-400 hover:text-white flex items-center justify-center transition text-sm font-bold">
+                ✕
+              </button>
+            </div>
+
+            {/* Quick Status Bar */}
+            <div className="my-3 p-3 rounded-xl bg-brand-card/80 border border-brand-border space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-400">Trạng thái API:</span>
+                <span className={`font-bold flex items-center gap-1.5 ${key ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  <span className={`w-2 h-2 rounded-full ${key ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+                  {key ? 'Đã kích hoạt' : 'Chưa có key'}
+                </span>
+              </div>
+              <button
+                onClick={() => { setApiModalOpen(true); setApiModalTab('tester'); setMobileDrawerOpen(false); }}
+                className="w-full py-1.5 px-3 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 flex items-center justify-center gap-1.5 transition">
+                <span>⚙️ Cài đặt & Kiểm tra API</span>
+              </button>
+            </div>
+
+            {/* Navigation Links in Drawer */}
+            <div className="space-y-1 flex-1 py-1">
+              <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider px-2 py-1">Tính năng chính</div>
+              
+              <button
+                onClick={() => { setTab('search'); setMobileDrawerOpen(false); }}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'search' ? 'bg-red-600/20 text-red-400 border border-red-500/30' : 'text-zinc-300 hover:bg-brand-card'}`}>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">🔥</span>
+                  <span>Xu hướng YouTube</span>
+                </div>
+                <span className="text-zinc-500">→</span>
+              </button>
+
+              <button
+                onClick={() => { setTab('keywords'); setMobileDrawerOpen(false); }}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'keywords' ? 'bg-red-600/20 text-red-400 border border-red-500/30' : 'text-zinc-300 hover:bg-brand-card'}`}>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">🔍</span>
+                  <span>Tìm từ khoá bứt phá</span>
+                </div>
+                <span className="text-zinc-500">→</span>
+              </button>
+
+              <button
+                onClick={() => { setTab('niche'); setMobileDrawerOpen(false); }}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'niche' ? 'bg-red-600/20 text-red-400 border border-red-500/30' : 'text-zinc-300 hover:bg-brand-card'}`}>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">🎯</span>
+                  <span>Phân tích ngách SRT</span>
+                </div>
+                <span className="text-zinc-500">→</span>
+              </button>
+
+              <button
+                onClick={() => { setTab('rpm'); setMobileDrawerOpen(false); }}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'rpm' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-zinc-300 hover:bg-brand-card'}`}>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">🏆</span>
+                  <span>Top Ngách High RPM</span>
+                </div>
+                <span className="text-zinc-500">→</span>
+              </button>
+
+              <button
+                onClick={() => { setTab('competitors'); if (!compVideos.length) refreshCompetitorVideos(); setMobileDrawerOpen(false); }}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'competitors' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-zinc-300 hover:bg-brand-card'}`}>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">👥</span>
+                  <span>Kênh Đối Thủ Theo Dõi</span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  {competitors.length} kênh
+                </span>
+              </button>
+
+              <button
+                onClick={() => { setTab('autoupdate'); setMobileDrawerOpen(false); }}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'autoupdate' ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30' : 'text-zinc-300 hover:bg-brand-card'}`}>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">⚡</span>
+                  <span>Tự động quét Trend</span>
+                </div>
+                {autoUpdateData.pendingTrends?.length > 0 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500 text-white animate-pulse">
+                    +{autoUpdateData.pendingTrends.length}
+                  </span>
+                )}
+              </button>
+
+              <div className="pt-3 pb-1">
+                <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider px-2 py-1">Cẩm nang & Công cụ Wiki</div>
+              </div>
+
+              <button
+                onClick={() => { setTab('wiki'); setMobileDrawerOpen(false); }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-brand-card transition">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base text-amber-400">📖</span>
+                  <span>Wiki Cẩm Nang 24 Bài</span>
+                </div>
+                <span className="text-zinc-500">→</span>
+              </button>
+
+              <button
+                onClick={() => { setShowDemandValidationModal(true); setMobileDrawerOpen(false); }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-brand-card transition">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base text-emerald-400">🧪</span>
+                  <span>Kiểm Chứng Nhu Cầu</span>
+                </div>
+                <span className="text-zinc-500">→</span>
+              </button>
+
+              <button
+                onClick={() => { setShowTitlePatternModal(true); setMobileDrawerOpen(false); }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-brand-card transition">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base text-purple-400">🎯</span>
+                  <span>Khuôn Tiêu Đề Viral</span>
+                </div>
+                <span className="text-zinc-500">→</span>
+              </button>
+
+              <button
+                onClick={() => { setShowIdeaPlannerModal(true); setMobileDrawerOpen(false); }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-brand-card transition">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base text-amber-400">📋</span>
+                  <span>Kế Hoạch Video Pipeline</span>
+                </div>
+                <span className="text-zinc-500">→</span>
+              </button>
+
+              <div className="pt-3 pb-1">
+                <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider px-2 py-1">Hồ sơ & Lưu trữ</div>
+              </div>
+
+              <button
+                onClick={() => { setShowSavedVideosModal(true); setMobileDrawerOpen(false); }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-brand-card transition">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">⭐</span>
+                  <span>Video Đã Lưu</span>
+                </div>
+                <span className="text-zinc-400 text-[11px]">{savedVideos.length}</span>
+              </button>
+
+              <button
+                onClick={() => { setShowAccountModal(true); setMobileDrawerOpen(false); }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-zinc-300 hover:bg-brand-card transition">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-base">👤</span>
+                  <span>Tài Khoản & Phiên Làm Việc</span>
+                </div>
+                <span className="text-zinc-500">→</span>
+              </button>
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="pt-3 border-t border-brand-border text-center text-[10px] text-zinc-500">
+              YouTrend Analytics · Tối ưu hóa trải nghiệm Mobile
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Body */}
-      <main className="max-w-7xl mx-auto px-4 py-5 space-y-4 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-5 space-y-4 flex-1 w-full pb-24 md:pb-6">
         {/* Missing Key Banner with Direct Diagnostic & Guide */}
         {!key && (
           <div className="border border-zinc-800 bg-brand-surface rounded-xl p-4 text-sm space-y-2 shadow-md">
@@ -13151,15 +13557,15 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
         {/* TAB 1: GENERAL SEARCH & TRENDS */}
         {tab === 'search' && (<>
           {/* Quick Preset Buttons Bar */}
-          <section className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-semibold text-zinc-400 mr-1 hidden sm:inline">Chế độ nhanh:</span>
+          <section className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 -mx-3 px-3 sm:mx-0 sm:px-0">
+            <span className="text-xs font-semibold text-zinc-400 mr-1 hidden sm:inline shrink-0">Chế độ nhanh:</span>
             {PRESETS.map(p => {
               const isActive = activePreset === p.id;
               return (
                 <button
                   key={p.id}
                   onClick={() => applyPreset(p)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border shrink-0 ${
                     isActive 
                       ? 'bg-zinc-200 text-zinc-950 font-bold border-zinc-200 shadow-sm' 
                       : 'bg-brand-surface hover:bg-brand-card text-zinc-400 hover:text-zinc-200 border-brand-border'
@@ -13184,10 +13590,10 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                 />
               </div>
 
-              <div className="flex flex-wrap sm:flex-nowrap gap-1.5">
+              <div className="grid grid-cols-2 sm:flex sm:flex-nowrap gap-1.5">
                 {/* Thời gian đăng */}
                 <select
-                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500 max-w-[155px]"
+                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500 w-full sm:w-auto sm:max-w-[155px]"
                   value={f.period}
                   onChange={e => handleFilterChange('period', Number(e.target.value))}
                   title="Khoảng thời gian video được đăng tải">
@@ -13196,7 +13602,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
                 {/* Lĩnh vực */}
                 <select
-                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500 max-w-[135px] truncate"
+                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500 w-full sm:w-auto sm:max-w-[135px] truncate"
                   value={f.cat}
                   onChange={e => handleFilterChange('cat', e.target.value)}
                   title="Danh mục video">
@@ -13205,28 +13611,29 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
                 {/* Quốc gia */}
                 <select
-                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[135px]"
+                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 w-full sm:w-auto sm:max-w-[135px]"
                   value={f.region}
                   onChange={e => handleFilterChange('region', e.target.value)}
                   title="Khu vực quốc gia">
                   {REGIONS.map(c => <option key={c[0]} value={c[0]}>{c[1]}</option>)}
                 </select>
 
-                {/* Nút Quét */}
-                <button 
-                  onClick={() => load('new')} 
-                  disabled={loading} 
-                  className={bPrimary + ' py-1.5 px-4 text-xs whitespace-nowrap disabled:opacity-50'}>
-                  {loading ? 'Đang quét...' : 'Quét'}
-                </button>
+                {/* Nút Quét & Đặt lại */}
+                <div className="flex gap-1.5 w-full sm:w-auto">
+                  <button 
+                    onClick={() => load('new')} 
+                    disabled={loading} 
+                    className={bPrimary + ' flex-1 sm:flex-none py-1.5 px-4 text-xs whitespace-nowrap disabled:opacity-50'}>
+                    {loading ? 'Đang quét...' : 'Quét'}
+                  </button>
 
-                {/* Nút Đặt lại */}
-                <button
-                  onClick={clearFilters}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-white bg-brand-card hover:bg-brand-hover border border-brand-border transition whitespace-nowrap"
-                  title="Đặt lại bộ lọc về mặc định (24h)">
-                  Đặt lại
-                </button>
+                  <button
+                    onClick={clearFilters}
+                    className="flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-white bg-brand-card hover:bg-brand-hover border border-brand-border transition whitespace-nowrap text-center"
+                    title="Đặt lại bộ lọc về mặc định (24h)">
+                    Đặt lại
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -13302,22 +13709,22 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           </section>
 
           {/* Sorting & Views Toolbar */}
-          <section className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-brand-surface border border-brand-border rounded-xl">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-semibold text-zinc-400">Sắp xếp:</span>
-              <div className="flex flex-wrap gap-1">
+          <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 bg-brand-surface border border-brand-border rounded-xl">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              <span className="text-xs font-semibold text-zinc-400 shrink-0">Sắp xếp:</span>
+              <div className="flex gap-1 shrink-0">
                 {SORTS.map(s => (
                   <button
                     key={s[0]}
                     onClick={() => setSort(s[0])}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${sort === s[0] ? 'bg-red-600 text-white' : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border'}`}>
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition shrink-0 ${sort === s[0] ? 'bg-red-600 text-white' : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border'}`}>
                     {s[1]}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 ml-auto">
+            <div className="flex items-center justify-between sm:justify-end gap-1.5 pt-1 sm:pt-0 border-t sm:border-t-0 border-brand-border/60">
               <div className="flex bg-brand-card border border-brand-border rounded-lg p-0.5">
                 <button onClick={() => setMode('grid')} className={`px-2 py-0.5 rounded-md text-xs font-medium transition ${mode === 'grid' ? 'bg-brand-border text-white' : 'text-zinc-400'}`}>
                   Thẻ
@@ -13326,12 +13733,14 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                   Bảng
                 </button>
               </div>
-              <button onClick={exportCsv} disabled={!shown.length} className={bSecondary + ' py-1 px-2.5 text-xs disabled:opacity-40'}>
-                Xuất Excel
-              </button>
-              <button onClick={() => load('refresh')} disabled={loading} className={bSecondary + ' py-1 px-2.5 text-xs disabled:opacity-40'}>
-                Làm mới
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button onClick={exportCsv} disabled={!shown.length} className={bSecondary + ' py-1 px-2.5 text-xs disabled:opacity-40'}>
+                  Xuất Excel
+                </button>
+                <button onClick={() => load('refresh')} disabled={loading} className={bSecondary + ' py-1 px-2.5 text-xs disabled:opacity-40'}>
+                  Làm mới
+                </button>
+              </div>
             </div>
           </section>
 
@@ -13628,15 +14037,15 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                 </div>
 
                 {/* Timeframe Quick Pill Buttons */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-xs font-medium text-zinc-400 mr-1.5">Khung thời gian:</span>
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                  <span className="text-xs font-medium text-zinc-400 mr-1.5 shrink-0">Khung thời gian:</span>
                   {KEYWORD_PERIODS.map(p => {
                     const isActive = kwPeriod === p.id;
                     return (
                       <button
                         key={p.id}
                         onClick={() => setKwPeriod(p.id)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition border ${
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition border shrink-0 ${
                           isActive
                             ? 'bg-zinc-200 text-zinc-950 font-bold border-zinc-200 shadow-sm'
                             : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border'
@@ -13647,7 +14056,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                   })}
                   <button
                     onClick={() => setKwPeriod('all')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition border ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition border shrink-0 ${
                       kwPeriod === 'all'
                         ? 'bg-zinc-200 text-zinc-950 font-bold border-zinc-200 shadow-sm'
                         : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border'
@@ -13881,6 +14290,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             onSelectIdea={(niche) => {
               setShowIdeaPlannerModal(true);
             }}
+            onOpenApiModal={() => { setApiModalOpen(true); setApiModalTab('tester'); }}
           />
         )}
 
@@ -14946,7 +15356,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
       {/* Floating Messenger-Style Notification Bubble for Auto-Update Trends */}
       {tab !== 'autoupdate' && autoUpdateData.pendingTrends?.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end">
+        <div className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-40 flex flex-col items-end">
           {showAutoUpdateBubblePopup && (
             <div className="mb-2 w-72 sm:w-80 p-3.5 rounded-2xl bg-zinc-900/95 border border-purple-500/40 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
               <div className="flex items-start justify-between gap-2">
@@ -14982,6 +15392,81 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           </button>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation Bar - Native App Style */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0e1017]/95 backdrop-blur-xl border-t border-brand-border pb-safe select-none shadow-[0_-4px_24px_rgba(0,0,0,0.6)]">
+        <div className="grid grid-cols-5 h-14 items-stretch">
+          {/* Tab 1: Xu hướng */}
+          <button 
+            type="button"
+            onClick={() => { setTab('search'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            className={`flex flex-col items-center justify-center py-1 transition relative cursor-pointer ${
+              tab === 'search' ? 'text-red-500 font-bold' : 'text-zinc-400 hover:text-zinc-200'
+            }`}>
+            {tab === 'search' && (
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-red-500 rounded-full shadow-sm shadow-red-500/50"></span>
+            )}
+            <span className="text-lg leading-none">🔥</span>
+            <span className="text-[10px] tracking-tight mt-1">Xu hướng</span>
+          </button>
+
+          {/* Tab 2: Từ khoá */}
+          <button 
+            type="button"
+            onClick={() => { setTab('keywords'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            className={`flex flex-col items-center justify-center py-1 transition relative cursor-pointer ${
+              tab === 'keywords' ? 'text-red-500 font-bold' : 'text-zinc-400 hover:text-zinc-200'
+            }`}>
+            {tab === 'keywords' && (
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-red-500 rounded-full shadow-sm shadow-red-500/50"></span>
+            )}
+            <span className="text-lg leading-none">🔍</span>
+            <span className="text-[10px] tracking-tight mt-1">Từ khoá</span>
+          </button>
+
+          {/* Tab 3: Phân Tích */}
+          <button 
+            type="button"
+            onClick={() => { setTab('niche'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            className={`flex flex-col items-center justify-center py-1 transition relative cursor-pointer ${
+              tab === 'niche' ? 'text-red-500 font-bold' : 'text-zinc-400 hover:text-zinc-200'
+            }`}>
+            {tab === 'niche' && (
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-red-500 rounded-full shadow-sm shadow-red-500/50"></span>
+            )}
+            <span className="text-lg leading-none">🎯</span>
+            <span className="text-[10px] tracking-tight mt-1">Phân Tích</span>
+          </button>
+
+          {/* Tab 4: Top Ngách */}
+          <button 
+            type="button"
+            onClick={() => { setTab('rpm'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            className={`flex flex-col items-center justify-center py-1 transition relative cursor-pointer ${
+              tab === 'rpm' ? 'text-amber-400 font-bold' : 'text-zinc-400 hover:text-zinc-200'
+            }`}>
+            {tab === 'rpm' && (
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-amber-400 rounded-full shadow-sm shadow-amber-400/50"></span>
+            )}
+            <span className="text-lg leading-none">🏆</span>
+            <span className="text-[10px] tracking-tight mt-1">Top Ngách</span>
+          </button>
+
+          {/* Tab 5: Menu / Thêm */}
+          <button 
+            type="button"
+            onClick={() => setMobileDrawerOpen(true)}
+            className="flex flex-col items-center justify-center py-1 text-zinc-400 hover:text-zinc-200 relative transition cursor-pointer">
+            <div className="relative leading-none">
+              <span className="text-lg">⚡</span>
+              {(autoUpdateData.pendingTrends?.length > 0 || competitors.length > 0) && (
+                <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-purple-500 animate-ping"></span>
+              )}
+            </div>
+            <span className="text-[10px] tracking-tight mt-1">Thêm</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }
