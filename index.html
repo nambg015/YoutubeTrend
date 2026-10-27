@@ -10550,13 +10550,18 @@ function App() {
       if (key) {
         for (const comp of competitors.slice(0, 8)) {
           try {
-            const s = await yt('search', {
+            const searchParams = {
               part: 'snippet',
-              channelId: comp.id.startsWith('comp_') ? undefined : comp.id,
               order: 'date',
               maxResults: 4,
               type: 'video'
-            }, key).catch(() => null);
+            };
+            if (comp.id && !comp.id.startsWith('comp_')) {
+              searchParams.channelId = comp.id;
+            } else {
+              searchParams.q = comp.title || comp.handle;
+            }
+            const s = await yt('search', searchParams, key).catch(() => null);
 
             if (s && s.items && s.items.length) {
               const ids = s.items.map(i => i.id?.videoId).filter(Boolean);
@@ -10578,7 +10583,8 @@ function App() {
                     views,
                     vph,
                     dur: durSec,
-                    hoursAgo: Math.round(hours)
+                    hoursAgo: Math.round(hours),
+                    isOldApiSample: false
                   });
                 });
               }
@@ -10599,7 +10605,8 @@ function App() {
             views: 24500,
             vph: 850,
             dur: 2840,
-            hoursAgo: 6
+            hoursAgo: 6,
+            isOldApiSample: true
           },
           {
             id: 'comp_vid_2',
@@ -10611,7 +10618,8 @@ function App() {
             views: 18900,
             vph: 410,
             dur: 2125,
-            hoursAgo: 18
+            hoursAgo: 18,
+            isOldApiSample: true
           },
           {
             id: 'comp_vid_3',
@@ -10623,7 +10631,8 @@ function App() {
             views: 38200,
             vph: 720,
             dur: 2540,
-            hoursAgo: 28
+            hoursAgo: 28,
+            isOldApiSample: true
           },
           {
             id: 'comp_vid_4',
@@ -10635,7 +10644,8 @@ function App() {
             views: 74000,
             vph: 680,
             dur: 2400,
-            hoursAgo: 52
+            hoursAgo: 52,
+            isOldApiSample: true
           }
         ];
       }
@@ -13592,12 +13602,15 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           {/* Competitor Uploads Feed */}
           <div className="space-y-3 pt-2">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border pb-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wide">
                   Video Mới Nhất Đối Thủ Vừa Đăng
                 </h3>
                 <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/15 px-2 py-0.5 rounded border border-indigo-500/30">
                   {compVideos.length} video
+                </span>
+                <span className="text-xs text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/25 italic font-medium">
+                  *đây là đối thủ của API cũ đả từng dùng trên máy*
                 </span>
               </div>
 
@@ -13617,6 +13630,23 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Note banner explaining old API competitor data */}
+            <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl px-3.5 py-2.5 text-xs text-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-sm">
+              <div className="flex items-start sm:items-center gap-2">
+                <span className="text-sm shrink-0">📌</span>
+                <span className="leading-relaxed">
+                  <span className="font-bold underline">*đây là đối thủ của API cũ đả từng dùng trên máy*</span> (Khi API key gặp lỗi hoặc chưa đồng bộ kênh mới, hệ thống tự động lưu giữ video của các kênh đối thủ trước đó).
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={refreshCompetitorVideos}
+                disabled={compLoading}
+                className="px-3 py-1 rounded-lg text-[11px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 transition shrink-0 whitespace-nowrap self-start sm:self-auto">
+                {compLoading ? 'Đang quét...' : 'Quét với API hiện tại ↻'}
+              </button>
             </div>
 
             {/* Video Cards Grid */}
@@ -13649,6 +13679,11 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                         
                         <div className="text-xs text-zinc-400 flex items-center justify-between">
                           <span className="truncate max-w-[170px] font-medium text-zinc-300">{v.channel}</span>
+                          {(v.id.startsWith('comp_vid_') || v.isOldApiSample) && (
+                            <span className="text-[10px] text-amber-400/90 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20 italic">
+                              *API cũ*
+                            </span>
+                          )}
                         </div>
 
                         {/* Metric Row */}
