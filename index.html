@@ -7078,32 +7078,32 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
 
       {/* Realtime Inspection Progress Bar & 10-Minute Timer */}
       {loading && (
-        <div className="border border-cyan-500/30 bg-zinc-950/90 backdrop-blur p-4 sm:p-5 rounded-2xl shadow-xl space-y-3 animate-in fade-in duration-150">
+        <div className="border border-zinc-800 bg-zinc-950/90 backdrop-blur p-4 sm:p-5 rounded-2xl shadow-xl space-y-3 animate-in fade-in duration-150">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
-              <span className="text-xs font-mono font-bold text-cyan-300">
-                QUY TRÌNH BÓC TÁCH TIÊU ĐỀ & GOM CỤM TỪ KHÓA LẶP LẠI
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="text-xs font-semibold text-zinc-200">
+                Quy trình bóc tách tiêu đề & gom cụm từ khóa
               </span>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-xs font-mono text-zinc-400">
-                Thời gian: <b className="text-cyan-300">{formatSeconds(elapsedSeconds)}</b> / 10:00
+                Thời gian: <b className="text-zinc-200">{formatSeconds(elapsedSeconds)}</b> / 10:00
               </span>
-              <span className="font-mono text-2xl font-black text-cyan-400">
+              <span className="font-mono text-xl font-bold text-zinc-100">
                 {progress}%
               </span>
               <button
                 onClick={() => { stopScanRef.current = true; setLoading(false); }}
-                className="px-2.5 py-1 rounded text-[11px] font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition">
+                className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition">
                 Dừng sớm & xem kết quả
               </button>
             </div>
           </div>
 
-          <div className="w-full h-2.5 bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-800">
+          <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-800">
             <div 
-              className="h-full bg-gradient-to-r from-cyan-500 via-sky-400 to-emerald-400 rounded-full transition-all duration-200 ease-out shadow-sm"
+              className="h-full bg-zinc-200 rounded-full transition-all duration-200 ease-out"
               style={{ width: progress + '%' }}>
             </div>
           </div>
@@ -7122,7 +7122,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
                 </span>
               )}
             </div>
-            <span className="text-[11px] font-bold text-emerald-400 shrink-0 ml-2">
+            <span className="text-[11px] font-medium text-emerald-400 shrink-0 ml-2">
               {inspectStatus.currentVerdict}
             </span>
           </div>
@@ -7156,7 +7156,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
                 </div>
                 <div className="bg-brand-surface p-3 rounded-xl border border-brand-border text-center shadow">
                   <span className="text-[10px] text-zinc-400 uppercase font-semibold block">Tỷ lệ bứt phá TB</span>
-                  <b className="text-base font-black text-cyan-400 mt-0.5 block">{winRate}%</b>
+                  <b className="text-base font-black text-zinc-200 mt-0.5 block">{winRate}%</b>
                 </div>
               </div>
 
@@ -7164,23 +7164,22 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
               <div className="flex flex-wrap rounded-xl bg-brand-surface p-1 border border-brand-border gap-1">
                 <button
                   onClick={() => setActiveTab('clusters')}
-                  className={"flex-1 py-2 px-3 text-xs font-black rounded-lg transition flex items-center justify-center gap-1.5 " + (activeTab === 'clusters' ? 'bg-amber-500 text-black shadow-md' : 'text-zinc-400 hover:text-white')}>
-                  <span>🔥 CỤM TỪ KHÓA LẶP LẠI ({keywordClusters.length})</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-black/30 text-black font-extrabold">SRT Đinh</span>
+                  className={"flex-1 py-2 px-3 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 " + (activeTab === 'clusters' ? 'bg-zinc-200 text-zinc-950 font-bold shadow-sm' : 'text-zinc-400 hover:text-white')}>
+                  <span>Cụm từ khóa lặp lại ({keywordClusters.length})</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('breakout')}
-                  className={"flex-1 py-2 px-3 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 " + (activeTab === 'breakout' ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 shadow-sm' : 'text-zinc-400 hover:text-white')}>
-                  <span>🚀 KÊNH NHỎ VIEW CAO ({smallChannelBreakoutList.length})</span>
+                  className={"flex-1 py-2 px-3 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 " + (activeTab === 'breakout' ? 'bg-zinc-800 text-zinc-200 border border-zinc-700 shadow-sm' : 'text-zinc-400 hover:text-white')}>
+                  <span>Kênh nhỏ view cao ({smallChannelBreakoutList.length})</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={"py-2 px-3 text-xs font-medium rounded-lg transition " + (activeTab === 'all' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white')}>
+                  className={"py-2 px-3 text-xs font-medium rounded-lg transition " + (activeTab === 'all' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white')}>
                   Tất cả ({totalChannels})
                 </button>
                 <button
                   onClick={() => setActiveTab('flop')}
-                  className={"py-2 px-3 text-xs font-medium rounded-lg transition " + (activeTab === 'flop' ? 'bg-rose-600/30 text-rose-300 border border-rose-500/40' : 'text-zinc-400 hover:text-white')}>
+                  className={"py-2 px-3 text-xs font-medium rounded-lg transition " + (activeTab === 'flop' ? 'bg-zinc-800/80 text-zinc-400 border border-zinc-700' : 'text-zinc-400 hover:text-white')}>
                   Kênh lẹt đẹt ({flopCount})
                 </button>
               </div>
@@ -10427,7 +10426,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                               </button>
                               <button
                                 onClick={() => handleExploreKeywordVideos(k.kw)}
-                                className="px-2.5 py-1 text-xs font-bold bg-red-600 hover:bg-red-500 text-white rounded-lg transition"
+                                className="px-2.5 py-1 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded-lg transition"
                                 title="Quét video thực tế trên YouTube">
                                 Quét video
                               </button>
@@ -10453,29 +10452,29 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
         {tab === 'rpm' && (
           <section className="space-y-4">
             {/* Header & Strategic Overview */}
-            <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-brand-border pb-4">
+            <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-brand-border pb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      Hidden Cash-Cow Channel Spy
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                      High-RPM Radar
                     </span>
-                    <span className="text-xs text-zinc-400">Thị trường Mỹ & Quốc tế (High-RPM Tier 1)</span>
+                    <span className="text-xs text-zinc-400">Thị trường Mỹ & Quốc tế (Tier 1)</span>
                   </div>
                   <h2 className="font-extrabold text-base sm:text-xl text-white mt-1">
                     Săn Kênh Mỏ Vàng Ngầm (Sub Thấp - RPM Cao)
                   </h2>
                   <p className="text-xs text-zinc-400 mt-0.5 max-w-3xl leading-relaxed">
-                    Dò tìm các kênh nước ngoài ít sub (5k - 50k subs), view không cần quá cao nhưng cực kỳ đều đặn, video dài &gt; 20 - 90 phút chèn 6 - 12 quảng cáo mid-roll với RPM khủng ($25 - $48/1k view).
+                    Dò tìm các kênh nước ngoài ít sub (5k - 50k), video dài chèn nhiều quảng cáo mid-roll với RPM cao ($25 - $48/1k view).
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 self-start lg:self-auto">
+                <div className="flex items-center gap-2 self-start lg:self-auto shrink-0">
                   <button
                     onClick={() => loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery)}
                     disabled={rpmLoading}
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/20 transition flex items-center gap-1.5 disabled:opacity-50">
-                    <span>{rpmLoading ? 'Đang quét mỏ vàng...' : 'Quét Dữ Liệu Ngay'}</span>
+                    className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition flex items-center gap-1.5 disabled:opacity-50 shadow-sm">
+                    <span>{rpmLoading ? 'Đang quét...' : 'Quét Dữ Liệu Ngay'}</span>
                   </button>
                 </div>
               </div>
@@ -10485,10 +10484,9 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                 {/* Section Header with Actions */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-brand-border/70 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-[12px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] font-extrabold">THUẬT TOÁN ĐỘNG</span>
-                      <span>🏆 1. Bảng Xếp Hạng Top 10 Ngách Trend Đang Hot (Quét & Biến Động Hằng Ngày):</span>
-                    </span>
+                    <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                      <span>Bảng Xếp Hạng Top 10 Ngách Trend</span>
+                    </h3>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -10496,43 +10494,33 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                       type="button"
                       onClick={() => runLiveNicheRescore()}
                       disabled={isRescoringNiches}
-                      className="px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black shadow-md shadow-amber-500/25 transition flex items-center gap-1.5 disabled:opacity-50">
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition flex items-center gap-1.5 disabled:opacity-50">
                       <span className={isRescoringNiches ? 'animate-spin' : ''}>⚡</span>
-                      <span>{isRescoringNiches ? 'Đang Quét & Chấm Điểm...' : 'Quét & Chấm Điểm Lại Top 10'}</span>
+                      <span>{isRescoringNiches ? 'Đang Chấm Điểm...' : 'Chấm Điểm Lại Top 10'}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowScoreFormulaModal(true)}
-                      className="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border transition flex items-center gap-1"
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border transition flex items-center gap-1"
                       title="Xem cách thuật toán tính điểm và lọc top">
-                      <span>ℹ️</span> Công Thức Chấm Điểm
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowSavedVideosModal(true)}
-                      className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition flex items-center gap-1.5 shadow-sm"
-                      title="Mở kho video đã bookmark">
-                      <span>🔖 Kho Video Đã Lưu</span>
-                      <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-black font-extrabold text-[10px]">
-                        {savedVideos.length}
-                      </span>
+                      <span>ℹ️ Công Thức Chấm Điểm</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Live Scanning Progress Ticker */}
                 {isRescoringNiches && (
-                  <div className="p-3 bg-amber-500/10 border border-amber-500/40 rounded-xl flex items-center gap-3 animate-pulse text-xs text-amber-200">
-                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></div>
-                    <span className="font-bold">{rescoreProgressStep}</span>
+                  <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center gap-3 animate-pulse text-xs text-zinc-200">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+                    <span className="font-medium">{rescoreProgressStep}</span>
                   </div>
                 )}
 
                 {/* Timeframe Selector Pills (24h, 1d, 2d, 3d, 7d, 14d, 30d, 90d) */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] text-zinc-400">
-                    <span className="font-semibold text-zinc-300">Chọn mốc thời gian kiểm tra xếp hạng:</span>
-                    <span className="text-zinc-500 hidden sm:inline">Bấm mốc bất kỳ để soi lịch sử thăng/tụt hạng của ngách</span>
+                    <span className="font-medium text-zinc-300">Khung thời gian xếp hạng:</span>
+                    <span className="text-zinc-500 hidden sm:inline">Bấm mốc để xem lịch sử thăng/tụt hạng của ngách</span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5">
@@ -10545,14 +10533,14 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                           onClick={() => setNicheTimeframe(tf.id)}
                           className={`px-2.5 py-2 rounded-xl text-left border transition flex flex-col justify-between ${
                             isActive
-                              ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20 font-bold ring-1 ring-amber-400'
-                              : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border hover:border-zinc-600'
+                              ? 'bg-zinc-200 text-zinc-950 font-bold border-zinc-200 shadow-sm'
+                              : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border hover:border-zinc-700'
                           }`}>
                           <div className="flex items-center justify-between w-full">
-                            <span className="text-xs font-extrabold truncate">{tf.label}</span>
-                            {isActive && <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse"></span>}
+                            <span className="text-xs font-bold truncate">{tf.label}</span>
+                            {isActive && <span className="w-1.5 h-1.5 rounded-full bg-zinc-950"></span>}
                           </div>
-                          <span className={`text-[10px] mt-0.5 truncate ${isActive ? 'text-black/80 font-semibold' : 'text-zinc-500'}`}>
+                          <span className={`text-[10px] mt-0.5 truncate ${isActive ? 'text-zinc-800 font-semibold' : 'text-zinc-500'}`}>
                             {tf.badge}
                           </span>
                         </button>
@@ -11110,46 +11098,46 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
         <section className="space-y-5 animate-in fade-in duration-150">
           
           {/* Header Hero Banner */}
-          <div className="border border-indigo-500/40 bg-gradient-to-r from-indigo-950/70 via-slate-900 to-brand-surface rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+          <div className="border border-brand-border bg-brand-surface rounded-2xl p-4 sm:p-5 shadow-lg relative overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <div className="inline-block px-3 py-1 rounded bg-indigo-500/20 text-indigo-300 font-mono text-xs font-bold border border-indigo-500/40">
-                  THEO DÕI KÊNH ĐỐI THỦ CHUYÊN SÂU
+                <div className="inline-block px-2.5 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px] font-bold border border-zinc-700">
+                  THEO DÕI KÊNH ĐỐI THỦ
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black text-white mt-1.5">
-                  Giám Sát Đối Thủ & Sao Chép Prompt Triệu View
+                <h2 className="text-base sm:text-xl font-extrabold text-white mt-1">
+                  Giám Sát Đối Thủ & Phân Tích Nội Dung
                 </h2>
-                <p className="text-xs sm:text-sm text-zinc-300 mt-1 max-w-2xl leading-relaxed">
-                  Cập nhật các video mới nhất do đối thủ đăng tải mỗi ngày, phân tích lý do video lên xu hướng và tự động tạo Prompt kịch bản + Thumbnail Midjourney hoàn chỉnh để làm nội dung vượt trội hơn họ.
+                <p className="text-xs text-zinc-400 mt-0.5 max-w-2xl leading-relaxed">
+                  Cập nhật video mới nhất của các đối thủ mỗi ngày, phân tích lý do video lên xu hướng và tạo prompt kịch bản tối ưu.
                 </p>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={refreshCompetitorVideos}
                   disabled={compLoading}
-                  className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold bg-indigo-600 hover:bg-indigo-500 text-white transition shadow-lg flex items-center gap-2 disabled:opacity-50">
-                  <span>{compLoading ? 'Đang Quét YouTube API...' : 'Quét Update Hằng Ngày (Xem Họ Đăng Gì)'}</span>
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition shadow-sm flex items-center gap-2 disabled:opacity-50">
+                  <span>{compLoading ? 'Đang quét...' : 'Quét Video Mới Nhất'}</span>
                 </button>
               </div>
             </div>
 
             {/* Quick Add Competitor Channel Input */}
-            <div className="mt-5 pt-4 border-t border-brand-border/60 flex flex-wrap sm:flex-nowrap gap-2">
+            <div className="mt-4 pt-3 border-t border-brand-border/60 flex flex-wrap sm:flex-nowrap gap-2">
               <input
                 type="text"
                 value={compInput}
                 onChange={(e) => setCompInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddCompetitor(compInput)}
                 placeholder="Dán link kênh (youtube.com/@ChannelName) hoặc nhập @handle để thêm..."
-                className="flex-1 bg-brand-surface border border-brand-border rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+                className="flex-1 bg-brand-card border border-brand-border rounded-lg px-3 py-2 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
               />
               <button
                 onClick={() => handleAddCompetitor(compInput)}
                 disabled={compLoading}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition whitespace-nowrap disabled:opacity-50">
-                + Thêm Kênh Đối Thủ
+                className="px-4 py-2 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition whitespace-nowrap disabled:opacity-50">
+                + Thêm Đối Thủ
               </button>
             </div>
           </div>
@@ -11322,36 +11310,36 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
       {tab === 'autoupdate' && (
           <section className="space-y-4">
             {/* Header & Status Control Card */}
-            <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-brand-border pb-4">
+            <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-brand-border pb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      Daily Automated Trend Radar
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                      Automated Trend Radar
                     </span>
-                    <span className="text-xs text-zinc-400">Tự Động Quét 24h & Đề Xuất Duyệt</span>
+                    <span className="text-xs text-zinc-400">Tự động quét & đề xuất</span>
                   </div>
                   <h2 className="font-extrabold text-base sm:text-xl text-white mt-1">
                     Cập Nhật Tự Động Xu Hướng Mỗi Ngày
                   </h2>
                   <p className="text-xs text-zinc-400 mt-0.5 max-w-3xl leading-relaxed">
-                    Hệ thống tự động đi tìm các xu hướng bứt phá mới mỗi ngày từ các kênh nước ngoài (US/UK) ít sub và view đều, sau đó hỏi bạn có muốn cập nhật thêm vào kế hoạch khai thác hay không.
+                    Hệ thống tự động tìm các xu hướng bứt phá mới mỗi ngày từ các kênh nước ngoài ít sub và view đều để đưa vào kế hoạch khai thác.
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+                <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto shrink-0">
                   <button
                     onClick={runDailyScan}
                     disabled={autoScanning}
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-500/25 transition flex items-center gap-1.5 disabled:opacity-50">
-                    <span>{autoScanning ? 'Đang tự động quét...' : 'Chạy Quét Trend Hôm Nay Ngay'}</span>
+                    className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition flex items-center gap-1.5 disabled:opacity-50 shadow-sm">
+                    <span>{autoScanning ? 'Đang quét...' : 'Chạy Quét Trend Hôm Nay'}</span>
                   </button>
 
                   <button
                     onClick={toggleAutoScan}
-                    className={`px-3 py-2 rounded-xl text-xs font-semibold border transition ${
+                    className={`px-3 py-2 rounded-lg text-xs font-medium border transition ${
                       autoUpdateData.enabled 
-                        ? 'bg-emerald-600/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-600/25' 
+                        ? 'bg-zinc-800 text-zinc-100 border-zinc-700 hover:bg-zinc-700' 
                         : 'bg-brand-card text-zinc-400 border-brand-border hover:text-white'
                     }`}>
                     {autoUpdateData.enabled ? '✓ Tự động: BẬT' : 'Tự động: TẮT'}
