@@ -10447,16 +10447,16 @@ function TopNgachSection({
     }
   };
 
-  // Hạt giống xu hướng đa lĩnh vực (Bắt trọn ngách Case Study, Tài liệu, AI, Vụ án bứt phá như BeyondVN)
+  // Hạt giống xu hướng đa lĩnh vực (Từ khóa chuẩn hóa, không dùng ký tự đặc biệt tránh lỗi API)
   const SEED_TREND_TOPICS = React.useMemo(() => [
-    { id: 'casestudy', label: 'Case Study & Câu Chuyện Thương Hiệu', q: 'case study "rise and fall" | "the rise and fall" | "the story of"', rpm: '$35 - $60' },
-    { id: 'business', label: 'Đế Chế & Kinh Doanh Sụp Đổ', q: 'business collapse case study documentary "the company that"', rpm: '$35 - $60' },
-    { id: 'documentary', label: 'Phim Tài Liệu Mini & Góc Khuất', q: 'mini documentary "the truth about" | "uncovered"', rpm: '$30 - $50' },
-    { id: 'crime', label: 'Hồ Sơ Vụ Án & Lời Khai', q: 'police interrogation confession body language crime', rpm: '$25 - $38' },
-    { id: 'ai', label: 'Điện Ảnh AI & Hoạt Hình', q: 'ai animation cinematic film trailer midjourney', rpm: '$30 - $48' },
+    { id: 'casestudy', label: 'Case Study & Câu Chuyện Thương Hiệu', q: 'case study rise and fall business story', rpm: '$35 - $60' },
+    { id: 'business', label: 'Đế Chế & Kinh Doanh Sụp Đổ', q: 'business collapse case study documentary', rpm: '$35 - $60' },
+    { id: 'documentary', label: 'Phim Tài Liệu Mini & Góc Khuất', q: 'mini documentary mystery uncovered', rpm: '$30 - $50' },
+    { id: 'crime', label: 'Hồ Sơ Vụ Án & Lời Khai', q: 'police interrogation confession body language', rpm: '$25 - $38' },
+    { id: 'ai', label: 'Điện Ảnh AI & Hoạt Hình', q: 'ai animation cinematic film midjourney', rpm: '$30 - $48' },
     { id: 'sea', label: 'Bí Ẩn Vực Sâu & Đại Dương', q: 'deep ocean mystery abyss creature iceberg', rpm: '$22 - $35' },
-    { id: 'history', label: 'Lịch Sử & Văn Minh Cổ', q: 'ancient civilization lost technology warfare history', rpm: '$24 - $36' },
-    { id: 'psychology', label: 'Tâm Lý Học & Hành Vi', q: 'dark psychology manipulation human behavior traits', rpm: '$28 - $45' },
+    { id: 'history', label: 'Lịch Sử & Văn Minh Cổ', q: 'ancient civilization lost technology archaeology', rpm: '$24 - $36' },
+    { id: 'psychology', label: 'Tâm Lý Học & Hành Vi', q: 'dark psychology manipulation human behavior', rpm: '$28 - $45' },
     { id: 'horror', label: 'Kinh Dị & Giả Thuyết', q: 'analog horror scp foundation backrooms story', rpm: '$20 - $32' },
     { id: 'universe', label: 'Khoa Học & Vũ Trụ', q: 'space universe telescope breakthrough discovery', rpm: '$26 - $42' },
     { id: 'gaming', label: 'Cốt Truyện Game & Bí Mật', q: 'game lore iceberg secrets explained', rpm: '$16 - $26' },
@@ -10549,9 +10549,10 @@ function TopNgachSection({
             part: 'snippet',
             type: 'video',
             q: topic.q,
-            order: 'viewCount', // Lấy video view cao nhất
+            // DÙNG 'relevance' ĐỂ BẮT ĐƯỢC KÊNH NHỎ (<30k sub). Nếu dùng 'viewCount', YouTube chỉ trả về các kênh triệu sub (MrBeast, Vox...) nên bị bộ lọc loại bỏ sạch 100%!
+            order: 'relevance',
             publishedAfter: tenDaysAgoISO,
-            maxResults: 50 // Tối đa 50 kết quả cho 1 lần gọi API
+            maxResults: 50
           };
           if (selectedRegion) {
             searchParams.regionCode = selectedRegion;
@@ -10559,6 +10560,12 @@ function TopNgachSection({
           searchRes = await yt('search', searchParams, apiKey);
         } catch (e) {
           console.warn('Search API error on seed:', topic.label, e);
+          if (e.code === 'quotaExceeded' || e.code === 'HTTP403' || (e.msg && e.msg.includes('quota'))) {
+            throw new Error('API Key đã hết hạn mức Quota hôm nay (10.000 units). Vui lòng đổi API Key mới trong cài đặt!');
+          }
+          if (e.code === 'keyInvalid' || (e.msg && e.msg.includes('API key not valid'))) {
+            throw new Error('YouTube API Key không hợp lệ. Vui lòng bấm Cấu hình API để nhập lại!');
+          }
           continue;
         }
 
@@ -10624,9 +10631,9 @@ function TopNgachSection({
           // Tiêu chí 1: Kênh dưới 30k sub (bắt buộc theo ngưỡng subLimitFilter)
           if (chInfo.subCount !== null && chInfo.subCount > subLimitFilter) return;
 
-          // Tiêu chí 2: Lượt xem từ vài ngàn trở lên (tối thiểu 2.000 view)
+          // Tiêu chí 2: Lượt xem từ vài ngàn trở lên (tối thiểu 1.500 view)
           const views = Number(v.statistics.viewCount || 0);
-          if (views < 2000) return;
+          if (views < 1500) return;
 
           // Tiêu chí 3: Trong 10 ngày trở xuống
           const pubTime = new Date(v.snippet.publishedAt).getTime();
