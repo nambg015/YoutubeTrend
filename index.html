@@ -9537,94 +9537,155 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
         </div>
       )}
 
-      {/* Top Header */}
-      <header className="border-b border-brand-border sticky top-0 glass-header z-30">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-3 h-3 rounded-full bg-red-600 shadow-sm shadow-red-500"></div>
-            <div>
-              <span className="font-extrabold text-base sm:text-lg tracking-tight text-white flex items-center gap-2">
-                YouTrend <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">Analytics</span>
+      {/* Top Header - Single Row Minimalist Hotbar */}
+      <header className="border-b border-white/5 sticky top-0 bg-zinc-950/85 backdrop-blur-xl z-30 select-none shadow-sm shadow-black/40">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2 lg:gap-3 flex-nowrap w-full">
+          {/* Logo / Brand */}
+          <div className="flex items-center gap-2 shrink-0 cursor-pointer" onClick={() => setTab('search')}>
+            <div className="relative flex items-center justify-center">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-600 shadow-lg shadow-red-500/60 ring-2 ring-red-500/20"></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight text-white hover:text-red-400 transition">
+                YouTrend
+              </span>
+              <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 hidden sm:inline">
+                PRO
               </span>
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <nav className="flex items-center gap-1 bg-brand-surface p-1 rounded-xl border border-brand-border">
-            <button onClick={() => setTab('search')} className={tab === 'search' ? bActive : 'px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white rounded-lg transition'}>
-              Tìm xu hướng
+          {/* Main Hotbar Nav - Single Row Pill Bar */}
+          <nav className="flex items-center gap-0.5 sm:gap-1 bg-zinc-900/90 p-1 rounded-xl border border-white/10 overflow-x-auto no-scrollbar shrink min-w-0 flex-nowrap">
+            <button 
+              onClick={() => setTab('search')} 
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                tab === 'search' 
+                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700/80' 
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+              }`}>
+              <span>Xu hướng</span>
             </button>
+
             <button 
               onClick={() => setTab('keywords')} 
-              className={tab === 'keywords' ? bActive : 'px-3 py-1.5 text-xs font-medium text-emerald-300 hover:text-white rounded-lg transition'}>
-              Từ khoá Trend
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                tab === 'keywords' 
+                  ? 'bg-zinc-800 text-emerald-300 shadow-sm border border-emerald-500/30' 
+                  : 'text-zinc-400 hover:text-emerald-300 hover:bg-zinc-800/40'
+              }`}>
+              <span>Từ khoá</span>
             </button>
+
             <button 
               onClick={() => setTab('niche')} 
-              className={tab === 'niche' ? bActive : 'px-3 py-1.5 text-xs font-medium text-cyan-300 hover:text-white rounded-lg transition flex items-center gap-1.5'}>
-              <span>Bắt Trend SRT & Quét Ngách</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30">Cụm Từ Khóa</span>
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                tab === 'niche' 
+                  ? 'bg-zinc-800 text-cyan-300 shadow-sm border border-cyan-500/30' 
+                  : 'text-zinc-400 hover:text-cyan-300 hover:bg-zinc-800/40'
+              }`}>
+              <span>Trend SRT</span>
+              <span className="text-[9px] px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30 leading-none">HOT</span>
             </button>
+
             <button 
               onClick={() => {
                 setTab('rpm');
                 if (!rpmItems.length) loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery);
               }} 
-              className={tab === 'rpm' ? bActive : 'px-3 py-1.5 text-xs font-medium text-amber-300/90 hover:text-white rounded-lg transition flex items-center gap-1.5'}>
-              <span>Săn Kênh Mỏ Vàng</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">RPM Cao</span>
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                tab === 'rpm' 
+                  ? 'bg-zinc-800 text-amber-300 shadow-sm border border-amber-500/30' 
+                  : 'text-zinc-400 hover:text-amber-300 hover:bg-zinc-800/40'
+              }`}>
+              <span>Top Ngách</span>
+              <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 leading-none">RPM</span>
             </button>
+
             <button 
               onClick={() => {
                 setTab('competitors');
                 if (!compVideos.length) refreshCompetitorVideos();
               }} 
-              className={tab === 'competitors' ? bActive : 'px-3 py-1.5 text-xs font-medium text-indigo-300 hover:text-white rounded-lg transition flex items-center gap-1.5'}>
-              <span>Kênh Đối Thủ</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30">
-                {competitors.length}
-              </span>
-            </button>
-            <button 
-              onClick={() => setTab('autoupdate')} 
-              className={tab === 'autoupdate' ? bActive : 'px-3 py-1.5 text-xs font-medium text-purple-300 hover:text-white rounded-lg transition flex items-center gap-1.5'}>
-              <span>Update Tự Động</span>
-              {autoUpdateData.pendingTrends?.length > 0 && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-red-600 text-white font-bold animate-pulse">
-                  {autoUpdateData.pendingTrends.length}
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                tab === 'competitors' 
+                  ? 'bg-zinc-800 text-indigo-300 shadow-sm border border-indigo-500/30' 
+                  : 'text-zinc-400 hover:text-indigo-300 hover:bg-zinc-800/40'
+              }`}>
+              <span>Đối thủ</span>
+              {competitors.length > 0 && (
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30 leading-none">
+                  {competitors.length}
                 </span>
               )}
             </button>
-            <button onClick={() => setTab('watch')} className={tab === 'watch' ? bActive : 'px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white rounded-lg transition'}>
-              Watchlist ({watchList.length})
+
+            <button 
+              onClick={() => setTab('autoupdate')} 
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                tab === 'autoupdate' 
+                  ? 'bg-zinc-800 text-purple-300 shadow-sm border border-purple-500/30' 
+                  : 'text-zinc-400 hover:text-purple-300 hover:bg-zinc-800/40'
+              }`}>
+              <span>Tự động</span>
+              {autoUpdateData.pendingTrends?.length > 0 && (
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping"></span>
+              )}
             </button>
+
+            <button 
+              onClick={() => setTab('watch')} 
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap shrink-0 flex items-center gap-1 ${
+                tab === 'watch' 
+                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700/80' 
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+              }`}>
+              <span>Watchlist</span>
+              {watchList.length > 0 && (
+                <span className="text-[10px] text-zinc-500 font-mono">({watchList.length})</span>
+              )}
+            </button>
+
+            <div className="w-[1px] h-4 bg-zinc-800 mx-0.5 shrink-0"></div>
+
             <button
               onClick={() => setShowSavedVideosModal(true)}
-              className="px-3 py-1.5 text-xs font-bold text-amber-300 hover:text-white bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg transition flex items-center gap-1.5 shadow-sm"
+              className="px-2.5 py-1.5 text-xs font-bold text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 rounded-lg transition whitespace-nowrap shrink-0 flex items-center gap-1.5"
               title="Mở kho video đã lưu để xem khi rảnh">
-              <span>🔖 Đã Lưu</span>
+              <span>🔖 Đã lưu</span>
               {savedVideos.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-black text-[10px] font-black">
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-black text-[9px] font-black leading-none">
                   {savedVideos.length}
                 </span>
               )}
             </button>
           </nav>
 
-          {/* User Account Button & API Diagnostic Center */}
-          <div className="flex items-center gap-2">
+          {/* Actions: API Status & Account */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <button 
               onClick={() => { setApiModalOpen(true); setApiModalTab('tester'); }} 
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition shadow-sm ${key ? 'bg-brand-surface text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10' : 'bg-red-600/20 text-red-300 border-red-500/50 hover:bg-red-600/30 ring-1 ring-red-500/30'}`}
-              title="Mở bảng cài đặt và kiểm tra kết nối API Google & YouTube">
-              <span className={`w-2 h-2 rounded-full ${key ? 'bg-emerald-400 animate-pulse' : 'bg-red-400 animate-ping'}`}></span>
-              <span>{key ? ('API Đã Kết Nối (' + key.slice(0, 4) + '...' + key.slice(-4) + ')') : '🔑 Cài Đặt API (Google / YouTube)'}</span>
+              className={`h-8 px-2 sm:px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition shadow-sm shrink-0 ${
+                key 
+                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20' 
+                  : 'bg-red-500/15 text-red-300 border-red-500/40 hover:bg-red-500/25 ring-1 ring-red-500/20 animate-pulse'
+              }`}
+              title={key ? ('API đã kết nối: ' + key + '. Bấm để mở kiểm tra & thiết lập') : 'Chưa cài đặt API. Bấm để kết nối ngay'}>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${key ? 'bg-emerald-400' : 'bg-red-400 animate-ping'}`}></span>
+              <span className="font-semibold">{key ? 'API' : 'Cài API'}</span>
+              {key && (
+                <span className="text-[10px] opacity-70 font-mono hidden md:inline">
+                  {key.slice(0, 4)}...{key.slice(-3)}
+                </span>
+              )}
             </button>
+
             <button
               onClick={() => setShowAccountModal(true)}
-              className="px-2.5 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white bg-brand-card hover:bg-brand-hover border border-brand-border transition"
+              className="h-8 px-2 sm:px-2.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-white bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 transition flex items-center gap-1.5 shrink-0"
               title="Thông tin tài khoản và phiên làm việc">
-              <span>👤 Tài khoản</span>
+              <span>👤</span>
+              <span className="hidden sm:inline">Tài khoản</span>
             </button>
           </div>
         </div>
