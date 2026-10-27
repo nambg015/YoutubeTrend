@@ -10383,6 +10383,8 @@ function TopNgachSection({
   const [scanStats, setScanStats] = React.useState(null);
   const [hasScanned, setHasScanned] = React.useState(false);
   const [showDrilldown, setShowDrilldown] = React.useState(false);
+  const [inspectingVideo, setInspectingVideo] = React.useState(null);
+  const [showApiGuideModal, setShowApiGuideModal] = React.useState(false);
 
   // Dynamic ranking based on selected timeframe
   const rankedNiches = React.useMemo(() => {
@@ -10480,12 +10482,19 @@ function TopNgachSection({
       const subs = {};
       const channelStats = {};
       if (cids.length) {
-        const c = await yt('channels', { part: 'statistics,snippet', id: cids.join(',') }, apiKey);
+        const c = await yt('channels', { part: 'statistics,snippet,contentDetails', id: cids.join(',') }, apiKey);
         (c.items || []).forEach(x => {
-          subs[x.id] = x.statistics.hiddenSubscriberCount ? null : Number(x.statistics.subscriberCount);
+          const subCount = x.statistics.hiddenSubscriberCount ? null : Number(x.statistics.subscriberCount);
+          const channelAgeDays = Math.max(1, Math.round((Date.now() - new Date(x.snippet.publishedAt).getTime()) / 864e5));
+          subs[x.id] = subCount;
           channelStats[x.id] = {
-            subCount: x.statistics.hiddenSubscriberCount ? null : Number(x.statistics.subscriberCount),
-            videoCount: Number(x.statistics.videoCount || 0)
+            subCount: subCount,
+            videoCount: Number(x.statistics.videoCount || 0),
+            country: x.snippet?.country || '',
+            publishedAt: x.snippet?.publishedAt || '',
+            ageDays: channelAgeDays,
+            uploadsId: x.contentDetails?.relatedPlaylists?.uploads || x.id.replace(/^UC/, 'UU'),
+            channelThumb: x.snippet?.thumbnails?.default?.url || ''
           };
         });
       }
@@ -10497,29 +10506,52 @@ function TopNgachSection({
         const subCount = subs[v.snippet.channelId] === undefined ? null : subs[v.snippet.channelId];
         const viewsCount = Number(st.viewCount || 0);
         const outlierRatio = subCount ? (viewsCount / Math.max(subCount, 1)).toFixed(1) : null;
+        const chInfo = channelStats[v.snippet.channelId] || {};
+
+        const hoursPassed = Math.max(0.1, (Date.now() - new Date(v.snippet.publishedAt).getTime()) / 36e5);
+        const calculatedVph = Math.round(viewsCount / hoursPassed);
+        const likes = st.likeCount == null ? null : Number(st.likeCount);
+        const comments = st.commentCount == null ? null : Number(st.commentCount);
+        const engRate = viewsCount > 0 ? ((((likes || 0) + (comments || 0)) / viewsCount) * 100).toFixed(2) : '0';
+        const isOrganic = Number(engRate) >= 1.0;
+        const isBreakout = (chInfo.ageDays <= 90 || chInfo.videoCount <= 15) && viewsCount >= 3000;
+        const hasCaptions = v.contentDetails?.caption === 'true';
+        const licensedContent = !!v.contentDetails?.licensedContent;
 
         const o = {
           id: v.id,
           title: v.snippet.title,
           channel: v.snippet.channelTitle,
           channelId: v.snippet.channelId,
+          channelThumb: chInfo.channelThumb || '',
           thumb: bestThumb,
           published: v.snippet.publishedAt,
           ts: new Date(v.snippet.publishedAt).getTime(),
           views: viewsCount,
-          likes: st.likeCount == null ? null : Number(st.likeCount),
-          comments: st.commentCount == null ? null : Number(st.commentCount),
+          likes: likes,
+          comments: comments,
           dur: durSeconds,
           subs: subCount,
           outlierRatio: outlierRatio,
-          videoCount: channelStats[v.snippet.channelId]?.videoCount || 0,
+          videoCount: chInfo.videoCount || 0,
+          country: chInfo.country || 'N/A',
+          channelAgeDays: chInfo.ageDays || null,
+          channelPublishedAt: chInfo.publishedAt || '',
+          uploadsId: chInfo.uploadsId || v.snippet.channelId.replace(/^UC/, 'UU'),
+          isBreakout: isBreakout,
+          hasCaptions: hasCaptions,
+          licensedContent: licensedContent,
+          tags: v.snippet.tags || [],
+          engRate: engRate,
+          isOrganic: isOrganic,
+          vph: calculatedVph,
           niche: n
         };
         if (typeof score === 'function') {
           const sc = score(o);
           o.sc = sc;
           o.total = sc.total;
-          o.vph = sc.vph;
+          if (!o.vph) o.vph = sc.vph;
           o.eng = sc.eng;
         }
         return o;
@@ -11062,6 +11094,14 @@ function TopNgachSection({
                 Đang quét YouTube Data API...
               </span>
             )}
+            <button
+              type="button"
+              onClick={() => setShowApiGuideModal(true)}
+              className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer flex items-center gap-1"
+              title="Xem ghi chú cập nhật và hướng dẫn sử dụng 8 tính năng API ẩn">
+              <span>💡</span>
+              <span>Hướng Dẫn &amp; Tính Năng Mới</span>
+            </button>
           </div>
 
           {/* Compact Filter Controls in Single Line */}
@@ -11310,8 +11350,8 @@ function TopNgachSection({
               return (
                 <article
                   key={v.id || idx}
-                  className="bg-brand-surface border border-brand-border hover:border-amber-400/50 rounded-xl overflow-hidden flex flex-col group transition shadow-md hover:shadow-xl">
-                  {/* Thumbnail Container siêu gọn */}
+                  className="bg-brand-surface border border-zinc-800 hover:border-zinc-600 rounded-xl overflow-hidden flex flex-col group transition shadow-sm hover:shadow-md">
+                  {/* Thumbnail Container siêu gọn & ít màu */}
                   <a
                     href={ytUrl}
                     target="_blank"
@@ -11321,26 +11361,33 @@ function TopNgachSection({
                     <img
                       src={v.thumb}
                       alt=""
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      className="w-full h-full object-cover group-hover:scale-102 transition duration-200"
                       loading="lazy"
                     />
 
                     {/* Sub Count Badge */}
-                    <div className="absolute top-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-black/85 text-emerald-300 backdrop-blur-sm border border-emerald-500/30">
+                    <div className="absolute top-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-700/80">
                       {v.subs ? (typeof fmt === 'function' ? fmt(v.subs) : v.subs) + ' subs' : 'Kênh nhỏ'}
                     </div>
 
                     {/* Outlier Ratio Badge */}
                     {v.outlierRatio && (
-                      <div className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-600/90 text-white backdrop-blur-sm shadow-md">
+                      <div className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-zinc-900/90 text-amber-300 backdrop-blur-sm border border-amber-500/40">
                         🔥 x{v.outlierRatio} View/Sub
                       </div>
                     )}
 
+                    {/* Breakout Channel Indicator */}
+                    {v.isBreakout && (
+                      <div className="absolute bottom-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-zinc-900/90 text-zinc-200 border border-zinc-600 backdrop-blur-sm">
+                        🚀 Tân binh
+                      </div>
+                    )}
+
                     {/* Duration & Mid-roll Ads Badge */}
-                    <div className="absolute bottom-1.5 right-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded bg-black/85 text-white backdrop-blur-sm flex items-center gap-1">
+                    <div className="absolute bottom-1.5 right-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-800 flex items-center gap-1">
                       <span>{typeof fmtDur === 'function' ? fmtDur(v.dur) : '25:00'}</span>
-                      <span className="text-amber-400 font-bold border-l border-zinc-700 pl-1">~{rev.midrolls} Ads</span>
+                      <span className="text-zinc-400 border-l border-zinc-700 pl-1">~{rev.midrolls} Ads</span>
                     </div>
                   </a>
 
@@ -11351,7 +11398,7 @@ function TopNgachSection({
                         href={ytUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs font-bold text-white line-clamp-2 leading-snug hover:text-amber-400 transition"
+                        className="text-xs sm:text-[13px] font-semibold text-zinc-200 line-clamp-2 leading-snug hover:text-white transition"
                         title={v.title}>
                         {v.title}
                       </a>
@@ -11361,11 +11408,13 @@ function TopNgachSection({
                           href={chUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="truncate max-w-[120px] font-medium text-zinc-300 hover:text-red-400 flex items-center gap-1 transition"
+                          className="truncate max-w-[120px] font-medium text-zinc-300 hover:text-white flex items-center gap-1 transition"
                           title="Mở kênh trên YouTube">
                           <span>📺</span>
                           <span className="truncate">{v.channel}</span>
-                          <span className="text-[9px] text-zinc-500">↗</span>
+                          {v.country && v.country !== 'N/A' && (
+                            <span className="text-[9px] text-zinc-500 font-mono">[{v.country}]</span>
+                          )}
                         </a>
                         <span className="text-[10px] text-zinc-500 shrink-0 font-medium">
                           RPM {n.rpmRange ? n.rpmRange.split('-')[0].trim() : '$20+'}
@@ -11374,29 +11423,44 @@ function TopNgachSection({
                     </div>
 
                     {/* Metric Row */}
-                    <div className="pt-1 border-t border-brand-border/60 flex items-center justify-between text-[10px]">
+                    <div className="pt-1 border-t border-zinc-800/80 flex items-center justify-between text-[10px] text-zinc-400">
                       <span className="text-zinc-300 font-medium">
                         👁️ {typeof fmt === 'function' ? fmt(v.views) : v.views}
                       </span>
                       {v.vph ? (
-                        <span className="text-amber-300 font-bold">
+                        <span className="text-zinc-300 font-medium">
                           ⚡+{typeof fmt === 'function' ? fmt(v.vph) : v.vph}/h
                         </span>
                       ) : null}
-                      <span className="text-emerald-400 font-bold">
-                        ${typeof fmt === 'function' ? fmt(rev.low) : rev.low} - ${typeof fmt === 'function' ? fmt(rev.high) : rev.high}
+                      <span className="text-zinc-300 font-medium">
+                        ${typeof fmt === 'function' ? fmt(rev.low) : rev.low}-${typeof fmt === 'function' ? fmt(rev.high) : rev.high}
                       </span>
                     </div>
 
+                    {/* Nút Soi Video & Tags (1 Quota) */}
+                    <button
+                      type="button"
+                      onClick={() => setInspectingVideo(v)}
+                      className="w-full py-1 px-2 rounded-lg font-medium text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-500 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                      title="Soi tags ẩn, bản quyền, tương tác và lấy 50 video của kênh chỉ tốn 1 quota">
+                      <span>🔍</span>
+                      <span>Soi Video &amp; Tags</span>
+                      {v.tags && v.tags.length > 0 && (
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-zinc-900 text-zinc-400 font-mono">
+                          {v.tags.length}
+                        </span>
+                      )}
+                    </button>
+
                     {/* Quick Action Buttons */}
-                    <div className="pt-1 flex items-center gap-1 text-[10px]">
+                    <div className="flex items-center gap-1 text-[10px]">
                       {onToggleSave && (
                         <button
                           type="button"
                           onClick={() => onToggleSave(v)}
-                          className={`flex-1 py-1 px-1.5 rounded-md font-semibold transition text-center truncate cursor-pointer ${
+                          className={`flex-1 py-1 px-1.5 rounded-md font-medium transition text-center truncate cursor-pointer ${
                             saved
-                              ? 'bg-amber-400 text-zinc-950'
+                              ? 'bg-zinc-200 text-zinc-950 font-semibold'
                               : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
                           }`}>
                           {saved ? '✓ Đã Lưu' : '🔖 Lưu'}
@@ -11408,14 +11472,14 @@ function TopNgachSection({
                           onClick={() => onAddCompetitor(v.channel)}
                           className="py-1 px-1.5 rounded-md font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition truncate cursor-pointer"
                           title="Thêm kênh này vào danh sách theo dõi đối thủ">
-                          + Đối thủ
+                          + Kênh
                         </button>
                       )}
                       <a
                         href={ytUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="py-1 px-2 rounded-md font-semibold bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 transition text-center truncate shrink-0"
+                        className="py-1 px-2 rounded-md font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700 hover:text-white transition text-center truncate shrink-0"
                         title="Xem trực tiếp trên YouTube">
                         YT ↗
                       </a>
@@ -11427,6 +11491,24 @@ function TopNgachSection({
           </div>
         )}
       </div>
+
+      {/* Video Inspector Modal (Hidden Tags, 1-Quota 50 Videos, Copyright & Organic Check) */}
+      {inspectingVideo && (
+        <VideoInspectorModal
+          video={inspectingVideo}
+          apiKey={apiKey}
+          onClose={() => setInspectingVideo(null)}
+          onToggleSave={onToggleSave}
+          isSaved={isSaved}
+          onAddCompetitor={onAddCompetitor}
+          showToast={showToast}
+        />
+      )}
+
+      {/* API Features & Changelog Guide Modal */}
+      {showApiGuideModal && (
+        <ApiFeaturesGuideModal onClose={() => setShowApiGuideModal(false)} />
+      )}
     </section>
   );
 }
@@ -11613,6 +11695,529 @@ function NicheDetailModal({ niche, onClose, onSelectKeywordForSearch, onAddCompe
             onClick={onClose}
             className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition">
             Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cửa Sổ Soi Video Chuyên Sâu (Hidden Tags, 1-Quota 50 Videos, Copyright & Organic Check)
+function VideoInspectorModal({ video, apiKey, onClose, onToggleSave, isSaved, onAddCompetitor, showToast }) {
+  const [activeTab, setActiveTab] = React.useState('tags'); // 'tags' | 'uploads' | 'analytics'
+  const [uploadsVideos, setUploadsVideos] = React.useState([]);
+  const [loadingUploads, setLoadingUploads] = React.useState(false);
+  const [uploadsError, setUploadsError] = React.useState(null);
+
+  if (!video) return null;
+
+  const ytUrl = 'https://www.youtube.com/watch?v=' + video.id;
+  const chUrl = 'https://www.youtube.com/channel/' + (video.channelId || '');
+  const saved = isSaved && isSaved(video.id);
+  const tags = video.tags || [];
+
+  const copyToClipboard = (text, msg) => {
+    try {
+      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      if (showToast) showToast(msg || 'Đã sao chép vào bộ nhớ tạm!');
+    } catch (e) {
+      if (showToast) showToast('Lỗi khi sao chép: ' + String(e));
+    }
+  };
+
+  const loadUploads = React.useCallback(async () => {
+    if (!apiKey) {
+      setUploadsError('Cần YouTube Data API Key để tải danh sách video.');
+      return;
+    }
+    const uploadsId = video.uploadsId || (video.channelId ? video.channelId.replace(/^UC/, 'UU') : null);
+    if (!uploadsId) {
+      setUploadsError('Không tìm thấy mã Uploads Playlist của kênh này.');
+      return;
+    }
+    setLoadingUploads(true);
+    setUploadsError(null);
+    try {
+      const res = await yt('playlistItems', {
+        part: 'snippet,contentDetails',
+        playlistId: uploadsId,
+        maxResults: 50
+      }, apiKey);
+      const items = (res.items || []).map(item => ({
+        id: item.contentDetails?.videoId || item.snippet?.resourceId?.videoId,
+        title: item.snippet?.title || '',
+        thumb: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || '',
+        published: item.snippet?.publishedAt || item.contentDetails?.videoPublishedAt || ''
+      })).filter(x => Boolean(x.id));
+      setUploadsVideos(items);
+    } catch (err) {
+      setUploadsError(err.msg || 'Không thể tải video từ Uploads Playlist.');
+    } finally {
+      setLoadingUploads(false);
+    }
+  }, [apiKey, video.uploadsId, video.channelId]);
+
+  React.useEffect(() => {
+    if (activeTab === 'uploads' && uploadsVideos.length === 0 && !loadingUploads) {
+      loadUploads();
+    }
+  }, [activeTab, uploadsVideos.length, loadingUploads, loadUploads]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-[#121316] border border-zinc-800 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto text-zinc-200">
+        {/* Modal Header */}
+        <div className="p-4 sm:p-5 border-b border-zinc-800 flex items-start justify-between gap-3 bg-zinc-900/60">
+          <div className="space-y-1 pr-2">
+            <div className="flex items-center gap-2 flex-wrap text-[11px]">
+              <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 font-medium">
+                {video.subs ? (typeof fmt === 'function' ? fmt(video.subs) : video.subs) + ' subs' : 'Kênh nhỏ'}
+              </span>
+              {video.outlierRatio && (
+                <span className="px-2 py-0.5 rounded bg-zinc-800 text-amber-300 border border-amber-500/40 font-bold">
+                  🔥 x{video.outlierRatio} View/Sub
+                </span>
+              )}
+              {video.country && video.country !== 'N/A' && (
+                <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">
+                  🌍 {video.country}
+                </span>
+              )}
+              {video.isBreakout && (
+                <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-zinc-600 font-medium">
+                  🚀 Tân binh &lt;90 ngày
+                </span>
+              )}
+            </div>
+            <h2 className="text-sm sm:text-base font-bold text-white line-clamp-2 leading-snug pt-1">
+              {video.title}
+            </h2>
+            <div className="flex items-center gap-2 text-xs text-zinc-400 pt-0.5">
+              <a
+                href={chUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-zinc-300 hover:text-white font-medium flex items-center gap-1">
+                <span>📺</span>
+                <span>{video.channel}</span>
+                <span>↗</span>
+              </a>
+              <span>•</span>
+              <span>{typeof fmt === 'function' ? fmt(video.views) : video.views} views</span>
+              {video.vph ? (
+                <span className="text-zinc-300">(+{typeof fmt === 'function' ? fmt(video.vph) : video.vph}/h)</span>
+              ) : null}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition shrink-0 cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        {/* Modal Navigation Tabs */}
+        <div className="flex border-b border-zinc-800 px-4 sm:px-5 gap-4 text-xs font-medium bg-zinc-900/30">
+          <button
+            type="button"
+            onClick={() => setActiveTab('tags')}
+            className={`py-3 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'tags'
+                ? 'border-zinc-200 text-white font-semibold'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}>
+            <span>🏷️ Thẻ Tags Ẩn ({tags.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('uploads')}
+            className={`py-3 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'uploads'
+                ? 'border-zinc-200 text-white font-semibold'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}>
+            <span>📺 50 Video Mới (1 Quota)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('analytics')}
+            className={`py-3 border-b-2 transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'analytics'
+                ? 'border-zinc-200 text-white font-semibold'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            }`}>
+            <span>🛡️ Bản Quyền &amp; Tương Tác Thật</span>
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+          {/* Tab 1: Tags Ẩn */}
+          {activeTab === 'tags' && (
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap bg-zinc-900/60 p-3 rounded-xl border border-zinc-800">
+                <div>
+                  <span className="text-xs font-semibold text-white block">Danh sách Thẻ Tags Ẩn của Video</span>
+                  <span className="text-[11px] text-zinc-400">
+                    {tags.length
+                      ? `Trích xuất trực tiếp ${tags.length} thẻ tags từ YouTube Data API v3.`
+                      : 'Video này không cài thẻ tags ẩn.'}
+                  </span>
+                </div>
+                {tags.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(tags.join(', '), `Đã chép ${tags.length} tags (dạng phẩy) vào bộ nhớ tạm!`)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-200 hover:bg-white text-zinc-900 transition cursor-pointer">
+                      📋 Sao Chép (Dấu phẩy)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(tags.join('\n'), `Đã chép ${tags.length} tags (mỗi dòng 1 tag)!`)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer">
+                      📑 Dạng Danh Sách
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {tags.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 max-h-72 overflow-y-auto p-1">
+                  {tags.map((t, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => copyToClipboard(t, `Đã chép tag: "${t}"`)}
+                      title="Bấm để sao chép tag này"
+                      className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-600 text-zinc-300 text-xs font-mono transition cursor-pointer flex items-center gap-1.5">
+                      <span className="text-[10px] text-zinc-500">#{idx + 1}</span>
+                      <span>{t}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center border border-dashed border-zinc-800 rounded-xl bg-zinc-900/30 space-y-1.5">
+                  <p className="text-zinc-300 font-medium">Không có thẻ tags ẩn nào.</p>
+                  <p className="text-zinc-500 text-[11px]">
+                    Tác giả video này dựa hoàn toàn vào từ khóa trong Tiêu Đề và Mô Tả video để ăn đề xuất.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 2: Uploads 50 video (1 Quota) */}
+          {activeTab === 'uploads' && (
+            <div className="space-y-3">
+              <div className="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 flex items-start gap-2.5">
+                <span className="text-base shrink-0">⚡</span>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-semibold text-zinc-200">Tiết kiệm 99% Quota API YouTube</p>
+                  <p className="text-[11px] text-zinc-400">
+                    Tải trực tiếp từ Playlist Uploads (<code className="text-zinc-300 font-mono">{video.uploadsId || 'UU...'}</code>) chỉ tiêu tốn đúng <b className="text-white">1 Quota</b> (thay vì 100 Quota với tìm kiếm thông thường).
+                  </p>
+                </div>
+              </div>
+
+              {loadingUploads ? (
+                <div className="p-10 text-center space-y-2 border border-dashed border-zinc-800 rounded-xl">
+                  <div className="w-5 h-5 border-2 border-zinc-300 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                  <p className="text-xs text-zinc-400">Đang tải 50 video mới nhất (1 Quota)...</p>
+                </div>
+              ) : uploadsError ? (
+                <div className="p-6 text-center text-zinc-400 border border-zinc-800 rounded-xl bg-zinc-900/40 space-y-2">
+                  <p className="text-xs text-zinc-300">{uploadsError}</p>
+                  <button
+                    type="button"
+                    onClick={loadUploads}
+                    className="px-3 py-1 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 cursor-pointer">
+                    Thử lại
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                  {uploadsVideos.map((item, idx) => (
+                    <div
+                      key={item.id || idx}
+                      className="p-2 rounded-xl bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700 flex items-center justify-between gap-3 transition">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img
+                          src={item.thumb}
+                          alt=""
+                          className="w-16 aspect-video object-cover rounded bg-zinc-800 shrink-0"
+                          loading="lazy"
+                        />
+                        <div className="min-w-0">
+                          <a
+                            href={'https://www.youtube.com/watch?v=' + item.id}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-zinc-200 hover:text-white line-clamp-1 block transition">
+                            {item.title}
+                          </a>
+                          <span className="text-[10px] text-zinc-500 block pt-0.5">
+                            {item.published ? new Date(item.published).toLocaleDateString('vi-VN') : ''}
+                          </span>
+                        </div>
+                      </div>
+                      <a
+                        href={'https://www.youtube.com/watch?v=' + item.id}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-medium border border-zinc-700 transition shrink-0">
+                        Xem YT ↗
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 3: Bản Quyền, Breakout & Organic Rate */}
+          {activeTab === 'analytics' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Box 1: Content ID */}
+              <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-zinc-400 font-medium">Bản Quyền Content ID</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                      video.licensedContent ? 'bg-zinc-800 text-zinc-200 border border-zinc-700' : 'bg-zinc-800 text-zinc-400'
+                    }`}>
+                    {video.licensedContent ? 'Licensed' : 'Unlicensed'}
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-white">
+                  {video.licensedContent ? 'Đã kích hoạt Content ID' : 'Chưa có bản quyền Content ID'}
+                </p>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  {video.licensedContent
+                    ? 'Video này có chứa nội dung (âm thanh/hình ảnh) đã được đăng ký hệ thống Content ID tự động của YouTube. Cần cẩn trọng bản quyền khi reup hoặc làm video tương tự.'
+                    : 'Không phát hiện bản quyền Content ID tự động. Kênh tự sản xuất hoặc dùng tài nguyên tự do.'}
+                </p>
+              </div>
+
+              {/* Box 2: Organic Engagement */}
+              <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-zinc-400 font-medium">Tương Tác Thật vs View Ảo</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                      video.isOrganic ? 'bg-zinc-800 text-zinc-200 border border-zinc-700' : 'bg-zinc-800 text-amber-300 border border-amber-500/30'
+                    }`}>
+                    {video.engRate}% rate
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-white">
+                  {video.isOrganic ? 'Tương tác tự nhiên xuất sắc' : 'Tương tác thấp (Có thể buff view)'}
+                </p>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  Likes: {typeof fmt === 'function' ? fmt(video.likes || 0) : (video.likes || 0)} | Comments: {typeof fmt === 'function' ? fmt(video.comments || 0) : (video.comments || 0)}. Tỷ lệ tương tác chuẩn của ngách là trên 1.0%. Tỷ lệ thấp &lt; 0.5% thường là do view ảo hoặc nhúng web ngoài.
+                </p>
+              </div>
+
+              {/* Box 3: Country */}
+              <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1.5">
+                <span className="text-[11px] text-zinc-400 font-medium block">Quốc Gia Gốc Của Kênh</span>
+                <p className="text-xs font-semibold text-white flex items-center gap-1.5">
+                  <span className="font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300">{video.country || 'N/A'}</span>
+                  <span>{video.country === 'US' ? 'Hoa Kỳ (Mỹ)' : video.country === 'VN' ? 'Việt Nam' : video.country === 'GB' ? 'Vương Quốc Anh' : 'Quốc gia đăng ký'}</span>
+                </p>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  Trích xuất trực tiếp từ mã quốc gia gốc của tài khoản YouTube. Giúp nhận biết kênh ngoại thực thụ hay kênh do tác giả VN dựng lên target thị trường nước ngoài.
+                </p>
+              </div>
+
+              {/* Box 4: Breakout Channel */}
+              <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1.5">
+                <span className="text-[11px] text-zinc-400 font-medium block">Tân Binh Đột Phá (Breakout)</span>
+                <p className="text-xs font-semibold text-white">
+                  {video.isBreakout ? '🚀 Kênh Tân Binh Đột Phá' : 'Kênh đã phát triển ổn định'}
+                </p>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  Tuổi đời kênh: <b className="text-zinc-200">{video.channelAgeDays ? video.channelAgeDays + ' ngày' : 'N/A'}</b> • Tổng video: <b className="text-zinc-200">{video.videoCount || 0}</b>. Kênh mới dưới 90 ngày hoặc ít video nhưng đạt view to chứng minh ngách đang có nhu cầu người xem cực lớn!
+                </p>
+              </div>
+
+              {/* Box 5: Midroll Ads */}
+              <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1.5">
+                <span className="text-[11px] text-zinc-400 font-medium block">Đủ Chuẩn Chèn Mid-roll Ads</span>
+                <p className="text-xs font-semibold text-white">
+                  {video.dur >= 480 ? '✓ Đủ điều kiện chèn Mid-roll Ads' : 'Dưới 8 phút (Chỉ Ads đầu/cuối)'}
+                </p>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  Thời lượng video: {typeof fmtDur === 'function' ? fmtDur(video.dur) : '25:00'}. Theo quy định YouTube, video trên 8 phút (≥480s) được tự do đặt quảng cáo giữa video, giúp đẩy doanh thu RPM tăng từ 200% - 350%.
+                </p>
+              </div>
+
+              {/* Box 6: Captions */}
+              <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-1.5">
+                <span className="text-[11px] text-zinc-400 font-medium block">Phụ Đề Đa Ngôn Ngữ (CC)</span>
+                <p className="text-xs font-semibold text-white">
+                  {video.hasCaptions ? '✓ Có phụ đề CC' : 'Không có phụ đề CC riêng'}
+                </p>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  Video có phụ đề (Closed Captions) được thuật toán YouTube index toàn bộ nội dung từ vựng và tự động dịch cho khán giả toàn cầu.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="p-3 sm:p-4 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {onToggleSave && (
+              <button
+                type="button"
+                onClick={() => onToggleSave(video)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+                  saved ? 'bg-zinc-200 text-zinc-950 font-semibold' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
+                }`}>
+                {saved ? '✓ Đã Lưu' : '🔖 Lưu Video'}
+              </button>
+            )}
+            {onAddCompetitor && (
+              <button
+                type="button"
+                onClick={() => onAddCompetitor(video.channel)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer">
+                + Thêm Kênh Đối Thủ
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href={ytUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition">
+              Mở trên YouTube ↗
+            </a>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer">
+              Đóng
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cửa Sổ Hướng Dẫn & Ghi Chú Tính Năng Mới
+function ApiFeaturesGuideModal({ onClose }) {
+  const features = [
+    {
+      num: '1',
+      title: 'Trích Xuất 100% Thẻ Tags Ẩn Của Đối Thủ',
+      desc: 'YouTube ẩn thẻ tags trên giao diện web thông thường. Hệ thống đọc trực tiếp trường snippet.tags của YouTube Data API v3 và cho phép sao chép 1-click dưới dạng danh sách phân tách bằng dấu phẩy, sẵn sàng dán trực tiếp vào khung Tags trong YouTube Studio.'
+    },
+    {
+      num: '2',
+      title: 'Đo Lường Tốc Độ Tăng Trưởng Views-Per-Hour (VPH)',
+      desc: 'Thay vì chỉ nhìn vào tổng view tĩnh, hệ thống lấy thời gian đăng chính xác snippet.publishedAt và chia cho số giờ đã trôi qua. Nhận biết ngay video nào đang "bắt sóng đề xuất nóng hổi" ngay tại thời điểm hiện tại.'
+    },
+    {
+      num: '3',
+      title: 'Tuyệt Chiêu 1 Quota: Lấy 50 Video Mới Nhất Của Kênh',
+      desc: 'Lệnh tìm kiếm thông thường (Search API) tốn 100 Quota/lần. Bằng cách đổi tiền tố Channel ID từ UC... sang UU... (Uploads Playlist), hệ thống gọi API playlistItems.list chỉ tiêu tốn đúng 1 Quota duy nhất mà lấy được trọn vẹn 50 video mới nhất của đối thủ.'
+    },
+    {
+      num: '4',
+      title: 'Kiểm Tra Bản Quyền & Content ID (Licensed Content)',
+      desc: 'Kiểm tra thuộc tính contentDetails.licensedContent. Cho bạn biết video đó đã được đăng ký hệ thống bản quyền Content ID tự động hay chưa, giúp phòng tránh rủi ro gậy bản quyền khi nghiên cứu nội dung.'
+    },
+    {
+      num: '5',
+      title: 'Bắt Sóng Kênh Tân Binh Đột Phá (Breakout Channel)',
+      desc: 'Đối chiếu ngày thành lập kênh và tổng số video đăng tải. Nếu kênh mới dưới 90 ngày hoặc có dưới 15 video nhưng lại đạt hàng chục ngàn view, đây là bảo chứng vàng cho thấy ngách đó đang thiếu nội dung trầm trọng và rất dễ làm.'
+    },
+    {
+      num: '6',
+      title: 'Phát Hiện Buff View Ảo vs Tương Tác Thật (Organic Rate)',
+      desc: 'Đo tỷ lệ (Likes + Comments) / Views. Các video cày view bằng tool hoặc chạy ads rác thường có tỷ lệ tương tác dưới 0.5%. Hệ thống lọc cảnh báo để bạn không lãng phí thời gian đu theo những con số ảo.'
+    },
+    {
+      num: '7',
+      title: 'Bóc Tách Quốc Gia Gốc Của Kênh (Channel Country)',
+      desc: 'Trích xuất thuộc tính snippet.country của kênh. Giúp bạn phân biệt rõ ràng đâu là kênh đến từ các quốc gia Tier-1 có RPM cao (US, GB, CA...) và đâu là kênh do creator Việt Nam dựng lên hướng ngoại.'
+    },
+    {
+      num: '8',
+      title: 'Tối Ưu Thời Lượng & Chèn Quảng Cáo Giữa Video (Mid-roll Ads)',
+      desc: 'Phân tích thời lượng chính xác từ định dạng ISO-8601 duration (contentDetails.duration). Nhận diện video đủ chuẩn ≥ 8 phút (480s) để chèn nhiều quảng cáo giữa video, tối ưu doanh thu RPM x2 đến x3 lần.'
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-[#121316] border border-zinc-800 rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto text-zinc-200">
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-zinc-800 flex items-start justify-between gap-3 bg-zinc-900/60">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                YouTube Data API v3
+              </span>
+              <span className="text-xs text-zinc-500 font-mono">Changelog &amp; Hướng dẫn</span>
+            </div>
+            <h2 className="text-base sm:text-lg font-bold text-white pt-0.5">
+              Ghi Chú Cập Nhật &amp; 8 Tính Năng API Mới
+            </h2>
+            <p className="text-xs text-zinc-400">
+              Tất cả tính năng đã được tích hợp trực tiếp vào ứng dụng với giao diện tinh gọn, dễ nhìn.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition shrink-0 cursor-pointer">
+            ✕
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1 text-xs">
+          {features.map((f, i) => (
+            <div key={i} className="p-3 rounded-xl bg-zinc-900/50 border border-zinc-800 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded bg-zinc-800 text-zinc-200 text-[11px] font-bold flex items-center justify-center shrink-0">
+                  {f.num}
+                </span>
+                <h3 className="text-xs font-semibold text-white">{f.title}</h3>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-relaxed pl-7">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="p-3 sm:p-4 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
+          <span className="text-[11px] text-zinc-500">
+            Bấm &quot;🔍 Soi Video &amp; Tags&quot; trên mỗi thẻ video để sử dụng
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-zinc-200 hover:bg-white text-zinc-900 transition cursor-pointer">
+            Đã Hiểu
           </button>
         </div>
       </div>
