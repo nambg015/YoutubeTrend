@@ -10339,7 +10339,7 @@ function getNicheChannels(niche, realChannelsMap) {
   }];
 }
 
-// TAB 2: TOP NGÁCH (HIGH-RPM NICHES - TIMEFRAME, GRID, CLASSIFICATION & SCANNER)
+// TAB 2: TOP NGÁCH (DYNAMIC REAL-TIME NICHE DISCOVERY ENGINE - 100% YOUTUBE DATA API V3)
 function TopNgachSection({
   apiKey,
   onSelectNiche,
@@ -10352,1006 +10352,562 @@ function TopNgachSection({
   onSelectIdea,
   onOpenApiModal
 }) {
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [timeframe, setTimeframe] = React.useState('24h');
-  const [activeNicheId, setActiveNicheId] = React.useState('billionaire_maid');
-
-  // Cache kênh thật 100% trích xuất từ YouTube API theo từng ngách kèm đánh giá tính khả thi
-  const [realChannelsMap, setRealChannelsMap] = React.useState(() => {
+  // Danh sách các ngách THẬT được quét và bóc tách động từ YouTube API v3 (Không dùng ngách tĩnh)
+  const [realDiscoveredNiches, setRealDiscoveredNiches] = React.useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('yt_real_channels_cache') || '{}');
+      return JSON.parse(localStorage.getItem('yt_real_discovered_niches_v2') || '[]');
     } catch (e) {
-      return {};
+      return [];
     }
   });
 
-  // State bộ quét KÊNH trend ngách (Mặc định sub thấp < 30.000 sub theo yêu cầu)
-  const [channelSubLimit, setChannelSubLimit] = React.useState(30000); // 30k là default
-  const [scanningChannelNicheId, setScanningChannelNicheId] = React.useState(null);
-  const [isBatchScanning, setIsBatchScanning] = React.useState(false);
-  const [batchProgress, setBatchProgress] = React.useState(null);
-  const cancelBatchRef = React.useRef(false);
+  const [activeNicheId, setActiveNicheId] = React.useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('yt_real_discovered_niches_v2') || '[]');
+      return cached[0]?.id || null;
+    } catch (e) {
+      return null;
+    }
+  });
 
-  // Scanner filter states cho VIDEO bên dưới
-  const [subFilter, setSubFilter] = React.useState('under50k'); // 'under30k' | 'under50k' | 'under100k' | 'all'
-  const [durFilter, setDurFilter] = React.useState('long'); // 'long' | 'all'
-  const [viewFilter, setViewFilter] = React.useState('steady'); // 'steady' | 'viral' | 'new' | 'all'
-  const [period, setPeriod] = React.useState(720); // 24 | 168 | 720 | 0
-  const [customQuery, setCustomQuery] = React.useState('');
-  const [videoItems, setVideoItems] = React.useState([]);
-  const [loading, setLoading] = React.useState(false);
-  const [scanStats, setScanStats] = React.useState(null);
-  const [hasScanned, setHasScanned] = React.useState(false);
-  const [showDrilldown, setShowDrilldown] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [customKeywordInput, setCustomKeywordInput] = React.useState('');
+  const [isScanningNiches, setIsScanningNiches] = React.useState(false);
+  const [scanProgress, setScanProgress] = React.useState(null); // { current, total, topic, foundVideos, foundNiches }
+  const cancelScanRef = React.useRef(false);
   const [inspectingVideo, setInspectingVideo] = React.useState(null);
   const [showApiGuideModal, setShowApiGuideModal] = React.useState(false);
-
-  // Dynamic ranking based on selected timeframe
-  const rankedNiches = React.useMemo(() => {
-    if (typeof getNicheLeaderboard === 'function') {
-      return getNicheLeaderboard(timeframe);
+  const [subLimitFilter, setSubLimitFilter] = React.useState(30000); // 30k sub mặc định
+  const [lastScannedTime, setLastScannedTime] = React.useState(() => {
+    try {
+      return localStorage.getItem('yt_real_discovered_niches_time') || '';
+    } catch (e) {
+      return '';
     }
-    return typeof CASHCOW_NICHES !== 'undefined' ? CASHCOW_NICHES : [];
-  }, [timeframe]);
+  });
 
-  // Search filter for niches grid & TỰ ĐỘNG XÓA/LOẠI BỎ TOÀN BỘ NGÁCH KHÔNG KHẢ THI!
+  // Hạt giống xu hướng đa lĩnh vực để quét toàn diện YouTube (10 ngày qua)
+  const SEED_TREND_TOPICS = React.useMemo(() => [
+    { id: 'crime', label: 'Hồ Sơ Vụ Án & Lời Khai', q: 'police interrogation confession body language crime', rpm: '$25 - $38' },
+    { id: 'ai', label: 'Điện Ảnh AI & Hoạt Hình', q: 'ai animation cinematic film trailer midjourney', rpm: '$30 - $48' },
+    { id: 'sea', label: 'Bí Ẩn Vực Sâu & Đại Dương', q: 'deep ocean mystery abyss creature iceberg', rpm: '$22 - $35' },
+    { id: 'history', label: 'Lịch Sử & Văn Minh Cổ', q: 'ancient civilization lost technology warfare history', rpm: '$24 - $36' },
+    { id: 'psychology', label: 'Tâm Lý Học & Hành Vi', q: 'dark psychology manipulation human behavior traits', rpm: '$28 - $45' },
+    { id: 'horror', label: 'Kinh Dị & Giả Thuyết', q: 'analog horror scp foundation backrooms story', rpm: '$20 - $32' },
+    { id: 'universe', label: 'Khoa Học & Vũ Trụ', q: 'space universe telescope breakthrough discovery', rpm: '$26 - $42' },
+    { id: 'business', label: 'Đế Chế & Kinh Doanh', q: 'business collapse success story case study', rpm: '$35 - $60' },
+    { id: 'gaming', label: 'Cốt Truyện Game & Bí Mật', q: 'game lore iceberg secrets explained', rpm: '$16 - $26' },
+    { id: 'restore', label: 'Phục Chế & Sáng Tạo', q: 'restoration abandoned tool antique project', rpm: '$22 - $32' },
+    { id: 'story', label: 'Kể Chuyện & Bài Học', q: 'animated story reddit confessions life lesson', rpm: '$20 - $30' },
+    { id: 'ambient', label: 'Âm Thanh & Thư Giãn', q: 'peaceful ambient sleep sound rain 4k', rpm: '$18 - $28' },
+    { id: 'military', label: 'Chiến Tranh & Vũ Khí', q: 'military tactics weapon technology warfare history', rpm: '$24 - $38' },
+    { id: 'conspiracy', label: 'Tảng Băng Chìm & Thuyết', q: 'conspiracy iceberg dark truth documented', rpm: '$22 - $35' }
+  ], []);
+
+  // Lọc ngách theo ô tìm kiếm
   const q = (searchQuery || '').trim().toLowerCase();
   const visibleNiches = React.useMemo(() => {
-    let list = rankedNiches;
-    if (q) {
-      list = list.filter(n =>
-        (n.name || '').toLowerCase().includes(q) ||
-        (n.subtitle || '').toLowerCase().includes(q) ||
-        (n.exampleChannel || '').toLowerCase().includes(q) ||
-        (n.desc || '').toLowerCase().includes(q) ||
-        (n.queries || []).some(k => (k || '').toLowerCase().includes(q))
-      );
-    }
-    // Tự động loại bỏ hoàn toàn các ngách không khả thi (<30k sub) theo yêu cầu người dùng!
-    return list.filter(n => {
-      const summary = typeof getNicheChannelSummary === 'function'
-        ? getNicheChannelSummary(n, realChannelsMap, channelSubLimit)
-        : null;
-      if (summary && summary.status === 'infeasible') {
-        return false;
-      }
-      return true;
-    });
-  }, [q, rankedNiches, realChannelsMap, channelSubLimit]);
+    if (!q) return realDiscoveredNiches;
+    return realDiscoveredNiches.filter(n =>
+      (n.name || '').toLowerCase().includes(q) ||
+      (n.category || '').toLowerCase().includes(q) ||
+      (n.channels || []).some(ch => (ch.name || '').toLowerCase().includes(q))
+    );
+  }, [realDiscoveredNiches, q]);
 
-  // Active Niche for drilldown & scanning - Tự động chọn ngách khả thi
+  // Ngách đang chọn
   const activeNiche = React.useMemo(() => {
-    return visibleNiches.find(n => n.id === activeNicheId) || visibleNiches[0] || rankedNiches[0] || (typeof CASHCOW_NICHES !== 'undefined' ? CASHCOW_NICHES[0] : null);
-  }, [visibleNiches, rankedNiches, activeNicheId]);
+    return visibleNiches.find(n => n.id === activeNicheId) || visibleNiches[0] || null;
+  }, [visibleNiches, activeNicheId]);
 
-  // Scan Function for active niche - Strict 100% Real YouTube Outlier Scan
-  const runScan = React.useCallback(async (targetNiche, overrideQuery, overrideSub, overrideDur, overrideView, overridePeriod) => {
-    const n = targetNiche || activeNiche;
-    if (!n) return;
+  // Tự động phân tích từ khóa và đặt tên ngách sinh động
+  const inferNicheTitle = (baseLabel, videos) => {
+    if (!videos || videos.length === 0) return baseLabel;
+    const allTitles = videos.map(v => v.title).join(' ');
+    const cleaned = allTitles.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/);
+    const stopWords = new Set([
+      'the', 'and', 'in', 'of', 'to', 'for', 'with', 'a', 'an', 'is', 'on', 'this', 'that', 'by',
+      'how', 'what', 'why', 'who', 'from', 'at', 'into', 'part', 'episode', 'full', 'video', 'watch',
+      'your', 'you', 'are', 'was', 'were', 'been', 'will', 'about', 'after', 'before', 'more', 'most'
+    ]);
+    const freq = {};
+    cleaned.forEach(w => {
+      if (w.length > 3 && !stopWords.has(w)) {
+        freq[w] = (freq[w] || 0) + 1;
+      }
+    });
+    const topKeywords = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 2).map(x => x[0]);
+    if (topKeywords.length > 0) {
+      const cap = topKeywords.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' & ');
+      return `${baseLabel} (${cap})`;
+    }
+    return baseLabel;
+  };
 
-    const tSub = overrideSub !== undefined ? overrideSub : subFilter;
-    const tDur = overrideDur !== undefined ? overrideDur : durFilter;
-    const tView = overrideView !== undefined ? overrideView : viewFilter;
-    const tPeriod = overridePeriod !== undefined ? overridePeriod : period;
-    const tQuery = overrideQuery !== undefined ? overrideQuery : customQuery;
-
-    setLoading(true);
-    setHasScanned(true);
-
+  // QUÉT DÒ NGÁCH THẬT 100% TỪ YOUTUBE DATA API V3
+  const runDeepNicheDiscovery = React.useCallback(async (customQueryOverride) => {
     if (!apiKey || typeof yt !== 'function') {
-      // TUYỆT ĐỐI KHÔNG BỊA RA DỮ LIỆU GIẢ KHI CHƯA CÓ API KEY
-      setVideoItems([]);
-      setScanStats({
-        totalScanned: 0,
-        foundCount: 0,
-        isLive: false,
-        reason: 'no_api_key'
-      });
-      setLoading(false);
+      if (typeof showToast === 'function') showToast('Vui lòng nhập YouTube API Key để quét ngách thật!', 'warning');
+      if (typeof onOpenApiModal === 'function') onOpenApiModal();
       return;
     }
 
-    try {
-      const cutoff = tPeriod > 0 ? Date.now() - tPeriod * 36e5 : 0;
-      let queryStr = (tQuery || '').trim();
-      if (!queryStr) {
-        queryStr = (n.queries || []).slice(0, 3).join(' | ') || n.name;
-      }
+    setIsScanningNiches(true);
+    cancelScanRef.current = false;
 
-      const searchParams = {
-        part: 'snippet',
-        type: 'video',
-        q: queryStr,
-        maxResults: 50,
-        regionCode: 'US',
-        order: 'viewCount'
-      };
+    // Khoảng thời gian: 10 ngày trở xuống
+    const tenDaysAgoISO = new Date(Date.now() - 10 * 864e5).toISOString();
 
-      if (tDur === 'long') {
-        searchParams.videoDuration = 'long';
-      }
-      if (cutoff > 0) {
-        searchParams.publishedAfter = new Date(cutoff).toISOString();
-      }
+    const seedsToScan = customQueryOverride
+      ? [{ id: 'custom_' + Date.now(), label: customQueryOverride, q: customQueryOverride, rpm: '$25 - $40' }]
+      : SEED_TREND_TOPICS;
 
-      const s = await yt('search', searchParams, apiKey);
-      const ids = (s.items || []).map(i => i.id && i.id.videoId).filter(Boolean);
-      const vids = ids.length ? ((await yt('videos', { part: 'snippet,statistics,contentDetails', id: ids.join(',') }, apiKey)).items || []) : [];
-
-      const cids = [...new Set(vids.map(v => v.snippet.channelId))];
-      const subs = {};
-      const channelStats = {};
-      if (cids.length) {
-        const c = await yt('channels', { part: 'statistics,snippet,contentDetails', id: cids.join(',') }, apiKey);
-        (c.items || []).forEach(x => {
-          const subCount = x.statistics.hiddenSubscriberCount ? null : Number(x.statistics.subscriberCount);
-          const channelAgeDays = Math.max(1, Math.round((Date.now() - new Date(x.snippet.publishedAt).getTime()) / 864e5));
-          subs[x.id] = subCount;
-          channelStats[x.id] = {
-            subCount: subCount,
-            videoCount: Number(x.statistics.videoCount || 0),
-            country: x.snippet?.country || '',
-            publishedAt: x.snippet?.publishedAt || '',
-            ageDays: channelAgeDays,
-            uploadsId: x.contentDetails?.relatedPlaylists?.uploads || x.id.replace(/^UC/, 'UU'),
-            channelThumb: x.snippet?.thumbnails?.default?.url || ''
-          };
-        });
-      }
-
-      let out = vids.map(v => {
-        const st = v.statistics || {};
-        const bestThumb = typeof getBestThumb === 'function' ? getBestThumb(v.snippet.thumbnails) : (v.snippet.thumbnails?.medium?.url || '');
-        const durSeconds = typeof parseDur === 'function' ? parseDur(v.contentDetails && v.contentDetails.duration) : 1800;
-        const subCount = subs[v.snippet.channelId] === undefined ? null : subs[v.snippet.channelId];
-        const viewsCount = Number(st.viewCount || 0);
-        const outlierRatio = subCount ? (viewsCount / Math.max(subCount, 1)).toFixed(1) : null;
-        const chInfo = channelStats[v.snippet.channelId] || {};
-
-        const hoursPassed = Math.max(0.1, (Date.now() - new Date(v.snippet.publishedAt).getTime()) / 36e5);
-        const calculatedVph = Math.round(viewsCount / hoursPassed);
-        const likes = st.likeCount == null ? null : Number(st.likeCount);
-        const comments = st.commentCount == null ? null : Number(st.commentCount);
-        const engRate = viewsCount > 0 ? ((((likes || 0) + (comments || 0)) / viewsCount) * 100).toFixed(2) : '0';
-        const isOrganic = Number(engRate) >= 1.0;
-        const isBreakout = (chInfo.ageDays <= 90 || chInfo.videoCount <= 15) && viewsCount >= 3000;
-        const hasCaptions = v.contentDetails?.caption === 'true';
-        const licensedContent = !!v.contentDetails?.licensedContent;
-
-        const o = {
-          id: v.id,
-          title: v.snippet.title,
-          channel: v.snippet.channelTitle,
-          channelId: v.snippet.channelId,
-          channelThumb: chInfo.channelThumb || '',
-          thumb: bestThumb,
-          published: v.snippet.publishedAt,
-          ts: new Date(v.snippet.publishedAt).getTime(),
-          views: viewsCount,
-          likes: likes,
-          comments: comments,
-          dur: durSeconds,
-          subs: subCount,
-          outlierRatio: outlierRatio,
-          videoCount: chInfo.videoCount || 0,
-          country: chInfo.country || 'N/A',
-          channelAgeDays: chInfo.ageDays || null,
-          channelPublishedAt: chInfo.publishedAt || '',
-          uploadsId: chInfo.uploadsId || v.snippet.channelId.replace(/^UC/, 'UU'),
-          isBreakout: isBreakout,
-          hasCaptions: hasCaptions,
-          licensedContent: licensedContent,
-          tags: v.snippet.tags || [],
-          engRate: engRate,
-          isOrganic: isOrganic,
-          vph: calculatedVph,
-          niche: n
-        };
-        if (typeof score === 'function') {
-          const sc = score(o);
-          o.sc = sc;
-          o.total = sc.total;
-          if (!o.vph) o.vph = sc.vph;
-          o.eng = sc.eng;
-        }
-        return o;
-      });
-
-      // Filter sub count
-      const maxSub = tSub === 'under30k' ? 30000 : (tSub === 'under50k' ? 50000 : (tSub === 'under100k' ? 100000 : Infinity));
-      if (maxSub !== Infinity) {
-        out = out.filter(v => v.subs == null || v.subs <= maxSub);
-      }
-
-      // Filter views
-      if (tView === 'steady') {
-        out = out.filter(v => v.views >= 1000 && v.views <= 60000);
-      } else if (tView === 'viral') {
-        out = out.filter(v => v.views > 60000);
-      } else if (tView === 'new') {
-        out = out.filter(v => v.views >= 500);
-      }
-
-      // Filter duration
-      if (tDur === 'long') {
-        out = out.filter(v => v.dur >= 1200);
-      }
-
-      // Sort by Outlier Ratio (Views / Subs) descending so small channels with huge views are first!
-      out.sort((a, b) => {
-        const ratioA = a.subs ? (a.views / a.subs) : (a.views / 20000);
-        const ratioB = b.subs ? (b.views / b.subs) : (b.views / 20000);
-        return ratioB - ratioA || b.views - a.views;
-      });
-
-      // TUYỆT ĐỐI KHÔNG TỰ ĐỘNG BỊA RA KẾT QUẢ NẾU RỖNG!
-      setScanStats({
-        totalScanned: vids.length,
-        foundCount: out.length,
-        subThreshold: maxSub,
-        searchedQuery: queryStr,
-        isLive: true
-      });
-      setVideoItems(out);
-
-      // Trích xuất 1-3 kênh THẬT 100% từ YouTube Data API (kênh sub nhỏ có view cao)
-      const extractedRealChannels = [];
-      const seenCids = new Set();
-      for (const item of out) {
-        if (item.channelId && !seenCids.has(item.channelId)) {
-          seenCids.add(item.channelId);
-          extractedRealChannels.push({
-            id: item.channelId,
-            name: item.channel,
-            subs: item.subs != null ? (typeof fmt === 'function' ? fmt(item.subs) + ' subs' : item.subs + ' subs') : 'Ẩn sub',
-            url: `https://www.youtube.com/channel/${item.channelId}`,
-            outlierRatio: item.outlierRatio,
-            isVerifiedApi: true
-          });
-          if (extractedRealChannels.length >= 3) break;
-        }
-      }
-
-      if (extractedRealChannels.length > 0) {
-        setRealChannelsMap(prev => {
-          const next = {
-            ...prev,
-            [n.id]: {
-              status: 'found',
-              subLimit: maxSub,
-              channels: extractedRealChannels,
-              minSubFound: null,
-              scannedAt: Date.now(),
-              reason: `Tìm thấy ${extractedRealChannels.length} kênh sub nhỏ từ kết quả quét video.`
-            }
-          };
-          try {
-            localStorage.setItem('yt_real_channels_cache', JSON.stringify(next));
-          } catch (e) {}
-          return next;
-        });
-      }
-    } catch (e) {
-      console.warn('Scanner YouTube API error:', e);
-      setScanStats({
-        totalScanned: 0,
-        foundCount: 0,
-        isLive: true,
-        error: e.message || 'Lỗi kết nối YouTube API'
-      });
-      setVideoItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [apiKey, activeNiche, subFilter, durFilter, viewFilter, period, customQuery]);
-
-  // 1. DÒ KÊNH TREND CỦA NGÁCH THEO TIÊU CHUẨN SUB THẤP (Mặc định < 30.000 subs)
-  // Logic: Nếu không tìm thấy kênh nào dưới ngưỡng sub có traction => Kết luận ngách KHÔNG KHẢ THI cho kênh nhỏ!
-  const scanSingleNicheChannels = React.useCallback(async (targetNiche, overrideSubLimit) => {
-    const n = targetNiche || activeNiche;
-    if (!n) return null;
-
-    if (!apiKey || typeof yt !== 'function') {
-      if (typeof showToast === 'function') showToast('Vui lòng kết nối YouTube API Key để dò kênh thật!', 'warning');
-      if (typeof onOpenApiModal === 'function') onOpenApiModal();
-      return null;
-    }
-
-    const effectiveLimit = overrideSubLimit !== undefined ? overrideSubLimit : channelSubLimit;
-    setScanningChannelNicheId(n.id);
+    const discoveredList = [];
+    let totalEligibleVideosFound = 0;
+    let totalEligibleChannelsFound = 0;
 
     try {
-      let queryStr = (n.queries && n.queries[0]) || n.name;
-      const searchParams = {
-        part: 'snippet',
-        type: 'video',
-        q: queryStr,
-        maxResults: 40,
-        regionCode: 'US',
-        order: 'viewCount'
-      };
+      for (let i = 0; i < seedsToScan.length; i++) {
+        if (cancelScanRef.current) break;
+        const topic = seedsToScan[i];
 
-      const s = await yt('search', searchParams, apiKey);
-      const vids = (s && s.items) || [];
-
-      if (vids.length === 0) {
-        const res = {
-          status: 'infeasible',
-          subLimit: effectiveLimit,
-          channels: [],
-          minSubFound: null,
-          totalChecked: 0,
-          scannedAt: Date.now(),
-          reason: `Không tìm thấy video nào đang có view bứt phá trong ngách với từ khóa "${queryStr}".`
-        };
-        setRealChannelsMap(prev => {
-          const next = { ...prev, [n.id]: res };
-          try { localStorage.setItem('yt_real_channels_cache', JSON.stringify(next)); } catch (e) {}
-          return next;
+        setScanProgress({
+          current: i + 1,
+          total: seedsToScan.length,
+          topic: topic.label,
+          foundVideos: totalEligibleVideosFound,
+          foundNiches: discoveredList.length
         });
-        return res;
-      }
 
-      const cids = [...new Set(vids.map(v => v.snippet?.channelId).filter(Boolean))];
-      if (cids.length === 0) {
-        const res = {
-          status: 'infeasible',
-          subLimit: effectiveLimit,
-          channels: [],
-          minSubFound: null,
-          totalChecked: 0,
-          scannedAt: Date.now(),
-          reason: 'Không trích xuất được kênh nào từ kết quả tìm kiếm.'
-        };
-        setRealChannelsMap(prev => {
-          const next = { ...prev, [n.id]: res };
-          try { localStorage.setItem('yt_real_channels_cache', JSON.stringify(next)); } catch (e) {}
-          return next;
-        });
-        return res;
-      }
-
-      // Trích xuất thống kê kênh thực tế 100% từ YouTube Data API
-      const cData = await yt('channels', {
-        part: 'snippet,statistics',
-        id: cids.slice(0, 50).join(',')
-      }, apiKey);
-
-      const cItems = (cData && cData.items) || [];
-      let minSub = Infinity;
-      const matched = [];
-
-      cItems.forEach(ch => {
-        const st = ch.statistics || {};
-        const isHidden = st.hiddenSubscriberCount;
-        const subNum = isHidden ? null : Number(st.subscriberCount || 0);
-
-        if (subNum !== null) {
-          if (subNum < minSub) minSub = subNum;
+        // 1. Tìm video theo chủ đề hạt giống đăng trong 10 ngày qua
+        let searchRes;
+        try {
+          searchRes = await yt('search', {
+            part: 'snippet',
+            type: 'video',
+            q: topic.q,
+            order: 'viewCount', // Lấy video view cao nhất
+            publishedAfter: tenDaysAgoISO,
+            maxResults: 30,
+            regionCode: 'US'
+          }, apiKey);
+        } catch (e) {
+          console.warn('Search API error on seed:', topic.label, e);
+          continue;
         }
 
-        // So sánh logic: lọc kênh sub thấp (mặc định < 30.000 subs)
-        const passes = effectiveLimit === Infinity ? true : (subNum !== null && subNum <= effectiveLimit);
-        if (passes) {
-          matched.push({
+        const items = searchRes.items || [];
+        const videoIds = items.map(it => it.id && it.id.videoId).filter(Boolean);
+        if (videoIds.length === 0) continue;
+
+        // 2. Lấy chi tiết thống kê video
+        let vidsRes;
+        try {
+          vidsRes = await yt('videos', {
+            part: 'snippet,statistics,contentDetails',
+            id: videoIds.join(',')
+          }, apiKey);
+        } catch (e) {
+          console.warn('Videos API error:', e);
+          continue;
+        }
+
+        const vidsList = vidsRes.items || [];
+        if (vidsList.length === 0) continue;
+
+        // 3. Lấy thông tin kênh của các video này để đối chiếu sub count
+        const channelIds = [...new Set(vidsList.map(v => v.snippet.channelId))];
+        let chRes;
+        try {
+          chRes = await yt('channels', {
+            part: 'statistics,snippet,contentDetails',
+            id: channelIds.join(',')
+          }, apiKey);
+        } catch (e) {
+          console.warn('Channels API error:', e);
+          continue;
+        }
+
+        const channelsMap = {};
+        (chRes.items || []).forEach(ch => {
+          const subCount = ch.statistics.hiddenSubscriberCount ? null : Number(ch.statistics.subscriberCount);
+          channelsMap[ch.id] = {
             id: ch.id,
-            name: ch.snippet?.title || 'Kênh YouTube',
-            subs: subNum !== null ? (typeof fmt === 'function' ? fmt(subNum) + ' subs' : subNum + ' subs') : 'Ẩn sub',
-            subsNum: subNum,
-            views: Number(st.viewCount || 0),
-            videos: Number(st.videoCount || 0),
-            url: `https://www.youtube.com/channel/${ch.id}`,
-            isVerifiedApi: true
+            name: ch.snippet.title,
+            subCount: subCount,
+            videoCount: Number(ch.statistics.videoCount || 0),
+            country: ch.snippet.country || 'US',
+            publishedAt: ch.snippet.publishedAt || '',
+            ageDays: Math.max(1, Math.round((Date.now() - new Date(ch.snippet.publishedAt).getTime()) / 864e5)),
+            uploadsId: ch.contentDetails?.relatedPlaylists?.uploads || ch.id.replace(/^UC/, 'UU'),
+            thumb: ch.snippet.thumbnails?.default?.url || ''
+          };
+        });
+
+        // 4. LỌC LOGIC NGHIÊM NGẶT THEO YÊU CẦU:
+        // - Kênh dưới 30k sub (< 30.000 subs)
+        // - Video đăng trong khoảng 10 ngày trở xuống
+        // - Lượt xem từ vài ngàn (>= 2.000) đến vài chục/trăm ngàn
+        const eligibleVideosInTopic = [];
+        const eligibleChannelsMap = {};
+
+        vidsList.forEach(v => {
+          const chInfo = channelsMap[v.snippet.channelId];
+          if (!chInfo) return;
+
+          // Tiêu chí 1: Kênh dưới 30k sub (bắt buộc theo ngưỡng subLimitFilter)
+          if (chInfo.subCount !== null && chInfo.subCount > subLimitFilter) return;
+
+          // Tiêu chí 2: Lượt xem từ vài ngàn trở lên (tối thiểu 2.000 view)
+          const views = Number(v.statistics.viewCount || 0);
+          if (views < 2000) return;
+
+          // Tiêu chí 3: Trong 10 ngày trở xuống
+          const pubTime = new Date(v.snippet.publishedAt).getTime();
+          const ageHours = (Date.now() - pubTime) / 36e5;
+          if (ageHours > 240) return; // 10 ngày = 240 giờ
+
+          // Tính chỉ số Outlier
+          const outlierRatio = chInfo.subCount ? (views / Math.max(chInfo.subCount, 1)).toFixed(1) : (views / 15000).toFixed(1);
+          const vph = Math.round(views / Math.max(0.1, ageHours));
+          const likes = v.statistics.likeCount != null ? Number(v.statistics.likeCount) : null;
+          const comments = v.statistics.commentCount != null ? Number(v.statistics.commentCount) : null;
+          const engRate = views > 0 ? ((((likes || 0) + (comments || 0)) / views) * 100).toFixed(2) : '0';
+          const durSeconds = typeof parseDur === 'function' ? parseDur(v.contentDetails?.duration) : 1800;
+          const isBreakout = (chInfo.ageDays <= 90 || chInfo.videoCount <= 15) && views >= 3000;
+
+          const videoObj = {
+            id: v.id,
+            title: v.snippet.title,
+            channel: v.snippet.channelTitle,
+            channelId: v.snippet.channelId,
+            channelThumb: chInfo.thumb || '',
+            thumb: typeof getBestThumb === 'function' ? getBestThumb(v.snippet.thumbnails) : (v.snippet.thumbnails?.medium?.url || ''),
+            published: v.snippet.publishedAt,
+            ts: pubTime,
+            views: views,
+            likes: likes,
+            comments: comments,
+            dur: durSeconds,
+            subs: chInfo.subCount,
+            outlierRatio: outlierRatio,
+            videoCount: chInfo.videoCount,
+            country: chInfo.country,
+            channelAgeDays: chInfo.ageDays,
+            channelPublishedAt: chInfo.publishedAt,
+            uploadsId: chInfo.uploadsId,
+            isBreakout: isBreakout,
+            hasCaptions: v.contentDetails?.caption === 'true',
+            licensedContent: !!v.contentDetails?.licensedContent,
+            tags: v.snippet.tags || [],
+            engRate: engRate,
+            isOrganic: Number(engRate) >= 1.0,
+            vph: vph
+          };
+
+          eligibleVideosInTopic.push(videoObj);
+          if (!eligibleChannelsMap[chInfo.id]) {
+            eligibleChannelsMap[chInfo.id] = {
+              id: chInfo.id,
+              name: chInfo.name,
+              subs: chInfo.subCount,
+              url: 'https://www.youtube.com/channel/' + chInfo.id,
+              videoCount: chInfo.videoCount,
+              country: chInfo.country
+            };
+          }
+        });
+
+        // 5. Nếu chủ đề có video thỏa mãn, tạo thành 1 Ngách Mới Động
+        if (eligibleVideosInTopic.length > 0) {
+          eligibleVideosInTopic.sort((a, b) => b.views - a.views);
+          const channelList = Object.values(eligibleChannelsMap);
+          totalEligibleVideosFound += eligibleVideosInTopic.length;
+          totalEligibleChannelsFound += channelList.length;
+
+          const inferredTitle = inferNicheTitle(topic.label, eligibleVideosInTopic);
+          const maxViews = eligibleVideosInTopic[0].views;
+          const maxOutlier = Math.max(...eligibleVideosInTopic.map(v => Number(v.outlierRatio) || 0));
+
+          discoveredList.push({
+            id: 'niche_' + topic.id + '_' + Date.now(),
+            name: inferredTitle,
+            category: topic.label,
+            rpmRange: topic.rpm,
+            avgRpm: Number(topic.rpm.split('-')[0].replace(/\D/g, '')) || 25,
+            channelsCount: channelList.length,
+            channels: channelList,
+            videos: eligibleVideosInTopic,
+            topVideo: eligibleVideosInTopic[0],
+            maxViews: maxViews,
+            maxOutlier: maxOutlier.toFixed(1),
+            scannedAt: Date.now()
           });
         }
-      });
 
-      // Sắp xếp kênh sub nhỏ theo lượng sub tăng dần
-      matched.sort((a, b) => (a.subsNum || 0) - (b.subsNum || 0));
-
-      let res;
-      const limitLabel = effectiveLimit === Infinity ? 'tất cả' : `<${effectiveLimit >= 1000 ? (effectiveLimit / 1000) + 'k' : effectiveLimit} sub`;
-
-      if (matched.length > 0) {
-        res = {
-          status: 'found',
-          subLimit: effectiveLimit,
-          channels: matched.slice(0, 3),
-          totalEligible: matched.length,
-          totalChecked: cItems.length,
-          minSubFound: minSub === Infinity ? null : minSub,
-          scannedAt: Date.now(),
-          reason: `Tìm thấy ${matched.length} kênh sub nhỏ (${limitLabel}) có video dẫn đầu ngách.`
-        };
-        if (typeof showToast === 'function') {
-          showToast(`🟢 Ngách "${n.name}": Khả thi! Tìm thấy ${matched.length} kênh ${limitLabel}.`, 'success');
-        }
-      } else {
-        const minSubText = minSub !== Infinity ? (typeof fmt === 'function' ? fmt(minSub) + ' subs' : minSub + ' subs') : '>50k subs';
-        res = {
-          status: 'infeasible',
-          subLimit: effectiveLimit,
-          channels: [],
-          totalEligible: 0,
-          totalChecked: cItems.length,
-          minSubFound: minSub === Infinity ? null : minSub,
-          scannedAt: Date.now(),
-          reason: `Đã dò ${cItems.length} kênh dẫn đầu ngách: 100% video đều thuộc các kênh lớn (kênh nhỏ nhất: ${minSubText}). Không có kênh nào ${limitLabel} có traction -> Kết luận: Ngách này không khả thi cho kênh mới/kênh nhỏ.`
-        };
-        if (typeof showToast === 'function') {
-          showToast(`🔴 Ngách "${n.name}": Không khả thi cho kênh ${limitLabel} (Kênh nhỏ nhất: ${minSubText}).`, 'warning');
-        }
+        await new Promise(r => setTimeout(r, 200));
       }
 
-      setRealChannelsMap(prev => {
-        const next = { ...prev, [n.id]: res };
-        try { localStorage.setItem('yt_real_channels_cache', JSON.stringify(next)); } catch (e) {}
-        return next;
-      });
-      return res;
+      // Sắp xếp các ngách tìm được: Ngách có view cao nhất lên đầu
+      discoveredList.sort((a, b) => b.maxViews - a.maxViews);
+
+      // Cắt lấy top 10 - 20 ngách
+      const finalNiches = discoveredList.slice(0, 20);
+
+      const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN');
+      setLastScannedTime(nowStr);
+      try {
+        localStorage.setItem('yt_real_discovered_niches_v2', JSON.stringify(finalNiches));
+        localStorage.setItem('yt_real_discovered_niches_time', nowStr);
+      } catch (e) {}
+
+      setRealDiscoveredNiches(finalNiches);
+      if (finalNiches.length > 0) {
+        setActiveNicheId(finalNiches[0].id);
+      }
+
+      if (typeof showToast === 'function') {
+        showToast(
+          finalNiches.length > 0
+            ? `Thành công! Đã bóc tách được ${finalNiches.length} ngách trend từ các kênh <${subLimitFilter/1000}k sub trong 10 ngày qua.`
+            : `Không tìm thấy video nào đạt chuẩn <${subLimitFilter/1000}k sub & >2k view trong 10 ngày qua.`,
+          finalNiches.length > 0 ? 'success' : 'warning'
+        );
+      }
     } catch (err) {
-      console.error('Error scanning niche channels:', err);
-      if (typeof showToast === 'function') showToast('Lỗi khi dò kênh: ' + (err.message || 'Lỗi API'), 'error');
-      return null;
+      console.error('Scan error:', err);
+      if (typeof showToast === 'function') showToast('Lỗi khi quét: ' + (err.message || 'Lỗi API'), 'error');
     } finally {
-      setScanningChannelNicheId(null);
+      setIsScanningNiches(false);
+      setScanProgress(null);
     }
-  }, [apiKey, activeNiche, channelSubLimit, showToast, onOpenApiModal]);
-
-  // 2. DÒ QUÉT TÌM NGÁCH MỚI KHẢ THI (<30k SUB) & TỰ ĐỘNG XÓA NGÁCH KHÔNG KHẢ THI
-  const scanTrendNewNiches = React.useCallback(async () => {
-    if (!apiKey || typeof yt !== 'function') {
-      if (typeof showToast === 'function') showToast('Vui lòng kết nối YouTube API Key để dò kênh thật!', 'warning');
-      if (typeof onOpenApiModal === 'function') onOpenApiModal();
-      return;
-    }
-
-    setIsBatchScanning(true);
-    cancelBatchRef.current = false;
-    let viableCount = 0;
-    let removedCount = 0;
-
-    const pool = rankedNiches || [];
-    for (let i = 0; i < pool.length; i++) {
-      if (cancelBatchRef.current) break;
-      const n = pool[i];
-      setBatchProgress({ current: i + 1, total: pool.length, name: n.name });
-      const res = await scanSingleNicheChannels(n, channelSubLimit);
-      if (res) {
-        if (res.status === 'found') viableCount++;
-        else removedCount++;
-      }
-      await new Promise(r => setTimeout(r, 180));
-    }
-
-    setIsBatchScanning(false);
-    setBatchProgress(null);
-    if (typeof showToast === 'function') {
-      showToast(`Đã quét xong: Giữ lại ${viableCount} ngách khả thi (<${channelSubLimit/1000}k sub), đã tự động loại bỏ ${removedCount} ngách không khả thi!`, 'success');
-    }
-  }, [apiKey, rankedNiches, channelSubLimit, scanSingleNicheChannels, showToast, onOpenApiModal]);
-
-  // Initial scan once on mount
-  const hasMountedRef = React.useRef(false);
-  React.useEffect(() => {
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-      runScan(activeNiche);
-    }
-  }, []);
-
-  const currentTfObj = (typeof NICHE_TIMEFRAMES !== 'undefined' ? NICHE_TIMEFRAMES : []).find(t => t.id === timeframe) || { label: '24 Giờ Qua', badge: 'Mới nhất' };
+  }, [apiKey, SEED_TREND_TOPICS, subLimitFilter, showToast, onOpenApiModal]);
 
   return (
-    <section className="space-y-3.5 animate-in fade-in duration-200">
-      {/* 1. Header & Quick Search (Thanh tiêu đề tinh gọn 1 dòng) */}
-      <div className="bg-brand-surface border border-brand-border rounded-xl p-3 sm:p-3.5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-base font-black text-amber-400 shrink-0">
-            🏆
+    <section className="space-y-4 animate-in fade-in duration-200">
+      {/* 1. Header Toolbar Tối Giản */}
+      <div className="bg-[#121316] border border-zinc-800 rounded-xl p-3 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-200 shrink-0">
+            🔥
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-black text-white">
-                Top Ngách High-RPM ($20 – $50+)
-              </h2>
-              <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                Tier 1 US
-              </span>
-            </div>
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span>Top Ngách Xu Hướng Thực Tế (&lt;30k Sub)</span>
+              {realDiscoveredNiches.length > 0 && (
+                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                  {realDiscoveredNiches.length} ngách bóc tách
+                </span>
+              )}
+            </h2>
             <p className="text-[11px] text-zinc-400">
-              Kênh sub nhỏ (&lt;50k sub) có video dài chèn nhiều ads, tỷ lệ View/Sub bứt phá.
+              100% YouTube API v3 • Kênh &lt;30.000 sub • Video đăng trong 10 ngày qua • View vài ngàn đến trăm ngàn
             </p>
           </div>
         </div>
 
-        {/* Minimalist Search Box */}
-        <div className="relative w-full md:w-60 shrink-0">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Tìm ngách hoặc tên kênh..."
-            className="w-full bg-brand-card border border-brand-border rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition"
-          />
-          {searchQuery && (
+        {/* Nút Quét Chính & Hướng dẫn */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {isScanningNiches ? (
             <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1.5 text-zinc-400 hover:text-white text-xs cursor-pointer">
-              ✕
+              type="button"
+              onClick={() => { cancelScanRef.current = true; }}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-800 transition cursor-pointer flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
+              <span>Dừng ({scanProgress?.current}/{scanProgress?.total} - {scanProgress?.topic})</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => runDeepNicheDiscovery()}
+              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 hover:bg-white text-zinc-950 transition cursor-pointer shadow flex items-center gap-1.5">
+              <span>⚡</span>
+              <span>Quét &amp; Bóc Tách Ngách Trend Mới</span>
             </button>
           )}
-        </div>
-      </div>
 
-      {/* 2. CHU KỲ & THANH QUÉT DÒ NGÁCH MỚI (<30k SUB) */}
-      <div className="bg-brand-surface border border-brand-border rounded-xl p-2.5 sm:p-3 space-y-2.5 text-xs shadow-sm">
-        {/* Hàng 1: Chu kỳ Timeframe Pills */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-              <span>⏱️</span> Chu kỳ:
-            </span>
-            {(typeof NICHE_TIMEFRAMES !== 'undefined' ? NICHE_TIMEFRAMES : []).map(tf => {
-              const isActive = timeframe === tf.id;
-              return (
-                <button
-                  key={tf.id}
-                  type="button"
-                  onClick={() => setTimeframe(tf.id)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap transition cursor-pointer flex items-center gap-1 shrink-0 ${
-                    isActive
-                      ? 'bg-amber-400 text-zinc-950 font-bold shadow-sm'
-                      : 'bg-brand-card hover:bg-zinc-800 text-zinc-300 border border-brand-border'
-                  }`}>
-                  <span>{tf.label}</span>
-                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-zinc-950"></span>}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-2.5 text-[10px] text-zinc-400 shrink-0">
-            <span className="text-zinc-300">
-              <b className="text-amber-400 font-bold">{visibleNiches.length}</b> ngách khả thi (&lt;30k sub)
-            </span>
-            {onOpenScoreFormula && (
-              <button
-                type="button"
-                onClick={onOpenScoreFormula}
-                className="text-[10px] text-zinc-400 hover:text-amber-300 transition flex items-center gap-0.5 cursor-pointer">
-                <span>ℹ️</span> Chấm điểm
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Hàng 2: THANH QUÉT DÒ NGÁCH MỚI (Tự động loại bỏ ngách không khả thi) */}
-        <div className="pt-2 border-t border-brand-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          {/* Trái: Lựa chọn ngưỡng sub kênh */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-medium text-zinc-400">Tiêu chuẩn kênh:</span>
-            <select
-              value={channelSubLimit}
-              onChange={e => setChannelSubLimit(e.target.value === 'Infinity' ? Infinity : Number(e.target.value))}
-              className="bg-brand-card border border-brand-border rounded-md px-2.5 py-1 text-[11px] font-bold text-amber-300 focus:outline-none focus:border-amber-400 cursor-pointer">
-              <option value="30000">&lt; 30k Sub (Chuẩn Mặc Định)</option>
-              <option value="10000">&lt; 10k Sub (Siêu Nhỏ)</option>
-              <option value="50000">&lt; 50k Sub</option>
-              <option value="100000">&lt; 100k Sub</option>
-              <option value="Infinity">Tất cả quy mô sub</option>
-            </select>
-          </div>
-
-          {/* Phải: 1 Nút Quét Dò Ngách Mới Duy Nhất */}
-          <div className="flex items-center gap-2">
-            {isBatchScanning ? (
-              <button
-                type="button"
-                onClick={() => { cancelBatchRef.current = true; }}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 transition cursor-pointer flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
-                <span>Dừng ({batchProgress?.current}/{batchProgress?.total} - {batchProgress?.name})</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={scanTrendNewNiches}
-                disabled={Boolean(scanningChannelNicheId)}
-                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 text-zinc-950 shadow-md transition cursor-pointer flex items-center gap-1.5">
-                <span>⚡</span>
-                <span>Quét Dò Ngách Mới (&lt;{channelSubLimit >= 1000 ? (channelSubLimit / 1000) + 'k' : channelSubLimit} Sub)</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. LƯỚI NGÁCH KHẢ THI - THIẾT KẾ TỐI GIẢN, CHỮ TO RÕ, DI CHUỘT ẤN ĐƯỢC NGAY */}
-      {visibleNiches.length === 0 ? (
-        <div className="p-8 text-center border border-dashed border-brand-border rounded-xl bg-brand-surface/40 space-y-2">
-          <span className="text-2xl block">🔍</span>
-          <h4 className="text-sm font-bold text-white">Chưa có ngách nào khớp bộ lọc</h4>
-          <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-            Hãy bấm nút <b>⚡ Quét Dò Ngách Mới</b> ở trên để hệ thống tự động quét và lọc ra các ngách có kênh sub nhỏ (&lt;30k) đang bứt phá.
-          </p>
           <button
-            onClick={scanTrendNewNiches}
-            className="mt-1 px-4 py-1.5 rounded-lg text-xs font-bold bg-amber-400 text-zinc-950 hover:bg-amber-300 transition cursor-pointer shadow">
-            ⚡ Quét Dò Ngách Mới Ngay
+            type="button"
+            onClick={() => setShowApiGuideModal(true)}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer flex items-center gap-1"
+            title="Xem hướng dẫn tính năng API">
+            <span>💡</span>
+            <span>Hướng Dẫn</span>
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
-          {visibleNiches.map((niche, idx) => {
-            const isSelected = activeNiche && activeNiche.id === niche.id;
-            const rankNum = niche.rank || idx + 1;
-            const isTop1 = rankNum === 1;
-            const isTop2 = rankNum === 2;
-            const isTop3 = rankNum === 3;
-            const channelSummary = typeof getNicheChannelSummary === 'function' ? getNicheChannelSummary(niche, realChannelsMap, channelSubLimit) : { status: 'not_scanned', channels: [] };
-            const hasReal = channelSummary.status === 'found' && channelSummary.channels.length > 0;
-            const firstChannel = hasReal ? channelSummary.channels[0] : null;
+      </div>
 
-            return (
-              <div
-                key={niche.id || idx}
-                onClick={() => {
-                  setActiveNicheId(niche.id);
-                  runScan(niche);
-                }}
-                className={`group p-3 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between min-h-[86px] select-none ${
-                  isSelected
-                    ? 'border-amber-400 bg-zinc-900 shadow-md ring-1 ring-amber-400/40'
-                    : 'border-zinc-800/80 bg-zinc-900/60 hover:border-zinc-600 hover:bg-zinc-800/60'
-                }`}>
-                {/* Hàng 1: Thứ hạng + Outlier + RPM */}
-                <div className="flex items-center justify-between text-xs gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`text-[11px] font-black px-1.5 py-0.5 rounded leading-none shrink-0 ${
-                      isTop1 ? 'bg-amber-400 text-zinc-950 font-black' :
-                      isTop2 ? 'bg-zinc-200 text-zinc-950 font-bold' :
-                      isTop3 ? 'bg-amber-600 text-white font-bold' :
-                      'bg-zinc-800 text-zinc-300 border border-zinc-700/60'
-                    }`}>
-                      #{rankNum}
-                    </span>
-                    {niche.outlierMultiplier && (
-                      <span className="text-xs font-semibold text-zinc-300">
-                        x{niche.outlierMultiplier}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-zinc-300 text-xs font-semibold">
-                    RPM {niche.rpmRange ? niche.rpmRange.split('-')[0].trim() : '$20+'}
-                  </span>
-                </div>
-
-                {/* Hàng 2: Tên ngách (Chữ to rõ, nổi bật, dễ đọc) */}
-                <div className="my-1.5">
-                  <h3 className="text-sm sm:text-[15px] font-bold text-white group-hover:text-amber-300 transition line-clamp-1 leading-snug">
-                    {niche.name}
-                  </h3>
-                </div>
-
-                {/* Hàng 3: Kênh nhỏ đại diện + Nút Xem Chi Tiết trực tiếp */}
-                <div className="flex items-center justify-between text-xs text-zinc-400 pt-1.5 border-t border-zinc-800/60">
-                  <div className="truncate max-w-[130px] flex items-center gap-1">
-                    <span className="text-[11px]">📺</span>
-                    {firstChannel ? (
-                      <a
-                        href={firstChannel.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="truncate text-zinc-300 hover:text-white transition font-medium text-[11px]"
-                        title={`Mở kênh ${firstChannel.name} trên YouTube`}>
-                        {firstChannel.name}
-                        <span className="text-[10px] text-zinc-400 ml-1">({firstChannel.subs?.replace(' subs','')})</span>
-                      </a>
-                    ) : (
-                      <span className="truncate text-zinc-400 text-[11px]">
-                        {niche.exampleChannel || 'Chưa dò kênh'}
-                      </span>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onSelectNiche) onSelectNiche(niche);
-                    }}
-                    className="text-zinc-400 group-hover:text-amber-300 hover:bg-zinc-800 px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 shrink-0"
-                    title="Bấm để xem kịch bản, video mẫu và phân tích ngách">
-                    <span>Chi tiết</span>
-                    <span className="text-[10px]">↗</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+      {/* 2. Thanh Tiến Trình Khi Đang Quét */}
+      {isScanningNiches && scanProgress && (
+        <div className="bg-[#121316] border border-zinc-800 rounded-xl p-3 space-y-2 text-xs">
+          <div className="flex items-center justify-between text-zinc-300">
+            <span className="flex items-center gap-2 font-medium">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+              <span>Đang quét hạt giống: <b className="text-white">{scanProgress.topic}</b> ({scanProgress.current}/{scanProgress.total})</span>
+            </span>
+            <span className="text-zinc-400 text-[11px]">
+              Đã phát hiện: <b className="text-zinc-200">{scanProgress.foundVideos}</b> video &bull; <b className="text-zinc-200">{scanProgress.foundNiches}</b> ngách đạt chuẩn
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-zinc-300 transition-all duration-300 rounded-full"
+              style={{ width: `${Math.round((scanProgress.current / scanProgress.total) * 100)}%` }}></div>
+          </div>
         </div>
       )}
 
-      {/* 4. WORKSPACE: QUÉT VIDEO KÊNH NHỎ VIEW TO (TẬP TRUNG, KHÔNG CẦN CUỘN XUỐNG XA) */}
-      <div id="niche-scanner-results" className="space-y-3 pt-1">
-        {/* Compact Integrated Toolbar */}
-        <div className="bg-brand-surface border border-brand-border rounded-xl p-2.5 sm:p-3 flex flex-col md:flex-row md:items-center justify-between gap-2.5 shadow-sm">
-          {/* Active Niche Title & Count */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-white flex items-center gap-1">
-                <span>🎬</span> Quét Video Cụ Thể: <b className="text-amber-400">{activeNiche?.name || ''}</b>
-              </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/10 text-amber-300 border border-amber-400/30">
-                {videoItems.length} video kênh nhỏ view to
-              </span>
-            </div>
-            {loading && (
-              <span className="text-[11px] text-amber-400 animate-pulse font-medium flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
-                Đang quét YouTube Data API...
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => setShowApiGuideModal(true)}
-              className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer flex items-center gap-1"
-              title="Xem ghi chú cập nhật và hướng dẫn sử dụng 8 tính năng API ẩn">
-              <span>💡</span>
-              <span>Hướng Dẫn &amp; Tính Năng Mới</span>
-            </button>
-          </div>
-
-          {/* Compact Filter Controls in Single Line */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Sub filter */}
-            <select
-              value={subFilter}
-              onChange={e => {
-                const v = e.target.value;
-                setSubFilter(v);
-                runScan(activeNiche, customQuery, v, durFilter, viewFilter, period);
-              }}
-              className="bg-brand-card border border-brand-border rounded-lg px-2 py-1 text-[11px] text-zinc-200 focus:outline-none focus:border-amber-400 cursor-pointer">
-              <option value="under30k">&lt; 30k Sub</option>
-              <option value="under50k">&lt; 50k Sub (Chuẩn)</option>
-              <option value="under100k">&lt; 100k Sub</option>
-              <option value="all">Tất cả Sub</option>
-            </select>
-
-            {/* Duration filter */}
-            <select
-              value={durFilter}
-              onChange={e => {
-                const v = e.target.value;
-                setDurFilter(v);
-                runScan(activeNiche, customQuery, subFilter, v, viewFilter, period);
-              }}
-              className="bg-brand-card border border-brand-border rounded-lg px-2 py-1 text-[11px] text-zinc-200 focus:outline-none focus:border-amber-400 cursor-pointer">
-              <option value="long">&gt;20 phút (Ads)</option>
-              <option value="all">Tất cả độ dài</option>
-            </select>
-
-            {/* Period filter */}
-            <select
-              value={period}
-              onChange={e => {
-                const v = Number(e.target.value);
-                setPeriod(v);
-                runScan(activeNiche, customQuery, subFilter, durFilter, viewFilter, v);
-              }}
-              className="bg-brand-card border border-brand-border rounded-lg px-2 py-1 text-[11px] text-zinc-200 focus:outline-none focus:border-amber-400 cursor-pointer">
-              <option value={24}>24h qua</option>
-              <option value={168}>7 ngày</option>
-              <option value={720}>30 ngày</option>
-              <option value={0}>Tất cả</option>
-            </select>
-
-            {/* Quick search input */}
-            <form
-              onSubmit={e => {
-                e.preventDefault();
-                runScan(activeNiche, customQuery);
-              }}
-              className="flex items-center gap-1">
-              <input
-                type="text"
-                value={customQuery}
-                onChange={e => setCustomQuery(e.target.value)}
-                placeholder="Từ khóa/kênh..."
-                className="w-28 sm:w-36 bg-brand-card border border-brand-border rounded-lg px-2 py-1 text-[11px] text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-400"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-400 hover:bg-amber-300 text-zinc-950 transition cursor-pointer disabled:opacity-50">
-                Quét
-              </button>
-            </form>
-
-            {/* Toggle Drilldown button */}
-            <button
-              type="button"
-              onClick={() => setShowDrilldown(!showDrilldown)}
-              className={`px-2 py-1 rounded-lg text-[11px] font-medium border transition cursor-pointer flex items-center gap-1 ${
-                showDrilldown
-                  ? 'bg-zinc-800 text-white border-zinc-600'
-                  : 'bg-brand-card text-zinc-400 hover:text-white border-brand-border'
-              }`}
-              title="Mở rộng từ khóa & kịch bản liên quan của ngách">
-              <span>🏷️ Từ khóa</span>
-              <span className="text-[9px]">{showDrilldown ? '▲' : '▼'}</span>
-            </button>
-          </div>
+      {/* 3. Lưới Các Ngách Thực Tế (Không Dùng Ngách Tĩnh Cứng Nhắc) */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
+          <span className="font-semibold text-zinc-300">
+            {realDiscoveredNiches.length > 0
+              ? `Danh Sách ${realDiscoveredNiches.length} Ngách Trend Hiện Tại (Bấm để xem video thật)`
+              : 'Chưa Có Dữ Liệu Ngách'}
+          </span>
+          {lastScannedTime && (
+            <span className="text-[11px] text-zinc-500">
+              Lần quét gần nhất: {lastScannedTime}
+            </span>
+          )}
         </div>
 
-        {/* Collapsible Drilldown (Chỉ hiện khi bấm mở, không chiếm chỗ cuộn chuột) */}
-        {showDrilldown && activeNiche && (
-          <div className="bg-brand-surface border border-brand-border rounded-xl p-3 space-y-2.5 animate-in fade-in duration-150">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-zinc-300 flex items-center gap-1">
-                <span>📡</span> Ngách liên quan &amp; từ khóa bóc tách:
-              </span>
-              <div className="flex items-center gap-1.5">
-                {onSelectIdea && (
-                  <button
-                    type="button"
-                    onClick={() => onSelectIdea(activeNiche)}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-400 hover:bg-amber-300 text-zinc-950 transition cursor-pointer">
-                    📋 Lên Kế Hoạch Video
-                  </button>
-                )}
-                {onAddCompetitor && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const ch = activeNiche.channelName || activeNiche.exampleChannel;
-                      if (ch) onAddCompetitor(ch);
-                    }}
-                    className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 cursor-pointer">
-                    + Đối thủ
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-1">
-              {(activeNiche.relatedNiches || [activeNiche.name, activeNiche.subtitle, 'US Audience 50+']).map((rn, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setCustomQuery(rn);
-                    runScan(activeNiche, rn);
-                  }}
-                  className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer">
-                  🏷️ {rn}
-                </button>
-              ))}
-            </div>
-
-            {(activeNiche.queries || []).length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-zinc-400 pt-1 border-t border-brand-border/40">
-                <span className="font-semibold text-zinc-400">Từ khóa ăn khách:</span>
-                {activeNiche.queries.slice(0, 5).map((kw, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setCustomQuery(kw);
-                      runScan(activeNiche, kw);
-                    }}
-                    className="px-1.5 py-0.5 rounded bg-zinc-950 text-cyan-300 border border-zinc-800 font-mono hover:border-cyan-700 cursor-pointer">
-                    🔍 {kw}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 5. LƯỚI VIDEO THỰC TẾ (ẢNH 1: COMPACT CARDS 4-5 CỘT SIÊU GỌN) */}
-        {loading && videoItems.length === 0 ? (
-          <div className="p-10 text-center border border-dashed border-brand-border rounded-xl bg-brand-surface/40 space-y-2">
-            <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-xs text-zinc-300 font-medium">Đang quét YouTube Data API tìm video kênh nhỏ view to...</p>
-            <p className="text-[10px] text-zinc-500">Đối chiếu sub và lượt xem thực tế...</p>
-          </div>
-        ) : !apiKey ? (
-          <div className="p-6 text-center border border-amber-500/30 rounded-xl bg-gradient-to-b from-amber-500/5 to-brand-surface space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-xl mx-auto">
-              🔑
-            </div>
-            <div className="max-w-md mx-auto space-y-1">
-              <h4 className="text-xs sm:text-sm font-bold text-white">
-                Cần YouTube Data API Key để quét Kênh Nhỏ View To
-              </h4>
-              <p className="text-[11px] text-zinc-400 leading-relaxed">
-                Để bảo đảm số liệu <b>100% trung thực và chính xác</b> (không dùng số liệu giả), hệ thống cần kết nối YouTube API Key miễn phí của Google.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-              {onOpenApiModal && (
-                <button
-                  type="button"
-                  onClick={onOpenApiModal}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 text-zinc-950 transition cursor-pointer">
-                  <span>⚡</span> Nhập API Key (Miễn phí)
-                </button>
-              )}
-              {activeNiche && (
-                <a
-                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent((activeNiche.queries && activeNiche.queries[0]) || activeNiche.name)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition">
-                  Tìm ngách trên YouTube ↗
-                </a>
-              )}
-            </div>
-          </div>
-        ) : videoItems.length === 0 ? (
-          <div className="p-8 text-center border border-dashed border-brand-border rounded-xl bg-brand-surface/40 space-y-2.5">
-            <span className="text-2xl block">🎯</span>
-            <h4 className="text-xs sm:text-sm font-bold text-white">
-              Không tìm thấy video nào từ kênh sub nhỏ đạt chuẩn Outlier
-            </h4>
-            <div className="text-[11px] text-zinc-400 max-w-md mx-auto space-y-1.5">
-              <p>
-                Đã quét <b>{scanStats?.totalScanned || 50}</b> video mới nhất theo từ khóa ngách <b className="text-amber-400">{activeNiche?.name}</b> trên YouTube API.
-              </p>
-              <p className="text-amber-300/90 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20 text-[10px]">
-                🛡️ <b>Cam kết trung thực:</b> Trong chu kỳ đã chọn ({period === 24 ? '24 giờ qua' : period === 168 ? '7 ngày qua' : period === 720 ? '30 ngày qua' : 'toàn thời gian'}), không có video từ kênh sub nhỏ có tỷ lệ view vượt trội. Hệ thống tuyệt đối không tạo dữ liệu giả.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setSubFilter('under100k');
-                  runScan(activeNiche, customQuery, 'under100k', durFilter, viewFilter, period);
-                }}
-                className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-700 cursor-pointer">
-                Tìm kênh &lt; 100k sub
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPeriod(0);
-                  runScan(activeNiche, customQuery, subFilter, durFilter, viewFilter, 0);
-                }}
-                className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-700 cursor-pointer">
-                Quét toàn thời gian (All-time)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSubFilter('all');
-                  setDurFilter('all');
-                  setViewFilter('all');
-                  runScan(activeNiche, customQuery, 'all', 'all', 'all', period);
-                }}
-                className="px-3 py-1 rounded-lg text-[11px] font-bold bg-amber-400 text-zinc-950 hover:bg-amber-300 cursor-pointer">
-                Xem tất cả video
-              </button>
-            </div>
+        {realDiscoveredNiches.length === 0 ? (
+          <div className="p-8 sm:p-10 text-center border border-dashed border-zinc-800 rounded-xl bg-[#121316] space-y-3">
+            <span className="text-3xl block">🎯</span>
+            <h3 className="text-sm sm:text-base font-bold text-white">
+              Chưa Có Ngách Nào Được Quét
+            </h3>
+            <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
+              Hệ thống đã loại bỏ hoàn toàn các ngách giả lập khô khan. Hãy bấm nút dưới đây để YouTube Data API v3 quét thực tế toàn bộ các kênh &lt;30k sub có video bứt phá trong 10 ngày qua và tự động bóc tách thành các ngách.
+            </p>
+            <button
+              type="button"
+              onClick={() => runDeepNicheDiscovery()}
+              disabled={isScanningNiches}
+              className="mt-2 px-5 py-2 rounded-xl text-xs font-bold bg-zinc-100 hover:bg-white text-zinc-950 transition cursor-pointer shadow">
+              ⚡ Bắt Đầu Quét Dò Ngách Thật Ngay
+            </button>
           </div>
         ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+            {visibleNiches.map((niche, idx) => {
+              const isSelected = activeNiche && activeNiche.id === niche.id;
+              return (
+                <div
+                  key={niche.id || idx}
+                  onClick={() => setActiveNicheId(niche.id)}
+                  className={`p-3 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between min-h-[92px] select-none ${
+                    isSelected
+                      ? 'border-zinc-300 bg-zinc-900 shadow-md ring-1 ring-zinc-400/40'
+                      : 'border-zinc-800 bg-[#121316] hover:border-zinc-700 hover:bg-zinc-900/60'
+                  }`}>
+                  {/* Hàng 1: Thứ hạng & Chỉ số View/Sub */}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60 leading-none">
+                      #{idx + 1}
+                    </span>
+                    <span className="text-[11px] font-bold text-amber-300">
+                      🔥 x{niche.maxOutlier} View/Sub
+                    </span>
+                  </div>
+
+                  {/* Hàng 2: Tên Ngách Tự Động Bóc Tách (Chữ to, rõ nét, không rối) */}
+                  <div className="my-1.5">
+                    <h3 className="text-xs sm:text-[13px] font-bold text-white line-clamp-2 leading-snug">
+                      {niche.name}
+                    </h3>
+                  </div>
+
+                  {/* Hàng 3: View cao nhất & Số kênh <30k sub */}
+                  <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-1.5 border-t border-zinc-800/80">
+                    <span className="truncate">
+                      👁️ Max: {typeof fmt === 'function' ? fmt(niche.maxViews) : niche.maxViews}
+                    </span>
+                    <span className="shrink-0 text-zinc-300 font-medium">
+                      📺 {niche.channelsCount} kênh &lt;30k
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 4. Quét Riêng Theo Từ Khóa Tự Chọn (Linh hoạt cho người dùng) */}
+      <div className="bg-[#121316] border border-zinc-800 rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-3 text-xs flex-wrap">
+        <span className="text-zinc-400 text-[11px]">
+          🔍 Quét dò ngách theo chủ đề cụ thể:
+        </span>
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            if (customKeywordInput.trim()) {
+              runDeepNicheDiscovery(customKeywordInput.trim());
+            }
+          }}
+          className="flex items-center gap-1.5">
+          <input
+            type="text"
+            value={customKeywordInput}
+            onChange={e => setCustomKeywordInput(e.target.value)}
+            placeholder="vd: stoicism, gta 6, scp..."
+            className="w-36 sm:w-48 bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+          />
+          <button
+            type="submit"
+            disabled={isScanningNiches}
+            className="px-3 py-1 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition cursor-pointer disabled:opacity-50">
+            Quét Chủ Đề
+          </button>
+        </form>
+      </div>
+
+      {/* 5. DANH SÁCH VIDEO THỰC TẾ CỦA NGÁCH ĐANG CHỌN (100% KÊNH THẬT & VIDEO THẬT) */}
+      {activeNiche && (
+        <div className="space-y-3 pt-2">
+          {/* Header ngách đang chọn */}
+          <div className="bg-[#121316] border border-zinc-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>🎬</span> Video Thực Tế: <b className="text-zinc-200">{activeNiche.name}</b>
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-800 text-zinc-300 border border-zinc-700">
+                  {activeNiche.videos.length} video kênh &lt;30k sub trong 10 ngày qua
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-400 pt-0.5">
+                Các video này đạt view vượt trội so với số lượng sub của kênh (Outlier). Bấm &quot;Soi Video &amp; Tags&quot; để copy tags ẩn và soi 50 video chỉ với 1 quota.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {onSelectKeywordForSearch && (
+                <button
+                  type="button"
+                  onClick={() => onSelectKeywordForSearch(activeNiche.category || activeNiche.name)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer">
+                  Bắt Trend Từ Khóa ↗
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Lưới video thực tế */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
-            {videoItems.map((v, idx) => {
+            {activeNiche.videos.map((v, idx) => {
               const ytUrl = 'https://www.youtube.com/watch?v=' + v.id;
-              const n = v.niche || activeNiche || CASHCOW_NICHES[0];
-              const rev = typeof calcEstimatedRev === 'function' ? calcEstimatedRev(v.views, v.dur, n.avgRpm || 35) : { low: 100, high: 250, midrolls: 8 };
+              const chUrl = 'https://www.youtube.com/channel/' + (v.channelId || '');
               const saved = isSaved && isSaved(v.id);
-              const chUrl = v.channelUrl || ('https://www.youtube.com/results?search_query=' + encodeURIComponent(v.channel));
+              const rev = typeof calcEstimatedRev === 'function' ? calcEstimatedRev(v.views, v.dur, activeNiche.avgRpm || 30) : { low: 50, high: 150, midrolls: 6 };
 
               return (
                 <article
                   key={v.id || idx}
-                  className="bg-brand-surface border border-zinc-800 hover:border-zinc-600 rounded-xl overflow-hidden flex flex-col group transition shadow-sm hover:shadow-md">
-                  {/* Thumbnail Container siêu gọn & ít màu */}
+                  className="bg-[#121316] border border-zinc-800 hover:border-zinc-600 rounded-xl overflow-hidden flex flex-col group transition shadow-sm hover:shadow-md">
+                  {/* Thumbnail Container */}
                   <a
                     href={ytUrl}
                     target="_blank"
@@ -11391,8 +10947,8 @@ function TopNgachSection({
                     </div>
                   </a>
 
-                  {/* Card Body siêu gọn */}
-                  <div className="p-2.5 flex flex-col gap-1.5 flex-1 justify-between">
+                  {/* Card Body */}
+                  <div className="p-2.5 flex flex-col gap-1.5 flex-1 justify-between text-xs">
                     <div className="space-y-1">
                       <a
                         href={ytUrl}
@@ -11417,7 +10973,7 @@ function TopNgachSection({
                           )}
                         </a>
                         <span className="text-[10px] text-zinc-500 shrink-0 font-medium">
-                          RPM {n.rpmRange ? n.rpmRange.split('-')[0].trim() : '$20+'}
+                          RPM {activeNiche.rpmRange ? activeNiche.rpmRange.split('-')[0].trim() : '$25+'}
                         </span>
                       </div>
                     </div>
@@ -11489,8 +11045,8 @@ function TopNgachSection({
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Video Inspector Modal (Hidden Tags, 1-Quota 50 Videos, Copyright & Organic Check) */}
       {inspectingVideo && (
@@ -14142,52 +13698,52 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               
               <button
                 onClick={() => { setTab('search'); setMobileDrawerOpen(false); }}
-                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'search' ? 'bg-red-600/20 text-red-400 border border-red-500/30' : 'text-zinc-300 hover:bg-brand-card'}`}>
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'search' ? 'bg-zinc-800 text-white' : 'text-zinc-300 hover:bg-zinc-800/60'}`}>
                 <div className="flex items-center gap-2.5">
                   <span className="text-base">🔥</span>
-                  <span>Xu hướng YouTube</span>
+                  <span>Xu Hướng</span>
                 </div>
                 <span className="text-zinc-500">→</span>
               </button>
 
               <button
                 onClick={() => { setTab('keywords'); setMobileDrawerOpen(false); }}
-                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'keywords' ? 'bg-red-600/20 text-red-400 border border-red-500/30' : 'text-zinc-300 hover:bg-brand-card'}`}>
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'keywords' ? 'bg-zinc-800 text-white' : 'text-zinc-300 hover:bg-zinc-800/60'}`}>
                 <div className="flex items-center gap-2.5">
                   <span className="text-base">🔍</span>
-                  <span>Tìm từ khoá bứt phá</span>
+                  <span>Từ Khóa</span>
                 </div>
                 <span className="text-zinc-500">→</span>
               </button>
 
               <button
                 onClick={() => { setTab('niche'); setMobileDrawerOpen(false); }}
-                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'niche' ? 'bg-red-600/20 text-red-400 border border-red-500/30' : 'text-zinc-300 hover:bg-brand-card'}`}>
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'niche' ? 'bg-zinc-800 text-white' : 'text-zinc-300 hover:bg-zinc-800/60'}`}>
                 <div className="flex items-center gap-2.5">
                   <span className="text-base">🎯</span>
-                  <span>Phân tích ngách SRT</span>
+                  <span>Phân Tích</span>
                 </div>
                 <span className="text-zinc-500">→</span>
               </button>
 
               <button
                 onClick={() => { setTab('rpm'); setMobileDrawerOpen(false); }}
-                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'rpm' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-zinc-300 hover:bg-brand-card'}`}>
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'rpm' ? 'bg-zinc-800 text-white' : 'text-zinc-300 hover:bg-zinc-800/60'}`}>
                 <div className="flex items-center gap-2.5">
                   <span className="text-base">🏆</span>
-                  <span>Top Ngách High RPM</span>
+                  <span>Top Ngách</span>
                 </div>
                 <span className="text-zinc-500">→</span>
               </button>
 
               <button
                 onClick={() => { setTab('competitors'); if (!compVideos.length) refreshCompetitorVideos(); setMobileDrawerOpen(false); }}
-                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'competitors' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-zinc-300 hover:bg-brand-card'}`}>
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition ${tab === 'competitors' ? 'bg-zinc-800 text-white' : 'text-zinc-300 hover:bg-zinc-800/60'}`}>
                 <div className="flex items-center gap-2.5">
                   <span className="text-base">👥</span>
-                  <span>Kênh Đối Thủ Theo Dõi</span>
+                  <span>Đối Thủ</span>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
                   {competitors.length} kênh
                 </span>
               </button>
