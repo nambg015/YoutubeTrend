@@ -4724,9 +4724,9 @@ function Actions({ v, saved, isCompetitor, onDetail, onDownload, onSave, onCopy,
         </button>
         <button 
           onClick={() => onSave(v)} 
-          className={`py-1 px-2 rounded-lg font-medium border transition ${saved ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-brand-card hover:bg-brand-hover text-zinc-400 border-brand-border'}`} 
-          title="Lưu vào danh sách theo dõi">
-          {saved ? 'Đã lưu' : 'Theo dõi'}
+          className={`py-1 px-2 rounded-lg font-medium border transition ${saved ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold' : 'bg-brand-card hover:bg-brand-hover text-zinc-400 hover:text-amber-300 border-brand-border'}`} 
+          title={saved ? "Đã lưu trong kho xem sau" : "Lưu vào kho xem sau"}>
+          {saved ? '✓ Đã lưu' : 'Lưu'}
         </button>
         <button 
           onClick={() => onCopy(ytUrl, 'Đã sao chép link video!')} 
@@ -8405,7 +8405,7 @@ function CompetitorContentPromptModal({ video, onClose, onCopy }) {
 }
 
 // User Account & API Key Management Modal (Strictly No Icons)
-function AccountProfileModal({ apiKey, onClose, onSaveKey, onRemoveKey, competitorsCount = 0, watchCount = 0 }) {
+function AccountProfileModal({ apiKey, onClose, onSaveKey, onRemoveKey, competitorsCount = 0, savedCount = 0 }) {
   const [draftKey, setDraftKey] = useState(apiKey || '');
   const [showKeyText, setShowKeyText] = useState(false);
 
@@ -8444,8 +8444,8 @@ function AccountProfileModal({ apiKey, onClose, onSaveKey, onRemoveKey, competit
             <b className="text-amber-300">{competitorsCount} kênh</b>
           </div>
           <div className="flex justify-between items-center text-zinc-400">
-            <span>Video trong Watchlist:</span>
-            <b className="text-amber-300">{watchCount} video</b>
+            <span>Video đã lưu xem sau:</span>
+            <b className="text-amber-300">{savedCount} video</b>
           </div>
         </div>
 
@@ -11931,20 +11931,6 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             </button>
 
             <button 
-              onClick={() => setTab('watch')} 
-              className={`h-full flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
-                tab === 'watch' 
-                  ? 'text-white font-semibold' 
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}>
-              <span>Watchlist</span>
-              {watchList.length > 0 && (
-                <span className="text-[11px] text-zinc-500">({watchList.length})</span>
-              )}
-              {tab === 'watch' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
-            </button>
-
-            <button 
               onClick={() => setTab('wiki')} 
               className={`h-full flex items-center gap-1.5 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
                 tab === 'wiki' 
@@ -12364,11 +12350,11 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                       <div className="mt-auto pt-1">
                         <Actions 
                           v={v} 
-                          saved={!!watch[v.id]} 
+                          saved={isSavedVideo(v.id)} 
                           isCompetitor={isCompetitorChannel(v.channelId, v.channel)}
                           onDetail={setDetail} 
                           onDownload={setDownloadVideo} 
-                          onSave={toggleWatch}
+                          onSave={toggleSaveVideo}
                           onCopy={copyText}
                           onNicheAnalyze={setNicheAnalyzeVideo}
                           onToggleCompetitor={addCompetitorFromVideo}
@@ -12418,11 +12404,11 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                         <td className="p-3 min-w-[220px]">
                           <Actions 
                             v={v} 
-                            saved={!!watch[v.id]} 
+                            saved={isSavedVideo(v.id)} 
                             isCompetitor={isCompetitorChannel(v.channelId, v.channel)}
                             onDetail={setDetail} 
                             onDownload={setDownloadVideo} 
-                            onSave={toggleWatch}
+                            onSave={toggleSaveVideo}
                             onCopy={copyText}
                             onNicheAnalyze={setNicheAnalyzeVideo}
                             onToggleCompetitor={addCompetitorFromVideo}
@@ -14004,69 +13990,6 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           </section>
         )}
 
-        {/* TAB 4: WATCHLIST CONTENT */}
-        {tab === 'watch' && (
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-brand-surface border border-brand-border rounded-xl">
-              <div>
-                <h2 className="font-bold text-base text-white">Danh sách theo dõi tăng trưởng (Snapshot)</h2>
-                <p className="text-xs text-zinc-400">Ghi nhận sự tăng trưởng lượt xem thực tế theo từng thời điểm để phân tích tốc độ tăng view.</p>
-              </div>
-              <button onClick={updateSnaps} disabled={busy || !watchList.length} className={bPrimary + ' disabled:opacity-40'}>
-                {busy ? 'Đang quét snapshot...' : 'Cập nhật lượt xem mới'}
-              </button>
-            </div>
-
-            {!watchList.length && (
-              <div className="text-center border border-dashed border-brand-border rounded-xl p-10 bg-brand-surface/40">
-                <h3 className="font-bold text-base text-white">Chưa có video nào trong Watchlist</h3>
-                <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-sm mx-auto">
-                  Tại tab "Tìm xu hướng" hoặc "Trend RPM Cao", bấm nút <b>Theo dõi</b> ở bất kỳ video nào bạn muốn lưu.
-                </p>
-              </div>
-            )}
-
-            <div className="grid md:grid-cols-2 gap-4">
-              {watchList.map(w => {
-                const first = w.snaps[0], last = w.snaps[w.snaps.length - 1];
-                const gain = last.v - first.v;
-                const hrs = (last.t - first.t) / 36e5;
-                const ytUrl = 'https://www.youtube.com/watch?v=' + w.id;
-                return (
-                  <article key={w.id} className="bg-brand-surface border border-brand-border rounded-xl p-4 flex flex-col sm:flex-row gap-3">
-                    <img src={w.thumb} alt="" className="w-full sm:w-36 aspect-video object-cover rounded-xl bg-zinc-900 flex-shrink-0" />
-                    <div className="flex-1 space-y-2 text-xs">
-                      <h3 className="font-bold text-sm text-white line-clamp-2 leading-snug">{w.title}</h3>
-                      <div className="text-zinc-400">{w.channel} · Đăng {fmtD(w.published)}</div>
-                      <div className="bg-brand-card p-2.5 rounded-lg border border-brand-border space-y-1">
-                        <div>View hiện tại: <b className="text-white text-sm">{fmt(last.v)}</b> · Snapshot: <b>{w.snaps.length} lần</b></div>
-                        {w.snaps.length < 2 ? (
-                          <div className="text-amber-400 text-[11px]">Cần ít nhất 2 lần bấm "Cập nhật" sau ít phút để đo tốc độ tăng.</div>
-                        ) : (
-                          <div className="text-emerald-400 font-semibold text-[11px]">
-                            Tăng thêm: +{fmt(gain)} view trong {hrs.toFixed(2)} giờ ({hrs > 0 ? fmt(gain / hrs) : 'N/A'} view/giờ thực tế)
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        <a href={ytUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg font-semibold bg-red-600 hover:bg-red-500 text-white transition flex items-center">
-                          Xem trên YouTube
-                        </a>
-                        <button onClick={() => setDownloadVideo(w)} className="px-3 py-1.5 rounded-lg font-medium bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                          Tải về
-                        </button>
-                        <button onClick={() => setWatch(x => { const n = { ...x }; delete n[w.id]; return n; })} className="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-red-400 bg-brand-card hover:bg-brand-hover border border-brand-border">
-                          Bỏ theo dõi
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-        )}
-      
         {/* TAB: WIKI YOUTUBETREND */}
         {tab === 'wiki' && (
           <WikiSection 
@@ -14554,7 +14477,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             showToast('Đã đăng xuất tài khoản.');
           }}
           competitorsCount={competitors.length}
-          watchCount={watchList.length}
+          savedCount={savedVideos.length}
         />
       )}
 
