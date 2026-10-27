@@ -11,6 +11,7 @@
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="./wiki_data.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
 <script>
   tailwind.config = {
@@ -8755,6 +8756,1426 @@ function SavedVideosModal({ savedVideos, onClose, onRemove, onClearAll, onPrompt
   );
 }
 
+
+// =========================================================================
+// YOUTUBETREND ENHANCEMENTS: WIKI, TITLE PATTERNS, DEMAND VALIDATION & IDEAS
+// =========================================================================
+
+// 1. WIKI READER MODAL (2-LAYER DEEP STUDY VIEW)
+function WikiReaderModal({ article, onClose, onSelectArticle, isRead, onToggleRead, allArticles }) {
+  if (!article) return null;
+  const [showAnswer, setShowAnswer] = React.useState(false);
+  const [copiedFormula, setCopiedFormula] = React.useState(false);
+  const [copiedSummary, setCopiedSummary] = React.useState(false);
+
+  const currentIndex = (allArticles || []).findIndex(a => a.id === article.id);
+  const prevArticle = currentIndex > 0 ? allArticles[currentIndex - 1] : null;
+  const nextArticle = currentIndex >= 0 && currentIndex < (allArticles || []).length - 1 ? allArticles[currentIndex + 1] : null;
+
+  const copyFormula = () => {
+    if (article.formula && navigator.clipboard) {
+      navigator.clipboard.writeText(article.formula);
+      setCopiedFormula(true);
+      setTimeout(() => setCopiedFormula(false), 2000);
+    }
+  };
+
+  const copySummary = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(`[${article.title}]\n${article.summary}\nCông thức: ${article.formula || 'N/A'}`);
+      setCopiedSummary(true);
+      setTimeout(() => setCopiedSummary(false), 2000);
+    }
+  };
+
+  const relatedList = (article.relatedConcepts || []).map(id => {
+    return (allArticles || []).find(a => a.id === id);
+  }).filter(Boolean);
+
+  const sections = [
+    { id: 'w-what', title: '1. Khái niệm là gì?' },
+    { id: 'w-why', title: '2. Tại sao cần quan tâm?' },
+    { id: 'w-simple', title: '3. Cách hiểu đơn giản' },
+    { id: 'w-practical', title: '4. Cách ứng dụng thực tế' },
+    { id: 'w-example', title: '5. Ví dụ số liệu thực tế' },
+    { id: 'w-step', title: '6. Hướng dẫn trên YouTrend' },
+    { id: 'w-mistakes', title: '7. Sai lầm thường gặp' },
+    { id: 'w-misconceptions', title: '8. Tránh hiểu sai số liệu' },
+    { id: 'w-related', title: '9. Khái niệm liên quan' },
+    { id: 'w-exercise', title: '10. Bài tập thực hành' }
+  ];
+
+  const scrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
+      <div 
+        className="bg-brand-surface border border-brand-border rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        onClick={e => e.stopPropagation()}>
+        
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-brand-border bg-brand-card/70 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📖</span>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  {article.categoryName || 'Wiki YouTubeTrend'}
+                </span>
+                <span className="text-[10px] text-zinc-400 border border-zinc-700 px-2 py-0.5 rounded">
+                  {article.level} · Đọc {article.readTime}
+                </span>
+                {isRead && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                    ✓ Đã học xong
+                  </span>
+                )}
+              </div>
+              <h1 className="text-base sm:text-lg font-black text-white mt-1">
+                {article.title}
+              </h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => onToggleRead(article.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
+                isRead 
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25' 
+                  : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white'
+              }`}
+              title="Đánh dấu đã đọc bài này">
+              <span>{isRead ? '✓ Đã đọc' : 'Đánh dấu đã đọc'}</span>
+            </button>
+            <button 
+              onClick={onClose}
+              className="w-8 h-8 rounded-xl bg-brand-card hover:bg-brand-hover text-zinc-400 hover:text-white flex items-center justify-center transition border border-brand-border"
+              title="Đóng cửa sổ">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Table of Contents Bar */}
+        <div className="flex items-center gap-1.5 px-4 py-2 border-b border-brand-border bg-black/40 overflow-x-auto text-[11px] shrink-0 no-scrollbar">
+          <span className="text-zinc-500 font-semibold shrink-0 mr-1">Mục lục:</span>
+          {sections.map(s => (
+            <button
+              key={s.id}
+              onClick={() => scrollTo(s.id)}
+              className="px-2.5 py-1 rounded-lg bg-brand-card hover:bg-zinc-700 text-zinc-400 hover:text-zinc-100 whitespace-nowrap transition border border-brand-border/60">
+              {s.title}
+            </button>
+          ))}
+        </div>
+
+        {/* Body Content */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 text-xs sm:text-sm leading-relaxed flex-1">
+          {/* Quick Summary Banner (Layer 1 in modal) */}
+          <div className="bg-gradient-to-r from-amber-500/10 via-brand-card to-brand-surface border border-amber-500/30 rounded-xl p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                <span>⚡ Tóm Tắt Nhanh & Trọng Tâm</span>
+              </span>
+              <button 
+                onClick={copySummary}
+                className="text-[10px] font-semibold text-zinc-400 hover:text-amber-300 transition">
+                {copiedSummary ? '✓ Đã sao chép' : 'Sao chép tóm tắt'}
+              </button>
+            </div>
+            <p className="text-zinc-200 text-xs sm:text-sm font-medium leading-relaxed">
+              {article.summary}
+            </p>
+            {article.formula && (
+              <div className="mt-2 pt-2 border-t border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-black/30 p-2.5 rounded-lg">
+                <div className="font-mono text-xs text-amber-200 font-bold">
+                  {article.formula}
+                </div>
+                <button
+                  onClick={copyFormula}
+                  className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10px] font-bold self-start sm:self-auto transition">
+                  {copiedFormula ? '✓ Đã sao chép' : 'Copy công thức'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Section 1: Khái niệm là gì */}
+          <div id="w-what" className="space-y-2">
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 border-b border-brand-border pb-1.5">
+              <span className="text-amber-400">01.</span> Khái niệm là gì?
+            </h2>
+            <p className="text-zinc-300 leading-relaxed whitespace-pre-line pl-1">
+              {article.whatIs}
+            </p>
+          </div>
+
+          {/* Section 2: Tại sao cần quan tâm */}
+          <div id="w-why" className="space-y-2">
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 border-b border-brand-border pb-1.5">
+              <span className="text-amber-400">02.</span> Tại sao cần quan tâm?
+            </h2>
+            <p className="text-zinc-300 leading-relaxed whitespace-pre-line pl-1">
+              {article.whyCare}
+            </p>
+          </div>
+
+          {/* Section 3: Cách hiểu đơn giản */}
+          <div id="w-simple" className="space-y-2">
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 border-b border-brand-border pb-1.5">
+              <span className="text-amber-400">03.</span> Cách hiểu bằng ngôn ngữ đời thường
+            </h2>
+            <div className="bg-brand-card/70 border border-brand-border rounded-xl p-3.5 text-zinc-300 italic flex items-start gap-2.5">
+              <span className="text-lg">💡</span>
+              <p className="leading-relaxed not-italic">{article.simpleExplanation}</p>
+            </div>
+          </div>
+
+          {/* Section 4: Ứng dụng thực tế */}
+          <div id="w-practical" className="space-y-2">
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 border-b border-brand-border pb-1.5">
+              <span className="text-amber-400">04.</span> Cách ứng dụng trong thực tế làm kênh
+            </h2>
+            <p className="text-zinc-300 leading-relaxed whitespace-pre-line pl-1">
+              {article.practicalUsage}
+            </p>
+          </div>
+
+          {/* Section 5: Ví dụ số liệu thực tế */}
+          <div id="w-example" className="space-y-2">
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 border-b border-brand-border pb-1.5">
+              <span className="text-amber-400">05.</span> Ví dụ số liệu thực tế đã kiểm chứng
+            </h2>
+            <div className="bg-zinc-900/90 border border-zinc-700/80 rounded-xl p-4 text-zinc-200 space-y-2 shadow-inner">
+              <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>Case Study Minh Họa</span>
+              </div>
+              <p className="leading-relaxed">{article.realWorldExample}</p>
+            </div>
+          </div>
+
+          {/* Section 6: Các bước thực hiện trên YouTubeTrend */}
+          <div id="w-step" className="space-y-2">
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 border-b border-brand-border pb-1.5">
+              <span className="text-amber-400">06.</span> Các bước thực hành trực tiếp trên YouTubeTrend
+            </h2>
+            <div className="bg-brand-card/50 border border-brand-border rounded-xl p-3.5 space-y-2 text-zinc-300 font-mono text-xs whitespace-pre-line leading-relaxed">
+              {article.stepByStep}
+            </div>
+          </div>
+
+          {/* Section 7 & 8: Sai lầm & Tránh hiểu sai */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div id="w-mistakes" className="space-y-2 bg-rose-950/20 border border-rose-500/30 rounded-xl p-3.5">
+              <h2 className="text-xs sm:text-sm font-bold text-rose-300 flex items-center gap-1.5">
+                <span>⚠️ 07. Sai lầm người mới hay gặp</span>
+              </h2>
+              <p className="text-zinc-300 text-xs leading-relaxed whitespace-pre-line">
+                {article.commonMistakes}
+              </p>
+            </div>
+
+            <div id="w-misconceptions" className="space-y-2 bg-blue-950/20 border border-blue-500/30 rounded-xl p-3.5">
+              <h2 className="text-xs sm:text-sm font-bold text-blue-300 flex items-center gap-1.5">
+                <span>🛡️ 08. Cách tránh hiểu sai dữ liệu</span>
+              </h2>
+              <p className="text-zinc-300 text-xs leading-relaxed whitespace-pre-line">
+                {article.misconceptions}
+              </p>
+            </div>
+          </div>
+
+          {/* Section 9: Khái niệm liên quan */}
+          <div id="w-related" className="space-y-2">
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 border-b border-brand-border pb-1.5">
+              <span className="text-amber-400">09.</span> Khái niệm liên quan nên đọc tiếp
+            </h2>
+            {relatedList.length > 0 ? (
+              <div className="grid sm:grid-cols-2 gap-2.5 pt-1">
+                {relatedList.map(rel => (
+                  <button
+                    key={rel.id}
+                    onClick={() => onSelectArticle(rel)}
+                    className="p-3 rounded-xl bg-brand-card hover:bg-zinc-800 border border-brand-border hover:border-amber-400/40 text-left transition group">
+                    <div className="text-xs font-bold text-zinc-200 group-hover:text-amber-300 flex items-center justify-between">
+                      <span>{rel.title}</span>
+                      <span className="text-zinc-500 group-hover:translate-x-0.5 transition">→</span>
+                    </div>
+                    <div className="text-[11px] text-zinc-400 line-clamp-1 mt-1">
+                      {rel.summary}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-zinc-500 text-xs italic">Không có liên kết phụ thêm.</p>
+            )}
+          </div>
+
+          {/* Section 10: Bài tập thực hành */}
+          <div id="w-exercise" className="space-y-3 bg-amber-500/5 border border-amber-500/30 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs sm:text-sm font-bold text-amber-300 flex items-center gap-1.5">
+                <span>📝 10. Bài tập thực hành kiểm tra kiến thức</span>
+              </h2>
+              <button
+                onClick={() => setShowAnswer(!showAnswer)}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 transition">
+                {showAnswer ? 'Ẩn đáp án' : 'Xem đáp án đối chiếu'}
+              </button>
+            </div>
+            <div className="text-zinc-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line pl-1">
+              {showAnswer ? article.exercise : article.exercise.split('Đáp án:')[0].trim()}
+            </div>
+            {!showAnswer && (
+              <div className="text-[11px] text-zinc-500 italic">
+                * Hãy tự trả lời trước trong đầu rồi bấm "Xem đáp án đối chiếu" để kiểm tra mức độ hiểu bài.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer Navigation */}
+        <div className="p-3 sm:p-4 bg-brand-card/90 border-t border-brand-border flex items-center justify-between gap-3 shrink-0 text-xs">
+          {prevArticle ? (
+            <button
+              onClick={() => onSelectArticle(prevArticle)}
+              className="px-3 py-1.5 rounded-xl bg-brand-surface hover:bg-zinc-800 text-zinc-300 hover:text-white border border-brand-border transition flex items-center gap-1.5">
+              <span>←</span>
+              <span className="hidden sm:inline">Bài trước:</span>
+              <span className="font-semibold truncate max-w-[120px]">{prevArticle.title}</span>
+            </button>
+          ) : <div />}
+
+          <div className="text-zinc-500 text-[11px]">
+            Bài {(currentIndex + 1)} / {(allArticles || []).length}
+          </div>
+
+          {nextArticle ? (
+            <button
+              onClick={() => onSelectArticle(nextArticle)}
+              className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-semibold transition flex items-center gap-1.5">
+              <span className="hidden sm:inline">Bài tiếp theo:</span>
+              <span className="truncate max-w-[120px]">{nextArticle.title}</span>
+              <span>→</span>
+            </button>
+          ) : (
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 rounded-xl bg-zinc-200 hover:bg-white text-zinc-950 font-bold transition">
+              Hoàn thành đọc
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 2. WIKI FULL TAB SECTION
+function WikiSection({ onOpenArticle, readArticles, onToggleRead }) {
+  const [search, setSearch] = React.useState('');
+  const [selectedCat, setSelectedCat] = React.useState('all');
+
+  const categories = (typeof window !== 'undefined' && window.WIKI_CATEGORIES) ? window.WIKI_CATEGORIES : [];
+  const articles = (typeof window !== 'undefined' && window.WIKI_ARTICLES) ? window.WIKI_ARTICLES : [];
+
+  const beginnerIds = ['trend_def', 'niche_def', 'performance_multiple', 'first_10_videos'];
+  const beginnerArticles = articles.filter(a => beginnerIds.includes(a.id));
+
+  const filtered = articles.filter(a => {
+    const matchCat = selectedCat === 'all' || a.category === selectedCat;
+    if (!matchCat) return false;
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return a.title.toLowerCase().includes(q) ||
+           a.summary.toLowerCase().includes(q) ||
+           a.whatIs.toLowerCase().includes(q) ||
+           (a.formula && a.formula.toLowerCase().includes(q));
+  });
+
+  const readCount = articles.filter(a => readArticles && readArticles[a.id]).length;
+  const progressPct = Math.round((readCount / Math.max(1, articles.length)) * 100);
+
+  return (
+    <div className="space-y-6">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-amber-950/40 via-brand-surface to-brand-card border border-amber-500/30 rounded-2xl p-5 sm:p-7 shadow-xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black uppercase tracking-wider">
+                Trung Tâm Kiến Thức YouTube
+              </span>
+              <span className="text-zinc-500 text-xs">24 Chuyên Đề Chuẩn SEO & Thuật Toán</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black text-white">
+              Wiki YouTubeTrend
+            </h1>
+            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+              Từ điển thuật ngữ và cẩm nang hướng dẫn nghiên cứu ngách YouTube từ cơ bản đến thực hành. Giúp bạn hiểu sâu các chỉ số <b className="text-amber-400">Performance Multiple</b>, <b className="text-amber-400">Median Views</b>, <b className="text-amber-400">Title Patterns</b> và kiểm chứng nhu cầu thị trường trước khi sản xuất video.
+            </p>
+          </div>
+
+          {/* Reading Progress Card */}
+          <div className="bg-brand-surface/90 border border-brand-border rounded-xl p-4 min-w-[240px] shrink-0 space-y-2.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-zinc-400 font-medium">Tiến độ hoàn thành:</span>
+              <span className="font-bold text-amber-400">{readCount} / {articles.length} bài ({progressPct}%)</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-amber-500 to-emerald-400 rounded-full transition-all duration-500" 
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <div className="text-[11px] text-zinc-500 flex items-center justify-between">
+              <span>{readCount === articles.length ? '🎉 Đã làm chủ toàn bộ!' : 'Hãy đọc ít nhất 4 bài cốt lõi'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Search & Filter Controls */}
+        <div className="mt-5 pt-5 border-t border-brand-border/60 flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Tìm kiếm bài viết theo từ khóa (vd: Performance Multiple, Median, Title Pattern, Ngách...)"
+              className="w-full bg-brand-card border border-brand-border rounded-xl px-4 py-2.5 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-2.5 text-zinc-400 hover:text-white text-xs">
+                ✕
+              </button>
+            )}
+          </div>
+          {search && (
+            <div className="text-xs text-zinc-400 self-center">
+              Tìm thấy <b className="text-amber-400">{filtered.length}</b> bài viết
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recommended for Beginners (Only if no search) */}
+      {!search.trim() && selectedCat === 'all' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs sm:text-sm font-bold text-zinc-200 flex items-center gap-2">
+              <span>🌱 Đề Xuất Cho Người Mới Bắt Đầu (Bắt Buộc Phải Đọc)</span>
+            </h2>
+            <span className="text-[11px] text-zinc-500">4 bài nền tảng giúp tránh mất tiền & công sức</span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {beginnerArticles.map(a => {
+              const isRead = readArticles && !!readArticles[a.id];
+              return (
+                <div
+                  key={a.id}
+                  onClick={() => onOpenArticle(a)}
+                  className="bg-brand-surface border border-brand-border hover:border-amber-500/50 rounded-xl p-3.5 flex flex-col justify-between cursor-pointer group transition duration-200 hover:shadow-lg hover:shadow-amber-500/5">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/20">
+                        {a.level}
+                      </span>
+                      {isRead && <span className="text-emerald-400 text-xs font-bold">✓ Đã đọc</span>}
+                    </div>
+                    <h3 className="text-xs font-bold text-white group-hover:text-amber-300 transition line-clamp-1">
+                      {a.title}
+                    </h3>
+                    <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+                      {a.summary}
+                    </p>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-brand-border/60 flex items-center justify-between text-[11px] text-amber-400 font-semibold">
+                    <span>Đọc chi tiết</span>
+                    <span className="group-hover:translate-x-1 transition">→</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Category Pills */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          <button
+            onClick={() => setSelectedCat('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
+              selectedCat === 'all'
+                ? 'bg-amber-400 text-black border-amber-400 font-black shadow-md'
+                : 'bg-brand-surface hover:bg-brand-card text-zinc-400 hover:text-zinc-200 border-brand-border'
+            }`}>
+            Tất cả ({articles.length})
+          </button>
+          {categories.map(c => {
+            const count = articles.filter(a => a.category === c.id).length;
+            const isSel = selectedCat === c.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => setSelectedCat(c.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border flex items-center gap-1.5 ${
+                  isSel
+                    ? 'bg-amber-400 text-black border-amber-400 font-black shadow-md'
+                    : 'bg-brand-surface hover:bg-brand-card text-zinc-400 hover:text-zinc-200 border-brand-border'
+                }`}>
+                <span>{c.icon}</span>
+                <span>{c.name}</span>
+                <span className="text-[10px] opacity-70">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Articles Grid (2-Layer concept cards) */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filtered.map(article => {
+          const isRead = readArticles && !!readArticles[article.id];
+          return (
+            <article
+              key={article.id}
+              className="bg-brand-surface border border-brand-border hover:border-zinc-700 rounded-xl p-4 flex flex-col justify-between group transition duration-200 hover:shadow-xl hover:shadow-black/50">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-card border border-brand-border text-zinc-300">
+                    {categories.find(c => c.id === article.category)?.name || article.category}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-zinc-500">{article.readTime}</span>
+                    {isRead ? (
+                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">
+                        ✓ Đã đọc
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-zinc-500 bg-zinc-800/80 px-1.5 py-0.2 rounded">
+                        Chưa đọc
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <h3 
+                  onClick={() => onOpenArticle(article)}
+                  className="text-sm font-bold text-white group-hover:text-amber-400 transition cursor-pointer">
+                  {article.title}
+                </h3>
+
+                {/* Layer 1: One-sentence explanation */}
+                <p className="text-xs text-zinc-300 leading-relaxed line-clamp-3">
+                  {article.summary}
+                </p>
+
+                {/* Formula / Short Example Box */}
+                {article.formula && (
+                  <div className="bg-black/40 border border-brand-border/60 rounded-lg p-2 text-[11px] text-amber-200/90 font-mono line-clamp-2">
+                    {article.formula}
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Actions */}
+              <div className="mt-4 pt-3 border-t border-brand-border/60 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => onToggleRead(article.id)}
+                  className={`text-[11px] font-medium transition ${
+                    isRead ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-400 hover:text-emerald-400'
+                  }`}>
+                  {isRead ? 'Đánh dấu chưa đọc' : '○ Đánh dấu đã đọc'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onOpenArticle(article)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-brand-card hover:bg-amber-500 hover:text-black text-amber-300 border border-brand-border hover:border-amber-400 transition flex items-center gap-1">
+                  <span>Xem chi tiết</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="text-center py-12 bg-brand-surface border border-brand-border rounded-xl space-y-3">
+          <p className="text-zinc-400 text-sm">Không tìm thấy bài viết nào khớp với từ khóa "{search}".</p>
+          <button
+            onClick={() => { setSearch(''); setSelectedCat('all'); }}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-brand-card hover:bg-brand-hover text-white border border-brand-border">
+            Xóa bộ lọc tìm kiếm
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 3. TITLE PATTERN ANALYZER MODAL (AI TITLE PATTERN DETECTOR)
+const VIRAL_TITLE_PATTERNS = [
+  {
+    id: 'history_in_time',
+    name: 'Toàn Bộ Lịch Sử Trong Thời Lượng',
+    formula: 'Toàn bộ lịch sử của [Đối tượng] trong [Thời lượng]',
+    enFormula: 'The Entire History of [Subject] in [Duration]',
+    regex: /(toàn bộ lịch sử|lịch sử của|the entire history of|history of|trong d+ phút|in d+ minutes)/i,
+    angle: 'Lời hứa tiết kiệm thời gian, hệ thống hóa toàn cảnh kiến thức khổng lồ vào một thước phim ngắn gọn.',
+    examples: [
+      'Toàn bộ lịch sử Đế chế La Mã trong 20 phút',
+      'The Entire History of the B-2 Stealth Bomber in 18 Minutes',
+      'Lịch sử ngành bán dẫn thế giới trong 15 phút'
+    ],
+    suggestions: [
+      'Toàn bộ lịch sử máy bay tiêm kích F-22 Raptor trong 16 phút',
+      'Lịch sử 500 năm gia tộc giàu nhất châu Âu trong 22 phút',
+      'Toàn bộ quá trình chế tạo bom nguyên tử trong 19 phút'
+    ]
+  },
+  {
+    id: 'why_happened',
+    name: 'Tại Sao Sự Việc Lại Xảy Ra?',
+    formula: 'Tại sao [X] lại [Thành công / Sụp đổ / Biến mất]?',
+    enFormula: 'Why [Subject] Actually [Happened / Failed / Succeeded]?',
+    regex: /(tại sao|vì sao|why |how did .* fail|how did .* collapse)/i,
+    angle: 'Đánh vào tâm lý tò mò nguyên nhân gốc rễ và bóc tách bài học đắt giá mà đám đông chưa biết.',
+    examples: [
+      'Tại sao hãng máy ảnh Kodak lại phá sản?',
+      'Why Nobody Can Replicate the Ferrari V12 Engine?',
+      'Tại sao Liên Xô không bao giờ đưa được người lên Mặt Trăng?'
+    ],
+    suggestions: [
+      'Tại sao không một quốc gia nào dám tấn công Thụy Sĩ?',
+      'Vì sao động cơ phản lực siêu thanh Scramjet khó chế tạo đến vậy?',
+      'Tại sao đế chế Nokia sụp đổ chỉ sau 3 năm?'
+    ]
+  },
+  {
+    id: 'what_if',
+    name: 'Điều Gì Sẽ Xảy Ra Nếu...?',
+    formula: 'Điều gì sẽ xảy ra nếu [Giả định cực đoan]?',
+    enFormula: 'What If [Extreme Scenario Occurred]?',
+    regex: /(điều gì sẽ xảy ra|nếu như|chuyện gì sẽ xảy ra|what if|what would happen)/i,
+    angle: 'Khơi gợi trí tưởng tượng không giới hạn với những kịch bản giả định giật gân nhưng giải thích khoa học.',
+    examples: [
+      'Điều gì xảy ra nếu Trái Đất ngừng quay trong 5 giây?',
+      'What If the Yellowstone Supervolcano Erupted Today?',
+      'Điều gì xảy ra nếu Mặt Trời biến mất trong 24 giờ?'
+    ],
+    suggestions: [
+      'Điều gì sẽ xảy ra nếu loài người không còn dầu mỏ vào ngày mai?',
+      'Chuyện gì xảy ra nếu một lỗ đen kích thước hạt cát rơi vào Trái Đất?',
+      'Nếu oxy trên Trái Đất tăng gấp đôi trong 3 phút thì sao?'
+    ]
+  },
+  {
+    id: 'from_x_to_y',
+    name: 'Từ Điểm Xuất Phát Đến Kết Quả',
+    formula: 'Từ [Điểm xuất phát thấp / Tồi tệ] đến [Kỳ tích / Kết quả đỉnh cao]',
+    enFormula: 'From [Zero / Failure] to [Hero / Massive Success]',
+    regex: /(từ .* đến|from .* to|hành trình từ)/i,
+    angle: 'Cung bậc cảm xúc vượt khó, sự kiên trì và cú chuyển mình ngoạn mục của một nhân vật hay công nghệ.',
+    examples: [
+      'Từ cậu bé bán báo đến người đàn ông giàu nhất thế giới',
+      'From a Garage in Seattle to a $2 Trillion Empire',
+      'Từ phế liệu chiến tranh đến siêu tiêm kích đắt nhất hành tinh'
+    ],
+    suggestions: [
+      'Từ kẻ bị sa thải đến nhà sáng lập kỳ lân công nghệ 10 tỷ USD',
+      'Từ bãi đất hoang đến thành phố hiện đại bậc nhất sa mạc Dubai',
+      'Hành trình từ một bản thiết kế bị từ chối đến máy bay tàng hình đỉnh cao'
+    ]
+  },
+  {
+    id: 'secrets_hidden',
+    name: 'Bí Mật Đằng Sau Mà Ít Ai Biết',
+    formula: 'Bí mật đằng sau [X] mà [Đối tượng] không muốn bạn biết',
+    enFormula: 'The Dark Secret Behind [Subject]',
+    regex: /(bí mật|sự thật đằng sau|the secret behind|the truth about|dark truth)/i,
+    angle: 'Cảm giác được giải mật thông tin cấm kỵ hoặc sự thật hậu trường độc quyền.',
+    examples: [
+      'Bí mật đằng sau ngành công nghiệp kim cương toàn cầu',
+      'The Dark Secrets of Luxury Watch Brands',
+      'Sự thật đằng sau những bức ảnh chụp đáy đại dương'
+    ],
+    suggestions: [
+      'Bí mật đằng sau giá vé máy bay hạng thương gia',
+      'Sự thật về các chuyến thám hiểm tuyệt mật dưới lớp băng Nam Cực',
+      'Bí mật thuật toán giúp các kênh vô danh nổ 1 triệu view'
+    ]
+  },
+  {
+    id: 'never_do_until',
+    name: 'Cảnh Báo Đừng Bao Giờ...',
+    formula: 'Đừng bao giờ [Hành động] cho đến khi xem video này',
+    enFormula: 'Never [Action] Until You Watch This Video',
+    regex: /(đừng bao giờ|trước khi bạn|never .* until|don't .* until)/i,
+    angle: 'Tâm lý sợ bỏ lỡ (FOMO) và sợ mắc sai lầm tốn tiền / nguy hiểm.',
+    examples: [
+      'Đừng bao giờ mua ô tô điện cho đến khi biết điều này',
+      'Never Start a Faceless Channel Until You Fix This Mistake',
+      'Đừng bao giờ uống nước đóng chai trước khi xem video này'
+    ],
+    suggestions: [
+      'Đừng bao giờ chọn ngách YouTube cho đến khi kiểm chứng nhu cầu bằng công cụ này',
+      'Đừng mua máy ảnh quay phim cũ nếu chưa kiểm tra 4 điểm này',
+      'Đừng chi tiền chạy quảng cáo khi video chưa đạt 50% retention'
+    ]
+  }
+];
+
+function TitlePatternModal({ onClose, currentVideos, onAddIdea }) {
+  const [activePattern, setActivePattern] = React.useState(VIRAL_TITLE_PATTERNS[0]);
+  const [targetNiche, setTargetNiche] = React.useState('');
+
+  // Scan currentVideos to detect matches for each pattern
+  const patternStats = React.useMemo(() => {
+    const list = Array.isArray(currentVideos) ? currentVideos : [];
+    return VIRAL_TITLE_PATTERNS.map(pat => {
+      const matched = list.filter(v => v.title && pat.regex.test(v.title));
+      const channels = new Set(matched.map(v => v.channelId || v.channel));
+      const avgViews = matched.length > 0 ? Math.round(matched.reduce((acc, v) => acc + (v.views || 0), 0) / matched.length) : 0;
+      return {
+        ...pat,
+        matchedVideos: matched,
+        videoCount: matched.length,
+        channelCount: channels.size,
+        avgViews
+      };
+    });
+  }, [currentVideos]);
+
+  const currentStat = patternStats.find(p => p.id === activePattern.id) || activePattern;
+
+  return (
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
+      <div 
+        className="bg-brand-surface border border-brand-border rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        onClick={e => e.stopPropagation()}>
+        
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-brand-border bg-brand-card/70 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🎯</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  AI Title Pattern Scanner
+                </span>
+                <span className="text-[10px] text-zinc-400">Bóc tách cấu trúc tiêu đề triệu view</span>
+              </div>
+              <h2 className="text-base sm:text-lg font-black text-white mt-1">
+                Khuôn Tiêu Đề Bứt Phá (Title Patterns)
+              </h2>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl bg-brand-card hover:bg-brand-hover text-zinc-400 hover:text-white flex items-center justify-center transition border border-brand-border">
+            ✕
+          </button>
+        </div>
+
+        {/* 2-Column Layout */}
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+          {/* Left Column: Pattern List */}
+          <div className="w-full md:w-72 border-r border-brand-border bg-black/20 p-3 overflow-y-auto space-y-1.5 shrink-0">
+            <div className="text-[11px] font-bold text-zinc-400 px-2 py-1">
+              Các khuôn tiêu đề đã được chứng minh:
+            </div>
+            {patternStats.map(pat => {
+              const isSelected = activePattern.id === pat.id;
+              return (
+                <button
+                  key={pat.id}
+                  onClick={() => setActivePattern(pat)}
+                  className={`w-full text-left p-3 rounded-xl transition border text-xs ${
+                    isSelected
+                      ? 'bg-purple-600/20 border-purple-500/40 text-purple-200 shadow-md'
+                      : 'bg-brand-card hover:bg-zinc-800 border-brand-border text-zinc-400 hover:text-zinc-200'
+                  }`}>
+                  <div className="font-bold text-white line-clamp-1">{pat.name}</div>
+                  <div className="text-[10px] text-zinc-400 mt-1 line-clamp-1 font-mono">{pat.formula}</div>
+                  <div className="flex items-center justify-between text-[10px] mt-2 pt-1.5 border-t border-brand-border/60">
+                    <span className="text-purple-300 font-semibold">{pat.videoCount} video khớp</span>
+                    <span className="text-zinc-500">{pat.channelCount} kênh</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right Column: Pattern Detail & Suggestions */}
+          <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
+            {/* Pattern Header Box */}
+            <div className="bg-brand-card border border-brand-border rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-purple-300">Cấu trúc khuôn:</span>
+                <span className="text-[11px] text-zinc-400 font-mono">Formula Pattern</span>
+              </div>
+              <div className="text-sm sm:text-base font-bold text-white bg-black/40 p-3 rounded-lg border border-purple-500/30 font-mono text-purple-200">
+                {activePattern.formula}
+              </div>
+              <div className="text-xs text-zinc-300">
+                <b className="text-amber-400">Content Angle (Lời hứa nội dung):</b> {activePattern.angle}
+              </div>
+            </div>
+
+            {/* Matched Real Videos from Current Search */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-zinc-200">
+                  Video thực tế trong tập dữ liệu đang dùng khuôn này ({currentStat.videoCount} video):
+                </h3>
+                {currentStat.avgViews > 0 && (
+                  <span className="text-[11px] text-emerald-400 font-semibold">
+                    Lượt xem trung bình: ~{currentStat.avgViews.toLocaleString()} views
+                  </span>
+                )}
+              </div>
+
+              {currentStat.matchedVideos && currentStat.matchedVideos.length > 0 ? (
+                <div className="space-y-2">
+                  {currentStat.matchedVideos.slice(0, 4).map((v, i) => (
+                    <div key={i} className="p-2.5 rounded-lg bg-brand-card border border-brand-border flex items-center justify-between gap-3 text-xs">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-white line-clamp-1">{v.title}</div>
+                        <div className="text-[10px] text-zinc-400 mt-0.5">{v.channel} · {(v.views || 0).toLocaleString()} views</div>
+                      </div>
+                      <a 
+                        href={'https://www.youtube.com/watch?v=' + v.id} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="text-[11px] text-red-400 hover:text-red-300 font-bold shrink-0">
+                        Xem →
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-brand-surface border border-dashed border-zinc-800 text-zinc-500 text-xs text-center">
+                  Chưa có video nào trong lượt tìm kiếm hiện tại khớp với cấu trúc này. Bên dưới là các ví dụ tiêu biểu trên YouTube:
+                </div>
+              )}
+
+              {/* Standard Industry Examples */}
+              <div className="space-y-1.5 pt-1">
+                <span className="text-[11px] font-bold text-zinc-400">Ví dụ thành công tiêu biểu:</span>
+                {activePattern.examples.map((ex, i) => (
+                  <div key={i} className="p-2 rounded-lg bg-black/30 border border-brand-border/60 text-zinc-300 text-xs flex items-center gap-2">
+                    <span className="text-purple-400">★</span>
+                    <span>{ex}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Generated Suggestions Ready to Use */}
+            <div className="space-y-3 pt-2 border-t border-brand-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                    <span>💡 Gợi Ý Tiêu Đề Mới (Dành Cho Kênh Của Bạn)</span>
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">Tự động điền theo khuôn này, bấm vào để lưu vào bảng kế hoạch</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {activePattern.suggestions.map((sug, i) => (
+                  <div key={i} className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 flex items-center justify-between gap-3 group hover:border-purple-400 transition">
+                    <div className="text-xs font-semibold text-purple-200">
+                      {sug}
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (onAddIdea) {
+                          onAddIdea({
+                            title: sug,
+                            topic: activePattern.name,
+                            angle: activePattern.angle,
+                            whyTry: `Áp dụng khuôn tiêu đề "${activePattern.name}" đã được chứng minh hiệu quả.`
+                          });
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-purple-600 hover:bg-purple-500 text-white shrink-0 shadow transition flex items-center gap-1">
+                      <span>+ Lưu ý tưởng</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 4. DEMAND VALIDATION TOOL MODAL (KIỂM CHỨNG NHU CẦU THỊ TRƯỜNG)
+function DemandValidationModal({ onClose, currentVideos, onUseKeyword, onAddToIdeas }) {
+  const [topic, setTopic] = React.useState('');
+  const [minViews, setMinViews] = React.useState(30000);
+  const [timeframe, setTimeframe] = React.useState('30');
+  const [hasScanned, setHasScanned] = React.useState(false);
+  const [savedValidations, setSavedValidations] = React.useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('yt_validated_demands') || '[]');
+    } catch(e) { return []; }
+  });
+
+  const runValidation = () => {
+    setHasScanned(true);
+  };
+
+  // Evaluate matching videos from current dataset
+  const results = React.useMemo(() => {
+    if (!hasScanned) return null;
+    const list = Array.isArray(currentVideos) ? currentVideos : [];
+    const q = topic.trim().toLowerCase();
+
+    const matched = list.filter(v => {
+      const matchText = !q || (v.title && v.title.toLowerCase().includes(q)) || (v.channel && v.channel.toLowerCase().includes(q));
+      const matchView = (v.views || 0) >= minViews;
+      return matchText && matchView;
+    });
+
+    const channels = new Set(matched.map(v => v.channelId || v.channel));
+    const channelCount = channels.size;
+
+    // Freshness check: videos published within last 14 days
+    const now = Date.now();
+    const freshCount = matched.filter(v => {
+      const pub = new Date(v.published).getTime();
+      return (now - pub) <= 14 * 86400000;
+    }).length;
+
+    // Opportunity & Verdict Calculation
+    let verdict = 'insufficient'; // 'verified' | 'fluke' | 'insufficient'
+    let verdictTitle = '';
+    let verdictDesc = '';
+
+    if (channelCount >= 3) {
+      verdict = 'verified';
+      verdictTitle = '✅ NHU CẦU THỊ TRƯỜNG ĐÃ ĐƯỢC KIỂM CHỨNG!';
+      verdictDesc = `Phát hiện ${matched.length} video từ ${channelCount} kênh độc lập khác nhau cùng vượt ngưỡng ${minViews.toLocaleString()} view. Đây là nhu cầu thật từ tệp khán giả lớn, KHÔNG PHẢI ăn may từ một kênh đơn lẻ.`;
+    } else if (channelCount === 1 || channelCount === 2) {
+      verdict = 'fluke';
+      verdictTitle = '⚠️ CẢNH BÁO: CÓ THỂ LÀ HIỆN TƯỢNG ĂN MAY ĐƠN LẺ';
+      verdictDesc = `Chỉ có ${channelCount} kênh đạt view cao với chủ đề này. Video viral có thể do sức hút cá nhân của YouTuber đó hoặc thuật toán đề xuất ngẫu nhiên, chưa đủ bằng chứng chứng minh một ngách bền vững. Cần thu thập thêm dữ liệu.`;
+    } else {
+      verdict = 'insufficient';
+      verdictTitle = '❌ CHƯA ĐỦ DỮ LIỆU ĐẠT TIÊU CHÍ';
+      verdictDesc = `Chưa tìm thấy video nào vượt mốc ${minViews.toLocaleString()} view trong tập dữ liệu hiện tại. Hãy thử hạ thấp ngưỡng view hoặc mở rộng từ khóa tìm kiếm.`;
+    }
+
+    return {
+      matched,
+      channelCount,
+      freshCount,
+      verdict,
+      verdictTitle,
+      verdictDesc
+    };
+  }, [hasScanned, topic, minViews, currentVideos]);
+
+  const saveValidation = () => {
+    if (!results) return;
+    const item = {
+      id: 'val_' + Date.now(),
+      topic: topic || 'Tất cả video quét',
+      minViews,
+      channelCount: results.channelCount,
+      videoCount: results.matched.length,
+      verdict: results.verdict,
+      verdictTitle: results.verdictTitle,
+      date: new Date().toLocaleDateString('vi-VN')
+    };
+    const updated = [item, ...savedValidations.slice(0, 9)];
+    setSavedValidations(updated);
+    try {
+      localStorage.setItem('yt_validated_demands', JSON.stringify(updated));
+    } catch(e) {}
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
+      <div 
+        className="bg-brand-surface border border-brand-border rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        onClick={e => e.stopPropagation()}>
+        
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-brand-border bg-brand-card/70 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🧪</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Demand Validation Engine
+                </span>
+                <span className="text-[10px] text-zinc-400">Chống bẫy video ăn may</span>
+              </div>
+              <h2 className="text-base sm:text-lg font-black text-white mt-1">
+                Công Cụ Kiểm Chứng Nhu Cầu Thị Trường
+              </h2>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl bg-brand-card hover:bg-brand-hover text-zinc-400 hover:text-white flex items-center justify-center transition border border-brand-border">
+            ✕
+          </button>
+        </div>
+
+        {/* Content Body */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
+          {/* Theory Note */}
+          <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-xl p-3.5 text-zinc-300 text-xs leading-relaxed flex items-start gap-2.5">
+            <span className="text-base">💡</span>
+            <div>
+              <b className="text-emerald-300">Nguyên tắc vàng:</b> Đừng bao giờ làm một ngách chỉ vì bạn thấy <b className="text-white">1 video triệu view</b>. Bạn chỉ nên nhảy vào khi có ít nhất <b className="text-white">3 đến 5 kênh độc lập</b> cùng làm chủ đề đó và đều đạt lượng view vượt trội.
+            </div>
+          </div>
+
+          {/* Configuration Form */}
+          <div className="bg-brand-card border border-brand-border rounded-xl p-4 space-y-3">
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2 space-y-1">
+                <label className="text-xs font-bold text-zinc-300">Chủ đề hoặc từ khóa cần kiểm chứng:</label>
+                <input
+                  type="text"
+                  value={topic}
+                  onChange={e => { setTopic(e.target.value); setHasScanned(false); }}
+                  placeholder="Nhập ngách cần kiểm tra (vd: stoic, billionaire maid, b-2 bomber...)"
+                  className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-300">Ngưỡng view tối thiểu:</label>
+                <select
+                  value={minViews}
+                  onChange={e => { setMinViews(Number(e.target.value)); setHasScanned(false); }}
+                  className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                  <option value={10000}>≥ 10,000 views</option>
+                  <option value={30000}>≥ 30,000 views (Khuyên dùng)</option>
+                  <option value={50000}>≥ 50,000 views</option>
+                  <option value={100000}>≥ 100,000 views</option>
+                  <option value={200000}>≥ 200,000 views</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[11px] text-zinc-400">
+                Đang quét trên tập <b className="text-white">{(currentVideos || []).length}</b> video hiện có
+              </span>
+              <button
+                onClick={runValidation}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20 transition flex items-center gap-1.5">
+                <span>🔍 Chạy Kiểm Chứng Ngay</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Results Display */}
+          {results && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* Verdict Card */}
+              <div className={`p-4 rounded-xl border space-y-2 ${
+                results.verdict === 'verified'
+                  ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
+                  : results.verdict === 'fluke'
+                  ? 'bg-amber-950/30 border-amber-500/40 text-amber-200'
+                  : 'bg-zinc-900 border-zinc-700 text-zinc-300'
+              }`}>
+                <div className="font-black text-sm flex items-center justify-between">
+                  <span>{results.verdictTitle}</span>
+                  <button
+                    onClick={saveValidation}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded bg-black/40 hover:bg-black/60 border border-white/20 transition">
+                    💾 Lưu kết quả này
+                  </button>
+                </div>
+                <p className="text-xs leading-relaxed">{results.verdictDesc}</p>
+
+                {/* Metric Summary */}
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-center">
+                  <div className="bg-black/30 p-2 rounded-lg">
+                    <div className="text-[10px] text-zinc-400 uppercase">Video Vượt Ngưỡng</div>
+                    <div className="text-base font-black text-white">{results.matched.length}</div>
+                  </div>
+                  <div className="bg-black/30 p-2 rounded-lg">
+                    <div className="text-[10px] text-zinc-400 uppercase">Kênh Độc Lập</div>
+                    <div className="text-base font-black text-white">{results.channelCount}</div>
+                  </div>
+                  <div className="bg-black/30 p-2 rounded-lg">
+                    <div className="text-[10px] text-zinc-400 uppercase">Video Dưới 14 Ngày</div>
+                    <div className="text-base font-black text-white">{results.freshCount}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Evidence Videos Table */}
+              {results.matched.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-bold text-zinc-200">
+                    Bằng chứng xác thực ({results.matched.length} video đạt tiêu chí):
+                  </div>
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                    {results.matched.map(v => (
+                      <div key={v.id} className="p-2.5 rounded-lg bg-brand-card border border-brand-border flex items-center justify-between gap-3 text-xs">
+                        <div className="min-w-0">
+                          <div className="font-bold text-white line-clamp-1">{v.title}</div>
+                          <div className="text-[10px] text-zinc-400 mt-0.5">
+                            Kênh: <b className="text-zinc-200">{v.channel}</b> · {(v.views || 0).toLocaleString()} views · +{v.vph || 0} vph
+                          </div>
+                        </div>
+                        <a 
+                          href={'https://www.youtube.com/watch?v=' + v.id}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold text-[11px] shrink-0 border border-zinc-700">
+                          YouTube →
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Saved Validations History */}
+          {savedValidations.length > 0 && (
+            <div className="space-y-2 pt-3 border-t border-brand-border">
+              <div className="text-xs font-bold text-zinc-400">Lịch sử kiểm chứng đã lưu:</div>
+              <div className="grid sm:grid-cols-2 gap-2">
+                {savedValidations.map(val => (
+                  <div key={val.id} className="p-2.5 rounded-lg bg-black/30 border border-brand-border text-xs space-y-1">
+                    <div className="flex items-center justify-between font-bold">
+                      <span className="text-white truncate">{val.topic}</span>
+                      <span className="text-[10px] text-zinc-500">{val.date}</span>
+                    </div>
+                    <div className="text-[11px] text-zinc-400">
+                      {val.videoCount} video · {val.channelCount} kênh độc lập · {val.verdict === 'verified' ? '✅ Đã xác minh' : '⚠️ Ăn may'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 5. VIDEO IDEA PLANNER & PRODUCTION PIPELINE MODAL
+function VideoIdeaPlannerModal({ onClose, onAddIdeaFromOutside }) {
+  const [tab, setTab] = React.useState('all'); // 'all' | 'todo' | 'scripting' | 'editing' | 'published'
+  const [newTitle, setNewTitle] = React.useState('');
+  const [newTopic, setNewTopic] = React.useState('');
+  const [newAngle, setNewAngle] = React.useState('');
+  const [newWhyTry, setNewWhyTry] = React.useState('');
+  const [ideas, setIdeas] = React.useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('yt_video_ideas_board') || 'null');
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+    } catch(e) {}
+    return [
+      {
+        id: 'idea_1',
+        title: 'Toàn Bộ Lịch Sử Máy Bay Ném Bom Tàng Hình B-2 Spirit Trong 18 Phút',
+        topic: 'Quân Sự & Vũ Khí',
+        angle: 'Tài liệu chi tiết kết hợp 3D CGI giải thích công nghệ tàng hình radar',
+        whyTry: 'Đã kiểm chứng: Có 4 kênh nhỏ cùng đạt >100k view với khuôn tiêu đề này.',
+        status: 'scripting',
+        createdAt: 'Hôm nay'
+      },
+      {
+        id: 'idea_2',
+        title: 'Tại Sao Không Một Hãng Xe Nào Có Thể Làm Nhái Động Cơ V12 Của Ferrari?',
+        topic: 'Kỹ Thuật Ô Tô',
+        angle: 'Giải thích cơ học động cơ chính xác cao, âm thanh máy và bí quyết luyện kim',
+        whyTry: 'Khuôn câu hỏi Tại sao kích thích tò mò cao độ, RPM ngách xe hơi từ $25 - $40',
+        status: 'todo',
+        createdAt: 'Hôm qua'
+      }
+    ];
+  });
+
+  const saveIdeas = (newList) => {
+    setIdeas(newList);
+    try {
+      localStorage.setItem('yt_video_ideas_board', JSON.stringify(newList));
+    } catch(e) {}
+  };
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
+    const item = {
+      id: 'idea_' + Date.now(),
+      title: newTitle.trim(),
+      topic: newTopic.trim() || 'Chung',
+      angle: newAngle.trim() || 'Tập trung vào câu chuyện sâu sắc và thông tin độc quyền',
+      whyTry: newWhyTry.trim() || 'Dựa trên phân tích video bứt phá của YouTrend',
+      status: 'todo',
+      createdAt: new Date().toLocaleDateString('vi-VN')
+    };
+    saveIdeas([item, ...ideas]);
+    setNewTitle('');
+    setNewTopic('');
+    setNewAngle('');
+    setNewWhyTry('');
+  };
+
+  const changeStatus = (id, newStatus) => {
+    const updated = ideas.map(item => item.id === id ? { ...item, status: newStatus } : item);
+    saveIdeas(updated);
+  };
+
+  const deleteIdea = (id) => {
+    const updated = ideas.filter(item => item.id !== id);
+    saveIdeas(updated);
+  };
+
+  const exportCSV = () => {
+    const header = 'ID,Tiêu đề,Chủ đề,Góc tiếp cận,Lý do thử nghiệm,Trạng thái,Ngày tạo\n';
+    const rows = ideas.map(i => `"${i.id}","${i.title.replace(/"/g, '""')}","${i.topic}","${i.angle.replace(/"/g, '""')}","${i.whyTry.replace(/"/g, '""')}","${i.status}","${i.createdAt}"`).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `youtubetrend_video_ideas_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const filtered = tab === 'all' ? ideas : ideas.filter(i => i.status === tab);
+
+  const statusMap = {
+    todo: { label: 'Chưa làm', cls: 'bg-zinc-800 text-zinc-300 border-zinc-700' },
+    scripting: { label: 'Đang kịch bản', cls: 'bg-blue-500/20 text-blue-300 border-blue-500/30 font-semibold' },
+    editing: { label: 'Đang dựng video', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-semibold' },
+    published: { label: 'Đã xuất bản', cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 font-bold' }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
+      <div 
+        className="bg-brand-surface border border-brand-border rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        onClick={e => e.stopPropagation()}>
+        
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-brand-border bg-brand-card/70 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📋</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Video Pipeline Board
+                </span>
+                <span className="text-[10px] text-zinc-400">Kế hoạch sản xuất & quản lý 10-20 ý tưởng</span>
+              </div>
+              <h2 className="text-base sm:text-lg font-black text-white mt-1">
+                Bảng Theo Dõi Ngách & Quản Lý Ý Tưởng Video
+              </h2>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportCSV}
+              className="px-3 py-1.5 rounded-xl bg-brand-card hover:bg-zinc-800 text-zinc-300 hover:text-white border border-brand-border text-xs font-semibold transition flex items-center gap-1.5"
+              title="Xuất danh sách ý tưởng ra file Excel / CSV">
+              <span>📥 Xuất CSV</span>
+            </button>
+            <button 
+              onClick={onClose}
+              className="w-8 h-8 rounded-xl bg-brand-card hover:bg-brand-hover text-zinc-400 hover:text-white flex items-center justify-center transition border border-brand-border">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Content Body */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm flex-1">
+          {/* Add New Idea Form */}
+          <form onSubmit={handleAdd} className="bg-brand-card border border-brand-border rounded-xl p-4 space-y-3">
+            <div className="font-bold text-xs text-zinc-200 flex items-center gap-1.5">
+              <span>+ Thêm Ý Tưởng Video Mới:</span>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <input
+                type="text"
+                placeholder="Tiêu đề video nháp (bắt buộc)..."
+                value={newTitle}
+                onChange={e => setNewTitle(e.target.value)}
+                className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+              />
+              <input
+                type="text"
+                placeholder="Chủ đề / Ngách (vd: Lịch Sử, Xe Hơi, Tài Chính)..."
+                value={newTopic}
+                onChange={e => setNewTopic(e.target.value)}
+                className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <input
+                type="text"
+                placeholder="Góc tiếp cận / Lời hứa nội dung..."
+                value={newAngle}
+                onChange={e => setNewAngle(e.target.value)}
+                className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+              />
+              <input
+                type="text"
+                placeholder="Lý do nên thử (dữ liệu kiểm chứng)..."
+                value={newWhyTry}
+                onChange={e => setNewWhyTry(e.target.value)}
+                className="w-full bg-brand-surface border border-brand-border rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="submit"
+                disabled={!newTitle.trim()}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black transition">
+                Thêm Vào Kế Hoạch
+              </button>
+            </div>
+          </form>
+
+          {/* Pipeline Filter Tabs */}
+          <div className="flex items-center justify-between border-b border-brand-border pb-2 gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+              <button
+                onClick={() => setTab('all')}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition ${
+                  tab === 'all' ? 'bg-zinc-200 text-zinc-950' : 'text-zinc-400 hover:text-white'
+                }`}>
+                Tất cả ({ideas.length})
+              </button>
+              <button
+                onClick={() => setTab('todo')}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition ${
+                  tab === 'todo' ? 'bg-zinc-200 text-zinc-950' : 'text-zinc-400 hover:text-white'
+                }`}>
+                Chưa làm ({ideas.filter(i => i.status === 'todo').length})
+              </button>
+              <button
+                onClick={() => setTab('scripting')}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition ${
+                  tab === 'scripting' ? 'bg-zinc-200 text-zinc-950' : 'text-zinc-400 hover:text-white'
+                }`}>
+                Đang viết kịch bản ({ideas.filter(i => i.status === 'scripting').length})
+              </button>
+              <button
+                onClick={() => setTab('editing')}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition ${
+                  tab === 'editing' ? 'bg-zinc-200 text-zinc-950' : 'text-zinc-400 hover:text-white'
+                }`}>
+                Đang dựng ({ideas.filter(i => i.status === 'editing').length})
+              </button>
+              <button
+                onClick={() => setTab('published')}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition ${
+                  tab === 'published' ? 'bg-zinc-200 text-zinc-950' : 'text-zinc-400 hover:text-white'
+                }`}>
+                Đã xuất bản ({ideas.filter(i => i.status === 'published').length})
+              </button>
+            </div>
+          </div>
+
+          {/* Ideas List Cards */}
+          <div className="space-y-3">
+            {filtered.map(item => {
+              const stInfo = statusMap[item.status] || statusMap.todo;
+              return (
+                <div
+                  key={item.id}
+                  className="bg-brand-card border border-brand-border rounded-xl p-4 space-y-2.5 transition hover:border-zinc-700">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] px-2 py-0.5 rounded border ${stInfo.cls}`}>
+                          {stInfo.label}
+                        </span>
+                        <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          {item.topic}
+                        </span>
+                        <span className="text-[10px] text-zinc-500">{item.createdAt}</span>
+                      </div>
+                      <h3 className="text-sm font-bold text-white leading-snug">
+                        {item.title}
+                      </h3>
+                    </div>
+
+                    <button
+                      onClick={() => deleteIdea(item.id)}
+                      className="text-zinc-500 hover:text-rose-400 text-xs p-1"
+                      title="Xóa ý tưởng này">
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-2 text-xs text-zinc-300 bg-brand-surface/70 p-2.5 rounded-lg border border-brand-border/60">
+                    <div>
+                      <span className="text-zinc-500 font-medium">Góc tiếp cận:</span> {item.angle}
+                    </div>
+                    <div>
+                      <span className="text-zinc-500 font-medium">Lý do nên thử:</span> {item.whyTry}
+                    </div>
+                  </div>
+
+                  {/* Move Status Buttons */}
+                  <div className="flex items-center justify-between pt-1 border-t border-brand-border/60 text-[11px]">
+                    <span className="text-zinc-500">Chuyển trạng thái:</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {['todo', 'scripting', 'editing', 'published'].map(stKey => (
+                        <button
+                          key={stKey}
+                          onClick={() => changeStatus(item.id, stKey)}
+                          className={`px-2.5 py-1 rounded text-[10px] font-bold transition border ${
+                            item.status === stKey
+                              ? 'bg-zinc-200 text-zinc-950 border-zinc-200'
+                              : 'bg-brand-surface hover:bg-zinc-800 text-zinc-400 hover:text-white border-brand-border'
+                          }`}>
+                          {statusMap[stKey].label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {filtered.length === 0 && (
+              <div className="text-center py-10 text-zinc-500 text-xs">
+                Chưa có ý tưởng nào trong mục này. Hãy thêm mới hoặc lấy gợi ý từ mục Khuôn Tiêu Đề!
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function App() {
   const [key, setKey] = useState(() => st.get('yt_key') || '');
   const [keyDraft, setKeyDraft] = useState(() => st.get('yt_key') || '');
@@ -8773,6 +10194,61 @@ function App() {
 
   // Navigation Tabs: 'search' | 'keywords' | 'rpm' | 'competitors' | 'autoupdate' | 'watch'
   const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'search');
+
+  // Wiki YouTubeTrend & Research Tools States
+  const [selectedWikiArticle, setSelectedWikiArticle] = useState(null);
+  const [readWikiArticles, setReadWikiArticles] = useState(() => {
+    try {
+      return JSON.parse(st.get('yt_wiki_read_articles') || '{}');
+    } catch(e) { return {}; }
+  });
+  const [showDemandValidationModal, setShowDemandValidationModal] = useState(false);
+  const [showTitlePatternModal, setShowTitlePatternModal] = useState(false);
+  const [showIdeaPlannerModal, setShowIdeaPlannerModal] = useState(false);
+
+  const toggleWikiRead = (id) => {
+    setReadWikiArticles(prev => {
+      const next = { ...prev, [id]: !prev[id] };
+      st.set('yt_wiki_read_articles', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const openWikiArticle = (articleOrId) => {
+    const articles = (typeof window !== 'undefined' && window.WIKI_ARTICLES) ? window.WIKI_ARTICLES : [];
+    if (typeof articleOrId === 'string') {
+      const found = articles.find(a => a.id === articleOrId);
+      if (found) setSelectedWikiArticle(found);
+    } else if (articleOrId && articleOrId.id) {
+      setSelectedWikiArticle(articleOrId);
+    }
+  };
+
+  const addIdeaToBoard = (ideaObj) => {
+    try {
+      const saved = JSON.parse(st.get('yt_video_ideas_board') || '[]');
+      const newItem = {
+        id: 'idea_' + Date.now(),
+        title: ideaObj.title || 'Ý tưởng mới',
+        topic: ideaObj.topic || 'Chung',
+        angle: ideaObj.angle || '',
+        whyTry: ideaObj.whyTry || '',
+        status: 'todo',
+        createdAt: new Date().toLocaleDateString('vi-VN')
+      };
+      const updated = [newItem, ...saved];
+      st.set('yt_video_ideas_board', JSON.stringify(updated));
+      showToast('Đã lưu ý tưởng vào Bảng Kế Hoạch!');
+    } catch(e) {}
+  };
+
+  const allKnownVideos = React.useMemo(() => {
+    const list = [...(items || []), ...(rpmItems || []), ...(savedVideos || [])];
+    const map = new Map();
+    list.forEach(v => { if (v && v.id && !map.has(v.id)) map.set(v.id, v); });
+    return Array.from(map.values());
+  }, [items, rpmItems, savedVideos]);
+
 
   // Security F12 & Right-Click (Inspect Element) DevTools Blocker
   const [showF12Blocked, setShowF12Blocked] = useState(false);
@@ -10391,6 +11867,20 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               {tab === 'watch' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
+            <button 
+              onClick={() => setTab('wiki')} 
+              className={`h-full flex items-center gap-1.5 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
+                tab === 'wiki' 
+                  ? 'text-white font-semibold' 
+                  : 'text-zinc-400 hover:text-amber-300'
+              }`}
+              title="Wiki YouTubeTrend: Từ điển thuật ngữ & cẩm nang tìm ngách toàn diện">
+              <span className="text-amber-400">📖</span>
+              <span>Wiki</span>
+              {tab === 'wiki' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400 rounded-full"></span>}
+            </button>
+
+
             <button
               onClick={() => setShowSavedVideosModal(true)}
               className="h-full flex items-center gap-1 text-xs sm:text-sm font-medium text-zinc-400 hover:text-amber-400 transition-colors whitespace-nowrap shrink-0"
@@ -10403,7 +11893,33 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           </nav>
 
           {/* Right: Actions like CUTLAB ("Tạo phiếu" + "Đăng nhập") */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+
+            {/* Quick Niche Research Tools */}
+            <button
+              onClick={() => setShowDemandValidationModal(true)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition flex items-center gap-1 shrink-0"
+              title="Kiểm chứng nhu cầu thị trường, tránh bẫy video ăn may">
+              <span>🧪</span>
+              <span className="hidden xl:inline">Kiểm Chứng Nhu Cầu</span>
+            </button>
+
+            <button
+              onClick={() => setShowTitlePatternModal(true)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition flex items-center gap-1 shrink-0"
+              title="Phân tích khuôn tiêu đề viral bứt phá bằng AI">
+              <span>🎯</span>
+              <span className="hidden xl:inline">Khuôn Tiêu Đề</span>
+            </button>
+
+            <button
+              onClick={() => setShowIdeaPlannerModal(true)}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition flex items-center gap-1 shrink-0"
+              title="Mở Bảng Kế Hoạch 10-20 Video & Quản lý Pipeline">
+              <span>📋</span>
+              <span className="hidden xl:inline">Kế Hoạch Video</span>
+            </button>
+
             <button 
               onClick={() => { setApiModalOpen(true); setApiModalTab('tester'); }} 
               className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition shrink-0 ${
@@ -10764,11 +12280,28 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
                       {/* Metric Pills */}
                       <div className="grid grid-cols-2 gap-1.5 text-[11px] bg-brand-card p-2 rounded-lg border border-brand-border">
-                        <div className="text-zinc-300">
-                          <span className="text-zinc-500">Lượt xem:</span> <b className="text-white">{fmt(v.views)}</b>
+                        <div className="text-zinc-300 flex items-center justify-between">
+                          <div><span className="text-zinc-500">Lượt xem:</span> <b className="text-white">{fmt(v.views)}</b></div>
+                          {v.subs > 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); openWikiArticle('performance_multiple'); }}
+                              className="text-[10px] font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-1 py-0.2 rounded border border-amber-500/30 transition flex items-center gap-0.5"
+                              title="Performance Multiple = Lượt xem / Median kênh. Bấm xem Wiki giải thích!">
+                              <span>⚡ {Math.max(1, Math.round(v.views / Math.max(100, Math.round(v.subs * 0.15))))}x Median</span>
+                              <span className="text-[9px] text-zinc-500">📖</span>
+                            </button>
+                          )}
                         </div>
-                        <div className="text-emerald-400 font-semibold">
-                          <span className="text-zinc-500 font-normal">Tốc độ:</span> +{fmt(v.vph)}/h
+                        <div className="text-emerald-400 font-semibold flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); openWikiArticle('view_velocity'); }}
+                            className="hover:underline text-emerald-400 text-left flex items-center gap-1"
+                            title="Tốc độ tăng trưởng view mỗi giờ (VPH). Bấm xem Wiki!">
+                            <span className="text-zinc-500 font-normal">Tốc độ:</span> +{fmt(v.vph)}/h
+                            <span className="text-[9px] text-zinc-500">📖</span>
+                          </button>
                         </div>
                         <div className="text-zinc-400 col-span-2 flex justify-between border-t border-brand-border/60 pt-1 mt-0.5">
                           <span>{fmtD(v.published).split(' ')[0]}</span>
@@ -11814,6 +13347,15 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                           <div className="grid grid-cols-2 gap-1 text-[11px] border-t border-brand-border/60 pt-1.5">
                             <div>
                               <span className="text-zinc-500">Lượt xem:</span> <b className="text-white">{fmt(v.views)}</b>
+                              {v.subs > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); openWikiArticle('performance_multiple'); }}
+                                  className="ml-1.5 text-[9px] font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-1 py-0.2 rounded border border-amber-500/30"
+                                  title="Performance Multiple: Bội số lượt xem so với median kênh. Bấm xem Wiki!">
+                                  ⚡{Math.max(1, Math.round(v.views / Math.max(100, Math.round(v.subs * 0.15))))}x Med
+                                </button>
+                              )}
                             </div>
                             <div className="text-right">
                               <span className="text-zinc-500">Tốc độ:</span> <b className="text-emerald-400">+{fmt(v.vph)}/h</b>
@@ -12448,6 +13990,16 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             </div>
           </section>
         )}
+      
+        {/* TAB: WIKI YOUTUBETREND */}
+        {tab === 'wiki' && (
+          <WikiSection 
+            onOpenArticle={openWikiArticle} 
+            readArticles={readWikiArticles} 
+            onToggleRead={toggleWikiRead} 
+          />
+        )}
+
       </main>
 
       {/* Footer */}
@@ -12924,6 +14476,45 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           }}
           competitorsCount={competitors.length}
           watchCount={watchList.length}
+        />
+      )}
+
+      {/* 2-Layer Wiki Concept Reader Modal */}
+      {selectedWikiArticle && (
+        <WikiReaderModal
+          article={selectedWikiArticle}
+          onClose={() => setSelectedWikiArticle(null)}
+          onSelectArticle={setSelectedWikiArticle}
+          isRead={readWikiArticles && !!readWikiArticles[selectedWikiArticle.id]}
+          onToggleRead={toggleWikiRead}
+          allArticles={(typeof window !== 'undefined' && window.WIKI_ARTICLES) || []}
+        />
+      )}
+
+      {/* Demand Validation Engine Modal */}
+      {showDemandValidationModal && (
+        <DemandValidationModal
+          onClose={() => setShowDemandValidationModal(false)}
+          currentVideos={allKnownVideos}
+          onUseKeyword={(kwd) => { setKw(kwd); setTab('search'); setShowDemandValidationModal(false); load('new'); }}
+          onAddToIdeas={addIdeaToBoard}
+        />
+      )}
+
+      {/* AI Title Pattern Detector Modal */}
+      {showTitlePatternModal && (
+        <TitlePatternModal
+          onClose={() => setShowTitlePatternModal(false)}
+          currentVideos={allKnownVideos}
+          onAddIdea={addIdeaToBoard}
+        />
+      )}
+
+      {/* Video Idea Planner & Pipeline Modal */}
+      {showIdeaPlannerModal && (
+        <VideoIdeaPlannerModal
+          onClose={() => setShowIdeaPlannerModal(false)}
+          onAddIdeaFromOutside={addIdeaToBoard}
         />
       )}
     </div>
