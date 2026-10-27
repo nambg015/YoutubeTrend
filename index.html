@@ -10253,6 +10253,137 @@ function VideoIdeaPlannerModal({ onClose, onAddIdeaFromOutside }) {
   );
 }
 
+// TAB 2: TOP NGÁCH (HIGH-RPM NICHES GRID - CLEAN & MINIMALIST)
+function TopNgachSection({ onSelectNiche }) {
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const q = (searchQuery || '').trim().toLowerCase();
+
+  const nichesList = typeof CASHCOW_NICHES !== 'undefined' ? CASHCOW_NICHES : [];
+
+  const visibleNiches = React.useMemo(() => {
+    if (!q) return nichesList;
+    return nichesList.filter(n =>
+      (n.name || '').toLowerCase().includes(q) ||
+      (n.subtitle || '').toLowerCase().includes(q) ||
+      (n.exampleChannel || '').toLowerCase().includes(q) ||
+      (n.desc || '').toLowerCase().includes(q) ||
+      (n.queries || []).some(k => (k || '').toLowerCase().includes(q))
+    );
+  }, [q, nichesList]);
+
+  return (
+    <section className="space-y-4 animate-in fade-in duration-200">
+      {/* Clean Minimalist Header */}
+      <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+              Bảng Xếp Hạng High-RPM
+            </span>
+            <span className="text-xs text-zinc-400">Thị trường Mỹ & Quốc tế</span>
+          </div>
+          <h2 className="text-lg sm:text-xl font-black text-white">
+            Top Ngách Kiếm Tiền Cao (RPM $20 - $50+)
+          </h2>
+          <p className="text-xs text-zinc-400 max-w-2xl leading-relaxed">
+            Tổng hợp các ngách làm video dài cho kênh sub vừa &amp; nhỏ với RPM quảng cáo cực cao. Bấm vào từng ngách để xem chi tiết, video mẫu và kịch bản AI.
+          </p>
+        </div>
+
+        {/* Minimalist Search Box */}
+        <div className="relative w-full md:w-72 shrink-0">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Tìm ngách hoặc tên kênh..."
+            className="w-full bg-brand-card border border-brand-border rounded-xl px-3.5 py-2 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-2 text-zinc-400 hover:text-white text-xs cursor-pointer">
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Niches Count & State */}
+      <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
+        <span>Hiển thị <b className="text-white">{visibleNiches.length}</b> ngách tiềm năng</span>
+        {searchQuery && (
+          <span>Kết quả lọc cho: <b className="text-amber-400">"{searchQuery}"</b></span>
+        )}
+      </div>
+
+      {/* Minimalist Uniform Grid */}
+      {visibleNiches.length === 0 ? (
+        <div className="p-12 text-center border border-dashed border-brand-border rounded-2xl bg-brand-surface/40 space-y-2">
+          <span className="text-2xl block">🔍</span>
+          <h4 className="text-sm font-bold text-white">Không tìm thấy ngách phù hợp</h4>
+          <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+            Không có ngách hoặc kênh nào khớp với từ khóa "{searchQuery}". Hãy thử tìm với từ khóa khác hoặc bấm xóa tìm kiếm.
+          </p>
+          <button
+            onClick={() => setSearchQuery('')}
+            className="mt-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-700 cursor-pointer">
+            Xóa tìm kiếm
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {visibleNiches.map((niche, idx) => {
+            const comp = (niche.scores && niche.scores['24h'] && niche.scores['24h'].comp) || 'Thấp';
+            return (
+              <div
+                key={niche.id || idx}
+                onClick={() => onSelectNiche && onSelectNiche(niche)}
+                className="bg-brand-surface border border-brand-border hover:border-amber-400/60 rounded-xl p-4 flex flex-col justify-between transition duration-200 hover:shadow-xl hover:shadow-amber-500/5 group cursor-pointer space-y-3">
+                <div className="space-y-2">
+                  {/* Card Header: Rank & RPM */}
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                      #{idx + 1}
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                      RPM {niche.rpmRange}
+                    </span>
+                  </div>
+
+                  {/* Niche Title */}
+                  <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition line-clamp-1">
+                    {niche.name}
+                  </h3>
+
+                  {/* Channel Info */}
+                  <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+                    <span>📺</span>
+                    <span className="truncate">{niche.exampleChannel}</span>
+                  </div>
+
+                  {/* Short Description */}
+                  <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+                    {niche.desc}
+                  </p>
+                </div>
+
+                {/* Card Footer */}
+                <div className="pt-2 border-t border-brand-border/60 flex items-center justify-between text-[11px]">
+                  <span className="text-zinc-500 font-medium">Cạnh tranh: <b className="text-emerald-400 font-semibold">{comp}</b></span>
+                  <span className="text-amber-400 font-bold group-hover:translate-x-0.5 transition flex items-center gap-0.5">
+                    Chi tiết <span>→</span>
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 // Cửa Sổ Chi Tiết Ngách (Clean & Focused Niche Intelligence Modal)
 function NicheDetailModal({ niche, onClose, onSelectKeywordForSearch, onAddCompetitor, onToggleSave, isSaved, showToast }) {
   const [activeTab, setActiveTab] = React.useState('overview'); // 'overview' | 'videos' | 'prompts'
@@ -11908,11 +12039,6 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
     }
   }
 
-  useEffect(() => {
-    if (tab === 'rpm' && !rpmItems.length) {
-      loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery);
-    }
-  }, [tab, activeRpmNiche]);
 
   function applyPreset(preset) {
     setActivePreset(preset.id);
@@ -12105,10 +12231,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             </button>
 
             <button 
-              onClick={() => {
-                setTab('rpm');
-                if (!rpmItems.length) loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery);
-              }} 
+              onClick={() => setTab('rpm')} 
               className={`h-full flex items-center text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
                 tab === 'rpm' 
                   ? 'text-white font-semibold' 
@@ -13063,130 +13186,10 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           </section>
         )}
 
-        {/* TAB 2: HIGH-RPM CASH-COW NICHES (TOP NGÁCH - CLEAN & MINIMALIST) */}
-        {tab === 'rpm' && (() => {
-          const q = (rpmSearchQuery || '').trim().toLowerCase();
-          const visibleNiches = q
-            ? CASHCOW_NICHES.filter(n =>
-                (n.name || '').toLowerCase().includes(q) ||
-                (n.subtitle || '').toLowerCase().includes(q) ||
-                (n.exampleChannel || '').toLowerCase().includes(q) ||
-                (n.desc || '').toLowerCase().includes(q) ||
-                (n.queries || []).some(k => k.toLowerCase().includes(q))
-              )
-            : CASHCOW_NICHES;
-
-          return (
-            <section className="space-y-4">
-              {/* Clean Minimalist Header */}
-              <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                      Bảng Xếp Hạng High-RPM
-                    </span>
-                    <span className="text-xs text-zinc-400">Thị trường Mỹ & Quốc tế</span>
-                  </div>
-                  <h2 className="text-lg sm:text-xl font-black text-white">
-                    Top Ngách Kiếm Tiền Cao (RPM $20 - $50+)
-                  </h2>
-                  <p className="text-xs text-zinc-400 max-w-2xl">
-                    Tổng hợp các ngách làm video dài cho kênh sub vừa &amp; nhỏ với RPM quảng cáo cực cao. Bấm vào từng ngách để xem chi tiết, video mẫu và kịch bản AI.
-                  </p>
-                </div>
-
-                {/* Minimalist Search Box */}
-                <div className="relative w-full md:w-72 shrink-0">
-                  <input
-                    type="text"
-                    value={rpmSearchQuery}
-                    onChange={e => setRpmSearchQuery(e.target.value)}
-                    placeholder="Tìm ngách hoặc tên kênh..."
-                    className="w-full bg-brand-card border border-brand-border rounded-xl px-3.5 py-2 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition"
-                  />
-                  {rpmSearchQuery && (
-                    <button
-                      onClick={() => setRpmSearchQuery('')}
-                      className="absolute right-3 top-2 text-zinc-400 hover:text-white text-xs">
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Niches Count & State */}
-              <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
-                <span>Hiển thị <b className="text-white">{visibleNiches.length}</b> ngách tiềm năng</span>
-                {rpmSearchQuery && (
-                  <span>Kết quả lọc cho: <b className="text-amber-400">"{rpmSearchQuery}"</b></span>
-                )}
-              </div>
-
-              {/* Minimalist Uniform Grid */}
-              {visibleNiches.length === 0 ? (
-                <div className="p-12 text-center border border-dashed border-brand-border rounded-2xl bg-brand-surface/40 space-y-2">
-                  <span className="text-2xl block">🔍</span>
-                  <h4 className="text-sm font-bold text-white">Không tìm thấy ngách phù hợp</h4>
-                  <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                    Không có ngách hoặc kênh nào khớp với từ khóa "{rpmSearchQuery}". Hãy thử tìm với từ khóa khác hoặc bấm xóa tìm kiếm.
-                  </p>
-                  <button
-                    onClick={() => setRpmSearchQuery('')}
-                    className="mt-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-700">
-                    Xóa tìm kiếm
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {visibleNiches.map((niche, idx) => {
-                    return (
-                      <div
-                        key={niche.id}
-                        onClick={() => setSelectedNicheModal(niche)}
-                        className="bg-brand-surface border border-brand-border hover:border-amber-400/60 rounded-xl p-4 flex flex-col justify-between transition duration-200 hover:shadow-xl hover:shadow-amber-500/5 group cursor-pointer space-y-3">
-                        <div className="space-y-2">
-                          {/* Card Header: Rank & RPM */}
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
-                              #{idx + 1}
-                            </span>
-                            <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                              RPM {niche.rpmRange}
-                            </span>
-                          </div>
-
-                          {/* Niche Title */}
-                          <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition line-clamp-1">
-                            {niche.name}
-                          </h3>
-
-                          {/* Channel Info */}
-                          <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
-                            <span>📺</span>
-                            <span className="truncate">{niche.exampleChannel}</span>
-                          </div>
-
-                          {/* Short Description */}
-                          <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
-                            {niche.desc}
-                          </p>
-                        </div>
-
-                        {/* Card Footer */}
-                        <div className="pt-2 border-t border-brand-border/60 flex items-center justify-between text-[11px]">
-                          <span className="text-zinc-500 font-medium">Cạnh tranh: <b className="text-emerald-400 font-semibold">{niche.scores?.['24h']?.comp || 'Thấp'}</b></span>
-                          <span className="text-amber-400 font-bold group-hover:translate-x-0.5 transition flex items-center gap-0.5">
-                            Chi tiết <span>→</span>
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          );
-        })()}
+        {/* TAB 2: HIGH-RPM CASH-COW NICHES (TOP NGÁCH) */}
+        {tab === 'rpm' && (
+          <TopNgachSection onSelectNiche={(niche) => setSelectedNicheModal(niche)} />
+        )}
 
         {/* TAB 3: SRT VIRAL TREND HUNTER & NICHE CLUSTERING SCANNER */}
         {tab === 'niche' && (
@@ -14308,20 +14311,26 @@ class ErrorBoundary extends React.Component {
       }
       return (
         <div className="min-h-screen bg-[#0b0c10] text-zinc-200 flex flex-col items-center justify-center p-6 text-center">
-          <div className="max-w-md bg-[#181b26] border border-[#232738] rounded-2xl p-6 shadow-2xl space-y-4">
+          <div className="max-w-lg bg-[#181b26] border border-[#232738] rounded-2xl p-6 shadow-2xl space-y-4">
             <h2 className="text-base font-bold text-white">Đã xảy ra sự cố hiển thị</h2>
             <p className="text-xs text-zinc-400">
               Trang web đã tự động phục hồi an toàn. Bạn có thể bấm nút bên dưới để tiếp tục trải nghiệm.
             </p>
+            {this.state.error && (
+              <div className="p-3 bg-red-950/40 border border-red-500/30 rounded-xl text-left text-xs text-red-300 font-mono break-all max-h-48 overflow-y-auto">
+                <div className="font-bold">{this.state.error.name || 'Error'}: {this.state.error.message || String(this.state.error)}</div>
+                {this.state.error.stack && <div className="text-[10px] text-zinc-500 mt-1 whitespace-pre-wrap">{this.state.error.stack}</div>}
+              </div>
+            )}
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
-                className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition">
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition cursor-pointer">
                 Tải lại trang web
               </button>
               <button
                 onClick={() => { this.setState({ hasError: false }); window.location.href = window.location.pathname; }}
-                className="px-4 py-2 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition">
+                className="px-4 py-2 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer">
                 Về trang chủ
               </button>
             </div>
