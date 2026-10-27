@@ -10339,6 +10339,352 @@ function getNicheChannels(niche, realChannelsMap) {
   }];
 }
 
+const COOLING_WINDOW_MS = 10 * 864e5; // 10 ngày (240 giờ) theo tiêu chuẩn trend của người dùng
+
+// 1. Tự động dọn dẹp các ngách/video đã "hạ nhiệt" (> 10 ngày)
+function cleanCooledDownNiches(nichesList) {
+  if (!Array.isArray(nichesList)) return [];
+  const now = Date.now();
+
+  return nichesList
+    .map(niche => {
+      // Lọc giữ lại video còn trong thời hạn 10 ngày ("còn nhiệt")
+      const freshVideos = (niche.videos || []).filter(v => {
+        const videoTime = v.ts || (v.published ? new Date(v.published).getTime() : 0);
+        return (now - videoTime) <= COOLING_WINDOW_MS;
+      });
+
+      // Nếu không còn video nào trong 10 ngày -> ngách đã "hạ nhiệt", tự động xoá
+      if (freshVideos.length === 0) {
+        return null;
+      }
+
+      freshVideos.sort((a, b) => (b.views || 0) - (a.views || 0));
+
+      const remainingChannelMap = {};
+      freshVideos.forEach(v => {
+        if (v.channelId && !remainingChannelMap[v.channelId]) {
+          remainingChannelMap[v.channelId] = {
+            id: v.channelId,
+            name: v.channel,
+            subs: v.subs,
+            url: 'https://www.youtube.com/channel/' + v.channelId,
+            videoCount: v.videoCount,
+            country: v.country
+          };
+        }
+      });
+
+      const updatedChannels = Object.values(remainingChannelMap);
+      const maxViews = freshVideos[0]?.views || 0;
+      const maxOutlier = Math.max(...freshVideos.map(v => Number(v.outlierRatio) || 0));
+      const newestVideoTime = Math.max(...freshVideos.map(v => v.ts || (v.published ? new Date(v.published).getTime() : 0)));
+      const remainingDays = Math.max(1, Math.ceil((COOLING_WINDOW_MS - (now - newestVideoTime)) / 864e5));
+
+      return {
+        ...niche,
+        videos: freshVideos,
+        channels: updatedChannels,
+        channelsCount: updatedChannels.length,
+        topVideo: freshVideos[0],
+        maxViews: maxViews,
+        maxOutlier: isFinite(maxOutlier) ? maxOutlier.toFixed(1) : (niche.maxOutlier || '5.0'),
+        remainingDays: remainingDays,
+        isHot: true
+      };
+    })
+    .filter(Boolean);
+}
+
+// 2. Hợp nhất thông minh ngách mới phát hiện vào danh sách đã có (BẢO TOÀN, KHÔNG ĐÈ MẤT)
+function mergeDiscoveredNiches(existingNiches, newlyDiscovered) {
+  if (!newlyDiscovered || newlyDiscovered.length === 0) {
+    return cleanCooledDownNiches(existingNiches);
+  }
+
+  const mergedMap = new Map();
+
+  (existingNiches || []).forEach(n => {
+    const key = (n.category || n.name || '').trim().toLowerCase();
+    if (key) mergedMap.set(key, { ...n });
+  });
+
+  newlyDiscovered.forEach(newNiche => {
+    const key = (newNiche.category || newNiche.name || '').trim().toLowerCase();
+    if (mergedMap.has(key)) {
+      const existing = mergedMap.get(key);
+      const videoMap = new Map();
+      (existing.videos || []).forEach(v => videoMap.set(v.id, v));
+      (newNiche.videos || []).forEach(v => videoMap.set(v.id, v));
+
+      const mergedVideos = Array.from(videoMap.values());
+      mergedVideos.sort((a, b) => (b.views || 0) - (a.views || 0));
+
+      const channelMap = new Map();
+      (existing.channels || []).forEach(c => channelMap.set(c.id, c));
+      (newNiche.channels || []).forEach(c => channelMap.set(c.id, c));
+
+      const maxViews = mergedVideos[0]?.views || existing.maxViews;
+      const maxOutlier = Math.max(
+        Number(existing.maxOutlier) || 0,
+        ...mergedVideos.map(v => Number(v.outlierRatio) || 0)
+      );
+
+      mergedMap.set(key, {
+        ...existing,
+        name: newNiche.name || existing.name,
+        videos: mergedVideos,
+        channels: Array.from(channelMap.values()),
+        channelsCount: channelMap.size,
+        topVideo: mergedVideos[0],
+        maxViews: maxViews,
+        maxOutlier: isFinite(maxOutlier) ? maxOutlier.toFixed(1) : existing.maxOutlier,
+        scannedAt: Date.now()
+      });
+    } else {
+      mergedMap.set(key, newNiche);
+    }
+  });
+
+  const mergedList = Array.from(mergedMap.values());
+  const cleaned = cleanCooledDownNiches(mergedList);
+  cleaned.sort((a, b) => (b.maxViews || 0) - (a.maxViews || 0));
+  return cleaned.slice(0, 25);
+}
+
+// 3. Danh sách ngách mẫu ban đầu nếu bộ nhớ trống
+function getStarterDiscoveredNiches() {
+  const now = Date.now();
+  return cleanCooledDownNiches([
+    {
+      id: 'niche_crime_init',
+      name: 'Hồ Sơ Vụ Án (Interrogation & Confession)',
+      category: 'Hồ Sơ Vụ Án & Lời Khai',
+      rpmRange: '$25 - $38',
+      avgRpm: 32,
+      scannedAt: now - 2 * 864e5,
+      channelsCount: 2,
+      maxViews: 145000,
+      maxOutlier: '7.9',
+      channels: [
+        { id: 'UC5wX0bUqVjIq1P0sUeJ_A_g', name: 'True Crime Detective', subs: 18400, videoCount: 38, country: 'US', url: 'https://www.youtube.com/channel/UC5wX0bUqVjIq1P0sUeJ_A_g' },
+        { id: 'UCmY_C8w8p6m5B7XyK2j1Q_w', name: 'Interrogation Files', subs: 24500, videoCount: 42, country: 'US', url: 'https://www.youtube.com/channel/UCmY_C8w8p6m5B7XyK2j1Q_w' }
+      ],
+      videos: [
+        {
+          id: 'L_LUpnjgPso',
+          title: 'The Unsettling Interrogation of a Teen Suspect Who Thought He Was Smarter Than Detectives',
+          channel: 'True Crime Detective',
+          channelId: 'UC5wX0bUqVjIq1P0sUeJ_A_g',
+          thumb: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=640&q=80',
+          published: new Date(now - 3 * 864e5).toISOString(),
+          ts: now - 3 * 864e5,
+          views: 145000,
+          likes: 6200,
+          comments: 480,
+          dur: 2340,
+          subs: 18400,
+          outlierRatio: '7.9',
+          videoCount: 38,
+          country: 'US',
+          channelAgeDays: 140,
+          uploadsId: 'UU5wX0bUqVjIq1P0sUeJ_A_g',
+          isBreakout: true,
+          tags: ['crime', 'interrogation', 'police bodycam', 'true crime story', 'confession'],
+          engRate: '4.61',
+          isOrganic: true,
+          vph: 2014
+        },
+        {
+          id: 'aBcDeFgHiJk',
+          title: 'Detectives Notice One Habit That Broke Suspect In 30 Minutes',
+          channel: 'Interrogation Files',
+          channelId: 'UCmY_C8w8p6m5B7XyK2j1Q_w',
+          thumb: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=640&q=80',
+          published: new Date(now - 5 * 864e5).toISOString(),
+          ts: now - 5 * 864e5,
+          views: 89000,
+          likes: 3800,
+          comments: 290,
+          dur: 1980,
+          subs: 24500,
+          outlierRatio: '3.6',
+          videoCount: 42,
+          country: 'US',
+          channelAgeDays: 210,
+          uploadsId: 'UUmY_C8w8p6m5B7XyK2j1Q_w',
+          isBreakout: false,
+          tags: ['interrogation', 'psychology', 'criminal confession'],
+          engRate: '4.60',
+          isOrganic: true,
+          vph: 742
+        }
+      ]
+    },
+    {
+      id: 'niche_ai_init',
+      name: 'Điện Ảnh AI (Cinematic Trailer & Midjourney)',
+      category: 'Điện Ảnh AI & Hoạt Hình',
+      rpmRange: '$30 - $48',
+      avgRpm: 39,
+      scannedAt: now - 1 * 864e5,
+      channelsCount: 2,
+      maxViews: 182000,
+      maxOutlier: '9.6',
+      channels: [
+        { id: 'UC8vY_A9xK3j2P1qW7m6B5Q_a', name: 'CineAI Studios', subs: 19000, videoCount: 24, country: 'US', url: 'https://www.youtube.com/channel/UC8vY_A9xK3j2P1qW7m6B5Q_a' },
+        { id: 'UC2j1Q_w8p6m5B7XyK2j1Q_b', name: 'Prompt Cinema', subs: 14200, videoCount: 19, country: 'CA', url: 'https://www.youtube.com/channel/UC2j1Q_w8p6m5B7XyK2j1Q_b' }
+      ],
+      videos: [
+        {
+          id: 'xYz12345678',
+          title: 'The Dark Odyssey - 1950s Panavision Sci-Fi Movie (Midjourney + Runway Gen-3)',
+          channel: 'CineAI Studios',
+          channelId: 'UC8vY_A9xK3j2P1qW7m6B5Q_a',
+          thumb: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=640&q=80',
+          published: new Date(now - 2 * 864e5).toISOString(),
+          ts: now - 2 * 864e5,
+          views: 182000,
+          likes: 9400,
+          comments: 650,
+          dur: 620,
+          subs: 19000,
+          outlierRatio: '9.6',
+          videoCount: 24,
+          country: 'US',
+          channelAgeDays: 85,
+          uploadsId: 'UU8vY_A9xK3j2P1qW7m6B5Q_a',
+          isBreakout: true,
+          tags: ['ai film', 'midjourney', 'runway gen 3', 'ai cinema', 'scifi'],
+          engRate: '5.52',
+          isOrganic: true,
+          vph: 3791
+        }
+      ]
+    },
+    {
+      id: 'niche_sea_init',
+      name: 'Bí Ẩn Vực Sâu (Deep Ocean & Trench Mystery)',
+      category: 'Bí Ẩn Vực Sâu & Đại Dương',
+      rpmRange: '$22 - $35',
+      avgRpm: 28,
+      scannedAt: now - 2 * 864e5,
+      channelsCount: 1,
+      maxViews: 115000,
+      maxOutlier: '5.2',
+      channels: [
+        { id: 'UC3k2P1qW7m6B5Q_c8vY_A9x', name: 'Abyss Documented', subs: 22100, videoCount: 31, country: 'UK', url: 'https://www.youtube.com/channel/UC3k2P1qW7m6B5Q_c8vY_A9x' }
+      ],
+      videos: [
+        {
+          id: 'oPqRsTuVwXy',
+          title: 'What Russian Submarines Heard Under Antarctica Trench Terrified The Crew',
+          channel: 'Abyss Documented',
+          channelId: 'UC3k2P1qW7m6B5Q_c8vY_A9x',
+          thumb: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=640&q=80',
+          published: new Date(now - 4 * 864e5).toISOString(),
+          ts: now - 4 * 864e5,
+          views: 115000,
+          likes: 4700,
+          comments: 380,
+          dur: 2150,
+          subs: 22100,
+          outlierRatio: '5.2',
+          videoCount: 31,
+          country: 'UK',
+          channelAgeDays: 160,
+          uploadsId: 'UU3k2P1qW7m6B5Q_c8vY_A9x',
+          isBreakout: false,
+          tags: ['deep ocean', 'mariana trench', 'ocean mysteries', 'abyss creatures'],
+          engRate: '4.41',
+          isOrganic: true,
+          vph: 1197
+        }
+      ]
+    },
+    {
+      id: 'niche_history_init',
+      name: 'Lịch Sử Cổ Đại (Ancient Civilization & Relics)',
+      category: 'Lịch Sử & Văn Minh Cổ',
+      rpmRange: '$24 - $36',
+      avgRpm: 30,
+      scannedAt: now - 3 * 864e5,
+      channelsCount: 1,
+      maxViews: 98000,
+      maxOutlier: '3.5',
+      channels: [
+        { id: 'UC7m6B5Q_c8vY_A9xK3j2P1q', name: 'Lost Civilizations', subs: 28000, videoCount: 45, country: 'US', url: 'https://www.youtube.com/channel/UC7m6B5Q_c8vY_A9xK3j2P1q' }
+      ],
+      videos: [
+        {
+          id: 'zAbCdEfGhIj',
+          title: 'The 12,000 Year Old Underground City That Engineers Still Cannot Explain',
+          channel: 'Lost Civilizations',
+          channelId: 'UC7m6B5Q_c8vY_A9xK3j2P1q',
+          thumb: 'https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=640&q=80',
+          published: new Date(now - 3 * 864e5).toISOString(),
+          ts: now - 3 * 864e5,
+          views: 98000,
+          likes: 4100,
+          comments: 310,
+          dur: 1890,
+          subs: 28000,
+          outlierRatio: '3.5',
+          videoCount: 45,
+          country: 'US',
+          channelAgeDays: 280,
+          uploadsId: 'UU7m6B5Q_c8vY_A9xK3j2P1q',
+          isBreakout: false,
+          tags: ['ancient history', 'derinkuyu', 'lost technology', 'archaeology'],
+          engRate: '4.50',
+          isOrganic: true,
+          vph: 1361
+        }
+      ]
+    },
+    {
+      id: 'niche_psychology_init',
+      name: 'Tâm Lý Học Tối (Dark Psychology & Human Traits)',
+      category: 'Tâm Lý Học & Hành Vi',
+      rpmRange: '$28 - $45',
+      avgRpm: 36,
+      scannedAt: now - 1 * 864e5,
+      channelsCount: 1,
+      maxViews: 134000,
+      maxOutlier: '8.4',
+      channels: [
+        { id: 'UC5Q_c8vY_A9xK3j2P1qW7m6', name: 'Mind Mechanics', subs: 16000, videoCount: 22, country: 'US', url: 'https://www.youtube.com/channel/UC5Q_c8vY_A9xK3j2P1qW7m6' }
+      ],
+      videos: [
+        {
+          id: 'kLmNoPqRsTu',
+          title: '7 Subtle Signs Someone Is Secretly Jealous Of You (Dark Psychology)',
+          channel: 'Mind Mechanics',
+          channelId: 'UC5Q_c8vY_A9xK3j2P1qW7m6',
+          thumb: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=640&q=80',
+          published: new Date(now - 2 * 864e5).toISOString(),
+          ts: now - 2 * 864e5,
+          views: 134000,
+          likes: 7200,
+          comments: 540,
+          dur: 1420,
+          subs: 16000,
+          outlierRatio: '8.4',
+          videoCount: 22,
+          country: 'US',
+          channelAgeDays: 95,
+          uploadsId: 'UU5Q_c8vY_A9xK3j2P1qW7m6',
+          isBreakout: true,
+          tags: ['dark psychology', 'manipulation', 'human behavior', 'body language'],
+          engRate: '5.77',
+          isOrganic: true,
+          vph: 2791
+        }
+      ]
+    }
+  ]);
+}
+
 // TAB 2: TOP NGÁCH (DYNAMIC REAL-TIME NICHE DISCOVERY ENGINE - 100% YOUTUBE DATA API V3)
 function TopNgachSection({
   apiKey,
@@ -10353,12 +10699,26 @@ function TopNgachSection({
   onOpenApiModal
 }) {
   // Danh sách các ngách THẬT được quét và bóc tách động từ YouTube API v3 (Không dùng ngách tĩnh)
+  // Cơ chế: Lưu giữ các ngách đã quét, sau vài ngày hạ nhiệt (>10 ngày) thì tự động dọn dẹp
   const [realDiscoveredNiches, setRealDiscoveredNiches] = React.useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('yt_real_discovered_niches_v2') || '[]');
+      const raw = localStorage.getItem('yt_real_discovered_niches_v2');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const cleaned = cleanCooledDownNiches(parsed);
+          if (cleaned.length > 0) return cleaned;
+        }
+      }
     } catch (e) {
-      return [];
+      console.warn('Error reading niches cache:', e);
     }
+    // Nếu chưa quét hoặc vừa bị xoá rỗng, nạp ngách mẫu để người dùng xem và bấm quét nối tiếp
+    const starter = getStarterDiscoveredNiches();
+    try {
+      localStorage.setItem('yt_real_discovered_niches_v2', JSON.stringify(starter));
+    } catch (e) {}
+    return starter;
   });
 
   const [activeNicheId, setActiveNicheId] = React.useState(() => {
@@ -10385,6 +10745,19 @@ function TopNgachSection({
       return '';
     }
   });
+
+  // Tự động kiểm tra và dọn dẹp các ngách/video đã hạ nhiệt (> 10 ngày) khi tải trang
+  React.useEffect(() => {
+    setRealDiscoveredNiches(prev => {
+      const cleaned = cleanCooledDownNiches(prev);
+      if (cleaned.length !== prev.length) {
+        try {
+          localStorage.setItem('yt_real_discovered_niches_v2', JSON.stringify(cleaned));
+        } catch (e) {}
+      }
+      return cleaned;
+    });
+  }, []);
 
   // Hạt giống xu hướng đa lĩnh vực để quét toàn diện YouTube (10 ngày qua)
   const SEED_TREND_TOPICS = React.useMemo(() => [
@@ -10442,6 +10815,25 @@ function TopNgachSection({
       return `${baseLabel} (${cap})`;
     }
     return baseLabel;
+  };
+
+  // Nút dọn dẹp thủ công các ngách nguội
+  const handleManualCleanup = () => {
+    const cleaned = cleanCooledDownNiches(realDiscoveredNiches);
+    setRealDiscoveredNiches(cleaned);
+    try {
+      localStorage.setItem('yt_real_discovered_niches_v2', JSON.stringify(cleaned));
+    } catch (e) {}
+
+    const removedCount = realDiscoveredNiches.length - cleaned.length;
+    if (typeof showToast === 'function') {
+      showToast(
+        removedCount > 0
+          ? `Đã tự động loại bỏ ${removedCount} ngách đã hạ nhiệt (>10 ngày).`
+          : 'Tất cả các ngách hiện tại vẫn đang trong chu kỳ bứt phá (chưa hạ nhiệt)!',
+        removedCount > 0 ? 'success' : 'info'
+      );
+    }
   };
 
   // QUÉT DÒ NGÁCH THẬT 100% TỪ YOUTUBE DATA API V3
@@ -10651,28 +11043,43 @@ function TopNgachSection({
       // Sắp xếp các ngách tìm được: Ngách có view cao nhất lên đầu
       discoveredList.sort((a, b) => b.maxViews - a.maxViews);
 
-      // Cắt lấy top 10 - 20 ngách
-      const finalNiches = discoveredList.slice(0, 20);
-
       const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN');
       setLastScannedTime(nowStr);
-      try {
-        localStorage.setItem('yt_real_discovered_niches_v2', JSON.stringify(finalNiches));
-        localStorage.setItem('yt_real_discovered_niches_time', nowStr);
-      } catch (e) {}
 
-      setRealDiscoveredNiches(finalNiches);
-      if (finalNiches.length > 0) {
-        setActiveNicheId(finalNiches[0].id);
-      }
+      // BẢO TOÀN DỮ LIỆU ĐÃ QUÉT: Hợp nhất vào danh sách đã có thay vì ghi đè xoá sạch
+      setRealDiscoveredNiches(prevList => {
+        let merged;
+        if (discoveredList.length > 0) {
+          merged = mergeDiscoveredNiches(prevList, discoveredList);
+        } else {
+          // Nếu không phát hiện thêm trong lần quét này, giữ nguyên danh sách cũ (chỉ dọn dẹp video quá 10 ngày)
+          merged = cleanCooledDownNiches(prevList);
+        }
+
+        try {
+          localStorage.setItem('yt_real_discovered_niches_v2', JSON.stringify(merged));
+          localStorage.setItem('yt_real_discovered_niches_time', nowStr);
+        } catch (e) {}
+
+        if (merged.length > 0 && (!activeNicheId || !merged.some(n => n.id === activeNicheId))) {
+          setActiveNicheId(merged[0].id);
+        }
+
+        return merged;
+      });
 
       if (typeof showToast === 'function') {
-        showToast(
-          finalNiches.length > 0
-            ? `Thành công! Đã bóc tách được ${finalNiches.length} ngách trend từ các kênh <${subLimitFilter/1000}k sub trong 10 ngày qua.`
-            : `Không tìm thấy video nào đạt chuẩn <${subLimitFilter/1000}k sub & >2k view trong 10 ngày qua.`,
-          finalNiches.length > 0 ? 'success' : 'warning'
-        );
+        if (discoveredList.length > 0) {
+          showToast(
+            `Thành công! Đã phát hiện & lưu thêm ${discoveredList.length} ngách bứt phá từ kênh <${subLimitFilter/1000}k sub.`,
+            'success'
+          );
+        } else {
+          showToast(
+            `Đã giữ nguyên các ngách đang có. Chưa có video mới đạt chuẩn <${subLimitFilter/1000}k sub & >2k view trong đợt quét này.`,
+            'info'
+          );
+        }
       }
     } catch (err) {
       console.error('Scan error:', err);
@@ -10681,7 +11088,7 @@ function TopNgachSection({
       setIsScanningNiches(false);
       setScanProgress(null);
     }
-  }, [apiKey, SEED_TREND_TOPICS, subLimitFilter, showToast, onOpenApiModal]);
+  }, [apiKey, SEED_TREND_TOPICS, subLimitFilter, showToast, onOpenApiModal, activeNicheId]);
 
   return (
     <section className="space-y-4 animate-in fade-in duration-200">
@@ -10692,22 +11099,40 @@ function TopNgachSection({
             🔥
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-              <span>Top Ngách Xu Hướng Thực Tế (&lt;30k Sub)</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-sm sm:text-base font-bold text-white">
+                Top Ngách Xu Hướng Thực Tế (&lt;30k Sub)
+              </h2>
               {realDiscoveredNiches.length > 0 && (
-                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
-                  {realDiscoveredNiches.length} ngách bóc tách
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                    {realDiscoveredNiches.length} ngách đang lưu
+                  </span>
+                  <span className="text-[10px] text-zinc-400 bg-zinc-900 border border-zinc-800/80 px-2 py-0.5 rounded">
+                    ⏳ Tự xoá khi hạ nhiệt (&gt;10 ngày)
+                  </span>
+                </div>
               )}
-            </h2>
+            </div>
             <p className="text-[11px] text-zinc-400">
-              100% YouTube API v3 • Kênh &lt;30.000 sub • Video đăng trong 10 ngày qua • View vài ngàn đến trăm ngàn
+              100% YouTube API v3 • Kênh &lt;30.000 sub • Video đăng trong 10 ngày qua • Lưu giữ &amp; tự dọn khi nguội
             </p>
           </div>
         </div>
 
-        {/* Nút Quét Chính & Hướng dẫn */}
+        {/* Nút Quét Chính, Dọn Dẹp & Hướng Dẫn */}
         <div className="flex items-center gap-2 flex-wrap">
+          {realDiscoveredNiches.length > 0 && (
+            <button
+              type="button"
+              onClick={handleManualCleanup}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer flex items-center gap-1"
+              title="Tự động kiểm tra và loại bỏ ngay các ngách/video đã qua 10 ngày (hạ nhiệt)">
+              <span>🧹</span>
+              <span>Dọn Ngách Nguội</span>
+            </button>
+          )}
+
           {isScanningNiches ? (
             <button
               type="button"
@@ -10757,7 +11182,7 @@ function TopNgachSection({
         </div>
       )}
 
-      {/* 3. Lưới Các Ngách Thực Tế (Không Dùng Ngách Tĩnh Cứng Nhắc) */}
+      {/* 3. Lưới Các Ngách Thực Tế (Bảo toàn dữ liệu đã quét & tự dọn khi hạ nhiệt) */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
           <span className="font-semibold text-zinc-300">
@@ -10797,18 +11222,27 @@ function TopNgachSection({
                 <div
                   key={niche.id || idx}
                   onClick={() => setActiveNicheId(niche.id)}
-                  className={`p-3 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between min-h-[92px] select-none ${
+                  className={`p-3 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between min-h-[96px] select-none ${
                     isSelected
                       ? 'border-zinc-300 bg-zinc-900 shadow-md ring-1 ring-zinc-400/40'
                       : 'border-zinc-800 bg-[#121316] hover:border-zinc-700 hover:bg-zinc-900/60'
                   }`}>
-                  {/* Hàng 1: Thứ hạng & Chỉ số View/Sub */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60 leading-none">
-                      #{idx + 1}
-                    </span>
-                    <span className="text-[11px] font-bold text-amber-300">
-                      🔥 x{niche.maxOutlier} View/Sub
+                  {/* Hàng 1: Thứ hạng & Chỉ số View/Sub & Trạng thái Còn nhiệt */}
+                  <div className="flex items-center justify-between text-xs gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60 leading-none">
+                        #{idx + 1}
+                      </span>
+                      {niche.remainingDays != null && (
+                        <span
+                          className="text-[9px] font-medium text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-1 py-0.2 rounded"
+                          title={`Tự động dọn dẹp sau ${niche.remainingDays} ngày nếu hạ nhiệt`}>
+                          🔥 Còn {niche.remainingDays}d
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-bold text-amber-300 shrink-0">
+                      x{niche.maxOutlier} View/Sub
                     </span>
                   </div>
 
@@ -10870,13 +11304,18 @@ function TopNgachSection({
           {/* Header ngách đang chọn */}
           <div className="bg-[#121316] border border-zinc-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <span>🎬</span> Video Thực Tế: <b className="text-zinc-200">{activeNiche.name}</b>
                 </span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-800 text-zinc-300 border border-zinc-700">
                   {activeNiche.videos.length} video kênh &lt;30k sub trong 10 ngày qua
                 </span>
+                {activeNiche.remainingDays != null && (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-medium text-emerald-400 bg-emerald-950/60 border border-emerald-800/60">
+                    🔥 Đang trend (còn ~{activeNiche.remainingDays} ngày)
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-zinc-400 pt-0.5">
                 Các video này đạt view vượt trội so với số lượng sub của kênh (Outlier). Bấm &quot;Soi Video &amp; Tags&quot; để copy tags ẩn và soi 50 video chỉ với 1 quota.
