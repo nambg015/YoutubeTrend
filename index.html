@@ -10841,83 +10841,77 @@ function TopNgachSection({
   return (
     <section className="space-y-4 animate-in fade-in duration-200">
       {/* 1. Header Toolbar Tối Giản */}
-      <div className="bg-[#121316] border border-zinc-800 rounded-xl p-3 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-200 shrink-0">
-            🔥
-          </div>
+      <div className="bg-[#121316] border border-zinc-800 rounded-xl px-4 py-3 sm:py-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-sm">
+        {/* Bên trái: Tiêu đề & Thông tin ngắn gọn */}
+        <div className="flex items-center gap-3">
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-sm sm:text-base font-bold text-white">
-                Top Ngách Xu Hướng Thực Tế (&lt;30k Sub)
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                Top Ngách Xu Hướng
               </h2>
               {realDiscoveredNiches.length > 0 && (
-                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
-                  {realDiscoveredNiches.length} ngách bóc tách
+                <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700">
+                  {realDiscoveredNiches.length} ngách
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-zinc-400">
-              100% YouTube API v3 • Kênh &lt;30.000 sub • Video đăng trong 10 ngày qua • View vài ngàn đến trăm ngàn
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Kênh dưới 30.000 sub • Video bứt phá trong 10 ngày qua
             </p>
           </div>
         </div>
 
-        {/* Nút Quét Chính, Xoá Cache, Bộ Lọc Khu Vực & Hướng Dẫn */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Bộ lọc Khu vực (Mặc định: Toàn Cầu quét không giới hạn) */}
+        {/* Bên phải: Cụm điều khiển 1 hàng tinh gọn, không rớt dòng */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* Bộ lọc Khu vực */}
           <select
             value={selectedRegion}
             onChange={e => setSelectedRegion(e.target.value)}
             disabled={isScanningNiches}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 hover:border-zinc-500 focus:outline-none cursor-pointer"
-            title="Khu vực tìm kiếm (Mặc định: Toàn Cầu quét toàn bộ các kênh quốc tế)">
-            <option value="">🌐 Toàn Cầu (Mọi quốc gia)</option>
-            <option value="US">🇺🇸 Hoa Kỳ (US)</option>
-            <option value="IN">🇮🇳 Ấn Độ (IN)</option>
-            <option value="VN">🇻🇳 Việt Nam (VN)</option>
-            <option value="GB">🇬🇧 Vương Quốc Anh (GB)</option>
-            <option value="CA">🇨🇦 Canada (CA)</option>
-            <option value="AU">🇦🇺 Úc (AU)</option>
+            className="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium bg-zinc-900 text-zinc-200 border border-zinc-800 hover:border-zinc-700 focus:outline-none cursor-pointer">
+            <option value="">Toàn Cầu</option>
+            <option value="US">Hoa Kỳ (US)</option>
+            <option value="IN">Ấn Độ (IN)</option>
+            <option value="VN">Việt Nam (VN)</option>
+            <option value="GB">Anh (GB)</option>
+            <option value="CA">Canada (CA)</option>
+            <option value="AU">Úc (AU)</option>
           </select>
 
           {realDiscoveredNiches.length > 0 && (
             <button
               type="button"
               onClick={handleClearCache}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-rose-950/60 text-zinc-300 hover:text-rose-200 border border-zinc-700 hover:border-rose-800/80 transition cursor-pointer flex items-center gap-1"
-              title="Xoá sạch dữ liệu cũ để quét mới hoàn toàn">
-              <span>🗑️</span>
-              <span>Xóa Cache</span>
-            </button>
-          )}
-
-          {isScanningNiches ? (
-            <button
-              type="button"
-              onClick={() => { cancelScanRef.current = true; }}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-800 transition cursor-pointer flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
-              <span>Dừng ({scanProgress?.current}/{scanProgress?.total} - {scanProgress?.topic})</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => runDeepNicheDiscovery()}
-              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 hover:bg-white text-zinc-950 transition cursor-pointer shadow flex items-center gap-1.5">
-              <span>⚡</span>
-              <span>Quét &amp; Bóc Tách Ngách Trend Mới</span>
+              className="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shrink-0"
+              title="Xóa cache để quét lại ngách mới">
+              Xóa Cache
             </button>
           )}
 
           <button
             type="button"
             onClick={() => setShowApiGuideModal(true)}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer flex items-center gap-1"
-            title="Xem hướng dẫn tính năng API">
-            <span>💡</span>
-            <span>Hướng Dẫn</span>
+            className="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shrink-0"
+            title="Xem hướng dẫn tính năng">
+            Hướng Dẫn
           </button>
+
+          {isScanningNiches ? (
+            <button
+              type="button"
+              onClick={() => { cancelScanRef.current = true; }}
+              className="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-rose-950 text-rose-200 border border-rose-800 transition cursor-pointer flex items-center gap-2 shrink-0">
+              <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
+              <span>Dừng ({scanProgress?.current}/{scanProgress?.total})</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => runDeepNicheDiscovery()}
+              className="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition cursor-pointer shadow-sm shrink-0 whitespace-nowrap">
+              Quét Ngách Mới
+            </button>
+          )}
         </div>
       </div>
 
@@ -10946,7 +10940,7 @@ function TopNgachSection({
         <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
           <span className="font-semibold text-zinc-300">
             {realDiscoveredNiches.length > 0
-              ? `Danh Sách ${realDiscoveredNiches.length} Ngách Trend Hiện Tại (Bấm để xem video thật)`
+              ? `Các Ngách Trend Bứt Phá Hiện Tại (${realDiscoveredNiches.length})`
               : 'Chưa Có Dữ Liệu Ngách'}
           </span>
           {lastScannedTime && (
