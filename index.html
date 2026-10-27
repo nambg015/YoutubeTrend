@@ -6944,7 +6944,8 @@ function TopNgachSection({
   onToggleAutoScan,
   onApproveTrend,
   onDismissTrend,
-  onCopyRemakePrompt
+  onCopyRemakePrompt,
+  onOpenPendingTrendsModal
 }) {
   const STORAGE_KEY = 'yt_real_discovered_niches_v6';
   const TIME_KEY = 'yt_real_discovered_niches_time_v6';
@@ -7056,7 +7057,27 @@ function TopNgachSection({
     }
   };
 
-  const [videoFormatFilter, setVideoFormatFilter] = React.useState('all'); // 'all' | 'long' | 'short' | 'live'
+  const [videoFormatFilter, setVideoFormatFilter] = React.useState('all');
+
+  // Lắng nghe cập nhật khi trend mới được duyệt từ modal
+  React.useEffect(() => {
+    const handleUpdate = (e) => {
+      if (e && e.detail && Array.isArray(e.detail)) {
+        setRealDiscoveredNiches(e.detail);
+      } else {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+          if (Array.isArray(saved)) setRealDiscoveredNiches(saved);
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('topngach_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('topngach_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []); // 'all' | 'long' | 'short' | 'live'
   const [lastScannedTime, setLastScannedTime] = React.useState(() => {
     try {
       return localStorage.getItem(TIME_KEY) || '';
@@ -7514,16 +7535,17 @@ function TopNgachSection({
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <button
             type="button"
-            onClick={() => setIsRadarExpanded(!isRadarExpanded)}
-            className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium border transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
-              isRadarExpanded
-                ? 'bg-zinc-800 text-white border-zinc-700'
+            onClick={() => onOpenPendingTrendsModal ? onOpenPendingTrendsModal() : null}
+            className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold border transition cursor-pointer shrink-0 flex items-center gap-2 ${
+              autoUpdateData?.pendingTrends?.length > 0
+                ? 'bg-purple-600/20 text-purple-200 border-purple-500/40 hover:bg-purple-600/30 shadow-sm'
                 : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:text-white'
             }`}
-            title="Bật/Tắt hiển thị Radar Tự Động Săn Trend">
-            <span>Radar Tự Động</span>
+            title="Mở cửa sổ đề xuất trend mới hôm nay">
+            <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
+            <span>Đề Xuất Trend Mới</span>
             {autoUpdateData?.pendingTrends?.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-purple-500 text-white">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-purple-500 text-white shadow">
                 {autoUpdateData.pendingTrends.length}
               </span>
             )}
@@ -7579,203 +7601,6 @@ function TopNgachSection({
           )}
         </div>
       </div>
-
-      {/* 1.5. AUTOMATED TREND RADAR (ĐỒNG BỘ VÀO TOP NGÁCH) */}
-      {isRadarExpanded && autoUpdateData && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          {/* Header & Status Ribbon */}
-          <div className="bg-[#121316] border border-zinc-800 rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
-                    Automated Trend Radar
-                  </span>
-                  <span className="text-xs text-zinc-400">Tự động quét & đề xuất</span>
-                </div>
-                <h3 className="font-extrabold text-base sm:text-lg text-white mt-1">
-                  Cập Nhật Tự Động Xu Hướng Mỗi Ngày
-                </h3>
-                <p className="text-xs text-zinc-400 mt-0.5 max-w-3xl leading-relaxed">
-                  Hệ thống tự động tìm các xu hướng bứt phá mới mỗi ngày từ các kênh nước ngoài ít sub và view đều để đưa vào kế hoạch khai thác.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto shrink-0">
-                <button
-                  type="button"
-                  onClick={onRunDailyScan}
-                  disabled={autoScanning}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition flex items-center gap-1.5 disabled:opacity-50 shadow-sm cursor-pointer">
-                  <span>{autoScanning ? 'Đang quét...' : 'Chạy Quét Trend Hôm Nay'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onToggleAutoScan}
-                  className={`px-3 py-2 rounded-lg text-xs font-medium border transition cursor-pointer ${
-                    autoUpdateData.enabled 
-                      ? 'bg-zinc-800 text-zinc-100 border-zinc-700 hover:bg-zinc-700' 
-                      : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
-                  }`}>
-                  {autoUpdateData.enabled ? '✓ Tự động: BẬT' : 'Tự động: TẮT'}
-                </button>
-              </div>
-            </div>
-
-            {/* Status Ribbon */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              <div className="bg-zinc-900 p-2.5 rounded-xl border border-zinc-800">
-                <span className="text-zinc-500 text-[11px] block">Lần quét gần nhất</span>
-                <b className="text-zinc-200 mt-0.5 block">{autoUpdateData.lastScanDate || 'Hôm nay'}</b>
-              </div>
-              <div className="bg-zinc-900 p-2.5 rounded-xl border border-zinc-800">
-                <span className="text-zinc-500 text-[11px] block">Trend chờ bạn duyệt</span>
-                <b className="text-purple-400 mt-0.5 block">{autoUpdateData.pendingTrends?.length || 0} xu hướng mới</b>
-              </div>
-              <div className="bg-zinc-900 p-2.5 rounded-xl border border-zinc-800">
-                <span className="text-zinc-500 text-[11px] block">Đã duyệt cập nhật</span>
-                <b className="text-emerald-400 mt-0.5 block">{autoUpdateData.approvedTrends?.length || 0} chủ đề</b>
-              </div>
-              <div className="bg-zinc-900 p-2.5 rounded-xl border border-zinc-800">
-                <span className="text-zinc-500 text-[11px] block">Thị trường dò tìm</span>
-                <b className="text-amber-400 mt-0.5 block">Mỹ (US High-RPM)</b>
-              </div>
-            </div>
-          </div>
-
-          {/* Pending Trends Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-extrabold text-sm sm:text-base text-white flex items-center gap-2">
-                  <span>Đề Xuất Trend Mới Hôm Nay</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                    {autoUpdateData.pendingTrends?.length || 0} trend chờ quyết định
-                  </span>
-                </h4>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Hệ thống tự động phát hiện các video bùng nổ hôm nay. Hãy chọn có muốn cập nhật thêm các trend này hay không:
-                </p>
-              </div>
-            </div>
-
-            {(!autoUpdateData.pendingTrends || autoUpdateData.pendingTrends.length === 0) ? (
-              <div className="border border-dashed border-zinc-800 rounded-xl p-6 text-center bg-zinc-900/40 space-y-2">
-                <h5 className="font-bold text-xs sm:text-sm text-white">Bạn đã xử lý hết các đề xuất trend hôm nay!</h5>
-                <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                  Hệ thống sẽ tiếp tục tự động dò tìm các video bứt phá mới trong ngày mai, hoặc bạn có thể bấm "Chạy Quét Trend Hôm Nay" để quét bổ sung tức thì.
-                </p>
-                <button
-                  type="button"
-                  onClick={onRunDailyScan}
-                  disabled={autoScanning}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition inline-flex items-center gap-1.5 mt-2 cursor-pointer">
-                  Quét tìm trend mới ngay
-                </button>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {autoUpdateData.pendingTrends.map(trend => {
-                  const ytUrl = trend.videoId && !trend.videoId.startsWith('sample') 
-                    ? ('https://www.youtube.com/watch?v=' + trend.videoId)
-                    : ('https://www.youtube.com/results?search_query=' + encodeURIComponent(trend.title));
-                  return (
-                    <article key={trend.id} className="bg-[#121316] border-2 border-purple-500/30 hover:border-purple-500/60 rounded-2xl p-4 flex flex-col justify-between shadow-xl space-y-3 transition group">
-                      {/* Top Discovered Timestamp */}
-                      <div className="flex items-center justify-between text-[11px] border-b border-zinc-800 pb-2">
-                        <span className="font-bold text-purple-300 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
-                          Trend mới phát hiện: {trend.discoveredAt}
-                        </span>
-                        <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                          RPM {trend.rpm || '$25 - $48'}
-                        </span>
-                      </div>
-
-                      {/* Video Content Snapshot */}
-                      <div className="flex gap-3 items-start">
-                        <div className="relative w-32 sm:w-40 aspect-video rounded-xl overflow-hidden bg-zinc-900 flex-shrink-0">
-                          <img src={trend.thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
-                          <div className="absolute bottom-1 right-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/85 text-white">
-                            {fmtDur(trend.dur)}
-                          </div>
-                        </div>
-
-                        <div className="overflow-hidden space-y-1 flex-1">
-                          <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">{trend.nicheName}</div>
-                          <h4 className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-snug">
-                            {trend.title}
-                          </h4>
-                          <div className="text-[11px] text-zinc-400 flex flex-wrap gap-2 pt-0.5">
-                            <span>Kênh: <b>{trend.channel}</b></span>
-                            <span>·</span>
-                            <span className="text-emerald-300">{trend.channelSubs ? fmt(trend.channelSubs) + ' subs' : 'Kênh nhỏ'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Metrics Bar */}
-                      <div className="grid grid-cols-2 gap-2 text-[11px] bg-zinc-900 p-2 rounded-xl border border-zinc-800">
-                        <div>
-                          <span className="text-zinc-500">Lượt xem:</span> <b className="text-white">{fmt(trend.views)}</b>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-zinc-500">Tốc độ:</span> <b className="text-emerald-400">{trend.growthRate}</b>
-                        </div>
-                      </div>
-
-                      {/* Why System Recommends This */}
-                      <div className="bg-purple-950/25 p-2.5 rounded-xl border border-purple-500/25 text-[11px] text-zinc-300 leading-relaxed">
-                        <b className="text-purple-300">Vì sao nên cập nhật:</b> {trend.reason}
-                      </div>
-
-                      {/* Interactive Question & Choice Buttons */}
-                      <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 space-y-2">
-                        <div className="text-xs font-bold text-amber-300 flex items-center justify-between">
-                          <span>Bạn có muốn cập nhật thêm trend này không?</span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleApproveTrend(trend)}
-                            className="py-2 px-3 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
-                            <span>✓ Đồng Ý Cập Nhật</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => onCopyRemakePrompt ? onCopyRemakePrompt({ title: trend.title, channel: trend.channel, views: trend.views, dur: trend.dur, vph: trend.vph }) : null}
-                            className="py-2 px-3 rounded-xl text-xs font-bold bg-purple-600/30 hover:bg-purple-600/40 border border-purple-500/40 text-purple-200 transition flex items-center justify-center gap-1.5 cursor-pointer">
-                            <span>📋 Lấy Kịch Bản AI</span>
-                          </button>
-                        </div>
-
-                        <div className="flex gap-2 pt-1 border-t border-zinc-800">
-                          <a
-                            href={ytUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 py-1 px-2 rounded-lg text-[11px] text-center font-semibold bg-red-600/80 hover:bg-red-600 text-white transition">
-                            Xem trên YouTube ↗
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => onDismissTrend && onDismissTrend(trend.id)}
-                            className="py-1 px-3 rounded-lg text-[11px] text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition cursor-pointer">
-                            Bỏ qua
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* 2. Thanh Tiến Trình Khi Đang Quét */}
       {isScanningNiches && scanProgress && (
@@ -8929,6 +8754,256 @@ function ApiFeaturesGuideModal({ onClose }) {
 }
 
 
+// Cửa Sổ Modal Đề Xuất Trend Mới Hôm Nay (Automated Trend Radar Modal)
+function PendingTrendsModal({
+  isOpen,
+  onClose,
+  autoUpdateData,
+  autoScanning,
+  onRunDailyScan,
+  onToggleAutoScan,
+  onApproveTrend,
+  onDismissTrend,
+  onCopyRemakePrompt,
+  onExploreInTopNgach
+}) {
+  if (!isOpen || !autoUpdateData) return null;
+
+  const pendingList = autoUpdateData.pendingTrends || [];
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center p-3 sm:p-5 overflow-y-auto" onClick={onClose}>
+      <div 
+        className="bg-[#121316] border border-zinc-800 rounded-2xl w-full max-w-5xl shadow-2xl my-6 sm:my-8 overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col"
+        onClick={e => e.stopPropagation()}>
+        
+        {/* Modal Header Toolbar */}
+        <div className="p-4 sm:p-5 border-b border-zinc-800/80 bg-zinc-900/60 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                Automated Trend Radar
+              </span>
+              <span className="text-xs text-zinc-400">Tự động quét & đề xuất</span>
+            </div>
+            <h3 className="font-extrabold text-base sm:text-xl text-white mt-1">
+              Đề Xuất Xu Hướng Mới Hôm Nay
+            </h3>
+            <p className="text-xs text-zinc-400 mt-0.5 max-w-2xl leading-relaxed">
+              Hệ thống tự động phát hiện các video bứt phá từ kênh nhỏ ít sub. Bấm <b>"✓ Đồng Ý Cập Nhật"</b> để đưa ngay vào Top Ngách.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={onRunDailyScan}
+              disabled={autoScanning}
+              className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition flex items-center gap-1.5 disabled:opacity-50 shadow-sm cursor-pointer">
+              <span>{autoScanning ? 'Đang quét...' : 'Chạy Quét Trend Hôm Nay'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onToggleAutoScan}
+              className={`px-3 py-2 rounded-lg text-xs font-medium border transition cursor-pointer ${
+                autoUpdateData.enabled 
+                  ? 'bg-zinc-800 text-zinc-100 border-zinc-700 hover:bg-zinc-700' 
+                  : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
+              }`}>
+              {autoUpdateData.enabled ? '✓ Tự động: BẬT' : 'Tự động: TẮT'}
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-2 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 transition cursor-pointer ml-1">
+              Đóng ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Status Ribbon */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 sm:p-4 bg-black/30 border-b border-zinc-800/60 text-xs">
+          <div className="bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800">
+            <span className="text-zinc-500 text-[11px] block">Lần quét gần nhất</span>
+            <b className="text-zinc-200 mt-0.5 block">{autoUpdateData.lastScanDate || 'Hôm nay'}</b>
+          </div>
+          <div className="bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800">
+            <span className="text-zinc-500 text-[11px] block">Trend chờ bạn duyệt</span>
+            <b className="text-purple-400 mt-0.5 block">{pendingList.length} xu hướng mới</b>
+          </div>
+          <div className="bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800">
+            <span className="text-zinc-500 text-[11px] block">Đã duyệt cập nhật</span>
+            <b className="text-emerald-400 mt-0.5 block">{autoUpdateData.approvedTrends?.length || 0} chủ đề</b>
+          </div>
+          <div className="bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800">
+            <span className="text-zinc-500 text-[11px] block">Thị trường dò tìm</span>
+            <b className="text-amber-400 mt-0.5 block">Mỹ (US High-RPM)</b>
+          </div>
+        </div>
+
+        {/* Modal Body / Proposals Grid */}
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(85vh-200px)] space-y-4">
+          {pendingList.length === 0 ? (
+            <div className="border border-dashed border-zinc-800 rounded-2xl p-8 text-center bg-zinc-900/30 space-y-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl mx-auto font-bold border border-emerald-500/20">
+                ✓
+              </div>
+              <h4 className="font-bold text-sm sm:text-base text-white">
+                Bạn đã xử lý hết các đề xuất trend hôm nay!
+              </h4>
+              <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
+                Hệ thống đang tiếp tục tự động rà soát video mới. Các trend bạn đã duyệt hiện đã sẵn sàng trong Top Ngách.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={onRunDailyScan}
+                  disabled={autoScanning}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition cursor-pointer">
+                  Quét thêm trend mới
+                </button>
+                {onExploreInTopNgach && (
+                  <button
+                    type="button"
+                    onClick={onExploreInTopNgach}
+                    className="px-4 py-2 rounded-lg text-xs font-semibold bg-purple-600/30 hover:bg-purple-600/40 text-purple-200 border border-purple-500/40 transition cursor-pointer">
+                    Xem Trong Top Ngách →
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {pendingList.map(trend => {
+                const ytUrl = trend.videoId && !trend.videoId.startsWith('sample') 
+                  ? ('https://www.youtube.com/watch?v=' + trend.videoId)
+                  : ('https://www.youtube.com/results?search_query=' + encodeURIComponent(trend.title));
+                return (
+                  <article key={trend.id} className="bg-zinc-900/60 border-2 border-purple-500/30 hover:border-purple-500/60 rounded-2xl p-4 flex flex-col justify-between shadow-xl space-y-3 transition group">
+                    {/* Top Discovered Timestamp */}
+                    <div className="flex items-center justify-between text-[11px] border-b border-zinc-800 pb-2">
+                      <span className="font-bold text-purple-300 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
+                        Trend mới phát hiện: {trend.discoveredAt}
+                      </span>
+                      <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        RPM {trend.rpm || '$25 - $48'}
+                      </span>
+                    </div>
+
+                    {/* Video Content Snapshot */}
+                    <div className="flex gap-3 items-start">
+                      <div className="relative w-32 sm:w-40 aspect-video rounded-xl overflow-hidden bg-zinc-900 flex-shrink-0">
+                        <img src={trend.thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                        <div className="absolute bottom-1 right-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/85 text-white">
+                          {fmtDur(trend.dur)}
+                        </div>
+                      </div>
+
+                      <div className="overflow-hidden space-y-1 flex-1">
+                        <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">{trend.nicheName}</div>
+                        <h4 className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-snug">
+                          {trend.title}
+                        </h4>
+                        <div className="text-[11px] text-zinc-400 flex flex-wrap gap-2 pt-0.5">
+                          <span>Kênh: <b>{trend.channel}</b></span>
+                          <span>·</span>
+                          <span className="text-emerald-300">{trend.channelSubs ? fmt(trend.channelSubs) + ' subs' : 'Kênh nhỏ'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Metrics Bar */}
+                    <div className="grid grid-cols-2 gap-2 text-[11px] bg-zinc-900 p-2 rounded-xl border border-zinc-800">
+                      <div>
+                        <span className="text-zinc-500">Lượt xem:</span> <b className="text-white">{fmt(trend.views)}</b>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-zinc-500">Tốc độ:</span> <b className="text-emerald-400">{trend.growthRate}</b>
+                      </div>
+                    </div>
+
+                    {/* Why System Recommends This */}
+                    <div className="bg-purple-950/25 p-2.5 rounded-xl border border-purple-500/25 text-[11px] text-zinc-300 leading-relaxed">
+                      <b className="text-purple-300">Vì sao nên cập nhật:</b> {trend.reason}
+                    </div>
+
+                    {/* Interactive Question & Choice Buttons */}
+                    <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 space-y-2">
+                      <div className="text-xs font-bold text-amber-300 flex items-center justify-between">
+                        <span>Bạn có muốn cập nhật thêm trend này không?</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onApproveTrend(trend)}
+                          className="py-2 px-3 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
+                          <span>✓ Đồng Ý Cập Nhật</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onCopyRemakePrompt ? onCopyRemakePrompt({ title: trend.title, channel: trend.channel, views: trend.views, dur: trend.dur, vph: trend.vph }) : null}
+                          className="py-2 px-3 rounded-xl text-xs font-bold bg-purple-600/30 hover:bg-purple-600/40 border border-purple-500/40 text-purple-200 transition flex items-center justify-center gap-1.5 cursor-pointer">
+                          <span>📋 Lấy Kịch Bản AI</span>
+                        </button>
+                      </div>
+
+                      <div className="flex gap-2 pt-1 border-t border-zinc-800">
+                        <a
+                          href={ytUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 py-1 px-2 rounded-lg text-[11px] text-center font-semibold bg-red-600/80 hover:bg-red-600 text-white transition">
+                          Xem trên YouTube ↗
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => onDismissTrend && onDismissTrend(trend.id)}
+                          className="py-1 px-3 rounded-lg text-[11px] text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 transition cursor-pointer">
+                          Bỏ qua
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="p-3 sm:p-4 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between text-xs">
+          <div className="text-zinc-400">
+            Đã duyệt: <b className="text-emerald-400">{autoUpdateData.approvedTrends?.length || 0} trend</b> vào Top Ngách
+          </div>
+          <div className="flex items-center gap-2">
+            {onExploreInTopNgach && (
+              <button
+                type="button"
+                onClick={onExploreInTopNgach}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white border border-zinc-700 transition cursor-pointer">
+                Xem Trong Top Ngách →
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition cursor-pointer">
+              Đóng
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+
 function App() {
   const [key, setKey] = useState(() => st.get('yt_key') || '');
   const [keyDraft, setKeyDraft] = useState(() => st.get('yt_key') || '');
@@ -9534,6 +9609,7 @@ function App() {
     };
   });
   const [autoScanning, setAutoScanning] = useState(false);
+  const [showPendingTrendsModal, setShowPendingTrendsModal] = useState(false);
 
   useEffect(() => {
     st.set('yt_autoupdate', JSON.stringify(autoUpdateData));
@@ -9546,7 +9622,51 @@ function App() {
       pendingTrends: prev.pendingTrends.filter(t => t.id !== trend.id),
       approvedTrends: [trend, ...(prev.approvedTrends || [])]
     }));
-    showToast(`Đã duyệt & cập nhật trend "${trend.nicheName || trend.title.slice(0, 30)}" vào danh mục khai thác!`);
+
+    // Đồng bộ trực tiếp vào danh sách Top Ngách
+    try {
+      const STORAGE_KEY = 'yt_real_discovered_niches_v6';
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      const nicheId = 'niche_auto_' + (trend.videoId || trend.id);
+      const newVideo = {
+        id: trend.videoId || ('vid_' + Date.now()),
+        title: trend.title,
+        channel: trend.channel,
+        subs: trend.channelSubs,
+        views: trend.views,
+        vph: trend.vph,
+        dur: trend.dur,
+        thumb: trend.thumb,
+        published: new Date().toISOString()
+      };
+
+      const existingIdx = saved.findIndex(n => n.name.toLowerCase() === (trend.nicheName || '').toLowerCase());
+      let updated;
+      if (existingIdx !== -1) {
+        const exist = saved[existingIdx];
+        const vids = [newVideo, ...(exist.videos || []).filter(v => v.id !== newVideo.id)];
+        const updatedExist = { ...exist, videos: vids, topVideo: vids[0], maxViews: Math.max(exist.maxViews, newVideo.views) };
+        updated = [...saved];
+        updated[existingIdx] = updatedExist;
+      } else {
+        const newNiche = {
+          id: nicheId,
+          name: trend.nicheName || 'Xu Hướng Bứt Phá US',
+          rpm: trend.rpm || '$25 - $48',
+          category: 'Tự động đề xuất',
+          maxViews: trend.views,
+          competition: 'Thấp',
+          isAutoApproved: true,
+          videos: [newVideo],
+          topVideo: newVideo
+        };
+        updated = [newNiche, ...saved];
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('topngach_updated', { detail: updated }));
+    } catch (e) {}
+
+    showToast('Đã duyệt & đồng bộ trend "' + (trend.nicheName || trend.title.slice(0, 30)) + '" vào Top Ngách!');
   };
 
   // Dismiss a pending trend
@@ -11912,6 +12032,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             onApproveTrend={approveTrend}
             onDismissTrend={dismissTrend}
             onCopyRemakePrompt={copyRemakePrompt}
+            onOpenPendingTrendsModal={() => setShowPendingTrendsModal(true)}
           />
         )}
 
@@ -12607,6 +12728,25 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
         </ErrorBoundary>
       )}
 
+      {/* Cửa Sổ Modal Đề Xuất Trend Mới Hôm Nay */}
+      {showPendingTrendsModal && (
+        <PendingTrendsModal
+          isOpen={showPendingTrendsModal}
+          onClose={() => setShowPendingTrendsModal(false)}
+          autoUpdateData={autoUpdateData}
+          autoScanning={autoScanning}
+          onRunDailyScan={runDailyScan}
+          onToggleAutoScan={toggleAutoScan}
+          onApproveTrend={approveTrend}
+          onDismissTrend={dismissTrend}
+          onCopyRemakePrompt={copyRemakePrompt}
+          onExploreInTopNgach={() => {
+            setShowPendingTrendsModal(false);
+            setTab('rpm');
+          }}
+        />
+      )}
+
       {/* Security F12 Blocked Warning Modal */}
       {showF12Blocked && (
         <F12BlockedModal onClose={() => setShowF12Blocked(false)} />
@@ -12731,7 +12871,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                 Hôm nay phát hiện <b className="text-purple-300">{autoUpdateData.pendingTrends.length} xu hướng mới</b> bứt phá từ kênh sub thấp!
               </p>
               <button
-                onClick={() => { setTab('rpm'); setShowAutoUpdateBubblePopup(false); }}
+                onClick={() => { setShowPendingTrendsModal(true); setShowAutoUpdateBubblePopup(false); }}
                 className="mt-2.5 w-full py-1.5 px-3 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
                 <span>Xem & Duyệt Trend Ngay</span>
                 <span>→</span>
@@ -12741,7 +12881,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
           {/* The Chat Head / Bubble */}
           <button
-            onClick={() => setShowAutoUpdateBubblePopup(!showAutoUpdateBubblePopup)}
+            onClick={() => setShowPendingTrendsModal(true)}
             className="relative w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-800 text-white shadow-xl shadow-purple-950/60 border-2 border-purple-300/40 hover:scale-110 active:scale-95 transition-all flex items-center justify-center group cursor-pointer"
             title="Thông báo: Có xu hướng mới đang bứt phá!">
             <span className="text-lg">⚡</span>
