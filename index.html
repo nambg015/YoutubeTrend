@@ -4185,8 +4185,7 @@ const INITIAL_TRENDING_KEYWORDS = [
 
 // Dynamic keyword analysis generator for any user custom query
 function generateCustomKeywordAnalysis(query, selectedPeriod = '24', selectedCat = 'all', selectedRegion = 'VN') {
-  const cleanQ = (query || '').trim();
-  if (!cleanQ) return null;
+  const cleanQ = (query || '').trim() || 'Xu hướng thịnh hành';
 
   let hash = 0;
   for (let i = 0; i < cleanQ.length; i++) {
@@ -4445,10 +4444,10 @@ function errInfo(e) {
 }
 
 // UI Buttons & Styles
-const bPrimary = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-500 text-white transition flex items-center justify-center';
+const bPrimary = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition flex items-center justify-center';
 const bSecondary = 'px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 hover:text-white border border-brand-border transition flex items-center justify-center';
-const bActive = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600/15 text-red-400 border border-red-500/30 flex items-center justify-center';
-const inp = 'w-full bg-brand-surface border border-brand-border hover:border-zinc-600 rounded-lg px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-red-500 transition-all';
+const bActive = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-white border border-zinc-700 flex items-center justify-center';
+const inp = 'w-full bg-brand-surface border border-brand-border hover:border-zinc-600 rounded-lg px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition-all';
 const scoreCls = t => t >= 75 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : t >= 45 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-zinc-800 text-zinc-400 border border-zinc-700';
 
 // Video Action Buttons Component (Direct redirection to YouTube)
@@ -4462,14 +4461,14 @@ function Actions({ v, saved, isCompetitor, onDetail, onDownload, onSave, onCopy,
           href={ytUrl} 
           target="_blank" 
           rel="noopener noreferrer" 
-          className="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-500 text-white transition text-center shadow-sm truncate"
+          className="flex-1 py-1.5 px-2 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition text-center shadow-sm truncate"
           title="Mở xem trên YouTube">
           Xem trên YouTube ↗
         </a>
         {onNicheAnalyze && (
           <button 
             onClick={() => onNicheAnalyze(v)} 
-            className="py-1.5 px-2.5 rounded-lg text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition flex items-center whitespace-nowrap shadow-sm" 
+            className="py-1.5 px-2.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition flex items-center whitespace-nowrap shadow-sm" 
             title="Phân tích độ bão hòa ngách & các kênh tương tự">
             Kênh tương tự
           </button>
@@ -4856,6 +4855,10 @@ function CashCowExplainModal({ video, onClose, onDownload, onPromptCopy, onThumb
 function KeywordDetailModal({ item, onClose, onSearchVideo, onCopy }) {
   if (!item) return null;
   const tagListStr = (item.relatedKeywords || []).join(', ');
+  const tl = item.timeline || { '72h': 25, '48h': 50, '24h': 100 };
+  const tl72 = Math.min(100, Math.max(0, Number(tl['72h'] != null ? tl['72h'] : 25)));
+  const tl48 = Math.min(100, Math.max(0, Number(tl['48h'] != null ? tl['48h'] : 50)));
+  const tl24 = Math.min(100, Math.max(0, Number(tl['24h'] != null ? tl['24h'] : 100)));
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center p-3 sm:p-4 overflow-y-auto" onClick={onClose}>
@@ -4866,20 +4869,20 @@ function KeywordDetailModal({ item, onClose, onSearchVideo, onCopy }) {
           <div>
             <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
               <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
-                [{item.period}h qua]
+                [{item.period || 24}h qua]
               </span>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-red-600/20 text-red-300 border border-red-500/30">
-                [{item.catName}]
+                [{item.catName || 'Tổng hợp'}]
               </span>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-600/20 text-blue-300 border border-blue-500/30">
-                [{item.region}]
+                [{item.region || 'VN'}]
               </span>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
-                [Điểm Hot: {item.hotScore}/100]
+                [Điểm Hot: {item.hotScore || 85}/100]
               </span>
             </div>
             <h2 className="text-base sm:text-xl font-extrabold text-white leading-tight">
-              {item.kw}
+              {item.kw || 'Từ khóa'}
             </h2>
           </div>
           <button 
@@ -4894,15 +4897,15 @@ function KeywordDetailModal({ item, onClose, onSearchVideo, onCopy }) {
           <div className="bg-brand-card p-3 rounded-xl border border-brand-border">
             <div className="text-[11px] text-zinc-400 font-medium">Lượng tìm kiếm</div>
             <div className="text-sm sm:text-base font-extrabold text-white mt-1">
-              {fmt(item.volume)}
+              {fmt(item.volume || 0)}
             </div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">lượt / chu kỳ {item.period}h</div>
+            <div className="text-[10px] text-zinc-500 mt-0.5">lượt / chu kỳ {item.period || 24}h</div>
           </div>
 
           <div className="bg-brand-card p-3 rounded-xl border border-brand-border">
             <div className="text-[11px] text-zinc-400 font-medium">Tốc độ tăng trưởng</div>
             <div className="text-sm sm:text-base font-extrabold text-emerald-400 mt-1">
-              +{item.growth}%
+              +{item.growth || 0}%
             </div>
             <div className="text-[10px] text-emerald-500/80 mt-0.5">Tăng bứt phá</div>
           </div>
@@ -4917,7 +4920,7 @@ function KeywordDetailModal({ item, onClose, onSearchVideo, onCopy }) {
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
                   : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
               }`}>
-                {item.competition}
+                {item.competition || 'Trung bình'}
               </span>
             </div>
             <div className="text-[10px] text-zinc-500 mt-0.5">
@@ -4928,7 +4931,7 @@ function KeywordDetailModal({ item, onClose, onSearchVideo, onCopy }) {
           <div className="bg-brand-card p-3 rounded-xl border border-brand-border">
             <div className="text-[11px] text-zinc-400 font-medium">RPM ước tính</div>
             <div className="text-sm sm:text-base font-extrabold text-amber-400 mt-1">
-              {item.rpm}
+              {item.rpm || '$10 - $25'}
             </div>
             <div className="text-[10px] text-zinc-500 mt-0.5">trên 1.000 lượt xem</div>
           </div>
@@ -4940,16 +4943,16 @@ function KeywordDetailModal({ item, onClose, onSearchVideo, onCopy }) {
             Đánh giá xu hướng & Bối cảnh
           </div>
           <p className="text-xs text-zinc-300 leading-relaxed">
-            {item.reason}
+            {item.reason || 'Từ khóa đang có xu hướng gia tăng tìm kiếm trên YouTube.'}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-brand-border/60 text-xs text-zinc-400">
             <div>
               <span className="font-semibold text-zinc-300">Khán giả mục tiêu: </span>
-              {item.targetAudience}
+              {item.targetAudience || 'Khán giả quan tâm chủ đề này trên YouTube.'}
             </div>
             <div>
               <span className="font-semibold text-zinc-300">Độ cạnh tranh: </span>
-              {item.competitionNote}
+              {item.competitionNote || 'Đánh giá dựa trên phân bố kênh lớn và nhỏ.'}
             </div>
           </div>
         </div>
@@ -4961,35 +4964,35 @@ function KeywordDetailModal({ item, onClose, onSearchVideo, onCopy }) {
               Nhịp tăng trưởng theo khung giờ (72h - 48h - 24h)
             </div>
             <span className="text-[11px] text-zinc-400">
-              {item.recentVideos} video mới phát hành
+              {item.recentVideos || 50} video mới phát hành
             </span>
           </div>
           <div className="space-y-2 text-xs">
             <div>
               <div className="flex justify-between text-zinc-400 text-[11px] mb-1">
                 <span>72 giờ trước</span>
-                <span>{item.timeline['72h']}%</span>
+                <span>{tl72}%</span>
               </div>
               <div className="h-2 bg-brand-surface rounded-full overflow-hidden border border-brand-border">
-                <div className="h-full bg-zinc-600 rounded-full" style={{ width: item.timeline['72h'] + '%' }}></div>
+                <div className="h-full bg-zinc-600 rounded-full" style={{ width: `${tl72}%` }}></div>
               </div>
             </div>
             <div>
               <div className="flex justify-between text-zinc-400 text-[11px] mb-1">
                 <span>48 giờ trước</span>
-                <span>{item.timeline['48h']}%</span>
+                <span>{tl48}%</span>
               </div>
               <div className="h-2 bg-brand-surface rounded-full overflow-hidden border border-brand-border">
-                <div className="h-full bg-amber-500 rounded-full" style={{ width: item.timeline['48h'] + '%' }}></div>
+                <div className="h-full bg-amber-500 rounded-full" style={{ width: `${tl48}%` }}></div>
               </div>
             </div>
             <div>
               <div className="flex justify-between text-zinc-200 font-semibold text-[11px] mb-1">
                 <span>24 giờ qua (Đỉnh điểm bùng nổ)</span>
-                <span className="text-emerald-400 font-bold">{item.timeline['24h']}%</span>
+                <span className="text-emerald-400 font-bold">{tl24}%</span>
               </div>
               <div className="h-2 bg-brand-surface rounded-full overflow-hidden border border-brand-border">
-                <div className="h-full bg-emerald-500 rounded-full" style={{ width: item.timeline['24h'] + '%' }}></div>
+                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${tl24}%` }}></div>
               </div>
             </div>
           </div>
@@ -6483,7 +6486,8 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
   // SRT Step 1: Audience Persona Simulation States
   const [personaAge, setPersonaAge] = useState('55+');
   const [personaCountry, setPersonaCountry] = useState('US');
-  const [showPersonaPanel, setShowPersonaPanel] = useState(true);
+  const [showPersonaPanel, setShowPersonaPanel] = useState(false);
+  const [showSrtGuide, setShowSrtGuide] = useState(false);
   const [personaTrained, setPersonaTrained] = useState(true);
 
   // SRT Step 2: 3-Stream YouTube Algorithm Radar
@@ -6835,63 +6839,82 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
   return (
     <section className="space-y-4">
       {/* SRT Tool Hero & Strategic Overview */}
-      <div className="bg-brand-surface border border-cyan-500/40 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4 relative overflow-hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-brand-border pb-4">
+      <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-brand-border pb-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                SRT Viral Trend Hunter
+              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                SRT Trend Hunter
               </span>
-              <span className="text-xs text-amber-300 font-bold">
-                Quy Trình 3 Bước Bắt Trend Chuẩn Thuật Toán YouTube
+              <span className="text-xs text-zinc-400">
+                Phân tích đề xuất & phát hiện ngách tiềm năng
               </span>
             </div>
             <h2 className="font-extrabold text-base sm:text-xl text-white mt-1">
-              Phân Tích Ngách & Gom Cụm Từ Khóa Nóng (1 Video Ăn May, 4 Kênh Cùng Nổ Là Trend Thật!)
+              Phân Tích Ngách & Gom Cụm Từ Khóa
             </h2>
-            <p className="text-xs text-zinc-300 mt-0.5 max-w-4xl leading-relaxed">
-              Dựa trên nguyên lý chính thức của YouTube: Thuật toán không mang video đi tìm khán giả bừa bãi mà tìm video phù hợp cho người xem. Hệ thống giúp bạn giả lập hồ sơ người xem thật, cào 3 luồng đề xuất (Trang chủ, Đề xuất trang chủ, Cột bên phải), lọc kênh nhỏ view cao và gom các cụm từ khóa được nhiều kênh độc lập cùng nhào vào làm.
+            <p className="text-xs text-zinc-400 mt-0.5 max-w-3xl leading-relaxed">
+              Quét các luồng đề xuất YouTube, phát hiện video bùng nổ từ kênh nhỏ và tự động gom cụm các chủ đề đang được nhiều kênh làm cùng lúc.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowSrtGuide(!showSrtGuide)}
+              className="py-1.5 px-3 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border transition flex items-center gap-1.5">
+              <span>💡 {showSrtGuide ? 'Ẩn mẹo' : 'Mẹo & Cơ chế'}</span>
+            </button>
             <button
               onClick={() => setShowPersonaPanel(!showPersonaPanel)}
-              className="py-1.5 px-3 rounded-xl text-xs font-bold bg-brand-card hover:bg-brand-hover text-cyan-300 border border-cyan-500/30 transition flex items-center gap-1.5">
-              <span>👤 {showPersonaPanel ? 'Thu gọn chân dung' : 'Sửa chân dung người xem'}</span>
+              className="py-1.5 px-3 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border transition flex items-center gap-1.5">
+              <span>👤 {showPersonaPanel ? 'Thu gọn hồ sơ' : 'Chân dung người xem'}</span>
             </button>
           </div>
         </div>
 
+        {/* Collapsible Guidance & Algorithm Tips */}
+        {showSrtGuide && (
+          <div className="p-3.5 bg-brand-card/90 border border-zinc-800 rounded-xl text-xs space-y-2 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-zinc-200">💡 Nguyên lý bắt trend thuật toán YouTube:</span>
+              <button onClick={() => setShowSrtGuide(false)} className="text-zinc-500 hover:text-zinc-300 text-[11px]">Đóng ✕</button>
+            </div>
+            <div className="text-zinc-400 text-xs leading-relaxed space-y-1">
+              <p>• <b>Quy luật 4 kênh nổ:</b> 1 video nhiều view có thể là ăn may, nhưng khi 4 kênh nhỏ độc lập cùng nổ view về cùng một chủ đề thì đó là <b>Trend thật</b>.</p>
+              <p>• <b>Cào 3 luồng đề xuất:</b> Hệ thống giả lập người xem thật, quét Trang chủ (phát hiện đối thủ mới), Đề xuất trang chủ (format hot), và Cột bên phải (Up Next) để lọc kênh nhỏ view cao.</p>
+            </div>
+          </div>
+        )}
+
         {/* SRT STEP 1: Audience Persona Panel */}
         {showPersonaPanel && (
-          <div className="p-3.5 rounded-xl bg-brand-card/90 border border-cyan-500/30 space-y-3">
+          <div className="p-3.5 rounded-xl bg-brand-card/90 border border-zinc-800 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border/60 pb-2">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono text-[10px] font-black border border-cyan-500/40">
-                  BƯỚC 1: SET UP CHÂN DUNG NGƯỜI XEM (KÊNH TRẮNG)
+                <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px] font-bold border border-zinc-700">
+                  HỒ SƠ KHÁN GIẢ MÔ PHỎNG
                 </span>
                 <span className="text-xs text-zinc-300">
-                  Tài khoản mô phỏng: <b className="text-cyan-400">@Audience_{personaCountry}_{personaAge.replace('+', 'Plus')}_Bot</b>
+                  Bot: <b className="text-zinc-100">@Audience_{personaCountry}_{personaAge.replace('+', 'Plus')}_Bot</b>
                 </span>
               </div>
-              <div className="text-[11px] font-bold text-emerald-400 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>{personaTrained ? 'Đã nuôi tương tác 24h (Thuật toán tự đề xuất)' : 'Đang giả lập tương tác...'}</span>
+              <div className="text-[11px] font-medium text-emerald-400 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>{personaTrained ? 'Đã nuôi tương tác 24h' : 'Đang giả lập tương tác...'}</span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               <div>
-                <label className="text-[11px] font-semibold text-zinc-400 block mb-1">
-                  Độ tuổi khán giả mục tiêu:
+                <label className="text-[11px] font-medium text-zinc-400 block mb-1">
+                  Độ tuổi khán giả:
                 </label>
                 <select
                   value={personaAge}
                   onChange={e => setPersonaAge(e.target.value)}
-                  className="w-full bg-brand-surface border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500">
-                  <option value="55+">55+ tuổi (US Elders / Tâm linh / Khắc kỷ / Lịch sử)</option>
-                  <option value="18-24">18 - 24 tuổi (Gen Z / Gaming / Short-form viral)</option>
+                  className="w-full bg-brand-surface border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500">
+                  <option value="55+">55+ tuổi (US Elders / Tâm linh / Khắc kỷ)</option>
+                  <option value="18-24">18 - 24 tuổi (Gen Z / Gaming / Shorts)</option>
                   <option value="25-34">25 - 34 tuổi (Millennials / Công nghệ AI / Tài chính)</option>
                   <option value="35-44">35 - 44 tuổi (Trung niên / Đầu tư / Gia đình)</option>
                   <option value="45-54">45 - 54 tuổi (Trưởng thành / Sức khỏe / Bất động sản)</option>
@@ -6899,17 +6922,17 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-zinc-400 block mb-1">
-                  Quốc gia / Thị trường mục tiêu:
+                <label className="text-[11px] font-medium text-zinc-400 block mb-1">
+                  Quốc gia / Thị trường:
                 </label>
                 <select
                   value={personaCountry}
                   onChange={e => setPersonaCountry(e.target.value)}
-                  className="w-full bg-brand-surface border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500">
+                  className="w-full bg-brand-surface border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500">
                   <option value="US">Mỹ (United States - RPM Cao)</option>
-                  <option value="VN">Việt Nam (Thị trường nội địa)</option>
+                  <option value="VN">Việt Nam (Nội địa)</option>
                   <option value="UK">Anh Quốc (United Kingdom)</option>
-                  <option value="CA">Canada (Thị trường Bắc Mỹ)</option>
+                  <option value="CA">Canada</option>
                   <option value="AU">Úc (Australia)</option>
                   <option value="JP">Nhật Bản (Japan)</option>
                   <option value="DE">Đức (Germany)</option>
@@ -6917,8 +6940,8 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
               </div>
 
               <div className="sm:col-span-2">
-                <label className="text-[11px] font-semibold text-zinc-400 block mb-1">
-                  Kênh hạt giống mồi (Nuôi tương tác giả lập):
+                <label className="text-[11px] font-medium text-zinc-400 block mb-1">
+                  Kênh hạt giống mồi:
                 </label>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {(competitors || []).slice(0, 3).map(c => (
@@ -6929,9 +6952,9 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
                   ))}
                   <button
                     onClick={() => {
-                      if (showToast) showToast('Đã nạp danh sách kênh hạt giống vào hồ sơ bot để nuôi tương tác!');
+                      if (showToast) showToast('Đã nạp danh sách kênh hạt giống vào hồ sơ bot!');
                     }}
-                    className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[11px] font-bold hover:bg-cyan-500/30 transition">
+                    className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 text-[11px] font-medium transition">
                     + Làm mới tương tác
                   </button>
                 </div>
@@ -6952,22 +6975,22 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
                   if (onSelectKeyword) onSelectKeyword(e.target.value);
                 }}
                 onKeyDown={e => e.key === 'Enter' && runKeywordNicheScan(false)}
-                placeholder="Nhập từ khóa hoặc chủ đề ngách (Ví dụ: billionaire maid story, Catholic night prayer, Roblox gameplay, stoic wisdom...)"
-                className="w-full bg-brand-card border border-brand-border hover:border-zinc-600 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition shadow-inner"
+                placeholder="Nhập từ khóa hoặc chủ đề ngách (ví dụ: billionaire maid story, Catholic night prayer, stoic wisdom...)"
+                className="w-full bg-brand-card border border-brand-border hover:border-zinc-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition shadow-inner"
               />
             </div>
             <button
               id="srtScanButton"
               onClick={() => runKeywordNicheScan(false)}
               disabled={loading}
-              className="py-2.5 px-6 rounded-xl text-xs sm:text-sm font-black bg-cyan-500 hover:bg-cyan-400 text-black shadow-lg shadow-cyan-500/20 transition disabled:opacity-50 flex items-center justify-center gap-2 flex-shrink-0">
-              <span>{loading ? 'Đang bóc tách & gom cụm...' : 'Bắt Trend & Gom Cụm Từ Khóa'}</span>
+              className="py-2.5 px-5 rounded-xl text-xs sm:text-sm font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition disabled:opacity-50 flex items-center justify-center gap-2 flex-shrink-0 shadow-sm">
+              <span>{loading ? 'Đang phân tích...' : 'Bắt Trend & Gom Cụm'}</span>
             </button>
           </div>
 
           {/* Quick Preset Chips */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="text-[11px] text-zinc-400 font-semibold mr-1">Ngách triệu view gợi ý:</span>
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <span className="text-[11px] text-zinc-400 font-medium mr-1">Ngách gợi ý:</span>
             {[
               ['billionaire maid story rich man disguised', 'Tỷ Phú & Người Giúp Việc (US)'],
               ['Catholic night prayer Jesus healing', 'Cầu Nguyện Công Giáo (US)'],
@@ -6991,23 +7014,19 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
             ))}
           </div>
 
-          {/* SRT STEP 2: 3 Luồng Cào YouTube Thuật Toán */}
-          <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-card p-2.5 rounded-xl border border-brand-border mt-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wide">
-                BƯỚC 2: CÀO 3 LUỒNG ĐỀ XUẤT YOUTUBE:
-              </span>
-            </div>
+          {/* Luồng Đề Xuất YouTube */}
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-card/80 p-2.5 rounded-xl border border-brand-border">
+            <span className="text-[11px] font-medium text-zinc-400">Luồng đề xuất:</span>
             <div className="flex flex-wrap items-center gap-1.5">
               {[
-                ['home', '🏠 1. Cào Trang Chủ (Phát Hiện Đối Thủ Mới)'],
-                ['topic', '💡 2. Nội Dung Đề Xuất Trang Chủ (Format Hot)'],
-                ['sidebar', '➡️ 3. Cột Bên Phải (Sidebar / Up Next)']
+                ['home', 'Trang Chủ'],
+                ['topic', 'Đề Xuất Chủ Đề'],
+                ['sidebar', 'Cột Bên Phải (Up Next)']
               ].map(([sId, sLabel]) => (
                 <button
                   key={sId}
                   onClick={() => setStreamSource(sId)}
-                  className={"px-3 py-1 rounded-lg text-xs font-bold transition " + (streamSource === sId ? 'bg-cyan-500 text-black shadow-sm font-extrabold' : 'bg-brand-surface text-zinc-400 hover:text-white border border-brand-border')}>
+                  className={"px-2.5 py-1 rounded-lg text-xs font-medium transition border " + (streamSource === sId ? 'bg-zinc-200 text-zinc-950 font-bold border-zinc-200 shadow-sm' : 'bg-brand-surface text-zinc-400 hover:text-white border-brand-border')}>
                   {sLabel}
                 </button>
               ))}
@@ -7016,9 +7035,9 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
 
           {/* Time & Format Filters */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-card p-2.5 rounded-xl border border-brand-border">
-              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wide">
-                Khung Thời Gian Quét:
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-card/80 p-2.5 rounded-xl border border-brand-border">
+              <span className="text-[11px] font-medium text-zinc-400">
+                Khung thời gian:
               </span>
               <div className="flex flex-wrap items-center gap-1">
                 {NICHE_TIME_PERIODS.map(p => (
@@ -7026,16 +7045,16 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
                     key={p.id}
                     disabled={loading}
                     onClick={() => setTimeFilter(p.id)}
-                    className={"px-2.5 py-1 rounded-lg text-xs font-semibold transition " + (timeFilter === p.id ? 'bg-cyan-500 text-black font-extrabold shadow-sm' : 'bg-brand-surface text-zinc-400 hover:text-white border border-brand-border')}>
+                    className={"px-2.5 py-1 rounded-lg text-xs font-medium transition border " + (timeFilter === p.id ? 'bg-zinc-200 text-zinc-950 font-bold border-zinc-200 shadow-sm' : 'bg-brand-surface text-zinc-400 hover:text-white border-brand-border')}>
                     {p.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-card p-2.5 rounded-xl border border-brand-border">
-              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wide">
-                Định Dạng Video:
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-card/80 p-2.5 rounded-xl border border-brand-border">
+              <span className="text-[11px] font-medium text-zinc-400">
+                Định dạng video:
               </span>
               <div className="flex items-center gap-1">
                 {[
@@ -7047,7 +7066,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
                   <button
                     key={fId}
                     onClick={() => setFormatFilter(fId)}
-                    className={"px-2.5 py-1 rounded-lg text-xs font-semibold transition " + (formatFilter === fId ? 'bg-cyan-500 text-black font-extrabold shadow-sm' : 'bg-brand-surface text-zinc-400 hover:text-white border border-brand-border')}>
+                    className={"px-2.5 py-1 rounded-lg text-xs font-medium transition border " + (formatFilter === fId ? 'bg-zinc-200 text-zinc-950 font-bold border-zinc-200 shadow-sm' : 'bg-brand-surface text-zinc-400 hover:text-white border-brand-border')}>
                     {fLabel}
                   </button>
                 ))}
@@ -8373,6 +8392,7 @@ function App() {
   const [customKeywords, setCustomKeywords] = useState([]);
   const [kwSearching, setKwSearching] = useState(false);
   const [liveScanning, setLiveScanning] = useState(false);
+  const [showKwTips, setShowKwTips] = useState(false);
   
   // Search Tab States
   const [kw, setKw] = useState('');
@@ -8717,7 +8737,9 @@ function App() {
   // Live YouTube Trend Extraction Function
   const scanLiveYouTubeKeywords = async () => {
     if (!key) {
-      setError({ code: 'MISSING' });
+      showToast('Vui lòng nhập YouTube API Key để quét từ khóa trực tiếp từ YouTube!');
+      setApiModalOpen(true);
+      setApiModalTab('tester');
       return;
     }
     setLiveScanning(true);
@@ -8907,7 +8929,8 @@ function App() {
 
   // Perform Keyword Analysis / Discovery (Multi-pattern Autocomplete & Real YouTube Search)
   const handleKeywordSearch = async (overrideQ) => {
-    const q = (overrideQ !== undefined ? overrideQ : kwSearchQuery).trim();
+    const rawQ = overrideQ !== undefined ? overrideQ : kwSearchQuery;
+    const q = (rawQ || '').trim();
     if (!q) {
       showToast('Hiển thị toàn bộ từ khóa xu hướng');
       return;
@@ -8931,11 +8954,34 @@ function App() {
           liveSuggestions.push(...res.value);
         }
       });
-      const uniqueSuggests = Array.from(new Set(liveSuggestions)).filter(x => x.toLowerCase() !== q.toLowerCase()).slice(0, 15);
+      const uniqueSuggests = Array.from(new Set(liveSuggestions)).filter(x => typeof x === 'string' && x.toLowerCase() !== q.toLowerCase()).slice(0, 15);
 
       // 2. Base keyword object
-      const newKw = generateCustomKeywordAnalysis(q, kwPeriod, kwCat, kwRegion);
-      if (uniqueSuggests.length) {
+      const newKw = generateCustomKeywordAnalysis(q, kwPeriod, kwCat, kwRegion) || {
+        id: 'custom_' + Date.now(),
+        kw: q,
+        period: String(kwPeriod || '24'),
+        cat: kwCat || 'general',
+        catName: 'Tổng hợp xu hướng',
+        region: kwRegion || 'VN',
+        volume: 85000,
+        growth: 320,
+        hotScore: 88,
+        competition: 'Trung bình',
+        competitionNote: 'Chủ đề tiềm năng cho người sáng tạo nội dung.',
+        rpm: '$12 - $25',
+        recentVideos: 95,
+        timeline: { '72h': 25, '48h': 50, '24h': 100 },
+        reason: `Lượng tìm kiếm về "${q}" đang tăng trưởng mạnh.`,
+        targetAudience: 'Khán giả quan tâm đến nội dung liên quan.',
+        relatedKeywords: uniqueSuggests.length ? uniqueSuggests : [q + ' mới nhất', q + ' 2026', 'hướng dẫn ' + q],
+        titleIdeas: [
+          `${q}: Hướng Dẫn Chi Tiết Cho Người Mới Bắt Đầu`,
+          `Bí Quyết Làm Video Chủ Đề ${q} Triệu View`,
+          `Top 5 Điều Cần Biết Về ${q} Năm Nay`
+        ]
+      };
+      if (uniqueSuggests && uniqueSuggests.length) {
         newKw.relatedKeywords = uniqueSuggests;
       }
 
@@ -9005,10 +9051,11 @@ function App() {
         }
       }
 
-      setCustomKeywords(prev => [newKw, ...prev.filter(x => x.kw.toLowerCase() !== q.toLowerCase())]);
+      setCustomKeywords(prev => [newKw, ...(prev || []).filter(x => (x?.kw || '').toLowerCase() !== q.toLowerCase())]);
       setSelectedKeyword(newKw);
-      showToast(`Đã phân tích từ khóa "${newKw.kw}"` + (newKw.isLiveYtData ? ' (Dữ liệu thật 100% từ YouTube Data API)' : ''));
+      showToast(`Đã phân tích từ khóa "${newKw.kw || q}"` + (newKw.isLiveYtData ? ' (Dữ liệu thật 100% từ YouTube Data API)' : ''));
     } catch (e) {
+      console.error('handleKeywordSearch error:', e);
       showToast('Đã xảy ra lỗi khi tìm từ khóa!');
     } finally {
       setKwSearching(false);
@@ -9016,31 +9063,32 @@ function App() {
   };
 
   const allKeywordItems = useMemo(() => {
-    return [...customKeywords, ...INITIAL_TRENDING_KEYWORDS];
+    return [...(customKeywords || []), ...(INITIAL_TRENDING_KEYWORDS || [])];
   }, [customKeywords]);
 
   const filteredKeywords = useMemo(() => {
-    return allKeywordItems.filter(item => {
+    return (allKeywordItems || []).filter(item => {
+      if (!item || !item.kw) return false;
       if (kwPeriod !== 'all' && item.period !== kwPeriod) return false;
       if (kwCat !== 'all' && item.cat !== kwCat) return false;
       if (kwRegion !== 'all' && item.region !== kwRegion && item.region !== 'GLOBAL') return false;
       if (kwComp !== 'all' && item.competition !== kwComp) return false;
-      if (kwSearchQuery.trim()) {
+      if (kwSearchQuery && kwSearchQuery.trim()) {
         const q = kwSearchQuery.trim().toLowerCase();
-        const matchTitle = item.kw.toLowerCase().includes(q);
+        const matchTitle = (item.kw || '').toLowerCase().includes(q);
         const matchCat = (item.catName || '').toLowerCase().includes(q);
-        const matchRelated = (item.relatedKeywords || []).some(rk => rk.toLowerCase().includes(q));
+        const matchRelated = Array.isArray(item.relatedKeywords) && item.relatedKeywords.some(rk => typeof rk === 'string' && rk.toLowerCase().includes(q));
         if (!matchTitle && !matchCat && !matchRelated) return false;
       }
       return true;
     }).sort((a, b) => {
-      if (kwSort === 'volume') return b.volume - a.volume;
-      if (kwSort === 'hot') return b.hotScore - a.hotScore;
+      if (kwSort === 'volume') return (b.volume || 0) - (a.volume || 0);
+      if (kwSort === 'hot') return (b.hotScore || 0) - (a.hotScore || 0);
       if (kwSort === 'comp') {
         const order = { 'Thấp': 1, 'Trung bình': 2, 'Cao': 3 };
         return (order[a.competition] || 2) - (order[b.competition] || 2);
       }
-      return b.growth - a.growth;
+      return (b.growth || 0) - (a.growth || 0);
     });
   }, [allKeywordItems, kwPeriod, kwCat, kwRegion, kwComp, kwSort, kwSearchQuery]);
 
@@ -9529,33 +9577,33 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               onClick={() => setTab('search')} 
               className={`h-full flex items-center text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
                 tab === 'search' 
-                  ? 'text-red-500 font-semibold' 
+                  ? 'text-white font-semibold' 
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}>
               <span>Xu hướng</span>
-              {tab === 'search' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-full"></span>}
+              {tab === 'search' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
             <button 
               onClick={() => setTab('keywords')} 
               className={`h-full flex items-center text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
                 tab === 'keywords' 
-                  ? 'text-red-500 font-semibold' 
+                  ? 'text-white font-semibold' 
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}>
               <span>Từ khoá</span>
-              {tab === 'keywords' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-full"></span>}
+              {tab === 'keywords' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
             <button 
               onClick={() => setTab('niche')} 
               className={`h-full flex items-center text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
                 tab === 'niche' 
-                  ? 'text-red-500 font-semibold' 
+                  ? 'text-white font-semibold' 
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}>
               <span>Trend SRT</span>
-              {tab === 'niche' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-full"></span>}
+              {tab === 'niche' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
             <button 
@@ -9565,11 +9613,11 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               }} 
               className={`h-full flex items-center text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
                 tab === 'rpm' 
-                  ? 'text-red-500 font-semibold' 
+                  ? 'text-white font-semibold' 
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}>
               <span>Top Ngách</span>
-              {tab === 'rpm' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-full"></span>}
+              {tab === 'rpm' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
             <button 
@@ -9579,42 +9627,42 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               }} 
               className={`h-full flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
                 tab === 'competitors' 
-                  ? 'text-red-500 font-semibold' 
+                  ? 'text-white font-semibold' 
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}>
               <span>Đối thủ</span>
               {competitors.length > 0 && (
                 <span className="text-[11px] text-zinc-500">({competitors.length})</span>
               )}
-              {tab === 'competitors' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-full"></span>}
+              {tab === 'competitors' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
             <button 
               onClick={() => setTab('autoupdate')} 
               className={`h-full flex items-center gap-1.5 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
                 tab === 'autoupdate' 
-                  ? 'text-red-500 font-semibold' 
+                  ? 'text-white font-semibold' 
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}>
               <span>Tự động</span>
               {autoUpdateData.pendingTrends?.length > 0 && (
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping"></span>
               )}
-              {tab === 'autoupdate' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-full"></span>}
+              {tab === 'autoupdate' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
             <button 
               onClick={() => setTab('watch')} 
               className={`h-full flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
                 tab === 'watch' 
-                  ? 'text-red-500 font-semibold' 
+                  ? 'text-white font-semibold' 
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}>
               <span>Watchlist</span>
               {watchList.length > 0 && (
                 <span className="text-[11px] text-zinc-500">({watchList.length})</span>
               )}
-              {tab === 'watch' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-full"></span>}
+              {tab === 'watch' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
             <button
@@ -9740,8 +9788,8 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                   onClick={() => applyPreset(p)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
                     isActive 
-                      ? 'bg-red-600 text-white border-red-500 shadow-sm' 
-                      : 'bg-brand-surface hover:bg-brand-card text-zinc-300 border-brand-border'
+                      ? 'bg-zinc-200 text-zinc-950 font-bold border-zinc-200 shadow-sm' 
+                      : 'bg-brand-surface hover:bg-brand-card text-zinc-400 hover:text-zinc-200 border-brand-border'
                   }`}>
                   {p.label}
                 </button>
@@ -9750,7 +9798,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           </section>
 
           {/* Compact Streamlined Search & Filter Section */}
-          <section className="bg-brand-surface border border-brand-border rounded-xl p-3 sm:p-4 space-y-3 shadow-md">
+          <section className="bg-brand-surface border border-brand-border rounded-xl p-3 sm:p-4 space-y-3 shadow-sm">
             {/* Unified Single Row: Input + Thời gian + Lĩnh vực + Quốc gia + Quét */}
             <div className="flex flex-col md:flex-row gap-2">
               <div className="relative flex-1">
@@ -9766,7 +9814,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               <div className="flex flex-wrap sm:flex-nowrap gap-1.5">
                 {/* Thời gian đăng */}
                 <select
-                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[155px]"
+                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500 max-w-[155px]"
                   value={f.period}
                   onChange={e => handleFilterChange('period', Number(e.target.value))}
                   title="Khoảng thời gian video được đăng tải">
@@ -9775,7 +9823,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
                 {/* Lĩnh vực */}
                 <select
-                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500 max-w-[135px] truncate"
+                  className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500 max-w-[135px] truncate"
                   value={f.cat}
                   onChange={e => handleFilterChange('cat', e.target.value)}
                   title="Danh mục video">
@@ -9966,8 +10014,8 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                       </div>
 
                       {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                        <div className="px-3 py-1.5 rounded-lg bg-red-600/95 text-white font-semibold text-xs shadow-lg">
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                        <div className="px-3 py-1.5 rounded-lg bg-black/85 text-white border border-white/20 font-medium text-xs shadow-lg">
                           Xem trên YouTube
                         </div>
                       </div>
@@ -10092,104 +10140,91 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
         {tab === 'keywords' && (
           <section className="space-y-4">
             {/* Header & Strategic Overview */}
-            <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-brand-border pb-4">
+            <div className="bg-brand-surface border border-brand-border rounded-xl p-4 sm:p-5 shadow-sm space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-border/60 pb-3">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Keyword Trend Radar
-                    </span>
-                    <span className="text-xs text-zinc-400">Xu hướng tìm kiếm 24h · 48h · 72h</span>
-                  </div>
-                  <h2 className="font-extrabold text-base sm:text-xl text-white mt-1">
-                    Công Cụ Tìm Từ Khóa Trend Đang Hot
+                  <h2 className="font-bold text-base sm:text-lg text-white">
+                    Tìm Kiếm Từ Khóa Xu Hướng
                   </h2>
-                  <div className="mt-2 p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs text-cyan-200">
-                      Mới: Bạn muốn quét độ bão hòa, đo tốc độ km/h và lọc kênh đối thủ theo bất kỳ từ khóa nào?
-                    </span>
-                    <button
-                      onClick={() => setTab('niche')}
-                      className="px-3 py-1 rounded-lg text-xs font-bold bg-cyan-500 text-black hover:bg-cyan-400 transition">
-                      Chuyển Sang Quét Ngách Bằng Từ Khóa
-                    </button>
-                  </div>
-                  <p className="text-xs text-zinc-400 mt-0.5 max-w-3xl leading-relaxed">
-                    Theo dõi các từ khóa bùng nổ tìm kiếm theo từng khung giờ (24h, 48h, 72h, 7 ngày). Đánh giá dung lượng tìm kiếm ước tính, tốc độ tăng trưởng, độ cạnh tranh và gợi ý ý tưởng làm video đón đầu xu hướng.
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Phân tích tốc độ tăng trưởng, độ hot và tìm kiếm ý tưởng video đón đầu xu hướng.
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => scanLiveYouTubeKeywords()}
-                    disabled={liveScanning}
-                    className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 transition flex items-center justify-center disabled:opacity-50">
-                    {liveScanning ? 'Đang quét YouTube Live...' : 'Quét từ khóa YouTube trực tiếp'}
+                    onClick={() => setShowKwTips(!showKwTips)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border transition flex items-center gap-1.5">
+                    <span>💡 {showKwTips ? 'Ẩn mẹo' : 'Mẹo & Hướng dẫn'}</span>
                   </button>
                   <button
                     onClick={() => exportKeywordsCsv(filteredKeywords, kwStats.periodLabel, showToast)}
-                    className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-brand-card hover:bg-brand-hover text-zinc-200 border border-brand-border transition flex items-center justify-center">
-                    Xuất file CSV ({filteredKeywords.length})
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border transition flex items-center justify-center">
+                    Xuất CSV ({filteredKeywords.length})
                   </button>
                 </div>
               </div>
 
-              {/* Live Real-Data Notice & API Guide Banner */}
-              <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-950/30 via-brand-card to-brand-card border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-emerald-400 font-extrabold text-sm">💡</span>
-                  <div className="text-xs text-zinc-300">
-                    <b className="text-white">Tìm từ khóa & bắt trend chính xác:</b> Hệ thống quét đa tầng gồm Autocomplete YouTube thời gian thực + YouTube Data API v3 đo VPH & độ cạnh tranh kênh nhỏ.
+              {/* Collapsible Tips Panel - Only shown when user clicks button */}
+              {showKwTips && (
+                <div className="p-3.5 bg-brand-card/90 border border-zinc-800 rounded-xl text-xs space-y-2 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-zinc-200">💡 Mẹo tìm từ khóa & phân tích ngách:</span>
+                    <button onClick={() => setShowKwTips(false)} className="text-zinc-500 hover:text-zinc-300 text-[11px]">Đóng ✕</button>
+                  </div>
+                  <div className="text-zinc-400 text-xs leading-relaxed space-y-1.5">
+                    <p>• Hệ thống kết hợp gợi ý tìm kiếm thời gian thực (Autocomplete) từ YouTube + đo lường VPH và độ cạnh tranh của kênh nhỏ.</p>
+                    <p>• Muốn quét độ bão hòa, đo tốc độ và lọc đối thủ theo từ khóa ngách? <button onClick={() => setTab('niche')} className="text-zinc-200 underline font-medium hover:text-white">Chuyển sang Quét Ngách SRT →</button></p>
+                    <div className="pt-1">
+                      <button
+                        onClick={() => { setApiModalOpen(true); setApiModalTab('guide'); }}
+                        className="px-3 py-1 rounded-lg text-[11px] font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition">
+                        Hướng dẫn cài đặt API Key YouTube
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => { setApiModalOpen(true); setApiModalTab('guide'); }}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition flex items-center gap-1.5 self-start sm:self-auto flex-shrink-0">
-                  <span>Hướng Dẫn Cài Đặt API</span>
-                </button>
-              </div>
+              )}
 
-              {/* Search & Action Bar (Strictly No Icons) */}
+              {/* Search & Action Bar */}
               <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex gap-2">
                   <div className="relative flex-1">
                     <input
-                      className={inp + ' py-2.5 text-xs sm:text-sm'}
+                      className={inp + ' py-2 text-xs sm:text-sm'}
                       placeholder="Nhập từ khóa cần tìm kiếm hoặc phân tích (ví dụ: AI, lofi, affiliate, review, kinh doanh...)..."
                       value={kwSearchQuery}
                       onChange={e => setKwSearchQuery(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter') handleKeywordSearch(); }}
                     />
                   </div>
-                  <div className="flex gap-1.5">
+                  <button
+                    onClick={() => handleKeywordSearch()}
+                    disabled={kwSearching}
+                    className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition disabled:opacity-50 whitespace-nowrap flex items-center justify-center">
+                    {kwSearching ? 'Đang phân tích...' : 'Tìm từ khóa'}
+                  </button>
+                  {kwSearchQuery && (
                     <button
-                      onClick={() => handleKeywordSearch()}
-                      disabled={kwSearching}
-                      className="px-4 py-2.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition disabled:opacity-50 flex items-center justify-center">
-                      {kwSearching ? 'Đang phân tích...' : 'Tìm từ khóa'}
+                      onClick={() => { setKwSearchQuery(''); }}
+                      className="px-3 py-2 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-400 hover:text-white border border-brand-border transition whitespace-nowrap">
+                      Xóa
                     </button>
-                    {kwSearchQuery && (
-                      <button
-                        onClick={() => { setKwSearchQuery(''); }}
-                        className="px-3 py-2.5 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-400 hover:text-white border border-brand-border transition flex items-center justify-center">
-                        Xóa tìm kiếm
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
 
-                {/* Timeframe Quick Pill Buttons (24h, 48h, 72h, 7d, 30d) (No Icons) */}
+                {/* Timeframe Quick Pill Buttons */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-xs font-semibold text-zinc-400 mr-1.5">Khung thời gian:</span>
+                  <span className="text-xs font-medium text-zinc-400 mr-1.5">Khung thời gian:</span>
                   {KEYWORD_PERIODS.map(p => {
                     const isActive = kwPeriod === p.id;
                     return (
                       <button
                         key={p.id}
                         onClick={() => setKwPeriod(p.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition border ${
                           isActive
-                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                            ? 'bg-zinc-200 text-zinc-950 font-bold border-zinc-200 shadow-sm'
                             : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border'
                         }`}>
                         {p.label}
@@ -10198,12 +10233,12 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                   })}
                   <button
                     onClick={() => setKwPeriod('all')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition border ${
                       kwPeriod === 'all'
-                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                        ? 'bg-zinc-200 text-zinc-950 font-bold border-zinc-200 shadow-sm'
                         : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border'
                     }`}>
-                    Tất cả thời gian
+                    Tất cả
                   </button>
                 </div>
 
@@ -10213,7 +10248,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                   <div className="flex items-center gap-1.5">
                     <span className="text-zinc-400 text-[11px] font-medium">Lĩnh vực:</span>
                     <select
-                      className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500"
+                      className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
                       value={kwCat}
                       onChange={e => setKwCat(e.target.value)}>
                       {KEYWORD_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -10224,7 +10259,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                   <div className="flex items-center gap-1.5">
                     <span className="text-zinc-400 text-[11px] font-medium">Khu vực:</span>
                     <select
-                      className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500"
+                      className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
                       value={kwRegion}
                       onChange={e => setKwRegion(e.target.value)}>
                       {KEYWORD_REGIONS.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
@@ -10235,7 +10270,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                   <div className="flex items-center gap-1.5">
                     <span className="text-zinc-400 text-[11px] font-medium">Độ cạnh tranh:</span>
                     <select
-                      className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500"
+                      className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
                       value={kwComp}
                       onChange={e => setKwComp(e.target.value)}>
                       <option value="all">Tất cả mức độ</option>
@@ -10249,7 +10284,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                   <div className="flex items-center gap-1.5 sm:ml-auto">
                     <span className="text-zinc-400 text-[11px] font-medium">Sắp xếp:</span>
                     <select
-                      className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-red-500"
+                      className="bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
                       value={kwSort}
                       onChange={e => setKwSort(e.target.value)}>
                       <option value="growth">Tăng trưởng cao nhất (% bứt phá)</option>
@@ -12027,12 +12062,14 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
       {/* Trending Keyword Detail Modal (Strictly No Icons) */}
       {selectedKeyword && (
-        <KeywordDetailModal
-          item={selectedKeyword}
-          onClose={() => setSelectedKeyword(null)}
-          onSearchVideo={handleExploreKeywordVideos}
-          onCopy={copyText}
-        />
+        <ErrorBoundary fallback={null}>
+          <KeywordDetailModal
+            item={selectedKeyword}
+            onClose={() => setSelectedKeyword(null)}
+            onSearchVideo={handleExploreKeywordVideos}
+            onCopy={copyText}
+          />
+        </ErrorBoundary>
       )}
 
       {/* Security F12 Blocked Warning Modal */}
@@ -12101,18 +12138,28 @@ class ErrorBoundary extends React.Component {
   }
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback !== undefined) {
+        return this.props.fallback;
+      }
       return (
         <div className="min-h-screen bg-[#0b0c10] text-zinc-200 flex flex-col items-center justify-center p-6 text-center">
           <div className="max-w-md bg-[#181b26] border border-[#232738] rounded-2xl p-6 shadow-2xl space-y-4">
             <h2 className="text-base font-bold text-white">Đã xảy ra sự cố hiển thị</h2>
             <p className="text-xs text-zinc-400">
-              Trang web đã tự động phục hồi khỏi lỗi. Bạn có thể bấm nút bên dưới để tải lại dữ liệu.
+              Trang web đã tự động phục hồi an toàn. Bạn có thể bấm nút bên dưới để tiếp tục trải nghiệm.
             </p>
-            <button
-              onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
-              className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition">
-              Tải lại trang web
-            </button>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition">
+                Tải lại trang web
+              </button>
+              <button
+                onClick={() => { this.setState({ hasError: false }); window.location.href = window.location.pathname; }}
+                className="px-4 py-2 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition">
+                Về trang chủ
+              </button>
+            </div>
           </div>
         </div>
       );
