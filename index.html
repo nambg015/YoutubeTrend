@@ -11019,11 +11019,9 @@ function TopNgachSection({
         )}
       </div>
 
-      {/* 4. Quét Riêng Theo Từ Khóa Tự Chọn (Linh hoạt cho người dùng) */}
-      <div className="bg-[#121316] border border-zinc-800 rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-3 text-xs flex-wrap">
-        <span className="text-zinc-400 text-[11px]">
-          🔍 Quét dò ngách theo chủ đề cụ thể:
-        </span>
+            {/* 4. THANH CÔNG CỤ TINH GỌN (1 HÀNG): BÊN TRÁI TÌM KIẾM, BÊN PHẢI BỘ LỌC ĐỊNH DẠNG */}
+      <div className="bg-[#121316] border border-zinc-800 rounded-xl p-2 sm:p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-sm">
+        {/* Bên trái: Thanh tìm kiếm / Quét chủ đề tinh gọn */}
         <form
           onSubmit={e => {
             e.preventDefault();
@@ -11031,125 +11029,125 @@ function TopNgachSection({
               runDeepNicheDiscovery(customKeywordInput.trim());
             }
           }}
-          className="flex items-center gap-1.5">
-          <input
-            type="text"
-            value={customKeywordInput}
-            onChange={e => setCustomKeywordInput(e.target.value)}
-            placeholder="vd: case study, BeyondVN, stoicism..."
-            className="w-36 sm:w-48 bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
-          />
+          className="flex items-center gap-1.5 flex-1 max-w-sm">
+          <div className="relative flex-1">
+            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">🔍</span>
+            <input
+              type="text"
+              value={customKeywordInput}
+              onChange={e => setCustomKeywordInput(e.target.value)}
+              placeholder="Quét theo chủ đề (BeyondVN, case study...)"
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-7 pr-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+            />
+          </div>
           <button
             type="submit"
             disabled={isScanningNiches}
-            className="px-3 py-1 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition cursor-pointer disabled:opacity-50">
-            Quét Chủ Đề
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition cursor-pointer disabled:opacity-50 shrink-0">
+            Quét
           </button>
         </form>
+
+        {/* Bên phải: Bộ lọc định dạng video (Tất Cả / Dài / Shorts / Live) */}
+        {activeNiche && (() => {
+          const vids = activeNiche.videos || [];
+          const formatCounts = {
+            all: vids.length,
+            long: vids.filter(v => getVideoFormat(v) === 'long').length,
+            short: vids.filter(v => getVideoFormat(v) === 'short').length,
+            live: vids.filter(v => getVideoFormat(v) === 'live').length
+          };
+          return (
+            <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+              <div className="flex items-center gap-0.5 p-0.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs">
+                <button
+                  type="button"
+                  onClick={() => setVideoFormatFilter('all')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                    videoFormatFilter === 'all'
+                      ? 'bg-zinc-800 text-white font-semibold shadow-sm'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}>
+                  <span>Tất Cả</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-zinc-300 font-mono">
+                    {formatCounts.all}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVideoFormatFilter('long')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                    videoFormatFilter === 'long'
+                      ? 'bg-zinc-800 text-white font-semibold shadow-sm'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}>
+                  <span>🎬 Dài</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-zinc-300 font-mono">
+                    {formatCounts.long}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVideoFormatFilter('short')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                    videoFormatFilter === 'short'
+                      ? 'bg-rose-950/80 text-rose-200 border border-rose-800 font-semibold shadow-sm'
+                      : 'text-zinc-400 hover:text-rose-300'
+                  }`}>
+                  <span>⚡ Shorts</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-rose-300 font-mono">
+                    {formatCounts.short}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVideoFormatFilter('live')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                    videoFormatFilter === 'live'
+                      ? 'bg-red-950/80 text-red-200 border border-red-800 font-semibold shadow-sm'
+                      : 'text-zinc-400 hover:text-red-300'
+                  }`}>
+                  <span>🔴 Live</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-red-300 font-mono">
+                    {formatCounts.live}
+                  </span>
+                </button>
+              </div>
+
+              {onSelectKeywordForSearch && (
+                <button
+                  type="button"
+                  onClick={() => onSelectKeywordForSearch(activeNiche.category || activeNiche.name)}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer shrink-0">
+                  Bắt Trend ↗
+                </button>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
-            {/* 5. DANH SÁCH VIDEO THỰC TẾ CỦA NGÁCH ĐANG CHỌN (100% KÊNH THẬT & PHÂN LOẠI SHORT / DÀI / LIVE) */}
+      {/* 5. DANH SÁCH VIDEO THỰC TẾ CỦA NGÁCH ĐANG CHỌN */}
       {activeNiche && (() => {
         const vids = activeNiche.videos || [];
-        const formatCounts = {
-          all: vids.length,
-          long: vids.filter(v => getVideoFormat(v) === 'long').length,
-          short: vids.filter(v => getVideoFormat(v) === 'short').length,
-          live: vids.filter(v => getVideoFormat(v) === 'live').length
-        };
-
         const filteredVideos = vids.filter(v => {
           if (videoFormatFilter === 'all') return true;
           return getVideoFormat(v) === videoFormatFilter;
         });
 
         return (
-          <div className="space-y-3 pt-2">
-            {/* Header ngách đang chọn */}
-            <div className="bg-[#121316] border border-zinc-800 rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <span>🎬</span> Video Thực Tế: <b className="text-zinc-200">{activeNiche.name}</b>
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-800 text-zinc-300 border border-zinc-700">
-                    {vids.length} video kênh &lt;30k sub trong 10 ngày qua
-                  </span>
-                </div>
-                <p className="text-[11px] text-zinc-400 pt-0.5">
-                  Các video này đạt view vượt trội so với số lượng sub của kênh (Outlier). Bấm &quot;Soi Video &amp; Tags&quot; để copy tags ẩn và soi 50 video chỉ với 1 quota.
-                </p>
-              </div>
-
-              {/* BỘ LỌC PHÂN LOẠI ĐỊNH DẠNG: TẤT CẢ / VIDEO DÀI / SHORTS / TRỰC TIẾP */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-1 p-0.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setVideoFormatFilter('all')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 ${
-                      videoFormatFilter === 'all'
-                        ? 'bg-zinc-800 text-white font-semibold shadow-sm'
-                        : 'text-zinc-400 hover:text-zinc-200'
-                    }`}>
-                    <span>Tất Cả</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-zinc-300 font-mono">
-                      {formatCounts.all}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setVideoFormatFilter('long')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 ${
-                      videoFormatFilter === 'long'
-                        ? 'bg-zinc-800 text-white font-semibold shadow-sm'
-                        : 'text-zinc-400 hover:text-zinc-200'
-                    }`}>
-                    <span>🎬 Video Dài</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-zinc-300 font-mono">
-                      {formatCounts.long}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setVideoFormatFilter('short')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 ${
-                      videoFormatFilter === 'short'
-                        ? 'bg-rose-950/80 text-rose-200 border border-rose-800 font-semibold shadow-sm'
-                        : 'text-zinc-400 hover:text-rose-300'
-                    }`}>
-                    <span>⚡ Shorts</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-rose-300 font-mono">
-                      {formatCounts.short}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setVideoFormatFilter('live')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 ${
-                      videoFormatFilter === 'live'
-                        ? 'bg-red-950/80 text-red-200 border border-red-800 font-semibold shadow-sm'
-                        : 'text-zinc-400 hover:text-red-300'
-                    }`}>
-                    <span>🔴 Trực Tiếp</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-red-300 font-mono">
-                      {formatCounts.live}
-                    </span>
-                  </button>
-                </div>
-
-                {onSelectKeywordForSearch && (
-                  <button
-                    type="button"
-                    onClick={() => onSelectKeywordForSearch(activeNiche.category || activeNiche.name)}
-                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer">
-                    Bắt Trend Từ Khóa ↗
-                  </button>
-                )}
-              </div>
+          <div className="space-y-2 pt-1">
+            {/* Tiêu đề ngách thanh mảnh, tinh tế */}
+            <div className="flex items-center justify-between text-xs px-1">
+              <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
+                <span>🎬</span> Video Thực Tế: <b className="text-white">{activeNiche.name}</b>
+              </span>
+              <span className="text-[11px] text-zinc-500">
+                Hiển thị {filteredVideos.length}/{vids.length} video kênh &lt;30k sub trong 10 ngày qua
+              </span>
             </div>
 
             {/* Thông báo nếu không có video thuộc phân loại đang chọn */}
