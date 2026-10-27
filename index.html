@@ -634,7 +634,11 @@ Hãy viết một bài Cầu Nguyện & Suy Niệm dài 25 - 30 phút (~3.000 t�
     id: 'mythology_folklore',
     name: 'Thần Thoại Bắc Âu & Quái Thú Cổ Xưa',
     subtitle: 'Norse Mythology & Dark Folklore Lore',
+    channelName: 'Mythology Unveiled',
     exampleChannel: '@MythologyUnveiled',
+    subs: 26000,
+    views: 165000,
+    outlierMultiplier: 6.3,
     rpmRange: '$17 - $34',
     avgRpm: 25,
     tag: 'Thị trường hẹp ⚔️',
@@ -642,32 +646,243 @@ Hãy viết một bài Cầu Nguyện & Suy Niệm dài 25 - 30 phút (~3.000 t�
     desc: 'Truyền thuyết về thần Odin, quái vật Kraken, sinh vật bí ẩn trong rừng Bắc Âu.',
     queries: ['Norse mythology gods and monsters explained', 'creatures from dark folklore that terrified ancients', 'the truth behind the kraken deep sea monster'],
     whyText: 'Tệp khán giả ngách đam mê game thần thoại (God of War, Elden Ring) thích nghe, nhưng biên độ mở rộng không lớn bằng kể chuyện gia đình hay tài liệu vũ trụ.',
+    relatedNiches: ['Dark Norse Lore', 'Ancient Monster Legends', 'Creatures of the Deep', 'Mythological Deities'],
     aiVoice: 'ElevenLabs: George hoặc Marcus (Giọng già dặn, cổ kính, thần thoại)',
     thumbPromptTpl: (title) => `Epic dark Norse mythology scene, Allfather Odin standing with his two ravens Huginn and Muninn on icy mountain summit, holding glowing spear Gungnir, cinematic blizzard lighting, 8k --ar 16:9`,
     scriptPromptTpl: (title, channel) => `Viết kịch bản kể chuyện thần thoại Bắc Âu dài 30 phút (~3.500 từ tiếng Anh) về chủ đề: "${title}". Lồng ghép giọng điệu cổ xưa, âm hưởng hùng ca và những bài học ẩn dụ sâu sắc.`,
     sampleVideos: [
-      { id: 'myth_vid_1', title: "The 7 Terrifying Monsters Of Norse Mythology Even The Gods Feared", channel: "Mythology Unveiled", channelId: "ch_myth_1", subs: 36000, views: 21000, dur: 2350, vph: 240, published: new Date(Date.now() - 36e5 * 84).toISOString(), thumb: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80" }
+      { id: 'myth_vid_1', title: "The 7 Terrifying Monsters Of Norse Mythology Even The Gods Feared", channel: "Mythology Unveiled", channelId: "ch_myth_1", subs: 26000, views: 165000, dur: 2350, vph: 440, published: new Date(Date.now() - 36e5 * 84).toISOString(), thumb: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80" }
     ],
     scores: {
-      '24h': { score: 76.5, prevRank: 16, growth: '+100%', comp: 'Cao', retention: '78%', trendNote: 'Đáy bảng xếp hạng (Rank 16), ít biến động' },
-      '1d':  { score: 77.2, prevRank: 16, growth: '+110%', comp: 'Cao', retention: '78%', trendNote: 'Rank 16 hôm qua' },
-      '2d':  { score: 78.0, prevRank: 16, growth: '+120%', comp: 'Cao', retention: '79%', trendNote: 'Rank 16 2 ngày trước' },
-      '3d':  { score: 78.8, prevRank: 16, growth: '+130%', comp: 'Cao', retention: '80%', trendNote: 'Rank 16 3 ngày trước' },
-      '7d':  { score: 79.5, prevRank: 14, growth: '+140%', comp: 'Cao', retention: '80%', trendNote: 'Rank 16 tuần trước' },
-      '14d': { score: 82.1, prevRank: 13, growth: '+190%', comp: 'Trung bình', retention: '82%', trendNote: 'Rank 14 nửa tháng trước' },
-      '30d': { score: 83.5, prevRank: 10, growth: '+220%', comp: 'Trung bình', retention: '83%', trendNote: 'Rank 13 tháng trước' },
-      '90d': { score: 87.4, prevRank: 9, growth: '+290%', comp: 'Thấp', retention: '85%', trendNote: 'Top 10 quý trước' }
+      '24h': { score: 82.5, prevRank: 20, growth: '+150%', comp: 'Cao', retention: '80%', trendNote: 'Rank 20 hôm nay' },
+      '1d':  { score: 83.2, prevRank: 19, growth: '+160%', comp: 'Cao', retention: '80%', trendNote: 'Rank 19 hôm qua' },
+      '2d':  { score: 84.0, prevRank: 18, growth: '+170%', comp: 'Cao', retention: '81%', trendNote: 'Rank 18 2 ngày trước' },
+      '3d':  { score: 84.8, prevRank: 18, growth: '+180%', comp: 'Cao', retention: '81%', trendNote: 'Rank 18 3 ngày trước' },
+      '7d':  { score: 85.5, prevRank: 17, growth: '+190%', comp: 'Cao', retention: '81%', trendNote: 'Rank 17 tuần trước' },
+      '14d': { score: 86.1, prevRank: 16, growth: '+210%', comp: 'Trung bình', retention: '82%', trendNote: 'Rank 16 nửa tháng trước' },
+      '30d': { score: 86.5, prevRank: 15, growth: '+230%', comp: 'Trung bình', retention: '83%', trendNote: 'Rank 15 tháng trước' },
+      '90d': { score: 87.4, prevRank: 14, growth: '+290%', comp: 'Thấp', retention: '85%', trendNote: 'Top 14 quý trước' }
+    }
+  },
+  {
+    id: 'ai_automation_money',
+    name: 'AI Automation & Kiếm Tiền Online',
+    subtitle: 'No-Code AI Agents & Faceless SaaS Income',
+    channelName: 'AI Wealth Academy',
+    exampleChannel: '@AIWealthAcademy',
+    subs: 14500,
+    views: 215000,
+    outlierMultiplier: 14.8,
+    rpmRange: '$30 - $65',
+    avgRpm: 45,
+    tag: 'RPM Khủng 🤖',
+    tagCls: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+    desc: 'Hướng dẫn xây dựng hệ thống AI tự động kiếm tiền, đối tượng khán giả US trả tiền phần mềm chi trả CPM cực cao.',
+    queries: ['make money with AI agents automated', 'how I automated my online business with AI', 'best AI tools to make money 2025', 'faceless AI youtube channel blueprint'],
+    whyText: 'Chủ đề hot nhất 2025-2026. Quảng cáo từ các công cụ AI, SaaS, khóa học kinh doanh có giá CPM lên đến $40 - $70. Kênh chỉ 14k sub nhưng video đạt 200k+ view.',
+    relatedNiches: ['AI Automation Agency', 'Passive Income AI', 'No-code Tools US', 'Faceless SaaS'],
+    aiVoice: 'ElevenLabs: Brian hoặc Marcus (Giọng chuyên gia công nghệ, tự tin, súc tích)',
+    thumbPromptTpl: (title) => `Futuristic AI glowing neon interface, digital dollar signs flowing into robot hand, clean minimalist dark background, 8k --ar 16:9`,
+    scriptPromptTpl: (title, channel) => `Viết kịch bản video hướng dẫn AI kiếm tiền 25 phút (~3.200 từ tiếng Anh) với chủ đề: "${title}".`,
+    sampleVideos: [
+      { id: 'ai_auto_1', title: "How I Built A $12,000/Month Automated AI Business In 30 Days (Step By Step)", channel: "AI Wealth Academy", channelId: "ch_ai_1", subs: 14500, views: 215000, dur: 2240, vph: 980, published: new Date(Date.now() - 36e5 * 20).toISOString(), thumb: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80" },
+      { id: 'ai_auto_2', title: "The 3 AI Agents Running My Entire Company While I Sleep", channel: "AI Wealth Academy", channelId: "ch_ai_1", subs: 14500, views: 165000, dur: 1980, vph: 720, published: new Date(Date.now() - 36e5 * 48).toISOString(), thumb: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=600&q=80" }
+    ],
+    scores: {
+      '24h': { score: 95.8, prevRank: 5, growth: '+560%', comp: 'Thấp', retention: '90%', trendNote: '⭐ Bứt phá dữ dội, nhu cầu AI Automation tại Mỹ tăng vọt' },
+      '1d':  { score: 94.0, prevRank: 7, growth: '+480%', comp: 'Thấp', retention: '89%', trendNote: 'Leo hạng thần tốc' },
+      '2d':  { score: 92.5, prevRank: 10, growth: '+410%', comp: 'Thấp', retention: '88%', trendNote: 'Lọt Top 8' },
+      '3d':  { score: 90.0, prevRank: 12, growth: '+340%', comp: 'Trung bình', retention: '86%', trendNote: 'Mới bứt phá' },
+      '7d':  { score: 87.0, prevRank: 15, growth: '+260%', comp: 'Trung bình', retention: '84%', trendNote: 'Ngách mới nổi' },
+      '14d': { score: 84.0, prevRank: 18, growth: '+190%', comp: 'Trung bình', retention: '82%', trendNote: 'Giai đoạn ươm mầm' },
+      '30d': { score: 81.0, prevRank: 20, growth: '+140%', comp: 'Trung bình', retention: '80%', trendNote: 'Khởi đầu' },
+      '90d': { score: 78.0, prevRank: 22, growth: '+100%', comp: 'Trung bình', retention: '78%', trendNote: 'Giai đoạn đầu năm' }
+    }
+  },
+  {
+    id: 'roblox_brainrot',
+    name: 'Roblox Brookhaven & Bí Ẩn Gaming',
+    subtitle: 'Roblox Lore, Brookhaven Secrets & Viral Drama',
+    channelName: 'Pixel Quest Lore',
+    exampleChannel: '@PixelQuestLore',
+    subs: 28400,
+    views: 390000,
+    outlierMultiplier: 13.7,
+    rpmRange: '$12 - $22',
+    avgRpm: 16,
+    tag: 'View Triệu Nhanh 🎮',
+    tagCls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    desc: 'Giải mã bí ẩn rùng rợn trong Roblox Brookhaven RP, cốt truyện ly kỳ giữ chân tệp trẻ em & thanh thiếu niên US.',
+    queries: ['Brookhaven RP secret abandoned house mystery', 'Roblox creepy lore explained', 'the mystery behind roblox hospital room', 'Brookhaven secret bunker found'],
+    whyText: 'View tăng cực kỳ bùng nổ, tỷ lệ click thumbnail (CTR) trên 15% vì tính tò mò của trẻ em Mỹ. Kênh nhỏ dễ dàng đạt hàng trăm nghìn view chỉ trong vài ngày.',
+    relatedNiches: ['Roblox Brookhaven Lore', 'Gaming Creepypasta', 'Minecraft Secrets', 'Brainrot Viral Animation'],
+    aiVoice: 'ElevenLabs: Adam hoặc Anthony (Giọng hào hứng, hồi hộp, kịch tính)',
+    thumbPromptTpl: (title) => `Creepy Roblox character standing in front of dark mysterious Brookhaven mansion at night with red flashlight, cinematic lighting, 8k --ar 16:9`,
+    scriptPromptTpl: (title, channel) => `Viết kịch bản giải mã bí ẩn Roblox Brookhaven dài 15 phút (~2.200 từ tiếng Anh) với chủ đề: "${title}".`,
+    sampleVideos: [
+      { id: 'roblox_1', title: "We Finally Unlocked The Secret Basement In Brookhaven Hospital... What Was Inside Terrified Us", channel: "Pixel Quest Lore", channelId: "ch_rbx_1", subs: 28400, views: 390000, dur: 1140, vph: 1450, published: new Date(Date.now() - 36e5 * 14).toISOString(), thumb: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80" },
+      { id: 'roblox_2', title: "The Dark History Of The Brookhaven Agency Nobody Talks About", channel: "Pixel Quest Lore", channelId: "ch_rbx_1", subs: 28400, views: 240000, dur: 980, vph: 860, published: new Date(Date.now() - 36e5 * 38).toISOString(), thumb: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=600&q=80" }
+    ],
+    scores: {
+      '24h': { score: 94.5, prevRank: 7, growth: '+620%', comp: 'Trung bình', retention: '88%', trendNote: 'View bứt phá cực mạnh từ đối tượng Gen Z & Alpha US' },
+      '1d':  { score: 93.2, prevRank: 8, growth: '+510%', comp: 'Trung bình', retention: '87%', trendNote: 'Duy trì phong độ cao' },
+      '2d':  { score: 91.8, prevRank: 8, growth: '+440%', comp: 'Trung bình', retention: '86%', trendNote: 'Cắn đề xuất liên tục' },
+      '3d':  { score: 89.5, prevRank: 10, growth: '+360%', comp: 'Trung bình', retention: '85%', trendNote: 'Tăng tốc' },
+      '7d':  { score: 86.2, prevRank: 14, growth: '+280%', comp: 'Trung bình', retention: '83%', trendNote: 'Top 14 tuần trước' },
+      '14d': { score: 83.5, prevRank: 16, growth: '+210%', comp: 'Trung bình', retention: '82%', trendNote: 'Dưới top 15' },
+      '30d': { score: 81.0, prevRank: 18, growth: '+150%', comp: 'Trung bình', retention: '80%', trendNote: 'Bình ổn' },
+      '90d': { score: 79.0, prevRank: 19, growth: '+120%', comp: 'Trung bình', retention: '79%', trendNote: 'Ổn định' }
+    }
+  },
+  {
+    id: 'rain_sleep_sounds',
+    name: 'Âm Thanh Mưa Ngủ & Tiếng Ồn Trắng',
+    subtitle: 'Cozy Cabin Heavy Rain & Deep Sleep 10H',
+    channelName: 'Rainy Haven ASMR',
+    exampleChannel: '@RainyHavenASMR',
+    subs: 19800,
+    views: 260000,
+    outlierMultiplier: 13.1,
+    rpmRange: '$18 - $32',
+    avgRpm: 24,
+    tag: 'Giữ chân 95% 🌧️',
+    tagCls: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+    desc: 'Video âm thanh mưa rơi trên mái tôn ấm cúng, màn hình đen 8-10 tiếng ru ngủ, khán giả nghe thụ động xuyên đêm.',
+    queries: ['heavy rain on cozy tin roof sleep 10 hours', 'black screen rain sounds for insomnia', 'relaxing blizzard thunder cabin sleep', 'gentle rain for studying and anxiety relief'],
+    whyText: 'Retention rate (tỷ lệ giữ chân) lên tới 92% vì khán giả cắm tai nghe ngủ suốt 8 tiếng. Doanh thu đều đặn 365 ngày không lo lỗi thời vụ.',
+    relatedNiches: ['Sleep Aid Sounds', 'Black Screen ASMR', 'Thunderstorm Meditation', 'Tinnitus Relief Noise'],
+    aiVoice: 'Không lời thoại (Âm thanh mưa rơi, tiếng sấm êm dịu, gió rít nhẹ)',
+    thumbPromptTpl: (title) => `Cozy wooden cabin bedroom overlooking misty rainy forest through large glass window, warm fairy lights, steam from coffee cup, cinematic moody --ar 16:9`,
+    scriptPromptTpl: (title, channel) => `Cấu trúc vòng lặp âm thanh ASMR 10 tiếng ru ngủ chất lượng cao: "${title}".`,
+    sampleVideos: [
+      { id: 'rain_1', title: "Heavy Rain On Tin Roof At Cozy Wooden Cabin In Deep Forest (10 Hours Sleep Sounds)", channel: "Rainy Haven ASMR", channelId: "ch_rain_1", subs: 19800, views: 260000, dur: 36000, vph: 680, published: new Date(Date.now() - 36e5 * 30).toISOString(), thumb: "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=600&q=80" },
+      { id: 'rain_2', title: "Gentle Night Rain On Window With Distant Thunder (Black Screen For Insomnia)", channel: "Rainy Haven ASMR", channelId: "ch_rain_1", subs: 19800, views: 185000, dur: 28800, vph: 510, published: new Date(Date.now() - 36e5 * 62).toISOString(), thumb: "https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?auto=format&fit=crop&w=600&q=80" }
+    ],
+    scores: {
+      '24h': { score: 93.8, prevRank: 8, growth: '+440%', comp: 'Thấp', retention: '95%', trendNote: 'Retention cao nhất hệ thống (95%), view cực kỳ bền bỉ' },
+      '1d':  { score: 92.5, prevRank: 9, growth: '+410%', comp: 'Thấp', retention: '94%', trendNote: 'Ổn định trong Top 10' },
+      '2d':  { score: 91.0, prevRank: 11, growth: '+370%', comp: 'Thấp', retention: '94%', trendNote: 'Đều đặn mỗi đêm' },
+      '3d':  { score: 90.2, prevRank: 11, growth: '+340%', comp: 'Thấp', retention: '93%', trendNote: 'Giữ hạng' },
+      '7d':  { score: 88.5, prevRank: 12, growth: '+290%', comp: 'Thấp', retention: '93%', trendNote: 'Tuần trước ổn định' },
+      '14d': { score: 87.0, prevRank: 13, growth: '+250%', comp: 'Thấp', retention: '92%', trendNote: 'Bền vững' },
+      '30d': { score: 86.0, prevRank: 14, growth: '+220%', comp: 'Thấp', retention: '91%', trendNote: 'Chỉ số vàng' },
+      '90d': { score: 85.0, prevRank: 15, growth: '+180%', comp: 'Thấp', retention: '90%', trendNote: 'Bình ổn' }
+    }
+  },
+  {
+    id: 'weird_science_facts',
+    name: 'Khoa Học Kỳ Lạ & Thí Nghiệm Độc Đáo',
+    subtitle: 'Bizarre Biology, Unexplained Science & Dark Facts',
+    channelName: 'Oddity Lab Chronicles',
+    exampleChannel: '@OddityLabChronicles',
+    subs: 16200,
+    views: 195000,
+    outlierMultiplier: 12.0,
+    rpmRange: '$20 - $38',
+    avgRpm: 28,
+    tag: 'Tò Mò Cực Cao 🧪',
+    tagCls: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    desc: 'Các hiện tượng sinh học quái dị, nghịch lý khoa học gây sốc, giữ chân người xem bằng chuỗi câu hỏi nghẹt thở.',
+    queries: ['what happens if you never sleep science experiment', 'creatures that defy laws of biology', 'unbelievable chemistry reactions explained', 'the darkest medical experiment in history'],
+    whyText: 'Kích thích trí tò mò tuyệt đỉnh của khán giả quốc tế. Video tài liệu khoa học 20-30 phút chèn nhiều quảng cáo công nghệ, giáo dục giá cao.',
+    relatedNiches: ['Dark Science Facts', 'Bizarre Biology', 'Deep Sea Oddities', 'Medical Mysteries'],
+    aiVoice: 'ElevenLabs: George hoặc Adam (Giọng bí ẩn, lôi cuốn, kể chuyện khoa học)',
+    thumbPromptTpl: (title) => `Mysterious glowing specimen in vintage glass laboratory beaker, dramatic moody lighting, science laboratory reflections, 8k --ar 16:9`,
+    scriptPromptTpl: (title, channel) => `Viết kịch bản phim tài liệu khoa học hấp dẫn 25 phút (~3.000 từ tiếng Anh) với chủ đề: "${title}".`,
+    sampleVideos: [
+      { id: 'sci_fact_1', title: "What Actually Happens To Your Brain When You Don't Sleep For 7 Days", channel: "Oddity Lab Chronicles", channelId: "ch_odd_1", subs: 16200, views: 195000, dur: 1620, vph: 740, published: new Date(Date.now() - 36e5 * 28).toISOString(), thumb: "https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&w=600&q=80" },
+      { id: 'sci_fact_2', title: "5 Deep Sea Creatures That Biologists Still Cannot Explain", channel: "Oddity Lab Chronicles", channelId: "ch_odd_1", subs: 16200, views: 135000, dur: 1480, vph: 530, published: new Date(Date.now() - 36e5 * 58).toISOString(), thumb: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80" }
+    ],
+    scores: {
+      '24h': { score: 92.4, prevRank: 10, growth: '+390%', comp: 'Thấp', retention: '87%', trendNote: 'Tỷ lệ xem lại cao, đề xuất mạnh trên feed tài liệu' },
+      '1d':  { score: 91.0, prevRank: 11, growth: '+350%', comp: 'Thấp', retention: '86%', trendNote: 'Ổn định' },
+      '2d':  { score: 89.5, prevRank: 12, growth: '+300%', comp: 'Trung bình', retention: '85%', trendNote: 'Duy trì top 12' },
+      '3d':  { score: 88.0, prevRank: 13, growth: '+260%', comp: 'Trung bình', retention: '84%', trendNote: 'Ổn định' },
+      '7d':  { score: 86.5, prevRank: 15, growth: '+220%', comp: 'Trung bình', retention: '83%', trendNote: 'Top 15' },
+      '14d': { score: 84.0, prevRank: 17, growth: '+170%', comp: 'Trung bình', retention: '82%', trendNote: 'Cơ bản' },
+      '30d': { score: 82.0, prevRank: 19, growth: '+130%', comp: 'Trung bình', retention: '80%', trendNote: 'Khởi đầu' },
+      '90d': { score: 80.0, prevRank: 20, growth: '+100%', comp: 'Trung bình', retention: '79%', trendNote: 'Nền tảng' }
+    }
+  },
+  {
+    id: 'countryside_cooking',
+    name: 'Nấu Ăn Nông Thôn & Đời Sống Yên Bình',
+    subtitle: 'Peaceful Village Life & Outdoor ASMR Cooking',
+    channelName: 'Hearth & Harvest Life',
+    exampleChannel: '@HearthHarvestLife',
+    subs: 21500,
+    views: 240000,
+    outlierMultiplier: 11.2,
+    rpmRange: '$16 - $30',
+    avgRpm: 22,
+    tag: 'Khán giả trung thành 🌾',
+    tagCls: 'bg-amber-600/20 text-amber-300 border-amber-600/30',
+    desc: 'Nấu ăn dân dã ngoài trời, tiếng củi tí tách, tiếng xào nấu thư giãn không lời thoại thu hút khán giả toàn cầu.',
+    queries: ['village grandmother cooking traditional clay pot recipe', 'peaceful farm life cooking winter soup', 'off grid cabin traditional bread baking', 'outdoor fire cooking autumn harvest'],
+    whyText: 'Nội dung phi ngôn ngữ (No-Language Barrier), tiếp cận khán giả từ Âu sang Á. Tỷ lệ giữ chân cao vì tính chất chữa lành (healing).',
+    relatedNiches: ['Cottagecore Cooking', 'Wilderness ASMR Kitchen', 'Homesteading Life', 'Traditional Claypot Food'],
+    aiVoice: 'Không lời thoại (Âm thanh thiên nhiên, củi cháy tí tách, dao thớt nhịp nhàng)',
+    thumbPromptTpl: (title) => `Rustic outdoor wooden kitchen in sunlit countryside orchard, steaming clay pot on stone stove, fresh organic vegetables, golden hour lighting, 8k --ar 16:9`,
+    scriptPromptTpl: (title, channel) => `Lập kế hoạch quay dựng video nấu ăn chữa lành 20 phút: "${title}".`,
+    sampleVideos: [
+      { id: 'cook_1', title: "Winter Solstice Traditional Clay Pot Soup Cooked Over Open Fire In Peaceful Farm", channel: "Hearth & Harvest Life", channelId: "ch_cook_1", subs: 21500, views: 240000, dur: 1820, vph: 590, published: new Date(Date.now() - 36e5 * 36).toISOString(), thumb: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80" },
+      { id: 'cook_2', title: "Baking Sourdough Bread In Hand-Built Cob Oven During Autumn Rain", channel: "Hearth & Harvest Life", channelId: "ch_cook_1", subs: 21500, views: 168000, dur: 1450, vph: 420, published: new Date(Date.now() - 36e5 * 74).toISOString(), thumb: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80" }
+    ],
+    scores: {
+      '24h': { score: 90.8, prevRank: 12, growth: '+320%', comp: 'Trung bình', retention: '89%', trendNote: 'View đều và khán giả nước ngoài đăng ký kênh rất trung thành' },
+      '1d':  { score: 90.0, prevRank: 12, growth: '+310%', comp: 'Trung bình', retention: '88%', trendNote: 'Ổn định' },
+      '2d':  { score: 88.5, prevRank: 13, growth: '+270%', comp: 'Trung bình', retention: '87%', trendNote: 'Top 13' },
+      '3d':  { score: 87.2, prevRank: 14, growth: '+230%', comp: 'Trung bình', retention: '86%', trendNote: 'Top 14' },
+      '7d':  { score: 85.0, prevRank: 16, growth: '+190%', comp: 'Trung bình', retention: '85%', trendNote: 'Top 16' },
+      '14d': { score: 83.0, prevRank: 18, growth: '+150%', comp: 'Trung bình', retention: '84%', trendNote: 'Cơ bản' },
+      '30d': { score: 82.0, prevRank: 20, growth: '+120%', comp: 'Trung bình', retention: '82%', trendNote: 'Ổn định' },
+      '90d': { score: 81.0, prevRank: 21, growth: '+100%', comp: 'Trung bình', retention: '81%', trendNote: 'Bền bỉ' }
+    }
+  },
+  {
+    id: 'gaming_speedrun_lore',
+    name: 'Kỷ Lục Game & Phân Tích Hack Não',
+    subtitle: 'Impossible Speedruns & World Records Breakdown',
+    channelName: 'Frame Perfect Archive',
+    exampleChannel: '@FramePerfectArchive',
+    subs: 26000,
+    views: 275000,
+    outlierMultiplier: 10.6,
+    rpmRange: '$18 - $35',
+    avgRpm: 25,
+    tag: 'Cốt truyện lôi cuốn ⚡',
+    tagCls: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+    desc: 'Phân tích các kỷ lục game bất khả thi, cách game thủ tìm ra lỗi kỹ thuật để phá đảo thế giới, kịch tính như phim trinh thám.',
+    queries: ['how one player broke an unbroken speedrun record', 'the darkest glitch in gaming history', 'how a geometry dash player verified impossible level', 'the 10-year mystery of an impossible game jump'],
+    whyText: 'Nội dung tài liệu gaming kể chuyện (Video Essay / Documentary) có thời lượng 20-40 phút, retention cực cao vì người xem hồi hộp chờ xem kỷ lục có bị phá vỡ hay không.',
+    relatedNiches: ['Speedrun History', 'Gaming World Records', 'Geometry Dash Verifications', 'Retro Game Exploits'],
+    aiVoice: 'ElevenLabs: Marcus hoặc Anthony (Giọng kể chuyện tài liệu sắc bén, mạch lạc)',
+    thumbPromptTpl: (title) => `Dramatic split screen of retro game character and glowing world record stopwatch, mysterious neon gaming atmosphere, 8k --ar 16:9`,
+    scriptPromptTpl: (title, channel) => `Viết kịch bản phim tài liệu phân tích kỷ lục game 25 phút (~3.200 từ tiếng Anh) với chủ đề: "${title}".`,
+    sampleVideos: [
+      { id: 'spd_1', title: "The 12-Year Speedrun Record That Everyone Thought Was Impossible To Beat", channel: "Frame Perfect Archive", channelId: "ch_spd_1", subs: 26000, views: 275000, dur: 2180, vph: 810, published: new Date(Date.now() - 36e5 * 22).toISOString(), thumb: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=600&q=80" },
+      { id: 'spd_2', title: "How A Single Pixel Glitch Changed This Game Forever", channel: "Frame Perfect Archive", channelId: "ch_spd_1", subs: 26000, views: 190000, dur: 1850, vph: 580, published: new Date(Date.now() - 36e5 * 50).toISOString(), thumb: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80" }
+    ],
+    scores: {
+      '24h': { score: 89.6, prevRank: 14, growth: '+340%', comp: 'Thấp', retention: '88%', trendNote: 'Video dài trên 30p cắn đề xuất US cực mạnh' },
+      '1d':  { score: 88.5, prevRank: 15, growth: '+300%', comp: 'Thấp', retention: '87%', trendNote: 'Lọt Top 15' },
+      '2d':  { score: 87.0, prevRank: 16, growth: '+250%', comp: 'Thấp', retention: '86%', trendNote: 'Ổn định' },
+      '3d':  { score: 86.0, prevRank: 17, growth: '+220%', comp: 'Trung bình', retention: '85%', trendNote: 'Top 17' },
+      '7d':  { score: 84.5, prevRank: 18, growth: '+180%', comp: 'Trung bình', retention: '84%', trendNote: 'Top 18' },
+      '14d': { score: 83.0, prevRank: 19, growth: '+140%', comp: 'Trung bình', retention: '83%', trendNote: 'Top 19' },
+      '30d': { score: 82.0, prevRank: 21, growth: '+110%', comp: 'Trung bình', retention: '81%', trendNote: 'Cơ bản' },
+      '90d': { score: 80.5, prevRank: 22, growth: '+90%', comp: 'Trung bình', retention: '80%', trendNote: 'Khởi đầu' }
     }
   }
 ];
 
 const RPM_NICHES = CASHCOW_NICHES;
 
-// Helper to calculate Dynamic Top 10 and Dropped Niches for any timeframe
+// Helper to calculate Dynamic Top 20 and Dropped Niches for any timeframe (Sub Thấp - View Cao - Mọi Chủ Đề)
 function getNicheLeaderboard(timeframeId = '24h') {
   const tf = timeframeId || '24h';
   const list = CASHCOW_NICHES.map(niche => {
-    const scObj = niche.scores?.[tf] || { score: 70, prevRank: 16, trendNote: '', growth: '+100%', comp: 'Trung bình', retention: '80%' };
+    const scObj = niche.scores?.[tf] || { score: 70, prevRank: 24, trendNote: '', growth: '+100%', comp: 'Trung bình', retention: '80%' };
     
     // Calculate realistic derived metrics based on score, timeframe and niche characteristics
     const baseVph = Math.round(scObj.score * 18.2);
@@ -685,14 +900,23 @@ function getNicheLeaderboard(timeframeId = '24h') {
     const retVal = parseInt(scObj.retention || '85') || 85;
     const retScore = Math.min(15, Math.round((retVal / 100) * 15 * 10) / 10);
 
+    const subs = niche.subs || niche.sampleVideos?.[0]?.subs || 18400;
+    const peakViews = niche.views || niche.sampleVideos?.[0]?.views || 250000;
+    const outlierMultiplier = niche.outlierMultiplier || (peakViews && subs ? Math.round((peakViews / Math.max(subs, 1000)) * 10) / 10 : 12.5);
+
     return {
       ...niche,
       timeScore: scObj.score,
-      prevRank: scObj.prevRank || 12,
+      prevRank: scObj.prevRank || 24,
       trendNote: scObj.trendNote || '',
       growthRate: scObj.growth || '+200%',
       competitionLevel: scObj.comp || 'Trung bình',
       retentionRate: scObj.retention || '85%',
+      subs,
+      views: peakViews,
+      outlierMultiplier,
+      channelName: niche.channelName || niche.exampleChannel || niche.name,
+      relatedNiches: niche.relatedNiches || [niche.name, niche.subtitle, 'US Audience 50+', 'Cash Cow RPM'],
       vph,
       breakoutCount,
       avgViews,
@@ -710,7 +934,7 @@ function getNicheLeaderboard(timeframeId = '24h') {
     const rank = idx + 1;
     let diff = niche.prevRank - rank;
     let changeType = 'same'; // 'up' | 'down' | 'same' | 'new'
-    if (niche.prevRank > 10 && rank <= 10) {
+    if (niche.prevRank > 20 && rank <= 20) {
       changeType = 'new';
     } else if (diff > 0) {
       changeType = 'up';
@@ -8291,16 +8515,26 @@ function ScoreFormulaModal({ onClose }) {
 
         <div className="p-4 sm:p-6 space-y-5 max-h-[80vh] overflow-y-auto text-xs leading-relaxed">
           <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 rounded-xl border border-amber-500/30">
-            <div className="text-amber-300 font-bold text-sm mb-1">Cơ Chế Bảng Xếp Hạng Top 10 & Rớt Top:</div>
+            <div className="text-amber-300 font-bold text-sm mb-1">Cơ Chế Bảng Xếp Hạng Top 20 Kênh Sub Thấp - View Cao & Rớt Top:</div>
             <p className="text-zinc-300 leading-relaxed">
-              Hệ thống tự động chấm điểm cho toàn bộ các ngách mỏ vàng YouTube quốc tế theo thang điểm 100. Dạng ngách nào đạt điểm cao nhất theo ngày sẽ được đưa vào <b>Top 10 Tiềm Năng Bùng Nổ</b>. Khi một ngách bị bão hòa hoặc suy giảm lượt xem, điểm số tụt xuống và sẽ <b>tự động rớt khỏi Top 10</b> để nhường chỗ cho các ngách mới đang lên!
+              Hệ thống tự động chấm điểm cho toàn bộ các kênh và ngách mỏ vàng YouTube quốc tế theo thang điểm 100, tập trung vào <b>kênh quy mô nhỏ (&lt;50k sub) nhưng bứt phá view khủng (gấp 5x - 20x lần sub) trên mọi chủ đề</b>. 20 kênh/ngách có tỷ lệ bứt phá cao nhất sẽ được đưa vào <b>Top 20 Outlier Tiềm Năng Bùng Nổ</b>. Khi một ngách bị bão hòa hoặc giảm view, điểm số tụt xuống và sẽ <b>tự động rớt khỏi Top 20</b> để nhường chỗ cho các kênh mới đang lên!
             </p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="bg-brand-card p-3.5 rounded-xl border border-brand-border">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-emerald-400 text-xs">1. Tốc Độ Tăng Trưởng (VPH)</span>
+                <span className="font-bold text-rose-400 text-xs">1. Tỷ Lệ Outlier (View / Sub)</span>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">Trọng số 35%</span>
+              </div>
+              <p className="text-zinc-400 mt-2 text-[11px] leading-relaxed">
+                Kênh có subscriber thấp nhưng video đạt lượt xem đột biến (View gấp 5x - 20x lần Sub). Đây là dấu hiệu chắc chắn thuật toán YouTube đang đói nội dung ngách này!
+              </p>
+            </div>
+
+            <div className="bg-brand-card p-3.5 rounded-xl border border-brand-border">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-emerald-400 text-xs">2. Tốc Độ Tăng Trưởng (VPH)</span>
                 <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Trọng số 30%</span>
               </div>
               <p className="text-zinc-400 mt-2 text-[11px] leading-relaxed">
@@ -8310,31 +8544,21 @@ function ScoreFormulaModal({ onClose }) {
 
             <div className="bg-brand-card p-3.5 rounded-xl border border-brand-border">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-amber-400 text-xs">2. Tiềm Năng RPM Doanh Thu</span>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Trọng số 30%</span>
+                <span className="font-bold text-amber-400 text-xs">3. Tiềm Năng RPM Doanh Thu</span>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Trọng số 20%</span>
               </div>
               <p className="text-zinc-400 mt-2 text-[11px] leading-relaxed">
-                Ưu tiên thị trường Tier 1 (Mỹ, Canada, Anh, Úc) với RPM từ $20 - $55/1k view. Video dài chèn được 6 - 12 mid-roll ads mang lại giá trị cao gấp 8 lần video ngắn.
+                Ưu tiên thị trường Tier 1 (Mỹ, Canada, Anh, Úc) với RPM từ $20 - $65/1k view. Video dài chèn được 6 - 12 mid-roll ads mang lại giá trị cao gấp 8 lần video ngắn.
               </p>
             </div>
 
             <div className="bg-brand-card p-3.5 rounded-xl border border-brand-border">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-sky-400 text-xs">3. Kháng Cạnh Tranh (Sub Thấp)</span>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300">Trọng số 25%</span>
+                <span className="font-bold text-sky-400 text-xs">4. Kháng Cạnh Tranh & Giữ Chân</span>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300">Trọng số 15%</span>
               </div>
               <p className="text-zinc-400 mt-2 text-[11px] leading-relaxed">
-                Tỷ lệ kênh mới và kênh nhỏ (&lt;30k subs) vẫn cắn đề xuất view cao. Nếu ngách có quá nhiều ông lớn chiếm lĩnh $\rightarrow$ Điểm cạnh tranh bị trừ (rớt top).
-              </p>
-            </div>
-
-            <div className="bg-brand-card p-3.5 rounded-xl border border-brand-border">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-purple-400 text-xs">4. Tỷ Lệ Giữ Chân (Retention)</span>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">Trọng số 15%</span>
-              </div>
-              <p className="text-zinc-400 mt-2 text-[11px] leading-relaxed">
-                Thời gian xem trung bình (Watch Time) và khả năng giữ chân khán giả nghe xuyên đêm hoặc xem hết video không bấm tắt quảng cáo.
+                Tỷ lệ kênh mới và kênh nhỏ (&lt;30k subs) vẫn cắn đề xuất view cao mà không bị các kênh triệu sub đè bẹp, kèm tỷ lệ xem hết video (Watch time).
               </p>
             </div>
           </div>
@@ -8345,7 +8569,7 @@ function ScoreFormulaModal({ onClose }) {
               <div className="flex items-center gap-1.5"><span className="text-emerald-400 font-bold">▲ +2</span> <span>Tăng 2 bậc thứ hạng</span></div>
               <div className="flex items-center gap-1.5"><span className="text-rose-400 font-bold">▼ -1</span> <span>Tụt 1 bậc do giảm nhiệt</span></div>
               <div className="flex items-center gap-1.5"><span className="text-zinc-400 font-bold">──</span> <span>Giữ hạng ổn định</span></div>
-              <div className="flex items-center gap-1.5"><span className="text-amber-300 font-bold">⭐ MỚI</span> <span>Mới bứt phá vào Top 10</span></div>
+              <div className="flex items-center gap-1.5"><span className="text-amber-300 font-bold">⭐ MỚI</span> <span>Mới bứt phá vào Top 20</span></div>
             </div>
           </div>
         </div>
@@ -9404,28 +9628,28 @@ function App() {
     }
   };
 
-  // Run Live Niche Rescoring Animation
+  // Run Live Niche Rescoring Animation (Top 20 Outliers Sub Thấp - View Cao)
   const runLiveNicheRescore = () => {
     setIsRescoringNiches(true);
-    setRescoreProgressStep('Đang kết nối thuật toán YouTube Radar...');
-    showToast('Bắt đầu quét và chấm điểm lại Top 10 ngách...');
+    setRescoreProgressStep('Đang kết nối thuật toán YouTube Outlier Radar...');
+    showToast('Bắt đầu quét và chấm điểm lại Top 20 kênh (Sub Thấp - View Khủng)...');
     
     setTimeout(() => {
-      setRescoreProgressStep('Đang quét 16 ngách thị trường US & bóc tách tốc độ View/giờ (VPH)...');
+      setRescoreProgressStep('Đang rà soát các kênh sub thấp (<50k sub) có video bứt phá view khủng trên mọi chủ đề...');
     }, 450);
 
     setTimeout(() => {
-      setRescoreProgressStep('Đang tính toán trọng số: VPH 30% + RPM 30% + Ít cạnh tranh 25% + Giữ chân 15%...');
+      setRescoreProgressStep('Đang tính trọng số: Outlier View/Sub 35% + VPH 30% + RPM 20% + Ít cạnh tranh 15%...');
     }, 950);
 
     setTimeout(() => {
-      setRescoreProgressStep('Đang đối chiếu lịch sử biến động thứ hạng và cập nhật Top 10...');
+      setRescoreProgressStep('Đang bóc tách ngách liên quan từ video và cập nhật bảng Top 20...');
     }, 1450);
 
     setTimeout(() => {
       setIsRescoringNiches(false);
       setRescoreProgressStep('');
-      showToast('Đã quét và chấm điểm lại toàn bộ Top 10 ngách theo thời gian thực!');
+      showToast('Đã quét và chấm điểm lại toàn bộ Top 20 kênh bứt phá theo thời gian thực!');
     }, 1900);
   };
 
@@ -10986,10 +11210,13 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               <div className="space-y-3.5">
                 {/* Section Header with Actions */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-brand-border/70 pb-2.5">
-                  <div className="flex items-center gap-2">
+                  <div>
                     <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                      <span>Bảng Xếp Hạng Top 10 Ngách Trend</span>
+                      <span>Bảng Xếp Hạng Top 20 Kênh Sub Thấp - View Khủng (Mọi Chủ Đề)</span>
                     </h3>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Lọc các kênh quy mô nhỏ (&lt;50k sub) có video bứt phá view gấp 5x - 20x lần sub, tự động gom nhóm ngách &amp; từ khóa liên quan từ video.
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -10999,7 +11226,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                       disabled={isRescoringNiches}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition flex items-center gap-1.5 disabled:opacity-50">
                       <span className={isRescoringNiches ? 'animate-spin' : ''}>⚡</span>
-                      <span>{isRescoringNiches ? 'Đang Chấm Điểm...' : 'Chấm Điểm Lại Top 10'}</span>
+                      <span>{isRescoringNiches ? 'Đang Chấm Điểm...' : 'Chấm Điểm Lại Top 20'}</span>
                     </button>
                     <button
                       type="button"
@@ -11060,211 +11287,298 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                         <span className="text-zinc-300">
-                          Đang xem: <b className="text-white">{currentTfObj.label}</b> ({currentTfObj.desc})
+                          Đang xem: <b className="text-white">{currentTfObj.label}</b> (Top 20 Kênh Sub Thấp - View Khủng Đa Chủ Đề)
                         </span>
                       </div>
                       <div className="text-zinc-400 text-[10px]">
-                        Thuật toán: <b className="text-emerald-400">VPH 30%</b> · <b className="text-amber-400">RPM 30%</b> · <b className="text-sky-400">Ít cạnh tranh 25%</b> · <b className="text-purple-400">Retention 15%</b>
+                        Thuật toán: <b className="text-rose-400">Outlier View/Sub 35%</b> · <b className="text-emerald-400">VPH 30%</b> · <b className="text-amber-400">RPM 20%</b> · <b className="text-sky-400">Ít cạnh tranh 15%</b>
                       </div>
                     </div>
                   );
                 })()}
 
-                {/* TOP 10 RANKED NICHES CARDS */}
+                {/* TOP 20 RANKED OUTLIER CHANNELS & NICHES - 2 ROWS COMPACT HORIZONTAL SCROLLER */}
                 {(() => {
                   const currentTfObj = NICHE_TIMEFRAMES.find(t => t.id === nicheTimeframe) || NICHE_TIMEFRAMES[0];
                   const fullRanked = getNicheLeaderboard(nicheTimeframe);
-                  const top10 = fullRanked.slice(0, 10);
-                  const dropped = fullRanked.slice(10);
+                  const top20 = fullRanked.slice(0, 20);
+                  const dropped = fullRanked.slice(20);
+                  const selectedNicheObj = top20.find(n => n.id === activeRpmNiche) || fullRanked.find(n => n.id === activeRpmNiche) || top20[0];
 
                   return (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-                        {top10.map(niche => {
-                          const isSelected = activeRpmNiche === niche.id;
-                          const isTop1 = niche.rank === 1;
-                          const isTop2 = niche.rank === 2;
-                          const isTop3 = niche.rank === 3;
+                    <div className="space-y-3.5">
+                      {/* 2-Rows Container with Scroll Controls */}
+                      <div className="relative group/scroller">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const el = document.getElementById('top20-scroller');
+                            if (el) el.scrollBy({ left: -450, behavior: 'smooth' });
+                          }}
+                          className="hidden sm:flex absolute -left-2.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 items-center justify-center shadow-lg transition">
+                          ◀
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const el = document.getElementById('top20-scroller');
+                            if (el) el.scrollBy({ left: 450, behavior: 'smooth' });
+                          }}
+                          className="hidden sm:flex absolute -right-2.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 items-center justify-center shadow-lg transition">
+                          ▶
+                        </button>
 
-                          return (
-                            <button
-                              key={niche.id}
-                              type="button"
-                              onClick={() => {
-                                setActiveRpmNiche(niche.id);
-                                loadRpm(niche.id, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery);
-                              }}
-                              className={`p-3 rounded-xl border text-left transition relative flex flex-col justify-between group overflow-hidden ${
-                                isSelected
-                                  ? 'bg-brand-card border-amber-500 shadow-xl ring-2 ring-amber-500/40'
-                                  : isTop1
-                                  ? 'bg-gradient-to-br from-amber-950/20 via-brand-card/80 to-brand-card border-amber-500/50 hover:border-amber-400 shadow-md'
-                                  : 'bg-brand-card/50 hover:bg-brand-card border-brand-border hover:border-zinc-600'
-                              }`}>
-                              
-                              {/* Top 1 Glow Accent */}
-                              {isTop1 && (
-                                <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/10 rounded-full blur-xl pointer-events-none"></div>
-                              )}
+                        <div
+                          id="top20-scroller"
+                          className="grid grid-rows-2 auto-cols-[280px] sm:auto-cols-[305px] md:auto-cols-[325px] grid-flow-col gap-2.5 overflow-x-auto pb-3 pt-1 scrollbar-thin scroll-smooth px-1">
+                          {top20.map(niche => {
+                            const isSelected = activeRpmNiche === niche.id;
+                            const isTop1 = niche.rank === 1;
+                            const isTop2 = niche.rank === 2;
+                            const isTop3 = niche.rank === 3;
 
-                              <div>
-                                {/* Rank Header Row */}
-                                <div className="flex items-center justify-between gap-1 mb-1.5">
-                                  {/* Rank Number Badge */}
-                                  <div className="flex items-center gap-1.5">
-                                    <span className={`text-[11px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1 ${
-                                      isTop1
-                                        ? 'bg-amber-500 text-black shadow-sm font-black'
-                                        : isTop2
-                                        ? 'bg-slate-300 text-black font-extrabold'
-                                        : isTop3
-                                        ? 'bg-amber-700 text-white font-extrabold'
-                                        : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
-                                    }`}>
-                                      {isTop1 ? '👑 #1' : isTop2 ? '🥈 #2' : isTop3 ? '🥉 #3' : `#${niche.rank}`}
-                                    </span>
+                            return (
+                              <button
+                                key={niche.id}
+                                type="button"
+                                onClick={() => {
+                                  setActiveRpmNiche(niche.id);
+                                  loadRpm(niche.id, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery);
+                                }}
+                                className={`p-2.5 rounded-xl border text-left transition relative flex flex-col justify-between group overflow-hidden ${
+                                  isSelected
+                                    ? 'bg-zinc-900 border-zinc-200 shadow-xl ring-2 ring-zinc-400'
+                                    : isTop1
+                                    ? 'bg-gradient-to-br from-amber-950/25 via-zinc-900 to-zinc-900 border-amber-500/60 hover:border-amber-400 shadow-md'
+                                    : 'bg-zinc-900/80 hover:bg-zinc-900 border-zinc-800 hover:border-zinc-700'
+                                }`}>
+                                
+                                <div>
+                                  {/* Rank Header Row */}
+                                  <div className="flex items-center justify-between gap-1 mb-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 ${
+                                        isTop1
+                                          ? 'bg-amber-400 text-zinc-950 font-black'
+                                          : isTop2
+                                          ? 'bg-zinc-300 text-zinc-950 font-extrabold'
+                                          : isTop3
+                                          ? 'bg-amber-600 text-white font-extrabold'
+                                          : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
+                                      }`}>
+                                        {isTop1 ? '👑 #1' : isTop2 ? '🥈 #2' : isTop3 ? '🥉 #3' : `#${niche.rank}`}
+                                      </span>
 
-                                    {/* Rank Change Indicator */}
-                                    {niche.changeType === 'new' ? (
-                                      <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
-                                        ⭐ MỚI
+                                      {/* Outlier Ratio Badge */}
+                                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                        🔥 x{niche.outlierMultiplier || '12'} View/Sub
                                       </span>
-                                    ) : niche.diff > 0 ? (
-                                      <span className="text-[10px] font-bold text-emerald-400 flex items-center">
-                                        ▲ +{niche.diff}
-                                      </span>
-                                    ) : niche.diff < 0 ? (
-                                      <span className="text-[10px] font-bold text-rose-400 flex items-center">
-                                        ▼ {niche.diff}
-                                      </span>
-                                    ) : (
-                                      <span className="text-[10px] font-semibold text-zinc-500">
-                                        ──
-                                      </span>
-                                    )}
-                                  </div>
 
-                                  {/* Potential Score Badge */}
-                                  <div className="text-right">
+                                      {niche.changeType === 'new' && (
+                                        <span className="text-[9px] font-black px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                          ⭐ MỚI
+                                        </span>
+                                      )}
+                                    </div>
+
                                     <span className="text-[11px] font-black text-amber-400">
                                       {niche.timeScore}đ
                                     </span>
                                   </div>
-                                </div>
 
-                                {/* Niche Title & Subtitle */}
-                                <div className="font-bold text-xs text-white line-clamp-1 group-hover:text-amber-400 transition" title={niche.name}>
-                                  {niche.name}
-                                </div>
-                                <div className="text-[10px] text-zinc-400 mt-0.5 line-clamp-1" title={niche.subtitle}>
-                                  {niche.subtitle}
-                                </div>
+                                  {/* Channel Name */}
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <span className="text-zinc-400 text-xs">📺</span>
+                                    <span className="font-bold text-xs text-white truncate group-hover:text-amber-300 transition" title={niche.channelName || niche.exampleChannel}>
+                                      {niche.channelName || niche.exampleChannel || 'Kênh Mỏ Vàng'}
+                                    </span>
+                                    <span className="text-[10px] text-zinc-500 shrink-0">
+                                      ({fmt(niche.subs || 15000)} sub)
+                                    </span>
+                                  </div>
 
-                                {/* Rich Live Scored Metrics Grid */}
-                                <div className="grid grid-cols-2 gap-1.5 bg-black/40 rounded-lg p-2 mt-2 text-[10px] border border-brand-border/50">
-                                  <div>
-                                    <span className="text-zinc-500 block">Tốc độ VPH:</span>
-                                    <span className="font-black text-amber-300">⚡ +{fmt(niche.vph)}/h</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-zinc-500 block">RPM thực tế:</span>
-                                    <span className="font-black text-emerald-400">💰 {niche.rpmRange}</span>
-                                  </div>
-                                  <div className="mt-0.5">
-                                    <span className="text-zinc-500 block">Đột biến hôm nay:</span>
-                                    <span className="font-bold text-sky-300">🔥 {niche.breakoutCount} video</span>
-                                  </div>
-                                  <div className="mt-0.5">
-                                    <span className="text-zinc-500 block">Độ cạnh tranh:</span>
-                                    <span className={`font-bold ${niche.competitionLevel === 'Thấp' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                      {niche.competitionLevel}
+                                  {/* Niche Detected from Video */}
+                                  <div className="mt-1 flex items-center gap-1">
+                                    <span className="text-[10px] text-zinc-400 truncate" title={niche.name}>
+                                      Ngách: <b className="text-zinc-200">{niche.name}</b>
                                     </span>
                                   </div>
                                 </div>
-                              </div>
 
-                              {/* Footer Tag & Micro Trend Note */}
-                              <div className="mt-2.5 pt-2 border-t border-brand-border/60 space-y-1.5">
-                                <div className="flex items-center justify-between gap-1">
-                                  <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded border inline-block w-fit ${niche.tagCls}`}>
-                                    {niche.tag}
-                                  </div>
-                                  <span className="text-[9px] font-bold text-cyan-400">SRT Radar</span>
+                                {/* Bottom Quick Metrics Row */}
+                                <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-2 pt-1 border-t border-zinc-800/80">
+                                  <span className="font-medium text-amber-300">⚡ +{fmt(niche.vph)}/h</span>
+                                  <span className="text-emerald-400 font-semibold">{niche.rpmRange}</span>
+                                  <span className="text-sky-300 font-medium">Đỉnh {fmt(niche.views || 250000)} v</span>
                                 </div>
-                                {niche.trendNote && (
-                                  <div className="text-[10px] text-zinc-400 line-clamp-1 italic" title={niche.trendNote}>
-                                    {niche.trendNote}
-                                  </div>
-                                )}
-                                <div className="pt-1">
-                                  <div
-                                    role="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setNicheScannerKeyword(niche.query || niche.name);
-                                      setTab('niche');
-                                    }}
-                                    className="w-full py-1 px-2 rounded-lg text-[10px] font-bold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 transition text-center flex items-center justify-center gap-1 shadow-sm">
-                                    <span>🎯 Bắt Trend Cụm Từ Khóa</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
 
-                      {/* DROPPED NICHES / COOLING DOWN DRAWER */}
-                      <div className="border border-brand-border/70 rounded-xl overflow-hidden bg-brand-surface/60">
-                        <button
-                          type="button"
-                          onClick={() => setShowDroppedNiches(!showDroppedNiches)}
-                          className="w-full px-4 py-2.5 bg-brand-card/40 hover:bg-brand-card text-left flex items-center justify-between text-xs text-zinc-400 hover:text-white transition">
-                          <div className="flex items-center gap-2">
-                            <span className="text-rose-400 font-bold">📉 Các ngách đã rớt Top 10 / Đang hạ nhiệt ({dropped.length} ngách)</span>
-                            <span className="text-[11px] text-zinc-500 hidden sm:inline">Dò ngách nào bị bão hòa hoặc giảm lượt xem ở mốc {currentTfObj.label}</span>
-                          </div>
-                          <span className="text-zinc-400 font-bold text-xs">
-                            {showDroppedNiches ? '▲ Thu gọn' : '▼ Xem chi tiết'}
-                          </span>
-                        </button>
+                      {/* ACTIVE CHANNEL & RELATED NICHES DRILLDOWN PANEL */}
+                      {selectedNicheObj && (() => {
+                        const relatedNichesList = selectedNicheObj.relatedNiches || [
+                          selectedNicheObj.name,
+                          selectedNicheObj.subtitle,
+                          'Khán Giả US 50+ Tuổi',
+                          'Kiếm Tiền RPM Cao'
+                        ];
+                        const mainKeywords = (selectedNicheObj.queries || []).slice(0, 4);
 
-                        {showDroppedNiches && (
-                          <div className="p-3 bg-brand-card/20 border-t border-brand-border/60">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                              {dropped.map(niche => {
-                                const isSelected = activeRpmNiche === niche.id;
-                                return (
+                        return (
+                          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 sm:p-4 space-y-3 shadow-md">
+                            {/* Channel Header Row */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-zinc-800 border border-amber-500/30 flex items-center justify-center text-lg font-black text-amber-400 shrink-0">
+                                  📺
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="font-bold text-sm text-white">
+                                      {selectedNicheObj.channelName || selectedNicheObj.exampleChannel || selectedNicheObj.name}
+                                    </h4>
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                      🔥 Outlier: View gấp {selectedNicheObj.outlierMultiplier || '12'}x Sub
+                                    </span>
+                                    <span className="text-xs text-zinc-400">
+                                      · {fmt(selectedNicheObj.subs || 18400)} Subscribers · RPM {selectedNicheObj.rpmRange}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-zinc-400 mt-0.5">
+                                    {selectedNicheObj.desc || selectedNicheObj.whyText}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setNicheScannerKeyword(selectedNicheObj.queries?.[0] || selectedNicheObj.name);
+                                    setTab('niche');
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 hover:bg-white text-zinc-950 transition flex items-center gap-1 shadow-sm">
+                                  <span>🎯 Bắt Trend Cụm Từ Khóa</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (selectedNicheObj.channelName || selectedNicheObj.exampleChannel) {
+                                      addCompetitor(selectedNicheObj.channelName || selectedNicheObj.exampleChannel);
+                                    }
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition flex items-center gap-1">
+                                  <span>+ Thêm Đối Thủ</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Discovered Related Niches & Keywords */}
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">
+                                  📡 Ngách Liên Quan Bóc Tách Từ Video Của Kênh:
+                                </span>
+                                <span className="text-[10px] text-zinc-500">
+                                  (Bấm vào ngách để lọc video)
+                                </span>
+                              </div>
+                              
+                              <div className="flex flex-wrap gap-1.5">
+                                {relatedNichesList.map((rn, idx) => (
                                   <button
-                                    key={niche.id}
+                                    key={idx}
                                     type="button"
                                     onClick={() => {
-                                      setActiveRpmNiche(niche.id);
-                                      loadRpm(niche.id, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery);
+                                      setRpmQuery(rn);
+                                      loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rn);
                                     }}
-                                    className={`p-2.5 rounded-lg border text-left transition flex flex-col justify-between ${
-                                      isSelected
-                                        ? 'bg-brand-card border-amber-500/80 shadow ring-1 ring-amber-500/30'
-                                        : 'bg-brand-card/30 hover:bg-brand-card/70 border-brand-border/60 opacity-80 hover:opacity-100'
-                                    }`}>
-                                    <div>
-                                      <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1">
-                                        <span className="font-extrabold text-zinc-400">Rank #{niche.rank}</span>
-                                        <span className="font-bold text-zinc-400">{niche.timeScore}đ</span>
-                                      </div>
-                                      <div className="font-semibold text-[11px] text-zinc-300 line-clamp-1">{niche.name}</div>
-                                      <div className="text-[10px] text-emerald-400/90 font-medium mt-1">RPM {niche.rpmRange}</div>
-                                    </div>
-                                    <div className="text-[9px] text-rose-400/90 mt-2 truncate font-medium">
-                                      {niche.trendNote || 'Cạnh tranh cao / Giảm nhiệt'}
-                                    </div>
+                                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-500 transition flex items-center gap-1">
+                                    <span>🏷️ {rn}</span>
                                   </button>
-                                );
-                              })}
+                                ))}
+                              </div>
+
+                              {/* Golden Keywords Row */}
+                              {mainKeywords.length > 0 && (
+                                <div className="flex items-center gap-2 pt-1 flex-wrap text-xs text-zinc-400">
+                                  <span className="text-[11px] font-bold text-zinc-400">Từ khóa ăn khách:</span>
+                                  {mainKeywords.map((kw, idx) => (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => {
+                                        setNicheScannerKeyword(kw);
+                                        setTab('niche');
+                                      }}
+                                      className="text-[11px] px-2 py-0.5 rounded bg-zinc-950 text-cyan-300 hover:text-cyan-200 border border-zinc-800 hover:border-cyan-700 transition font-mono">
+                                      🔍 {kw}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
-                        )}
-                      </div>
+                        );
+                      })()}
+
+                      {/* DROPPED NICHES / COOLING DOWN DRAWER */}
+                      {dropped.length > 0 && (
+                        <div className="border border-brand-border/70 rounded-xl overflow-hidden bg-brand-surface/60">
+                          <button
+                            type="button"
+                            onClick={() => setShowDroppedNiches(!showDroppedNiches)}
+                            className="w-full px-4 py-2.5 bg-brand-card/40 hover:bg-brand-card text-left flex items-center justify-between text-xs text-zinc-400 hover:text-white transition">
+                            <div className="flex items-center gap-2">
+                              <span className="text-rose-400 font-bold">📉 Các ngách ngoài Top 20 / Đang hạ nhiệt ({dropped.length} ngách)</span>
+                              <span className="text-[11px] text-zinc-500 hidden sm:inline">Dò ngách nào bị bão hòa hoặc giảm lượt xem ở mốc {currentTfObj.label}</span>
+                            </div>
+                            <span className="text-zinc-400 font-bold text-xs">
+                              {showDroppedNiches ? '▲ Thu gọn' : '▼ Xem chi tiết'}
+                            </span>
+                          </button>
+
+                          {showDroppedNiches && (
+                            <div className="p-3 bg-brand-card/20 border-t border-brand-border/60">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                                {dropped.map(niche => {
+                                  const isSelected = activeRpmNiche === niche.id;
+                                  return (
+                                    <button
+                                      key={niche.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveRpmNiche(niche.id);
+                                        loadRpm(niche.id, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery);
+                                      }}
+                                      className={`p-2.5 rounded-lg border text-left transition flex flex-col justify-between ${
+                                        isSelected
+                                          ? 'bg-brand-card border-amber-500/80 shadow ring-1 ring-amber-500/30'
+                                          : 'bg-brand-card/30 hover:bg-brand-card/70 border-brand-border/60 opacity-80 hover:opacity-100'
+                                      }`}>
+                                      <div>
+                                        <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1">
+                                          <span className="font-extrabold text-zinc-400">Rank #{niche.rank}</span>
+                                          <span className="font-bold text-zinc-400">{niche.timeScore}đ</span>
+                                        </div>
+                                        <div className="font-semibold text-[11px] text-zinc-300 line-clamp-1">{niche.name}</div>
+                                        <div className="text-[10px] text-emerald-400/90 font-medium mt-1">RPM {niche.rpmRange}</div>
+                                      </div>
+                                      <div className="text-[9px] text-rose-400/90 mt-2 truncate font-medium">
+                                        {niche.trendNote || 'Cạnh tranh cao / Giảm nhiệt'}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
