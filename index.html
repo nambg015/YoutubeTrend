@@ -10392,23 +10392,35 @@ function TopNgachSection({
     return typeof CASHCOW_NICHES !== 'undefined' ? CASHCOW_NICHES : [];
   }, [timeframe]);
 
-  // Search filter for niches grid
+  // Search filter for niches grid & TỰ ĐỘNG XÓA/LOẠI BỎ TOÀN BỘ NGÁCH KHÔNG KHẢ THI!
   const q = (searchQuery || '').trim().toLowerCase();
   const visibleNiches = React.useMemo(() => {
-    if (!q) return rankedNiches;
-    return rankedNiches.filter(n =>
-      (n.name || '').toLowerCase().includes(q) ||
-      (n.subtitle || '').toLowerCase().includes(q) ||
-      (n.exampleChannel || '').toLowerCase().includes(q) ||
-      (n.desc || '').toLowerCase().includes(q) ||
-      (n.queries || []).some(k => (k || '').toLowerCase().includes(q))
-    );
-  }, [q, rankedNiches]);
+    let list = rankedNiches;
+    if (q) {
+      list = list.filter(n =>
+        (n.name || '').toLowerCase().includes(q) ||
+        (n.subtitle || '').toLowerCase().includes(q) ||
+        (n.exampleChannel || '').toLowerCase().includes(q) ||
+        (n.desc || '').toLowerCase().includes(q) ||
+        (n.queries || []).some(k => (k || '').toLowerCase().includes(q))
+      );
+    }
+    // Tự động loại bỏ hoàn toàn các ngách không khả thi (<30k sub) theo yêu cầu người dùng!
+    return list.filter(n => {
+      const summary = typeof getNicheChannelSummary === 'function'
+        ? getNicheChannelSummary(n, realChannelsMap, channelSubLimit)
+        : null;
+      if (summary && summary.status === 'infeasible') {
+        return false;
+      }
+      return true;
+    });
+  }, [q, rankedNiches, realChannelsMap, channelSubLimit]);
 
-  // Active Niche for drilldown & scanning
+  // Active Niche for drilldown & scanning - Tự động chọn ngách khả thi
   const activeNiche = React.useMemo(() => {
-    return rankedNiches.find(n => n.id === activeNicheId) || rankedNiches[0] || (typeof CASHCOW_NICHES !== 'undefined' ? CASHCOW_NICHES[0] : null);
-  }, [rankedNiches, activeNicheId]);
+    return visibleNiches.find(n => n.id === activeNicheId) || visibleNiches[0] || rankedNiches[0] || (typeof CASHCOW_NICHES !== 'undefined' ? CASHCOW_NICHES[0] : null);
+  }, [visibleNiches, rankedNiches, activeNicheId]);
 
   // Scan Function for active niche - Strict 100% Real YouTube Outlier Scan
   const runScan = React.useCallback(async (targetNiche, overrideQuery, overrideSub, overrideDur, overrideView, overridePeriod) => {
@@ -10754,8 +10766,8 @@ function TopNgachSection({
     }
   }, [apiKey, activeNiche, channelSubLimit, showToast, onOpenApiModal]);
 
-  // 2. DÒ TỰ ĐỘNG TOÀN BỘ 22 NGÁCH ĐỂ SO SÁNH & PHÂN LOẠI KHẢ THI
-  const scanAllNichesChannels = React.useCallback(async () => {
+  // 2. DÒ QUÉT TÌM NGÁCH MỚI KHẢ THI (<30k SUB) & TỰ ĐỘNG XÓA NGÁCH KHÔNG KHẢ THI
+  const scanTrendNewNiches = React.useCallback(async () => {
     if (!apiKey || typeof yt !== 'function') {
       if (typeof showToast === 'function') showToast('Vui lòng kết nối YouTube API Key để dò kênh thật!', 'warning');
       if (typeof onOpenApiModal === 'function') onOpenApiModal();
@@ -10765,26 +10777,27 @@ function TopNgachSection({
     setIsBatchScanning(true);
     cancelBatchRef.current = false;
     let viableCount = 0;
-    let infeasibleCount = 0;
+    let removedCount = 0;
 
-    for (let i = 0; i < visibleNiches.length; i++) {
+    const pool = rankedNiches || [];
+    for (let i = 0; i < pool.length; i++) {
       if (cancelBatchRef.current) break;
-      const n = visibleNiches[i];
-      setBatchProgress({ current: i + 1, total: visibleNiches.length, name: n.name });
+      const n = pool[i];
+      setBatchProgress({ current: i + 1, total: pool.length, name: n.name });
       const res = await scanSingleNicheChannels(n, channelSubLimit);
       if (res) {
         if (res.status === 'found') viableCount++;
-        else infeasibleCount++;
+        else removedCount++;
       }
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 180));
     }
 
     setIsBatchScanning(false);
     setBatchProgress(null);
     if (typeof showToast === 'function') {
-      showToast(`Đã dò xong: 🟢 ${viableCount} ngách khả thi | 🔴 ${infeasibleCount} ngách không khả thi (<${channelSubLimit/1000}k sub)`, 'success');
+      showToast(`Đã quét xong: Giữ lại ${viableCount} ngách khả thi (<${channelSubLimit/1000}k sub), đã tự động loại bỏ ${removedCount} ngách không khả thi!`, 'success');
     }
-  }, [apiKey, visibleNiches, channelSubLimit, scanSingleNicheChannels, showToast, onOpenApiModal]);
+  }, [apiKey, rankedNiches, channelSubLimit, scanSingleNicheChannels, showToast, onOpenApiModal]);
 
   // Initial scan once on mount
   const hasMountedRef = React.useRef(false);
@@ -10839,7 +10852,7 @@ function TopNgachSection({
         </div>
       </div>
 
-      {/* 2. TIMEFRAME & THANH DÒ KÊNH TREND (<30k SUB THEO YÊU CẦU) */}
+      {/* 2. CHU KỲ & THANH QUÉT DÒ NGÁCH MỚI (<30k SUB) */}
       <div className="bg-brand-surface border border-brand-border rounded-xl p-2.5 sm:p-3 space-y-2.5 text-xs shadow-sm">
         {/* Hàng 1: Chu kỳ Timeframe Pills */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -10867,8 +10880,8 @@ function TopNgachSection({
           </div>
 
           <div className="flex items-center gap-2.5 text-[10px] text-zinc-400 shrink-0">
-            <span className="text-zinc-300 hidden md:inline">
-              <b className="text-amber-400">{visibleNiches.length}</b> ngách tiềm năng
+            <span className="text-zinc-300">
+              <b className="text-amber-400 font-bold">{visibleNiches.length}</b> ngách khả thi (&lt;30k sub)
             </span>
             {onOpenScoreFormula && (
               <button
@@ -10881,325 +10894,147 @@ function TopNgachSection({
           </div>
         </div>
 
-        {/* Hàng 2: THANH QUÉT TREND KÊNH NGÁCH (TỰ DÒ KÊNH <30K SUB & ĐÁNH GIÁ KHẢ THI LOGIC) */}
-        <div className="pt-2 border-t border-brand-border/60 flex flex-col md:flex-row md:items-center justify-between gap-2">
-          {/* Trái: Tiêu chí lọc sub kênh (Default: <30k sub) */}
+        {/* Hàng 2: THANH QUÉT DÒ NGÁCH MỚI (Tự động loại bỏ ngách không khả thi) */}
+        <div className="pt-2 border-t border-brand-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          {/* Trái: Lựa chọn ngưỡng sub kênh */}
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-brand-card px-2 py-1 rounded-lg border border-brand-border text-zinc-300">
-              <span className="text-amber-400 font-bold text-xs">⚡</span>
-              <span className="text-[11px] font-semibold text-zinc-200">Dò Kênh Sub Thấp:</span>
-              <select
-                value={channelSubLimit}
-                onChange={e => setChannelSubLimit(e.target.value === 'Infinity' ? Infinity : Number(e.target.value))}
-                className="bg-zinc-900 border border-zinc-700 rounded px-2 py-0.5 text-[11px] font-bold text-amber-300 focus:outline-none focus:border-amber-400 cursor-pointer">
-                <option value="30000">&lt; 30k Sub (Chuẩn Mặc Định)</option>
-                <option value="10000">&lt; 10k Sub (Siêu Nhỏ)</option>
-                <option value="50000">&lt; 50k Sub</option>
-                <option value="100000">&lt; 100k Sub</option>
-                <option value="Infinity">Tất cả quy mô sub</option>
-              </select>
-            </div>
-
-            <div className="text-[10px] text-zinc-400 hidden lg:block">
-              (Logic: Không tìm thấy kênh &lt;{channelSubLimit >= 1000 ? (channelSubLimit / 1000) + 'k' : channelSubLimit} sub có traction = Ngách không khả thi)
-            </div>
+            <span className="text-[11px] font-medium text-zinc-400">Tiêu chuẩn kênh:</span>
+            <select
+              value={channelSubLimit}
+              onChange={e => setChannelSubLimit(e.target.value === 'Infinity' ? Infinity : Number(e.target.value))}
+              className="bg-brand-card border border-brand-border rounded-md px-2.5 py-1 text-[11px] font-bold text-amber-300 focus:outline-none focus:border-amber-400 cursor-pointer">
+              <option value="30000">&lt; 30k Sub (Chuẩn Mặc Định)</option>
+              <option value="10000">&lt; 10k Sub (Siêu Nhỏ)</option>
+              <option value="50000">&lt; 50k Sub</option>
+              <option value="100000">&lt; 100k Sub</option>
+              <option value="Infinity">Tất cả quy mô sub</option>
+            </select>
           </div>
 
-          {/* Phải: Các nút Quét Trend Kênh */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Nút Quét kênh cho ngách đang chọn */}
-            <button
-              type="button"
-              onClick={() => scanSingleNicheChannels(activeNiche, channelSubLimit)}
-              disabled={scanningChannelNicheId === activeNiche?.id || isBatchScanning}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-950 flex items-center gap-1.5 shadow transition cursor-pointer">
-              {scanningChannelNicheId === activeNiche?.id ? (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-zinc-950 animate-ping"></span>
-                  <span>Đang dò kênh ngách này...</span>
-                </>
-              ) : (
-                <>
-                  <span>⚡</span>
-                  <span>Quét Kênh Ngách "{activeNiche?.name ? (activeNiche.name.length > 18 ? activeNiche.name.slice(0, 16) + '...' : activeNiche.name) : ''}"</span>
-                </>
-              )}
-            </button>
-
-            {/* Nút Dò tự động tất cả 22 ngách */}
+          {/* Phải: 1 Nút Quét Dò Ngách Mới Duy Nhất */}
+          <div className="flex items-center gap-2">
             {isBatchScanning ? (
               <button
                 type="button"
                 onClick={() => { cancelBatchRef.current = true; }}
-                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 transition cursor-pointer flex items-center gap-1.5">
+                className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 transition cursor-pointer flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
                 <span>Dừng ({batchProgress?.current}/{batchProgress?.total} - {batchProgress?.name})</span>
               </button>
             ) : (
               <button
                 type="button"
-                onClick={scanAllNichesChannels}
+                onClick={scanTrendNewNiches}
                 disabled={Boolean(scanningChannelNicheId)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-card hover:bg-zinc-800 text-zinc-200 border border-brand-border transition cursor-pointer flex items-center gap-1.5"
-                title="Tự động kiểm tra từng ngách để tìm kênh sub nhỏ và so sánh tính khả thi">
-                <span>🌐</span>
-                <span>Dò Tự Động 22 Ngách</span>
+                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 text-zinc-950 shadow-md transition cursor-pointer flex items-center gap-1.5">
+                <span>⚡</span>
+                <span>Quét Dò Ngách Mới (&lt;{channelSubLimit >= 1000 ? (channelSubLimit / 1000) + 'k' : channelSubLimit} Sub)</span>
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* 3. LƯỚI 22 NGÁCH SIÊU GỌN VỚI TRẠNG THÁI KHẢ THI KÊNH THẬT */}
+      {/* 3. LƯỚI NGÁCH KHẢ THI - THIẾT KẾ TỐI GIẢN, CHỮ TO RÕ, DI CHUỘT ẤN ĐƯỢC NGAY */}
       {visibleNiches.length === 0 ? (
         <div className="p-8 text-center border border-dashed border-brand-border rounded-xl bg-brand-surface/40 space-y-2">
           <span className="text-2xl block">🔍</span>
-          <h4 className="text-sm font-bold text-white">Không tìm thấy ngách phù hợp</h4>
+          <h4 className="text-sm font-bold text-white">Chưa có ngách nào khớp bộ lọc</h4>
           <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-            Không có ngách hoặc kênh nào khớp với từ khóa "{searchQuery}".
+            Hãy bấm nút <b>⚡ Quét Dò Ngách Mới</b> ở trên để hệ thống tự động quét và lọc ra các ngách có kênh sub nhỏ (&lt;30k) đang bứt phá.
           </p>
           <button
-            onClick={() => setSearchQuery('')}
-            className="mt-1 px-3 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-700 cursor-pointer">
-            Xóa tìm kiếm
+            onClick={scanTrendNewNiches}
+            className="mt-1 px-4 py-1.5 rounded-lg text-xs font-bold bg-amber-400 text-zinc-950 hover:bg-amber-300 transition cursor-pointer shadow">
+            ⚡ Quét Dò Ngách Mới Ngay
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
           {visibleNiches.map((niche, idx) => {
             const isSelected = activeNiche && activeNiche.id === niche.id;
-            const comp = niche.competitionLevel || (niche.scores && niche.scores[timeframe] && niche.scores[timeframe].comp) || 'Thấp';
             const rankNum = niche.rank || idx + 1;
             const isTop1 = rankNum === 1;
             const isTop2 = rankNum === 2;
             const isTop3 = rankNum === 3;
             const channelSummary = typeof getNicheChannelSummary === 'function' ? getNicheChannelSummary(niche, realChannelsMap, channelSubLimit) : { status: 'not_scanned', channels: [] };
-            const isChannelScanningThis = scanningChannelNicheId === niche.id;
+            const hasReal = channelSummary.status === 'found' && channelSummary.channels.length > 0;
+            const firstChannel = hasReal ? channelSummary.channels[0] : null;
 
             return (
               <div
                 key={niche.id || idx}
-                className="relative group">
-                {/* 1 Ô nhỏ gọn mặc định (Tên ngách & thông tin cần thiết) */}
-                <div
-                  onClick={() => {
-                    setActiveNicheId(niche.id);
-                    runScan(niche);
-                  }}
-                  className={`p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-between h-[68px] select-none ${
-                    isSelected
-                      ? 'border-amber-400 bg-amber-500/10 shadow-md ring-1 ring-amber-400/40'
-                      : 'border-brand-border bg-brand-surface hover:border-amber-400/60 hover:bg-zinc-800/80'
-                  }`}>
-                  {/* Top: Rank + Outlier + RPM */}
-                  <div className="flex items-center justify-between text-[9px] gap-1">
-                    <div className="flex items-center gap-1 truncate">
-                      <span className={`font-black px-1 py-0.5 rounded leading-none shrink-0 ${
-                        isTop1 ? 'bg-amber-400 text-zinc-950' :
-                        isTop2 ? 'bg-zinc-200 text-zinc-950' :
-                        isTop3 ? 'bg-amber-600 text-white' :
-                        'bg-zinc-800 text-zinc-400 border border-zinc-700'
-                      }`}>
-                        #{rankNum}
-                      </span>
-                      {niche.outlierMultiplier && (
-                        <span className="font-bold text-rose-400 truncate text-[9px]">
-                          🔥x{niche.outlierMultiplier}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-emerald-400 font-bold shrink-0 text-[10px]">
-                      {niche.rpmRange ? niche.rpmRange.split('-')[0].trim() : '$20+'}
+                onClick={() => {
+                  setActiveNicheId(niche.id);
+                  runScan(niche);
+                }}
+                className={`group p-3 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between min-h-[86px] select-none ${
+                  isSelected
+                    ? 'border-amber-400 bg-zinc-900 shadow-md ring-1 ring-amber-400/40'
+                    : 'border-zinc-800/80 bg-zinc-900/60 hover:border-zinc-600 hover:bg-zinc-800/60'
+                }`}>
+                {/* Hàng 1: Thứ hạng + Outlier + RPM */}
+                <div className="flex items-center justify-between text-xs gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[11px] font-black px-1.5 py-0.5 rounded leading-none shrink-0 ${
+                      isTop1 ? 'bg-amber-400 text-zinc-950 font-black' :
+                      isTop2 ? 'bg-zinc-200 text-zinc-950 font-bold' :
+                      isTop3 ? 'bg-amber-600 text-white font-bold' :
+                      'bg-zinc-800 text-zinc-300 border border-zinc-700/60'
+                    }`}>
+                      #{rankNum}
                     </span>
-                  </div>
-
-                  {/* Tên ngách */}
-                  <h4 className="text-xs font-bold text-white group-hover:text-amber-300 truncate leading-snug">
-                    {niche.name}
-                  </h4>
-
-                  {/* Kênh & Trạng thái Khả Thi */}
-                  <div className="flex items-center justify-between text-[10px] text-zinc-500">
-                    {isChannelScanningThis ? (
-                      <span className="text-amber-400 font-bold text-[9px] animate-pulse flex items-center gap-1 truncate">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping shrink-0"></span>
-                        <span className="truncate">Đang dò kênh...</span>
-                      </span>
-                    ) : channelSummary.status === 'found' && channelSummary.channels.length > 0 ? (
-                      <span
-                        className="truncate max-w-[110px] text-emerald-400 font-semibold text-[10px] flex items-center gap-1"
-                        title={`Khả thi: Kênh ${channelSummary.channels[0].name} (${channelSummary.channels[0].subs})`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                        <span className="truncate">{channelSummary.channels[0].name}</span>
-                        <span className="text-zinc-400 text-[9px] shrink-0">({channelSummary.channels[0].subs?.replace(' subs','')})</span>
-                      </span>
-                    ) : channelSummary.status === 'infeasible' ? (
-                      <span
-                        className="truncate max-w-[115px] text-rose-400 font-semibold text-[10px] flex items-center gap-1"
-                        title={channelSummary.reason || 'Toàn bộ video đều thuộc kênh lớn, không có kênh <30k sub'}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
-                        <span className="truncate">Ko khả thi (&lt;30k)</span>
-                      </span>
-                    ) : (
-                      <span
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          scanSingleNicheChannels(niche, channelSubLimit);
-                        }}
-                        className="truncate max-w-[100px] text-zinc-400 hover:text-amber-300 text-[10px] flex items-center gap-1 cursor-pointer"
-                        title="Bấm để dò kênh sub nhỏ cho ngách này">
-                        <span className="text-amber-400">⚡</span>
-                        <span className="truncate">Dò kênh</span>
+                    {niche.outlierMultiplier && (
+                      <span className="text-xs font-semibold text-zinc-300">
+                        x{niche.outlierMultiplier}
                       </span>
                     )}
-
-                    {isSelected ? (
-                      <span className="text-amber-400 font-bold text-[9px] shrink-0">● Đang xem</span>
-                    ) : (
-                      <span className="text-zinc-600 group-hover:text-amber-400 text-[9px] shrink-0">Chi tiết ↗</span>
-                    )}
                   </div>
+                  <span className="text-zinc-300 text-xs font-semibold">
+                    RPM {niche.rpmRange ? niche.rpmRange.split('-')[0].trim() : '$20+'}
+                  </span>
                 </div>
 
-                {/* Di chuột vào mới có thông tin chi tiết (Hover Detail Overlay Popover) */}
-                <div className="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 delay-75 absolute left-0 top-0 z-40 w-72 sm:w-80 p-3 rounded-xl bg-zinc-900/98 backdrop-blur-md border-2 border-amber-400 shadow-2xl shadow-black/90 space-y-2">
-                  <div className="flex items-center justify-between gap-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-400 text-zinc-950">
-                        #{rankNum} {niche.tag || 'High-RPM'}
-                      </span>
-                      {niche.outlierMultiplier && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                          🔥 x{niche.outlierMultiplier} View/Sub
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                      RPM {niche.rpmRange}
-                    </span>
-                  </div>
+                {/* Hàng 2: Tên ngách (Chữ to rõ, nổi bật, dễ đọc) */}
+                <div className="my-1.5">
+                  <h3 className="text-sm sm:text-[15px] font-bold text-white group-hover:text-amber-300 transition line-clamp-1 leading-snug">
+                    {niche.name}
+                  </h3>
+                </div>
 
-                  <div>
-                    <h3 className="text-xs font-bold text-white leading-snug">
-                      {niche.name}
-                    </h3>
-                    <p className="text-[11px] text-zinc-400 line-clamp-2 mt-0.5 leading-relaxed">
-                      {niche.desc}
-                    </p>
-                  </div>
-
-                  {/* Khối Kênh thực tế & Đánh giá Khả Thi Logic */}
-                  <div className="space-y-1.5 pt-1.5 border-t border-zinc-800">
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="font-semibold text-zinc-300 flex items-center gap-1">
-                        <span>📺</span> Kênh Sub Nhỏ (&lt;{channelSubLimit >= 1000 ? (channelSubLimit / 1000) + 'k' : channelSubLimit} Sub):
-                      </span>
-                      {channelSummary.status === 'found' ? (
-                        <span className="text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                          🟢 Khả thi cao
-                        </span>
-                      ) : channelSummary.status === 'infeasible' ? (
-                        <span className="text-[9px] text-rose-400 font-bold bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
-                          🔴 Không khả thi
-                        </span>
-                      ) : (
-                        <span className="text-[9px] text-zinc-400 font-medium">
-                          Chưa dò kênh
-                        </span>
-                      )}
-                    </div>
-
-                    {channelSummary.status === 'found' ? (
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap gap-1">
-                          {channelSummary.channels.map((ch, cIdx) => (
-                            <a
-                              key={cIdx}
-                              href={ch.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-red-600/20 text-zinc-200 hover:text-red-300 border border-zinc-700 hover:border-red-500/40 text-[10px] font-medium transition"
-                              title={`Mở kênh ${ch.name} trên YouTube`}>
-                              <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                              <span className="truncate max-w-[110px]">{ch.name}</span>
-                              {ch.subs && <span className="text-[9px] text-emerald-300">({ch.subs})</span>}
-                              <span className="text-[9px] text-zinc-500">↗</span>
-                            </a>
-                          ))}
-                        </div>
-                        <p className="text-[10px] text-emerald-400/90 leading-tight">
-                          ✓ Phát hiện kênh sub nhỏ có video ăn view trong ngách. Thuật toán có chỗ cho creator mới.
-                        </p>
-                      </div>
-                    ) : channelSummary.status === 'infeasible' ? (
-                      <div className="p-2 rounded bg-rose-500/10 border border-rose-500/20 space-y-1">
-                        <p className="text-[10px] text-rose-300 font-medium leading-relaxed">
-                          {channelSummary.reason}
-                        </p>
-                        <div className="text-[9px] text-zinc-400">
-                          Kênh nhỏ nhất tìm thấy: <b className="text-amber-300">{channelSummary.minSubFound ? (typeof fmt === 'function' ? fmt(channelSummary.minSubFound) : channelSummary.minSubFound) + ' subs' : '>50k subs'}</b>.
-                        </div>
-                      </div>
+                {/* Hàng 3: Kênh nhỏ đại diện + Nút Xem Chi Tiết trực tiếp */}
+                <div className="flex items-center justify-between text-xs text-zinc-400 pt-1.5 border-t border-zinc-800/60">
+                  <div className="truncate max-w-[130px] flex items-center gap-1">
+                    <span className="text-[11px]">📺</span>
+                    {firstChannel ? (
+                      <a
+                        href={firstChannel.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="truncate text-zinc-300 hover:text-white transition font-medium text-[11px]"
+                        title={`Mở kênh ${firstChannel.name} trên YouTube`}>
+                        {firstChannel.name}
+                        <span className="text-[10px] text-zinc-400 ml-1">({firstChannel.subs?.replace(' subs','')})</span>
+                      </a>
                     ) : (
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-[10px] text-zinc-400">Chưa dò kênh theo tiêu chí &lt;30k sub</span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            scanSingleNicheChannels(niche, channelSubLimit);
-                          }}
-                          className="px-2 py-0.5 rounded bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/30 text-[10px] font-bold transition cursor-pointer">
-                          ⚡ Bấm dò ngay
-                        </button>
-                      </div>
+                      <span className="truncate text-zinc-400 text-[11px]">
+                        {niche.exampleChannel || 'Chưa dò kênh'}
+                      </span>
                     )}
                   </div>
 
-                  {/* Footer: Cạnh tranh & Nút Quét Trend */}
-                  <div className="pt-1.5 border-t border-zinc-800 flex items-center justify-between text-[11px]">
-                    <span className="text-zinc-400 text-[10px]">
-                      Cạnh tranh: <b className="text-emerald-400">{comp}</b>
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          scanSingleNicheChannels(niche, channelSubLimit);
-                        }}
-                        disabled={scanningChannelNicheId === niche.id}
-                        className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-400 hover:bg-amber-300 text-zinc-950 flex items-center gap-1 shadow transition cursor-pointer">
-                        <span>⚡</span> {scanningChannelNicheId === niche.id ? 'Đang dò...' : 'Dò Kênh'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveNicheId(niche.id);
-                          runScan(niche, '', subFilter, durFilter, viewFilter, period);
-                          const scannerEl = document.getElementById('niche-scanner-results');
-                          if (scannerEl) {
-                            scannerEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                          }
-                        }}
-                        className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition cursor-pointer flex items-center gap-1"
-                        title="Cuộn xuống quét các video bứt phá của ngách này">
-                        <span>🎬</span> Quét Video ↓
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onSelectNiche) onSelectNiche(niche);
-                        }}
-                        className="text-zinc-400 hover:text-white px-1.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-[10px] border border-zinc-700 transition"
-                        title="Xem toàn bộ kịch bản, video mẫu và phân tích">
-                        Chi tiết
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onSelectNiche) onSelectNiche(niche);
+                    }}
+                    className="text-zinc-400 group-hover:text-amber-300 hover:bg-zinc-800 px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 shrink-0"
+                    title="Bấm để xem kịch bản, video mẫu và phân tích ngách">
+                    <span>Chi tiết</span>
+                    <span className="text-[10px]">↗</span>
+                  </button>
                 </div>
               </div>
             );
