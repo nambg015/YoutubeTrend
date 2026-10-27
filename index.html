@@ -10352,15 +10352,25 @@ function TopNgachSection({
   onSelectIdea,
   onOpenApiModal
 }) {
+  const STORAGE_KEY = 'yt_real_discovered_niches_v5';
+  const TIME_KEY = 'yt_real_discovered_niches_time_v5';
+
   // Danh sách các ngách THẬT được quét và bóc tách động từ YouTube API v3 (100% kênh thật, tự dọn khi hạ nhiệt)
   const [realDiscoveredNiches, setRealDiscoveredNiches] = React.useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('yt_real_discovered_niches_v2') || '[]');
+      // Dọn sạch key v2 cũ nếu còn sót lại từ các bản trước
+      localStorage.removeItem('yt_real_discovered_niches_v2');
+      localStorage.removeItem('yt_real_discovered_niches_time');
+
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       if (!Array.isArray(saved) || saved.length === 0) return [];
+
       const now = Date.now();
-      // Tự động xoá các video/ngách đã hạ nhiệt (> 10 ngày)
+      // Loại bỏ hoàn toàn bất kỳ ngách mock nào còn sót lại và tự xoá video > 10 ngày
       const active = saved.map(n => {
+        if (n.id && n.id.includes('_init')) return null;
         const freshVids = (n.videos || []).filter(v => {
+          if (v.id === 'xYz12345678' || v.id === 'aBcDeFgHiJk' || v.id === 'oPqRsTuVwXy' || v.id === 'zAbCdEfGhIj' || v.id === 'kLmNoPqRsTu' || v.id === 'L_LUpnjgPso') return false;
           const vt = v.ts || (v.published ? new Date(v.published).getTime() : 0);
           return (now - vt) <= 10 * 864e5; // trong vòng 10 ngày
         });
@@ -10380,7 +10390,7 @@ function TopNgachSection({
 
   const [activeNicheId, setActiveNicheId] = React.useState(() => {
     try {
-      const cached = JSON.parse(localStorage.getItem('yt_real_discovered_niches_v2') || '[]');
+      const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       return cached[0]?.id || null;
     } catch (e) {
       return null;
@@ -10397,28 +10407,58 @@ function TopNgachSection({
   const [subLimitFilter, setSubLimitFilter] = React.useState(30000); // 30k sub mặc định
   const [lastScannedTime, setLastScannedTime] = React.useState(() => {
     try {
-      return localStorage.getItem('yt_real_discovered_niches_time') || '';
+      return localStorage.getItem(TIME_KEY) || '';
     } catch (e) {
       return '';
     }
   });
 
-  // Hạt giống xu hướng đa lĩnh vực để quét toàn diện YouTube (10 ngày qua)
+  // Tự động dọn dẹp các cache mock cũ khi tải trang
+  React.useEffect(() => {
+    try {
+      localStorage.removeItem('yt_real_discovered_niches_v2');
+      localStorage.removeItem('yt_real_discovered_niches_time');
+      const curr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      if (Array.isArray(curr) && curr.some(n => n.id?.includes('_init') || (n.videos || []).some(v => v.id === 'xYz12345678' || v.id === 'aBcDeFgHiJk'))) {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(TIME_KEY);
+        setRealDiscoveredNiches([]);
+        setActiveNicheId(null);
+      }
+    } catch (e) {}
+  }, []);
+
+  // Xoá toàn bộ cache cũ để quét sạch 100%
+  const handleClearCache = () => {
+    try {
+      localStorage.removeItem('yt_real_discovered_niches_v2');
+      localStorage.removeItem('yt_real_discovered_niches_v5');
+      localStorage.removeItem('yt_real_discovered_niches_time');
+      localStorage.removeItem('yt_real_discovered_niches_time_v5');
+    } catch (e) {}
+    setRealDiscoveredNiches([]);
+    setActiveNicheId(null);
+    setLastScannedTime('');
+    if (typeof showToast === 'function') {
+      showToast('Đã xóa sạch bộ nhớ cũ! Bạn có thể bấm quét để tìm ngách thật mới 100%.', 'info');
+    }
+  };
+
+  // Hạt giống xu hướng ngách chuyên sâu (Nhắm trúng video tài liệu, phân tích, kể chuyện của creator độc lập)
   const SEED_TREND_TOPICS = React.useMemo(() => [
-    { id: 'crime', label: 'Hồ Sơ Vụ Án & Lời Khai', q: 'police interrogation confession body language crime', rpm: '$25 - $38' },
-    { id: 'ai', label: 'Điện Ảnh AI & Hoạt Hình', q: 'ai animation cinematic film trailer midjourney', rpm: '$30 - $48' },
-    { id: 'sea', label: 'Bí Ẩn Vực Sâu & Đại Dương', q: 'deep ocean mystery abyss creature iceberg', rpm: '$22 - $35' },
-    { id: 'history', label: 'Lịch Sử & Văn Minh Cổ', q: 'ancient civilization lost technology warfare history', rpm: '$24 - $36' },
-    { id: 'psychology', label: 'Tâm Lý Học & Hành Vi', q: 'dark psychology manipulation human behavior traits', rpm: '$28 - $45' },
-    { id: 'horror', label: 'Kinh Dị & Giả Thuyết', q: 'analog horror scp foundation backrooms story', rpm: '$20 - $32' },
-    { id: 'universe', label: 'Khoa Học & Vũ Trụ', q: 'space universe telescope breakthrough discovery', rpm: '$26 - $42' },
-    { id: 'business', label: 'Đế Chế & Kinh Doanh', q: 'business collapse success story case study', rpm: '$35 - $60' },
-    { id: 'gaming', label: 'Cốt Truyện Game & Bí Mật', q: 'game lore iceberg secrets explained', rpm: '$16 - $26' },
-    { id: 'restore', label: 'Phục Chế & Sáng Tạo', q: 'restoration abandoned tool antique project', rpm: '$22 - $32' },
-    { id: 'story', label: 'Kể Chuyện & Bài Học', q: 'animated story reddit confessions life lesson', rpm: '$20 - $30' },
-    { id: 'ambient', label: 'Âm Thanh & Thư Giãn', q: 'peaceful ambient sleep sound rain 4k', rpm: '$18 - $28' },
-    { id: 'military', label: 'Chiến Tranh & Vũ Khí', q: 'military tactics weapon technology warfare history', rpm: '$24 - $38' },
-    { id: 'conspiracy', label: 'Tảng Băng Chìm & Thuyết', q: 'conspiracy iceberg dark truth documented', rpm: '$22 - $35' }
+    { id: 'crime', label: 'Hồ Sơ Vụ Án & Tội Phạm', q: 'police interrogation confession analysis breakdown documentary', rpm: '$25 - $38' },
+    { id: 'ai', label: 'Điện Ảnh AI & Hoạt Hình', q: 'ai short film cinematic trailer animation midjourney sora', rpm: '$30 - $48' },
+    { id: 'sea', label: 'Bí Ẩn Vực Sâu & Đại Dương', q: 'deep ocean mystery abyss iceberg explained mini documentary', rpm: '$22 - $35' },
+    { id: 'history', label: 'Lịch Sử & Văn Minh Cổ', q: 'ancient civilization lost technology archaeology documentary essay', rpm: '$24 - $36' },
+    { id: 'psychology', label: 'Tâm Lý Học & Hành Vi', q: 'dark psychology manipulation human behavior traits documentary', rpm: '$28 - $45' },
+    { id: 'horror', label: 'Kinh Dị & Tảng Băng Chìm', q: 'analog horror iceberg explained scp foundation backrooms story', rpm: '$20 - $32' },
+    { id: 'universe', label: 'Khoa Học & Vũ Trụ', q: 'space universe telescope deep space discovery documentary', rpm: '$26 - $42' },
+    { id: 'business', label: 'Đế Chế & Kinh Doanh', q: 'business collapse rise and fall company documentary case study', rpm: '$35 - $60' },
+    { id: 'gaming', label: 'Cốt Truyện Game & Bí Mật', q: 'game lore iceberg secrets explained mini documentary', rpm: '$16 - $26' },
+    { id: 'restore', label: 'Phục Chế & Sáng Tạo', q: 'restoration abandoned antique tool machine project documentary', rpm: '$22 - $32' },
+    { id: 'story', label: 'Kể Chuyện & Bài Học', q: 'animated story reddit confessions life lessons animated', rpm: '$20 - $30' },
+    { id: 'military', label: 'Chiến Tranh & Vũ Khí', q: 'military tactics weapon warfare history documentary analysis', rpm: '$24 - $38' },
+    { id: 'conspiracy', label: 'Tảng Băng Chìm & Thuyết', q: 'conspiracy iceberg dark truth documented video essay', rpm: '$22 - $35' }
   ], []);
 
   // Lọc ngách theo ô tìm kiếm
@@ -10441,7 +10481,7 @@ function TopNgachSection({
   const inferNicheTitle = (baseLabel, videos) => {
     if (!videos || videos.length === 0) return baseLabel;
     const allTitles = videos.map(v => v.title).join(' ');
-    const cleaned = allTitles.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/);
+    const cleaned = allTitles.toLowerCase().replace(/[^a-z0-9s]/g, '').split(/s+/);
     const stopWords = new Set([
       'the', 'and', 'in', 'of', 'to', 'for', 'with', 'a', 'an', 'is', 'on', 'this', 'that', 'by',
       'how', 'what', 'why', 'who', 'from', 'at', 'into', 'part', 'episode', 'full', 'video', 'watch',
@@ -10461,7 +10501,7 @@ function TopNgachSection({
     return baseLabel;
   };
 
-  // QUÉT DÒ NGÁCH THẬT 100% TỪ YOUTUBE DATA API V3
+  // QUÉT DÒ NGÁCH THẬT 100% TỪ YOUTUBE DATA API V3 (LỌC SUB THẤP VIEW CAO CHUẨN XÁC)
   const runDeepNicheDiscovery = React.useCallback(async (customQueryOverride) => {
     if (!apiKey || typeof yt !== 'function') {
       if (typeof showToast === 'function') showToast('Vui lòng nhập YouTube API Key để quét ngách thật!', 'warning');
@@ -10496,16 +10536,16 @@ function TopNgachSection({
           foundNiches: discoveredList.length
         });
 
-        // 1. Tìm video theo chủ đề hạt giống đăng trong 10 ngày qua
+        // 1. Tìm video theo chủ đề hạt giống đăng trong 10 ngày qua (maxResults 50 tối đa để lấy nhiều ứng viên)
         let searchRes;
         try {
           searchRes = await yt('search', {
             part: 'snippet',
             type: 'video',
             q: topic.q,
-            order: 'viewCount', // Lấy video view cao nhất
+            order: 'viewCount', // Ưu tiên video view cao
             publishedAfter: tenDaysAgoISO,
-            maxResults: 30,
+            maxResults: 50,
             regionCode: 'US'
           }, apiKey);
         } catch (e) {
@@ -10532,7 +10572,7 @@ function TopNgachSection({
         const vidsList = vidsRes.items || [];
         if (vidsList.length === 0) continue;
 
-        // 3. Lấy thông tin kênh của các video này để đối chiếu sub count
+        // 3. Lấy thông tin kênh để đối chiếu số lượng sub
         const channelIds = [...new Set(vidsList.map(v => v.snippet.channelId))];
         let chRes;
         try {
@@ -10561,10 +10601,11 @@ function TopNgachSection({
           };
         });
 
-        // 4. LỌC LOGIC NGHIÊM NGẶT THEO YÊU CẦU:
+        // 4. LỌC LOGIC NGHIÊM NGẶT - CHUẨN "SUB THẤP VIEW CAO / OUTLIER BỨT PHÁ":
         // - Kênh dưới 30k sub (< 30.000 subs)
         // - Video đăng trong khoảng 10 ngày trở xuống
-        // - Lượt xem từ vài ngàn (>= 2.000) đến vài chục/trăm ngàn
+        // - Thời lượng >= 3 phút (180s) loại bỏ Shorts, clip nhảm, meme rác
+        // - View bứt phá: Tối thiểu 3.000 view VÀ (views > subs * 1.2 HOẶC views >= 10.000)
         const eligibleVideosInTopic = [];
         const eligibleChannelsMap = {};
 
@@ -10572,25 +10613,39 @@ function TopNgachSection({
           const chInfo = channelsMap[v.snippet.channelId];
           if (!chInfo) return;
 
-          // Tiêu chí 1: Kênh dưới 30k sub (bắt buộc theo ngưỡng subLimitFilter)
+          // Tiêu chí 1: Kênh dưới 30k sub (bắt buộc theo subLimitFilter)
           if (chInfo.subCount !== null && chInfo.subCount > subLimitFilter) return;
+          if (chInfo.subCount === null && chInfo.videoCount > 50) return; // Tránh kênh lớn ẩn sub
 
-          // Tiêu chí 2: Lượt xem từ vài ngàn trở lên (tối thiểu 2.000 view)
-          const views = Number(v.statistics.viewCount || 0);
-          if (views < 2000) return;
-
-          // Tiêu chí 3: Trong 10 ngày trở xuống
+          // Tiêu chí 2: Trong 10 ngày trở xuống
           const pubTime = new Date(v.snippet.publishedAt).getTime();
           const ageHours = (Date.now() - pubTime) / 36e5;
           if (ageHours > 240) return; // 10 ngày = 240 giờ
 
-          // Tính chỉ số Outlier
-          const outlierRatio = chInfo.subCount ? (views / Math.max(chInfo.subCount, 1)).toFixed(1) : (views / 15000).toFixed(1);
+          // Tiêu chí 3: Thời lượng >= 3 phút (180s) để tránh shorts, meme xàm
+          const durSeconds = typeof parseDur === 'function' ? parseDur(v.contentDetails?.duration) : 1800;
+          if (durSeconds < 180) return;
+
+          // Tiêu chí 4: Lọc tiêu đề rác
+          const lowTitle = (v.snippet.title || '').toLowerCase();
+          if (lowTitle.includes('#shorts') || lowTitle.includes('tiktok') || lowTitle.includes('trailer official')) return;
+
+          // Tiêu chí 5: TIÊU CHUẨN BỨT PHÁ (SUB THẤP VIEW CAO)
+          const views = Number(v.statistics.viewCount || 0);
+          if (views < 3000) return;
+
+          const effSubs = chInfo.subCount || 8000;
+          const outlierRatioNum = views / Math.max(effSubs, 1);
+          // Nếu dưới 10.000 view, bắt buộc lượt view phải vượt 1.2x số sub của kênh (chứng minh bứt phá đề xuất)
+          if (views < 10000 && outlierRatioNum < 1.2) {
+            return;
+          }
+
+          const outlierRatio = outlierRatioNum.toFixed(1);
           const vph = Math.round(views / Math.max(0.1, ageHours));
           const likes = v.statistics.likeCount != null ? Number(v.statistics.likeCount) : null;
           const comments = v.statistics.commentCount != null ? Number(v.statistics.commentCount) : null;
           const engRate = views > 0 ? ((((likes || 0) + (comments || 0)) / views) * 100).toFixed(2) : '0';
-          const durSeconds = typeof parseDur === 'function' ? parseDur(v.contentDetails?.duration) : 1800;
           const isBreakout = (chInfo.ageDays <= 90 || chInfo.videoCount <= 15) && views >= 3000;
 
           const videoObj = {
@@ -10665,6 +10720,9 @@ function TopNgachSection({
         await new Promise(r => setTimeout(r, 200));
       }
 
+      // Sắp xếp các ngách tìm được: Ưu tiên ngách có Outlier và View cao nhất
+      discoveredList.sort((a, b) => (Number(b.maxOutlier) || 0) - (Number(a.maxOutlier) || 0));
+
       const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN');
       setLastScannedTime(nowStr);
 
@@ -10672,6 +10730,7 @@ function TopNgachSection({
       setRealDiscoveredNiches(prevList => {
         const nicheMap = new Map();
         (prevList || []).forEach(n => {
+          if (n.id && n.id.includes('_init')) return;
           const key = (n.category || n.name || '').trim().toLowerCase();
           if (key) nicheMap.set(key, n);
         });
@@ -10728,8 +10787,8 @@ function TopNgachSection({
         const finalSaved = finalMerged.slice(0, 20);
 
         try {
-          localStorage.setItem('yt_real_discovered_niches_v2', JSON.stringify(finalSaved));
-          localStorage.setItem('yt_real_discovered_niches_time', nowStr);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(finalSaved));
+          localStorage.setItem(TIME_KEY, nowStr);
         } catch (e) {}
 
         if (finalSaved.length > 0 && (!activeNicheId || !finalSaved.some(n => n.id === activeNicheId))) {
@@ -10741,10 +10800,10 @@ function TopNgachSection({
 
       if (typeof showToast === 'function') {
         showToast(
-          finalNiches.length > 0
-            ? `Thành công! Đã bóc tách được ${finalNiches.length} ngách trend từ các kênh <${subLimitFilter/1000}k sub trong 10 ngày qua.`
-            : `Không tìm thấy video nào đạt chuẩn <${subLimitFilter/1000}k sub & >2k view trong 10 ngày qua.`,
-          finalNiches.length > 0 ? 'success' : 'warning'
+          discoveredList.length > 0
+            ? `Thành công! Đã tìm thấy & bóc tách ${discoveredList.length} ngách bứt phá (Kênh <${subLimitFilter/1000}k sub, view cao trong 10 ngày qua).`
+            : `Không có video mới nào đạt chuẩn <${subLimitFilter/1000}k sub & view bứt phá trong đợt quét này (giữ nguyên dữ liệu cũ).`,
+          discoveredList.length > 0 ? 'success' : 'warning'
         );
       }
     } catch (err) {
@@ -10754,7 +10813,7 @@ function TopNgachSection({
       setIsScanningNiches(false);
       setScanProgress(null);
     }
-  }, [apiKey, SEED_TREND_TOPICS, subLimitFilter, showToast, onOpenApiModal]);
+  }, [apiKey, SEED_TREND_TOPICS, subLimitFilter, showToast, onOpenApiModal, activeNicheId]);
 
   return (
     <section className="space-y-4 animate-in fade-in duration-200">
@@ -10765,22 +10824,35 @@ function TopNgachSection({
             🔥
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-              <span>Top Ngách Xu Hướng Thực Tế (&lt;30k Sub)</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-sm sm:text-base font-bold text-white">
+                Top Ngách Xu Hướng Thực Tế (&lt;30k Sub)
+              </h2>
               {realDiscoveredNiches.length > 0 && (
                 <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
                   {realDiscoveredNiches.length} ngách bóc tách
                 </span>
               )}
-            </h2>
+            </div>
             <p className="text-[11px] text-zinc-400">
-              100% YouTube API v3 • Kênh &lt;30.000 sub • Video đăng trong 10 ngày qua • View vài ngàn đến trăm ngàn
+              100% YouTube API v3 • Kênh &lt;30.000 sub • Video đăng trong 10 ngày qua • View bứt phá (Outlier)
             </p>
           </div>
         </div>
 
-        {/* Nút Quét Chính & Hướng dẫn */}
+        {/* Nút Quét Chính, Xoá Cache & Hướng Dẫn */}
         <div className="flex items-center gap-2 flex-wrap">
+          {realDiscoveredNiches.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearCache}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-rose-950/60 text-zinc-300 hover:text-rose-200 border border-zinc-700 hover:border-rose-800/80 transition cursor-pointer flex items-center gap-1"
+              title="Xoá sạch dữ liệu cũ để quét mới hoàn toàn">
+              <span>🗑️</span>
+              <span>Xóa Cache</span>
+            </button>
+          )}
+
           {isScanningNiches ? (
             <button
               type="button"
@@ -10830,7 +10902,7 @@ function TopNgachSection({
         </div>
       )}
 
-      {/* 3. Lưới Các Ngách Thực Tế (Không Dùng Ngách Tĩnh Cứng Nhắc) */}
+      {/* 3. Lưới Các Ngách Thực Tế */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
           <span className="font-semibold text-zinc-300">
@@ -10852,7 +10924,7 @@ function TopNgachSection({
               Chưa Có Ngách Nào Được Quét
             </h3>
             <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
-              Hệ thống đã loại bỏ hoàn toàn các ngách giả lập khô khan. Hãy bấm nút dưới đây để YouTube Data API v3 quét thực tế toàn bộ các kênh &lt;30k sub có video bứt phá trong 10 ngày qua và tự động bóc tách thành các ngách.
+              Hệ thống lọc 100% video thực tế từ YouTube Data API v3: Kênh &lt;30.000 sub, thời lượng &ge;3 phút, view bứt phá (Outlier) trong 10 ngày qua. Hãy bấm nút dưới đây để bắt đầu quét.
             </p>
             <button
               type="button"
