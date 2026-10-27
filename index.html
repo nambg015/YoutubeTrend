@@ -10485,6 +10485,7 @@ function App() {
   const [showDemandValidationModal, setShowDemandValidationModal] = useState(false);
   const [showTitlePatternModal, setShowTitlePatternModal] = useState(false);
   const [showIdeaPlannerModal, setShowIdeaPlannerModal] = useState(false);
+  const [showWikiDropdown, setShowWikiDropdown] = useState(false);
   const [showAutoUpdateBubblePopup, setShowAutoUpdateBubblePopup] = useState(false);
   const [selectedNicheModal, setSelectedNicheModal] = useState(null);
   const [rpmSearchQuery, setRpmSearchQuery] = useState('');
@@ -12069,7 +12070,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           </div>
 
           {/* Center: Clean Text Navigation Tabs with Underline Active Indicator */}
-          <nav className="flex items-center gap-5 sm:gap-7 overflow-x-auto no-scrollbar shrink min-w-0 flex-nowrap h-full">
+          <nav className="flex items-center gap-5 sm:gap-7 overflow-visible shrink min-w-0 flex-nowrap h-full">
             <button 
               onClick={() => setTab('search')} 
               className={`h-full flex items-center text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
@@ -12131,56 +12132,116 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               {tab === 'autoupdate' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
-            {/* Wiki with 3 Research Tools in Hover Dropdown */}
-            <div className="relative group h-full flex items-center">
-              <button 
-                onClick={() => setTab('wiki')} 
-                className={`h-full flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
-                  tab === 'wiki' 
-                    ? 'text-white font-semibold' 
-                    : 'text-zinc-400 hover:text-amber-300'
-                }`}
-                title="Wiki YouTubeTrend: Từ điển thuật ngữ & cẩm nang tìm ngách toàn diện">
-                <span className="text-amber-400">📖</span>
-                <span>Wiki</span>
-                <span className="text-[10px] text-zinc-500 group-hover:text-amber-400 transition-transform group-hover:rotate-180">▾</span>
-                {tab === 'wiki' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400 rounded-full"></span>}
-              </button>
+            {/* Wiki with 3 Research Tools Dropdown */}
+            <div 
+              className="relative h-full flex items-center"
+              onMouseEnter={() => setShowWikiDropdown(true)}
+              onMouseLeave={() => setShowWikiDropdown(false)}>
+              <div className="h-full flex items-center gap-0.5">
+                <button 
+                  type="button"
+                  onClick={() => setTab('wiki')} 
+                  className={`h-full flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative cursor-pointer ${
+                    tab === 'wiki' 
+                      ? 'text-white font-semibold' 
+                      : 'text-zinc-400 hover:text-amber-300'
+                  }`}
+                  title="Wiki YouTubeTrend: Từ điển thuật ngữ & cẩm nang tìm ngách toàn diện">
+                  <span className="text-amber-400">📖</span>
+                  <span>Wiki</span>
+                  {tab === 'wiki' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400 rounded-full"></span>}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowWikiDropdown(prev => !prev);
+                  }}
+                  className={`h-full flex items-center px-1 text-zinc-400 hover:text-amber-400 transition-transform cursor-pointer ${showWikiDropdown ? 'rotate-180 text-amber-400' : ''}`}
+                  title="Mở menu 3 công cụ nghiên cứu">
+                  <span className="text-[10px]">▾</span>
+                </button>
+              </div>
 
-              {/* Hover Dropdown Menu with 3 Practical Tools */}
-              <div className="absolute top-full left-0 pt-2 hidden group-hover:block z-50 min-w-[220px] animate-in fade-in slide-in-from-top-1 duration-150">
-                <div className="bg-zinc-900 border border-zinc-700/80 rounded-xl p-1.5 shadow-2xl backdrop-blur-xl space-y-1">
-                  <div className="px-2.5 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-800">
-                    3 Công Cụ Nghiên Cứu
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowDemandValidationModal(true); }}
-                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold text-zinc-200 hover:text-emerald-300 hover:bg-zinc-800 flex items-center gap-2 transition">
-                    <span>🧪</span>
-                    <span>Kiểm Chứng Nhu Cầu</span>
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowTitlePatternModal(true); }}
-                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold text-zinc-200 hover:text-purple-300 hover:bg-zinc-800 flex items-center gap-2 transition">
-                    <span>🎯</span>
-                    <span>Khuôn Tiêu Đề</span>
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowIdeaPlannerModal(true); }}
-                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold text-zinc-200 hover:text-amber-300 hover:bg-zinc-800 flex items-center gap-2 transition">
-                    <span>📋</span>
-                    <span>Kế Hoạch Video</span>
-                  </button>
-                  <div className="pt-1 border-t border-zinc-800">
+              {/* Dropdown Menu with 3 Practical Tools */}
+              {showWikiDropdown && (
+                <div 
+                  className="absolute top-full left-0 z-50 min-w-[240px] pt-1"
+                  onMouseEnter={() => setShowWikiDropdown(true)}
+                  onMouseLeave={() => setShowWikiDropdown(false)}>
+                  <div className="bg-zinc-900 border border-zinc-700/90 rounded-2xl p-2 shadow-2xl backdrop-blur-2xl space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-2.5 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-800 flex items-center justify-between">
+                      <span>Công Cụ Nghiên Cứu</span>
+                      <span className="text-amber-400 font-bold text-[10px] bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">3 Nhánh</span>
+                    </div>
+
+                    {/* Branch 1: Kiểm chứng nhu cầu */}
                     <button
-                      onClick={() => setTab('wiki')}
-                      className="w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-amber-400 hover:bg-zinc-800 flex items-center justify-between transition">
-                      <span>Mở toàn bộ 24 bài Wiki</span>
-                      <span>→</span>
+                      type="button"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setShowDemandValidationModal(true); 
+                        setShowWikiDropdown(false); 
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold text-zinc-200 hover:text-emerald-300 hover:bg-zinc-800/80 flex items-center gap-2.5 transition group cursor-pointer">
+                      <span className="text-base">🧪</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white font-bold group-hover:text-emerald-300 transition-colors">Kiểm Chứng Nhu Cầu</div>
+                        <div className="text-[10px] text-zinc-500 line-clamp-1">Tránh bẫy video ăn may</div>
+                      </div>
+                      <span className="text-zinc-600 group-hover:text-emerald-400 text-xs">→</span>
                     </button>
+
+                    {/* Branch 2: Khuôn tiêu đề */}
+                    <button
+                      type="button"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setShowTitlePatternModal(true); 
+                        setShowWikiDropdown(false); 
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold text-zinc-200 hover:text-purple-300 hover:bg-zinc-800/80 flex items-center gap-2.5 transition group cursor-pointer">
+                      <span className="text-base">🎯</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white font-bold group-hover:text-purple-300 transition-colors">Khuôn Tiêu Đề</div>
+                        <div className="text-[10px] text-zinc-500 line-clamp-1">Phân tích cấu trúc viral</div>
+                      </div>
+                      <span className="text-zinc-600 group-hover:text-purple-400 text-xs">→</span>
+                    </button>
+
+                    {/* Branch 3: Kế hoạch video */}
+                    <button
+                      type="button"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setShowIdeaPlannerModal(true); 
+                        setShowWikiDropdown(false); 
+                      }}
+                      className="w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold text-zinc-200 hover:text-amber-300 hover:bg-zinc-800/80 flex items-center gap-2.5 transition group cursor-pointer">
+                      <span className="text-base">📋</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white font-bold group-hover:text-amber-300 transition-colors">Kế Hoạch Video</div>
+                        <div className="text-[10px] text-zinc-500 line-clamp-1">Pipeline 10-20 video</div>
+                      </div>
+                      <span className="text-zinc-600 group-hover:text-amber-400 text-xs">→</span>
+                    </button>
+
+                    {/* Link to Full Wiki */}
+                    <div className="pt-1 border-t border-zinc-800">
+                      <button
+                        type="button"
+                        onClick={() => { 
+                          setTab('wiki'); 
+                          setShowWikiDropdown(false); 
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-400 hover:bg-zinc-800/60 flex items-center justify-between transition cursor-pointer">
+                        <span>📖 Mở toàn bộ 24 bài Wiki</span>
+                        <span>→</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <button
