@@ -9098,7 +9098,7 @@ function WikiReaderModal({ article, onClose, onSelectArticle, isRead, onToggleRe
 }
 
 // 2. WIKI FULL TAB SECTION
-function WikiSection({ onOpenArticle, readArticles, onToggleRead }) {
+function WikiSection({ onOpenArticle, readArticles, onToggleRead, onOpenDemandValidation, onOpenTitlePattern, onOpenIdeaPlanner }) {
   const [search, setSearch] = React.useState('');
   const [selectedCat, setSelectedCat] = React.useState('all');
 
@@ -9185,6 +9185,43 @@ function WikiSection({ onOpenArticle, readArticles, onToggleRead }) {
               Tìm thấy <b className="text-amber-400">{filtered.length}</b> bài viết
             </div>
           )}
+        </div>
+      </div>
+
+      {/* 3 Practical Research Tools Bar inside Wiki */}
+      <div className="bg-gradient-to-r from-zinc-900/90 via-brand-surface to-brand-card border border-brand-border rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+        <div className="space-y-1 max-w-xl">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🛠️</span>
+            <span className="text-xs sm:text-sm font-bold text-white">Bộ 3 Công Cụ Thực Chiến Nghiên Cứu Ngách</span>
+            <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700">Thực hành</span>
+          </div>
+          <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed">
+            Áp dụng kiến thức Wiki vào thực tế: Kiểm chứng nhu cầu thị trường, phân tích khuôn tiêu đề viral và lên bảng kế hoạch 10-20 video đầu tiên.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={onOpenDemandValidation}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 transition flex items-center gap-1.5 shadow-sm hover:shadow-emerald-500/10 hover:border-emerald-400/50">
+            <span>🧪</span>
+            <span>Kiểm Chứng Nhu Cầu</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenTitlePattern}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/35 transition flex items-center gap-1.5 shadow-sm hover:shadow-purple-500/10 hover:border-purple-400/50">
+            <span>🎯</span>
+            <span>Khuôn Tiêu Đề</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenIdeaPlanner}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/35 transition flex items-center gap-1.5 shadow-sm hover:shadow-amber-500/10 hover:border-amber-400/50">
+            <span>📋</span>
+            <span>Kế Hoạch Video</span>
+          </button>
         </div>
       </div>
 
@@ -10234,6 +10271,7 @@ function App() {
   const [showDemandValidationModal, setShowDemandValidationModal] = useState(false);
   const [showTitlePatternModal, setShowTitlePatternModal] = useState(false);
   const [showIdeaPlannerModal, setShowIdeaPlannerModal] = useState(false);
+  const [showFloatingTools, setShowFloatingTools] = useState(false);
 
   const toggleWikiRead = (id) => {
     setReadWikiArticles(prev => {
@@ -11781,7 +11819,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
     <div className="min-h-screen flex flex-col bg-brand-dark text-slate-100">
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs sm:text-sm font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <div className="fixed bottom-20 right-6 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs sm:text-sm font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
           <span>✓</span> {toast}
         </div>
       )}
@@ -11922,33 +11960,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           </nav>
 
           {/* Right: Actions like CUTLAB ("Tạo phiếu" + "Đăng nhập") */}
-          <div className="flex items-center gap-2 shrink-0">
-
-            {/* Quick Niche Research Tools */}
-            <button
-              onClick={() => setShowDemandValidationModal(true)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition flex items-center gap-1 shrink-0"
-              title="Kiểm chứng nhu cầu thị trường, tránh bẫy video ăn may">
-              <span>🧪</span>
-              <span className="hidden xl:inline">Kiểm Chứng Nhu Cầu</span>
-            </button>
-
-            <button
-              onClick={() => setShowTitlePatternModal(true)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition flex items-center gap-1 shrink-0"
-              title="Phân tích khuôn tiêu đề viral bứt phá bằng AI">
-              <span>🎯</span>
-              <span className="hidden xl:inline">Khuôn Tiêu Đề</span>
-            </button>
-
-            <button
-              onClick={() => setShowIdeaPlannerModal(true)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition flex items-center gap-1 shrink-0"
-              title="Mở Bảng Kế Hoạch 10-20 Video & Quản lý Pipeline">
-              <span>📋</span>
-              <span className="hidden xl:inline">Kế Hoạch Video</span>
-            </button>
-
+          <div className="flex items-center gap-3 shrink-0">
             <button 
               onClick={() => { setApiModalOpen(true); setApiModalTab('tester'); }} 
               className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition shrink-0 ${
@@ -14025,7 +14037,10 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           <WikiSection 
             onOpenArticle={openWikiArticle} 
             readArticles={readWikiArticles} 
-            onToggleRead={toggleWikiRead} 
+            onToggleRead={toggleWikiRead}
+            onOpenDemandValidation={() => setShowDemandValidationModal(true)}
+            onOpenTitlePattern={() => setShowTitlePatternModal(true)}
+            onOpenIdeaPlanner={() => setShowIdeaPlannerModal(true)}
           />
         )}
 
@@ -14546,6 +14561,52 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           onAddIdeaFromOutside={addIdeaToBoard}
         />
       )}
+
+      {/* Floating Speed Dial: Bộ 3 Công Cụ Nghiên Cứu Ngách (Gọn gàng ở góc màn hình, không chiếm hotbar) */}
+      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2 select-none">
+        {showFloatingTools && (
+          <div className="bg-brand-surface/95 backdrop-blur-md border border-brand-border rounded-2xl p-2.5 shadow-2xl flex flex-col gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150 min-w-[210px]">
+            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider px-2 py-1 border-b border-brand-border/60 flex items-center justify-between">
+              <span>Công Cụ Nghiên Cứu</span>
+              <span className="text-[10px] text-amber-400 font-semibold">3 Tools</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setShowDemandValidationModal(true); setShowFloatingTools(false); }}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition flex items-center gap-2 text-left">
+              <span>🧪</span>
+              <span>Kiểm Chứng Nhu Cầu</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowTitlePatternModal(true); setShowFloatingTools(false); }}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition flex items-center gap-2 text-left">
+              <span>🎯</span>
+              <span>Khuôn Tiêu Đề</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowIdeaPlannerModal(true); setShowFloatingTools(false); }}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition flex items-center gap-2 text-left">
+              <span>📋</span>
+              <span>Kế Hoạch Video</span>
+            </button>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setShowFloatingTools(!showFloatingTools)}
+          className={`h-10 px-3 rounded-full shadow-2xl flex items-center gap-1.5 transition border ${
+            showFloatingTools 
+              ? 'bg-zinc-200 text-zinc-950 border-white shadow-white/10' 
+              : 'bg-brand-card hover:bg-zinc-800 text-zinc-200 hover:text-white border-brand-border hover:border-zinc-500 shadow-black/80'
+          }`}
+          title="Mở menu 3 công cụ: Kiểm Chứng Nhu Cầu, Khuôn Tiêu Đề, Kế Hoạch Video">
+          <span className="text-sm">🛠️</span>
+          <span className="text-xs font-bold">{showFloatingTools ? 'Đóng' : 'Công cụ'}</span>
+        </button>
+      </div>
     </div>
   );
 }
