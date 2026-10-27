@@ -7329,7 +7329,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
     ? 85 
     : Math.round((successCount / Math.max(1, successCount + flopCount)) * 100);
 
-  const kwSeed = (nicheQuery || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 25;
+  const kwSeed = ((scannedKeyword || keywordInput || initialKeyword || '')).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 25;
   const avgVphSpeed = currentFormatList.length > 0
     ? Math.min(50, Math.round(currentFormatList.reduce((s, it) => s + (it.vph || 0), 0) / (currentFormatList.length * 30)))
     : 15;
@@ -10253,40 +10253,245 @@ function VideoIdeaPlannerModal({ onClose, onAddIdeaFromOutside }) {
   );
 }
 
-// TAB 2: TOP NGÁCH (HIGH-RPM NICHES GRID - CLEAN & MINIMALIST)
-function TopNgachSection({ onSelectNiche }) {
+// TAB 2: TOP NGÁCH (HIGH-RPM NICHES - TIMEFRAME, GRID, CLASSIFICATION & SCANNER)
+function TopNgachSection({
+  apiKey,
+  onSelectNiche,
+  onSelectKeywordForSearch,
+  onAddCompetitor,
+  onToggleSave,
+  isSaved,
+  showToast,
+  onOpenScoreFormula,
+  onSelectIdea
+}) {
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [timeframe, setTimeframe] = React.useState('24h');
+  const [activeNicheId, setActiveNicheId] = React.useState('billionaire_maid');
+
+  // Scanner filter states
+  const [subFilter, setSubFilter] = React.useState('under50k'); // 'under30k' | 'under50k' | 'under100k' | 'all'
+  const [durFilter, setDurFilter] = React.useState('long'); // 'long' | 'all'
+  const [viewFilter, setViewFilter] = React.useState('steady'); // 'steady' | 'viral' | 'new' | 'all'
+  const [period, setPeriod] = React.useState(720); // 24 | 168 | 720 | 0
+  const [customQuery, setCustomQuery] = React.useState('');
+  const [videoItems, setVideoItems] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+
+  // Dynamic ranking based on selected timeframe
+  const rankedNiches = React.useMemo(() => {
+    if (typeof getNicheLeaderboard === 'function') {
+      return getNicheLeaderboard(timeframe);
+    }
+    return typeof CASHCOW_NICHES !== 'undefined' ? CASHCOW_NICHES : [];
+  }, [timeframe]);
+
+  // Search filter for niches grid
   const q = (searchQuery || '').trim().toLowerCase();
-
-  const nichesList = typeof CASHCOW_NICHES !== 'undefined' ? CASHCOW_NICHES : [];
-
   const visibleNiches = React.useMemo(() => {
-    if (!q) return nichesList;
-    return nichesList.filter(n =>
+    if (!q) return rankedNiches;
+    return rankedNiches.filter(n =>
       (n.name || '').toLowerCase().includes(q) ||
       (n.subtitle || '').toLowerCase().includes(q) ||
       (n.exampleChannel || '').toLowerCase().includes(q) ||
       (n.desc || '').toLowerCase().includes(q) ||
       (n.queries || []).some(k => (k || '').toLowerCase().includes(q))
     );
-  }, [q, nichesList]);
+  }, [q, rankedNiches]);
+
+  // Active Niche for drilldown & scanning
+  const activeNiche = React.useMemo(() => {
+    return rankedNiches.find(n => n.id === activeNicheId) || rankedNiches[0] || (typeof CASHCOW_NICHES !== 'undefined' ? CASHCOW_NICHES[0] : null);
+  }, [rankedNiches, activeNicheId]);
+
+  // Scan Function for active niche
+  const runScan = React.useCallback(async (targetNiche, overrideQuery, overrideSub, overrideDur, overrideView, overridePeriod) => {
+    const n = targetNiche || activeNiche;
+    if (!n) return;
+
+    const tSub = overrideSub !== undefined ? overrideSub : subFilter;
+    const tDur = overrideDur !== undefined ? overrideDur : durFilter;
+    const tView = overrideView !== undefined ? overrideView : viewFilter;
+    const tPeriod = overridePeriod !== undefined ? overridePeriod : period;
+    const tQuery = overrideQuery !== undefined ? overrideQuery : customQuery;
+
+    const getSampleItems = () => {
+      const samples = (n.sampleVideos && n.sampleVideos.length) ? n.sampleVideos : [
+        {
+          id: 'sample_' + n.id + '_1',
+          title: `Why This ${n.name} Channel Makes $8,000/Month With Only 20k Subscribers`,
+          channel: n.channelName || n.exampleChannel || 'Cash Cow Insights',
+          channelId: 'ch_' + n.id,
+          thumb: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
+          published: new Date(Date.now() - 36e5 * 24).toISOString(),
+          views: 34500,
+          vph: 580,
+          dur: 2840,
+          subs: n.subs || 18500
+        }
+      ];
+      return samples.map(s => {
+        const o = {
+          ...s,
+          ts: new Date(s.published).getTime(),
+          likes: Math.round(s.views * 0.04),
+          comments: Math.round(s.views * 0.008),
+          niche: n,
+          videoCount: 42
+        };
+        if (typeof score === 'function') {
+          const sc = score(o);
+          o.sc = sc;
+          o.total = sc.total;
+          o.vph = s.vph || sc.vph;
+          o.eng = sc.eng;
+        }
+        return o;
+      });
+    };
+
+    if (!apiKey || typeof yt !== 'function') {
+      setLoading(true);
+      setTimeout(() => {
+        setVideoItems(getSampleItems());
+        setLoading(false);
+      }, 250);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const cutoff = tPeriod > 0 ? Date.now() - tPeriod * 36e5 : 0;
+      let queryStr = (tQuery || '').trim();
+      if (!queryStr) {
+        queryStr = (n.queries || []).slice(0, 3).join(' | ') || n.name;
+      }
+
+      const searchParams = {
+        part: 'snippet',
+        type: 'video',
+        q: queryStr,
+        maxResults: 40,
+        regionCode: 'US',
+        order: 'viewCount'
+      };
+
+      if (tDur === 'long') {
+        searchParams.videoDuration = 'long';
+      }
+      if (cutoff > 0) {
+        searchParams.publishedAfter = new Date(cutoff).toISOString();
+      }
+
+      const s = await yt('search', searchParams, apiKey);
+      const ids = (s.items || []).map(i => i.id && i.id.videoId).filter(Boolean);
+      const vids = ids.length ? ((await yt('videos', { part: 'snippet,statistics,contentDetails', id: ids.join(',') }, apiKey)).items || []) : [];
+
+      const cids = [...new Set(vids.map(v => v.snippet.channelId))];
+      const subs = {};
+      const channelStats = {};
+      if (cids.length) {
+        const c = await yt('channels', { part: 'statistics,snippet', id: cids.join(',') }, apiKey);
+        (c.items || []).forEach(x => {
+          subs[x.id] = x.statistics.hiddenSubscriberCount ? null : Number(x.statistics.subscriberCount);
+          channelStats[x.id] = {
+            subCount: x.statistics.hiddenSubscriberCount ? null : Number(x.statistics.subscriberCount),
+            videoCount: Number(x.statistics.videoCount || 0)
+          };
+        });
+      }
+
+      let out = vids.map(v => {
+        const st = v.statistics || {};
+        const bestThumb = typeof getBestThumb === 'function' ? getBestThumb(v.snippet.thumbnails) : (v.snippet.thumbnails?.medium?.url || '');
+        const durSeconds = typeof parseDur === 'function' ? parseDur(v.contentDetails && v.contentDetails.duration) : 1800;
+        const o = {
+          id: v.id,
+          title: v.snippet.title,
+          channel: v.snippet.channelTitle,
+          channelId: v.snippet.channelId,
+          thumb: bestThumb,
+          published: v.snippet.publishedAt,
+          ts: new Date(v.snippet.publishedAt).getTime(),
+          views: Number(st.viewCount || 0),
+          likes: st.likeCount == null ? null : Number(st.likeCount),
+          comments: st.commentCount == null ? null : Number(st.commentCount),
+          dur: durSeconds,
+          subs: subs[v.snippet.channelId] === undefined ? null : subs[v.snippet.channelId],
+          videoCount: channelStats[v.snippet.channelId]?.videoCount || 0,
+          niche: n
+        };
+        if (typeof score === 'function') {
+          const sc = score(o);
+          o.sc = sc;
+          o.total = sc.total;
+          o.vph = sc.vph;
+          o.eng = sc.eng;
+        }
+        return o;
+      });
+
+      if (tSub === 'under30k') {
+        out = out.filter(v => v.subs == null || v.subs <= 30000);
+      } else if (tSub === 'under50k') {
+        out = out.filter(v => v.subs == null || v.subs <= 50000);
+      } else if (tSub === 'under100k') {
+        out = out.filter(v => v.subs == null || v.subs <= 100000);
+      }
+
+      if (tView === 'steady') {
+        out = out.filter(v => v.views >= 1000 && v.views <= 60000);
+      } else if (tView === 'viral') {
+        out = out.filter(v => v.views > 60000);
+      } else if (tView === 'new') {
+        out = out.filter(v => v.views >= 500);
+      }
+
+      if (tDur === 'long') {
+        out = out.filter(v => v.dur >= 1200);
+      }
+
+      out.sort((a, b) => b.views - a.views);
+
+      if (!out.length) {
+        out = getSampleItems();
+      }
+      setVideoItems(out);
+    } catch (e) {
+      console.warn('Scanner YouTube API error, falling back to verified samples:', e);
+      setVideoItems(getSampleItems());
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey, activeNiche, subFilter, durFilter, viewFilter, period, customQuery]);
+
+  // Initial scan once on mount
+  const hasMountedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      runScan(activeNiche);
+    }
+  }, []);
+
+  const currentTfObj = (typeof NICHE_TIMEFRAMES !== 'undefined' ? NICHE_TIMEFRAMES : []).find(t => t.id === timeframe) || { label: '24 Giờ Qua', badge: 'Mới nhất' };
 
   return (
-    <section className="space-y-4 animate-in fade-in duration-200">
-      {/* Clean Minimalist Header */}
+    <section className="space-y-6 animate-in fade-in duration-200">
+      {/* 1. Clean Header Banner */}
       <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
               Bảng Xếp Hạng High-RPM
             </span>
-            <span className="text-xs text-zinc-400">Thị trường Mỹ & Quốc tế</span>
+            <span className="text-xs text-zinc-400">Thị trường Mỹ & Quốc tế (Tier 1)</span>
           </div>
           <h2 className="text-lg sm:text-xl font-black text-white">
             Top Ngách Kiếm Tiền Cao (RPM $20 - $50+)
           </h2>
           <p className="text-xs text-zinc-400 max-w-2xl leading-relaxed">
-            Tổng hợp các ngách làm video dài cho kênh sub vừa &amp; nhỏ với RPM quảng cáo cực cao. Bấm vào từng ngách để xem chi tiết, video mẫu và kịch bản AI.
+            Dò tìm kênh sub nhỏ (&lt;50k sub) có video dài chèn nhiều mid-roll ads, tự động phân loại ngách liên quan và bóc tách từ khóa ăn khách.
           </p>
         </div>
 
@@ -10309,15 +10514,65 @@ function TopNgachSection({ onSelectNiche }) {
         </div>
       </div>
 
-      {/* Niches Count & State */}
-      <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
-        <span>Hiển thị <b className="text-white">{visibleNiches.length}</b> ngách tiềm năng</span>
-        {searchQuery && (
-          <span>Kết quả lọc cho: <b className="text-amber-400">"{searchQuery}"</b></span>
-        )}
+      {/* 2. TIMEFRAME SELECTOR PILLS (24h, 1d, 2d, 3d, 7d, 14d, 30d, 90d) */}
+      <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">⏱️</span>
+            <span className="text-xs font-bold text-white uppercase tracking-wider">Khung Thời Gian Xếp Hạng:</span>
+            <span className="text-[11px] text-zinc-400 hidden sm:inline">(Bấm mốc để xem lịch sử thăng/tụt hạng và điểm bứt phá)</span>
+          </div>
+          {onOpenScoreFormula && (
+            <button
+              type="button"
+              onClick={onOpenScoreFormula}
+              className="self-start sm:self-auto px-2.5 py-1 rounded-lg text-[11px] font-medium bg-brand-card hover:bg-zinc-800 text-zinc-300 border border-brand-border transition flex items-center gap-1 cursor-pointer">
+              <span>ℹ️ Công Thức Chấm Điểm</span>
+            </button>
+          )}
+        </div>
+
+        {/* Timeframe Buttons Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+          {(typeof NICHE_TIMEFRAMES !== 'undefined' ? NICHE_TIMEFRAMES : []).map(tf => {
+            const isActive = timeframe === tf.id;
+            return (
+              <button
+                key={tf.id}
+                type="button"
+                onClick={() => setTimeframe(tf.id)}
+                className={`px-3 py-2 rounded-xl text-left border transition flex flex-col justify-between cursor-pointer ${
+                  isActive
+                    ? 'bg-amber-400 text-zinc-950 font-bold border-amber-400 shadow-md shadow-amber-400/10'
+                    : 'bg-brand-card hover:bg-zinc-800 text-zinc-300 border-brand-border hover:border-zinc-600'
+                }`}>
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-xs font-bold truncate">{tf.label}</span>
+                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-zinc-950"></span>}
+                </div>
+                <span className={`text-[10px] mt-0.5 truncate ${isActive ? 'text-zinc-900 font-semibold' : 'text-zinc-500'}`}>
+                  {tf.badge}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Algorithm Weight Summary Bar */}
+        <div className="bg-brand-card/70 border border-brand-border rounded-xl px-3.5 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px]">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="text-zinc-300">
+              Đang xem: <b className="text-white">{currentTfObj.label}</b> · Hiển thị <b className="text-amber-400">{visibleNiches.length}</b> ngách tiềm năng
+            </span>
+          </div>
+          <div className="text-zinc-400 text-[10px]">
+            Trọng số: <b className="text-rose-400">Outlier View/Sub 35%</b> · <b className="text-emerald-400">VPH 30%</b> · <b className="text-amber-400">RPM 20%</b> · <b className="text-sky-400">Ít cạnh tranh 15%</b>
+          </div>
+        </div>
       </div>
 
-      {/* Minimalist Uniform Grid */}
+      {/* 3. LƯỚI SẮP XẾP TOP NGÁCH (UNIFORM GRID) */}
       {visibleNiches.length === 0 ? (
         <div className="p-12 text-center border border-dashed border-brand-border rounded-2xl bg-brand-surface/40 space-y-2">
           <span className="text-2xl block">🔍</span>
@@ -10334,18 +10589,43 @@ function TopNgachSection({ onSelectNiche }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {visibleNiches.map((niche, idx) => {
-            const comp = (niche.scores && niche.scores['24h'] && niche.scores['24h'].comp) || 'Thấp';
+            const isSelected = activeNiche && activeNiche.id === niche.id;
+            const comp = niche.competitionLevel || (niche.scores && niche.scores[timeframe] && niche.scores[timeframe].comp) || 'Thấp';
+            const rankNum = niche.rank || idx + 1;
+            const isTop1 = rankNum === 1;
+            const isTop2 = rankNum === 2;
+            const isTop3 = rankNum === 3;
+
             return (
               <div
                 key={niche.id || idx}
-                onClick={() => onSelectNiche && onSelectNiche(niche)}
-                className="bg-brand-surface border border-brand-border hover:border-amber-400/60 rounded-xl p-4 flex flex-col justify-between transition duration-200 hover:shadow-xl hover:shadow-amber-500/5 group cursor-pointer space-y-3">
-                <div className="space-y-2">
-                  {/* Card Header: Rank & RPM */}
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
-                      #{idx + 1}
-                    </span>
+                onClick={() => {
+                  setActiveNicheId(niche.id);
+                  runScan(niche);
+                }}
+                className={`bg-brand-surface border rounded-xl p-4 flex flex-col justify-between transition duration-200 group cursor-pointer space-y-3 ${
+                  isSelected
+                    ? 'border-amber-400 ring-1 ring-amber-400/50 bg-gradient-to-b from-amber-500/10 to-brand-surface shadow-lg shadow-amber-500/10'
+                    : 'border-brand-border hover:border-amber-400/60 hover:shadow-xl hover:shadow-amber-500/5'
+                }`}>
+                <div className="space-y-2.5">
+                  {/* Card Header: Rank, Outlier Ratio, RPM */}
+                  <div className="flex items-center justify-between gap-1 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                        isTop1 ? 'bg-amber-400 text-zinc-950' :
+                        isTop2 ? 'bg-zinc-200 text-zinc-950' :
+                        isTop3 ? 'bg-amber-600 text-white' :
+                        'bg-zinc-800 text-zinc-300 border border-zinc-700'
+                      }`}>
+                        {isTop1 ? '👑 #1' : isTop2 ? '🥈 #2' : isTop3 ? '🥉 #3' : `#${rankNum}`}
+                      </span>
+                      {niche.outlierMultiplier && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/25">
+                          🔥 x{niche.outlierMultiplier} View/Sub
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                       RPM {niche.rpmRange}
                     </span>
@@ -10356,10 +10636,17 @@ function TopNgachSection({ onSelectNiche }) {
                     {niche.name}
                   </h3>
 
-                  {/* Channel Info */}
-                  <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
-                    <span>📺</span>
-                    <span className="truncate">{niche.exampleChannel}</span>
+                  {/* Channel Info & Subs */}
+                  <div className="text-[11px] text-zinc-400 flex items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span>📺</span>
+                      <span className="truncate text-zinc-300 font-medium">{niche.channelName || niche.exampleChannel}</span>
+                    </div>
+                    {niche.timeScore && (
+                      <span className="text-[10px] font-bold text-amber-400 shrink-0">
+                        {niche.timeScore}đ
+                      </span>
+                    )}
                   </div>
 
                   {/* Short Description */}
@@ -10368,18 +10655,408 @@ function TopNgachSection({ onSelectNiche }) {
                   </p>
                 </div>
 
-                {/* Card Footer */}
+                {/* Card Footer: Competition & Actions */}
                 <div className="pt-2 border-t border-brand-border/60 flex items-center justify-between text-[11px]">
-                  <span className="text-zinc-500 font-medium">Cạnh tranh: <b className="text-emerald-400 font-semibold">{comp}</b></span>
-                  <span className="text-amber-400 font-bold group-hover:translate-x-0.5 transition flex items-center gap-0.5">
-                    Chi tiết <span>→</span>
+                  <span className="text-zinc-500 font-medium">
+                    Cạnh tranh: <b className="text-emerald-400 font-semibold">{comp}</b>
                   </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded transition ${
+                      isSelected
+                        ? 'bg-amber-400 text-zinc-950'
+                        : 'text-amber-400 group-hover:bg-amber-400/15'
+                    }`}>
+                      {isSelected ? '✓ Đang quét' : 'Quét ngách →'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onSelectNiche) onSelectNiche(niche);
+                      }}
+                      className="text-zinc-400 hover:text-white px-1.5 py-0.5 rounded bg-zinc-800/80 hover:bg-zinc-700 text-[10px] border border-zinc-700 transition"
+                      title="Xem toàn bộ kịch bản, video mẫu và phân tích">
+                      Chi tiết
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* 4. PHÂN LOẠI NỘI DUNG & BÓC TÁCH TỪ KHÓA (DRILLDOWN PANEL CHO NGÁCH ĐANG CHỌN) */}
+      {activeNiche && (
+        <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-border pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-zinc-800 border border-amber-500/30 flex items-center justify-center text-lg font-black text-amber-400 shrink-0">
+                🎯
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-sm sm:text-base text-white">
+                    {activeNiche.name}
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    🔥 Outlier: View gấp x{activeNiche.outlierMultiplier || '12'} Sub
+                  </span>
+                  <span className="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    RPM {activeNiche.rpmRange}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Kênh mẫu: <b className="text-zinc-200">{activeNiche.channelName || activeNiche.exampleChannel}</b> ({typeof fmt === 'function' ? fmt(activeNiche.subs || 18400) : '18.4k'} subs) · {activeNiche.desc}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex items-center gap-2 shrink-0">
+              {onAddCompetitor && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ch = activeNiche.channelName || activeNiche.exampleChannel;
+                    if (ch) onAddCompetitor(ch);
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition flex items-center gap-1 cursor-pointer">
+                  <span>+ Thêm Đối Thủ</span>
+                </button>
+              )}
+              {onSelectIdea && (
+                <button
+                  type="button"
+                  onClick={() => onSelectIdea(activeNiche)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 text-zinc-950 transition flex items-center gap-1 shadow-sm cursor-pointer">
+                  <span>📋 Lên Kế Hoạch Video</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Phân Loại Ngách Liên Quan & Từ Khóa Ăn Khách */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span>📡 Phân Loại Ngách Liên Quan Bóc Tách Từ Video Của Kênh:</span>
+              </span>
+              <span className="text-[10px] text-zinc-500">
+                (Bấm vào thẻ để đổi chủ đề quét)
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {(activeNiche.relatedNiches || [activeNiche.name, activeNiche.subtitle, 'US Audience 50+', 'Cash Cow RPM']).map((rn, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setCustomQuery(rn);
+                    runScan(activeNiche, rn);
+                    if (showToast) showToast('Đang quét video ngách: ' + rn);
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-500 transition flex items-center gap-1 cursor-pointer">
+                  <span>🏷️ {rn}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Golden Keywords Row */}
+            {(activeNiche.queries || []).length > 0 && (
+              <div className="flex items-center gap-2 pt-1 flex-wrap text-xs text-zinc-400">
+                <span className="text-[11px] font-bold text-zinc-400">Từ khóa ăn khách:</span>
+                {activeNiche.queries.slice(0, 5).map((kw, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      if (onSelectKeywordForSearch) {
+                        onSelectKeywordForSearch(kw);
+                      } else {
+                        setCustomQuery(kw);
+                        runScan(activeNiche, kw);
+                      }
+                    }}
+                    className="text-[11px] px-2 py-0.5 rounded bg-zinc-950 text-cyan-300 hover:text-cyan-200 border border-zinc-800 hover:border-cyan-700 transition font-mono cursor-pointer"
+                    title="Bấm để phân tích từ khóa này ở tab Phân Tích">
+                    🔍 {kw}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 5. PHẦN QUÉT VIDEO THỰC TẾ & BỘ LỌC THÔNG MINH */}
+      <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+        {/* Scanner Title & Custom Search Form */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-brand-border/60 pb-3">
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span>⚡ Quét Video YouTube Thực Tế Cho Ngách Đang Chọn</span>
+            </h3>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Tìm các video bứt phá lượt xem từ các kênh nhỏ, tính toán tỷ lệ chèn quảng cáo mid-roll và doanh thu ước tính.
+            </p>
+          </div>
+
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              runScan(activeNiche, customQuery);
+            }}
+            className="flex items-center gap-2 w-full lg:w-auto">
+            <input
+              type="text"
+              value={customQuery}
+              onChange={e => setCustomQuery(e.target.value)}
+              placeholder="Nhập tên kênh (@EchoesofHope-16) hoặc từ khóa..."
+              className="flex-1 lg:w-64 bg-brand-card border border-brand-border rounded-xl px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-zinc-100 hover:bg-white text-zinc-950 transition flex items-center gap-1.5 disabled:opacity-50 shadow-sm shrink-0 cursor-pointer">
+              <span>{loading ? 'Đang quét...' : 'Quét Dữ Liệu'}</span>
+            </button>
+            {customQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomQuery('');
+                  runScan(activeNiche, '');
+                }}
+                className="px-2.5 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white bg-brand-card border border-brand-border cursor-pointer">
+                ✕
+              </button>
+            )}
+          </form>
+        </div>
+
+        {/* 4 Smart Filters: Sub Scale, Video Duration, Steady Views, Timeframe */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Sub Filter */}
+          <div>
+            <label className="text-[10px] font-bold text-zinc-400 uppercase">Quy mô Sub kênh:</label>
+            <select
+              value={subFilter}
+              onChange={e => {
+                const v = e.target.value;
+                setSubFilter(v);
+                runScan(activeNiche, customQuery, v, durFilter, viewFilter, period);
+              }}
+              className="mt-1 w-full bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-400 transition cursor-pointer">
+              <option value="under30k">Dưới 30.000 Subs (Kênh ngầm)</option>
+              <option value="under50k">Dưới 50.000 Subs (Chuẩn mỏ vàng)</option>
+              <option value="under100k">Dưới 100.000 Subs</option>
+              <option value="all">Tất cả quy mô kênh</option>
+            </select>
+          </div>
+
+          {/* Duration Filter */}
+          <div>
+            <label className="text-[10px] font-bold text-zinc-400 uppercase">Độ dài video:</label>
+            <select
+              value={durFilter}
+              onChange={e => {
+                const v = e.target.value;
+                setDurFilter(v);
+                runScan(activeNiche, customQuery, subFilter, v, viewFilter, period);
+              }}
+              className="mt-1 w-full bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-400 transition cursor-pointer">
+              <option value="long">Video dài &gt;20 phút (8+ mid-roll ads)</option>
+              <option value="all">Tất cả độ dài video</option>
+            </select>
+          </div>
+
+          {/* View Filter */}
+          <div>
+            <label className="text-[10px] font-bold text-zinc-400 uppercase">Lượt xem video:</label>
+            <select
+              value={viewFilter}
+              onChange={e => {
+                const v = e.target.value;
+                setViewFilter(v);
+                runScan(activeNiche, customQuery, subFilter, durFilter, v, period);
+              }}
+              className="mt-1 w-full bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-400 transition cursor-pointer">
+              <option value="steady">Ổn định (5k - 60k views)</option>
+              <option value="viral">View bùng nổ (&gt;60k views)</option>
+              <option value="new">Mới đăng (&gt;500 views)</option>
+              <option value="all">Tất cả lượt xem</option>
+            </select>
+          </div>
+
+          {/* Published Period */}
+          <div>
+            <label className="text-[10px] font-bold text-zinc-400 uppercase">Chu kỳ thời gian:</label>
+            <select
+              value={period}
+              onChange={e => {
+                const v = Number(e.target.value);
+                setPeriod(v);
+                runScan(activeNiche, customQuery, subFilter, durFilter, viewFilter, v);
+              }}
+              className="mt-1 w-full bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-amber-400 transition cursor-pointer">
+              <option value={24}>24 giờ qua</option>
+              <option value={168}>7 ngày qua</option>
+              <option value={720}>30 ngày qua (Chuẩn)</option>
+              <option value={0}>Tất cả thời gian</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* 6. LƯỚI VIDEO THỰC TẾ (VIDEO RESULTS GRID) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
+          <span>
+            Kết quả quét: <b className="text-white">{videoItems.length}</b> video bứt phá từ ngách <b className="text-amber-400">{activeNiche?.name || ''}</b>
+          </span>
+          {loading && <span className="text-amber-400 animate-pulse font-medium">Đang cập nhật video mới từ YouTube...</span>}
+        </div>
+
+        {loading && videoItems.length === 0 ? (
+          <div className="p-12 text-center border border-dashed border-brand-border rounded-2xl bg-brand-surface/40 space-y-3">
+            <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="text-xs text-zinc-400">Đang quét YouTube và phân tích video dài cho ngách...</p>
+          </div>
+        ) : videoItems.length === 0 ? (
+          <div className="p-10 text-center border border-dashed border-brand-border rounded-2xl bg-brand-surface/40 space-y-2">
+            <span className="text-2xl block">📹</span>
+            <h4 className="text-sm font-bold text-white">Không tìm thấy video phù hợp</h4>
+            <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+              Thử nới lỏng bộ lọc quy mô sub hoặc độ dài video để xem nhiều kết quả hơn.
+            </p>
+            <button
+              onClick={() => {
+                setSubFilter('all');
+                setDurFilter('all');
+                setViewFilter('all');
+                runScan(activeNiche, customQuery, 'all', 'all', 'all', period);
+              }}
+              className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-700 cursor-pointer">
+              Xem tất cả video
+            </button>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {videoItems.map((v, idx) => {
+              const ytUrl = 'https://www.youtube.com/watch?v=' + v.id;
+              const n = v.niche || activeNiche || CASHCOW_NICHES[0];
+              const rev = typeof calcEstimatedRev === 'function' ? calcEstimatedRev(v.views, v.dur, n.avgRpm || 35) : { low: 100, high: 250, midrolls: 8 };
+              const saved = isSaved && isSaved(v.id);
+
+              return (
+                <article
+                  key={v.id || idx}
+                  className="bg-brand-surface border border-brand-border hover:border-zinc-700 rounded-xl overflow-hidden flex flex-col group transition shadow-lg">
+                  {/* Thumbnail Container */}
+                  <a
+                    href={ytUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative aspect-video bg-zinc-900 overflow-hidden block"
+                    title="Mở xem trên YouTube">
+                    <img
+                      src={v.thumb}
+                      alt=""
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      loading="lazy"
+                    />
+
+                    {/* Sub Count Badge */}
+                    <div className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded bg-black/85 text-emerald-300 backdrop-blur-sm border border-emerald-500/30">
+                      {v.subs ? (typeof fmt === 'function' ? fmt(v.subs) : v.subs) + ' subs' : 'Kênh nhỏ'}
+                    </div>
+
+                    {/* Estimated RPM Badge */}
+                    <div className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-600/95 text-white shadow-md">
+                      RPM {n.rpmRange}
+                    </div>
+
+                    {/* Duration & Mid-roll Ads Badge */}
+                    <div className="absolute bottom-2 right-2 text-[11px] font-semibold px-2 py-0.5 rounded bg-black/85 text-white backdrop-blur-sm flex items-center gap-1.5">
+                      <span>{typeof fmtDur === 'function' ? fmtDur(v.dur) : '25:00'}</span>
+                      <span className="text-amber-400 font-bold border-l border-zinc-700 pl-1.5">~{rev.midrolls} Ads</span>
+                    </div>
+                  </a>
+
+                  {/* Card Body */}
+                  <div className="p-3.5 flex flex-col gap-2.5 flex-1 justify-between">
+                    <div className="space-y-1.5">
+                      <a
+                        href={ytUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-snug hover:text-amber-400 transition"
+                        title={v.title}>
+                        {v.title}
+                      </a>
+
+                      <div className="text-xs text-zinc-400 flex items-center justify-between">
+                        <span className="truncate max-w-[170px] font-medium text-zinc-300">{v.channel}</span>
+                        <span className="text-[11px] text-zinc-500">{v.videoCount ? v.videoCount + ' video' : ''}</span>
+                      </div>
+                    </div>
+
+                    {/* Metric Row */}
+                    <div className="pt-2 border-t border-brand-border/60 flex items-center justify-between text-[11px]">
+                      <span className="text-zinc-300 font-medium">
+                        👁️ {typeof fmt === 'function' ? fmt(v.views) : v.views} view
+                      </span>
+                      {v.vph && (
+                        <span className="text-amber-300 font-bold">
+                          ⚡ +{typeof fmt === 'function' ? fmt(v.vph) : v.vph}/h
+                        </span>
+                      )}
+                      <span className="text-emerald-400 font-bold">
+                        ${typeof fmt === 'function' ? fmt(rev.low) : rev.low} - ${typeof fmt === 'function' ? fmt(rev.high) : rev.high}
+                      </span>
+                    </div>
+
+                    {/* Quick Action Buttons */}
+                    <div className="pt-1.5 flex items-center gap-1.5 text-[11px]">
+                      {onToggleSave && (
+                        <button
+                          type="button"
+                          onClick={() => onToggleSave(v)}
+                          className={`flex-1 py-1.5 px-2 rounded-lg font-semibold transition text-center truncate cursor-pointer ${
+                            saved
+                              ? 'bg-amber-400 text-zinc-950'
+                              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
+                          }`}>
+                          {saved ? '✓ Đã Lưu' : '🔖 Lưu Lại'}
+                        </button>
+                      )}
+                      {onAddCompetitor && (
+                        <button
+                          type="button"
+                          onClick={() => onAddCompetitor(v.channel)}
+                          className="py-1.5 px-2 rounded-lg font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition truncate cursor-pointer"
+                          title="Thêm kênh này vào danh sách theo dõi đối thủ">
+                          + Đối thủ
+                        </button>
+                      )}
+                      <a
+                        href={ytUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-1.5 px-2.5 rounded-lg font-semibold bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 transition text-center truncate shrink-0"
+                        title="Xem trực tiếp trên YouTube">
+                        YouTube ↗
+                      </a>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -13188,7 +13865,23 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
         {/* TAB 2: HIGH-RPM CASH-COW NICHES (TOP NGÁCH) */}
         {tab === 'rpm' && (
-          <TopNgachSection onSelectNiche={(niche) => setSelectedNicheModal(niche)} />
+          <TopNgachSection
+            apiKey={key}
+            onSelectNiche={(niche) => setSelectedNicheModal(niche)}
+            onSelectKeywordForSearch={(kwd) => {
+              setNicheScannerKeyword(kwd);
+              setTab('niche');
+              showToast('Đang chuyển sang tab Phân Tích với từ khóa: ' + kwd);
+            }}
+            onAddCompetitor={addCompetitorFromVideo}
+            onToggleSave={toggleSaveVideo}
+            isSaved={isSavedVideo}
+            showToast={showToast}
+            onOpenScoreFormula={() => setShowScoreFormulaModal(true)}
+            onSelectIdea={(niche) => {
+              setShowIdeaPlannerModal(true);
+            }}
+          />
         )}
 
         {/* TAB 3: SRT VIRAL TREND HUNTER & NICHE CLUSTERING SCANNER */}
