@@ -9147,55 +9147,59 @@ function App() {
     return 'yt_competitors_key_' + Math.abs(hash);
   };
 
-  // Competitor Spy Tab States - Phân tách dữ liệu riêng biệt theo từng API key
+  // Hàm lọc bỏ hoàn toàn các kênh mẫu cũ đã bị xóa
+  const isSampleCompetitor = (c) => {
+    if (!c) return true;
+    const sampleIds = ['UCmYv7x9Psq_4fE52Pq1a59w', 'UCr2hLq4wZ9vB9a2p8Z1m12Q', 'UC7xP1q2w3e4r5t6y7u8i9oP'];
+    if (sampleIds.includes(c.id)) return true;
+    if (typeof c.id === 'string' && c.id.startsWith('comp_')) return true;
+    const title = (c.title || '').toLowerCase();
+    if (title.includes('echoes of hope') || title.includes('sacred echoes') || title.includes('stoic wisdom')) return true;
+    return false;
+  };
+
+  // Competitor Spy Tab States - Mặc định trống 100%, xóa bỏ toàn bộ kênh mẫu cũ
   const [competitors, setCompetitors] = useState(() => {
     const initialKey = st.get('yt_api_key') || '';
     const sKey = getCompetitorsStorageKey(initialKey);
     try {
-      const saved = JSON.parse(st.get(sKey) || 'null');
-      if (Array.isArray(saved)) return saved;
-      // Khởi tạo kênh đối thủ mặc định nếu lần đầu sử dụng
-      const legacy = JSON.parse(st.get('yt_competitors') || 'null');
-      if (Array.isArray(legacy) && legacy.length > 0) {
-        st.set(sKey, JSON.stringify(legacy));
-        return legacy;
+      const raw = st.get(sKey);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (Array.isArray(saved)) {
+          const filtered = saved.filter(c => !isSampleCompetitor(c));
+          if (filtered.length !== saved.length) {
+            st.set(sKey, JSON.stringify(filtered));
+          }
+          return filtered;
+        }
       }
     } catch (e) {}
-    return [
-      {
-        id: 'UCmYv7x9Psq_4fE52Pq1a59w',
-        title: 'Echoes of Hope & Life',
-        handle: '@EchoesHopeLife',
-        avatar: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=200&q=80',
-        subs: 15400,
-        videoCount: 42,
-        viewCount: 1840000,
-        niche: 'Tỷ Phú & Người Giúp Việc (US)'
-      },
-      {
-        id: 'UCr2hLq4wZ9vB9a2p8Z1m12Q',
-        title: 'Sacred Echoes of Grace',
-        handle: '@SacredGrace',
-        avatar: 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=200&q=80',
-        subs: 21800,
-        videoCount: 68,
-        viewCount: 2450000,
-        niche: 'Cầu Nguyện Đạo Đức (US)'
-      },
-      {
-        id: 'UC7xP1q2w3e4r5t6y7u8i9oP',
-        title: 'Stoic Wisdom & Elder Tales',
-        handle: '@StoicElderTales',
-        avatar: 'https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=200&q=80',
-        subs: 29500,
-        videoCount: 54,
-        viewCount: 3890000,
-        niche: 'Khắc Kỷ & Tuổi Già (US)'
-      }
-    ];
+    return [];
   });
 
   const compActiveKeyRef = useRef(key);
+
+  // Khi tải trang, tự động xóa sạch các kênh mẫu cũ khỏi localStorage
+  useEffect(() => {
+    try {
+      const currentKey = st.get('yt_api_key') || '';
+      const sKey = getCompetitorsStorageKey(currentKey);
+      const raw = st.get(sKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.some(isSampleCompetitor)) {
+          const cleaned = parsed.filter(c => !isSampleCompetitor(c));
+          st.set(sKey, JSON.stringify(cleaned));
+          setCompetitors(cleaned);
+        }
+      }
+      const legacy = st.get('yt_competitors');
+      if (legacy) {
+        st.set('yt_competitors', JSON.stringify([]));
+      }
+    } catch (e) {}
+  }, []);
 
   // Khi người dùng chuyển đổi sang API key khác, tự động load danh sách kênh của API đó
   useEffect(() => {
@@ -9207,7 +9211,11 @@ function App() {
       if (raw !== null && raw !== undefined) {
         const saved = JSON.parse(raw);
         if (Array.isArray(saved)) {
-          setCompetitors(saved);
+          const filtered = saved.filter(c => !isSampleCompetitor(c));
+          if (filtered.length !== saved.length) {
+            st.set(sKey, JSON.stringify(filtered));
+          }
+          setCompetitors(filtered);
           setCompVideos([]);
           return;
         }
@@ -9220,7 +9228,8 @@ function App() {
   // Tự động lưu danh sách kênh đối thủ cho API key đang kích hoạt
   useEffect(() => {
     const sKey = getCompetitorsStorageKey(key);
-    st.set(sKey, JSON.stringify(competitors));
+    const cleanList = competitors.filter(c => !isSampleCompetitor(c));
+    st.set(sKey, JSON.stringify(cleanList));
   }, [competitors, key]);
 
   const [compInput, setCompInput] = useState('');
@@ -10811,6 +10820,29 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               {tab === 'rpm' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
+            {/* Tab Đối thủ trên Hotbar - kích thước to bằng các tab khác, màu cam nổi bật */}
+            <button 
+              onClick={() => {
+                setTab('competitors');
+                if (!compVideos.length) refreshCompetitorVideos();
+              }} 
+              className={`h-full flex items-center gap-1.5 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative cursor-pointer ${
+                tab === 'competitors' 
+                  ? 'text-orange-300 font-semibold' 
+                  : 'text-orange-400/80 hover:text-orange-200'
+              }`}
+              title="Theo dõi các kênh đối thủ">
+              <span>Đối thủ</span>
+              {competitors.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-orange-500/20 text-orange-300 border border-orange-500/35 leading-tight">
+                  {competitors.length}
+                </span>
+              )}
+              {tab === 'competitors' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-orange-400 via-amber-400 to-orange-500 rounded-full shadow-[0_0_8px_rgba(251,146,60,0.7)]"></span>
+              )}
+            </button>
+
             {/* Wiki with 3 Research Tools Dropdown */}
             <div 
               className="relative h-full flex items-center"
@@ -10934,27 +10966,8 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             </button>
           </nav>
 
-          {/* Desktop Right: Gradient cam nhẹ "Đối thủ" button + API Status + Account */}
+          {/* Desktop Right: API Status + Account */}
           <div className="hidden md:flex items-center gap-2.5 shrink-0">
-            <button
-              onClick={() => {
-                setTab('competitors');
-                if (!compVideos.length) refreshCompetitorVideos();
-              }}
-              className={'px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition shrink-0 cursor-pointer ' + (
-                tab === 'competitors'
-                  ? 'bg-gradient-to-r from-orange-500/30 via-amber-500/25 to-orange-500/20 text-white font-semibold border-orange-500/60 shadow-sm shadow-orange-500/20'
-                  : 'bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/10 hover:from-orange-500/25 hover:via-amber-500/15 hover:to-orange-500/15 text-orange-200 hover:text-white border-orange-500/30 hover:border-orange-500/50'
-              )}
-              title="Theo dõi các kênh đối thủ">
-              <span>Đối thủ</span>
-              {competitors.length > 0 && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-orange-500/25 text-orange-200 font-bold border border-orange-500/35 leading-tight">
-                  {competitors.length}
-                </span>
-              )}
-            </button>
-
             <button 
               onClick={() => { setApiModalOpen(true); setApiModalTab('tester'); }} 
               className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition shrink-0 ${
