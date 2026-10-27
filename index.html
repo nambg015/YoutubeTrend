@@ -10406,6 +10406,7 @@ function TopNgachSection({
   const [inspectingVideo, setInspectingVideo] = React.useState(null);
   const [showApiGuideModal, setShowApiGuideModal] = React.useState(false);
   const [subLimitFilter, setSubLimitFilter] = React.useState(30000); // 30k sub mặc định
+  const [selectedRegion, setSelectedRegion] = React.useState(''); // '' = Toàn cầu (Worldwide) tìm kiếm không giới hạn quốc gia
   const [lastScannedTime, setLastScannedTime] = React.useState(() => {
     try {
       return localStorage.getItem(TIME_KEY) || '';
@@ -10446,8 +10447,11 @@ function TopNgachSection({
     }
   };
 
-  // Hạt giống xu hướng đa lĩnh vực từ bản chuẩn 977a002 (Đã chứng minh tìm ra trend bứt phá)
+  // Hạt giống xu hướng đa lĩnh vực (Bắt trọn ngách Case Study, Tài liệu, AI, Vụ án bứt phá như BeyondVN)
   const SEED_TREND_TOPICS = React.useMemo(() => [
+    { id: 'casestudy', label: 'Case Study & Câu Chuyện Thương Hiệu', q: 'case study "rise and fall" | "the rise and fall" | "the story of"', rpm: '$35 - $60' },
+    { id: 'business', label: 'Đế Chế & Kinh Doanh Sụp Đổ', q: 'business collapse case study documentary "the company that"', rpm: '$35 - $60' },
+    { id: 'documentary', label: 'Phim Tài Liệu Mini & Góc Khuất', q: 'mini documentary "the truth about" | "uncovered"', rpm: '$30 - $50' },
     { id: 'crime', label: 'Hồ Sơ Vụ Án & Lời Khai', q: 'police interrogation confession body language crime', rpm: '$25 - $38' },
     { id: 'ai', label: 'Điện Ảnh AI & Hoạt Hình', q: 'ai animation cinematic film trailer midjourney', rpm: '$30 - $48' },
     { id: 'sea', label: 'Bí Ẩn Vực Sâu & Đại Dương', q: 'deep ocean mystery abyss creature iceberg', rpm: '$22 - $35' },
@@ -10455,7 +10459,6 @@ function TopNgachSection({
     { id: 'psychology', label: 'Tâm Lý Học & Hành Vi', q: 'dark psychology manipulation human behavior traits', rpm: '$28 - $45' },
     { id: 'horror', label: 'Kinh Dị & Giả Thuyết', q: 'analog horror scp foundation backrooms story', rpm: '$20 - $32' },
     { id: 'universe', label: 'Khoa Học & Vũ Trụ', q: 'space universe telescope breakthrough discovery', rpm: '$26 - $42' },
-    { id: 'business', label: 'Đế Chế & Kinh Doanh', q: 'business collapse success story case study', rpm: '$35 - $60' },
     { id: 'gaming', label: 'Cốt Truyện Game & Bí Mật', q: 'game lore iceberg secrets explained', rpm: '$16 - $26' },
     { id: 'restore', label: 'Phục Chế & Sáng Tạo', q: 'restoration abandoned tool antique project', rpm: '$22 - $32' },
     { id: 'story', label: 'Kể Chuyện & Bài Học', q: 'animated story reddit confessions life lesson', rpm: '$20 - $30' },
@@ -10539,18 +10542,21 @@ function TopNgachSection({
           foundNiches: discoveredList.length
         });
 
-        // 1. Tìm video theo chủ đề hạt giống đăng trong 10 ngày qua
+        // 1. Tìm video theo chủ đề hạt giống đăng trong 10 ngày qua (Quét toàn cầu 50 video/chủ đề)
         let searchRes;
         try {
-          searchRes = await yt('search', {
+          const searchParams = {
             part: 'snippet',
             type: 'video',
             q: topic.q,
             order: 'viewCount', // Lấy video view cao nhất
             publishedAfter: tenDaysAgoISO,
-            maxResults: 35,
-            regionCode: 'US'
-          }, apiKey);
+            maxResults: 50 // Tối đa 50 kết quả cho 1 lần gọi API
+          };
+          if (selectedRegion) {
+            searchParams.regionCode = selectedRegion;
+          }
+          searchRes = await yt('search', searchParams, apiKey);
         } catch (e) {
           console.warn('Search API error on seed:', topic.label, e);
           continue;
@@ -10804,7 +10810,7 @@ function TopNgachSection({
       setIsScanningNiches(false);
       setScanProgress(null);
     }
-  }, [apiKey, SEED_TREND_TOPICS, subLimitFilter, showToast, onOpenApiModal, activeNicheId]);
+  }, [apiKey, SEED_TREND_TOPICS, subLimitFilter, showToast, onOpenApiModal, activeNicheId, selectedRegion]);
 
   return (
     <section className="space-y-4 animate-in fade-in duration-200">
@@ -10831,8 +10837,24 @@ function TopNgachSection({
           </div>
         </div>
 
-        {/* Nút Quét Chính, Xoá Cache & Hướng Dẫn */}
+        {/* Nút Quét Chính, Xoá Cache, Bộ Lọc Khu Vực & Hướng Dẫn */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Bộ lọc Khu vực (Mặc định: Toàn Cầu quét không giới hạn) */}
+          <select
+            value={selectedRegion}
+            onChange={e => setSelectedRegion(e.target.value)}
+            disabled={isScanningNiches}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 hover:border-zinc-500 focus:outline-none cursor-pointer"
+            title="Khu vực tìm kiếm (Mặc định: Toàn Cầu quét toàn bộ các kênh quốc tế)">
+            <option value="">🌐 Toàn Cầu (Mọi quốc gia)</option>
+            <option value="US">🇺🇸 Hoa Kỳ (US)</option>
+            <option value="IN">🇮🇳 Ấn Độ (IN)</option>
+            <option value="VN">🇻🇳 Việt Nam (VN)</option>
+            <option value="GB">🇬🇧 Vương Quốc Anh (GB)</option>
+            <option value="CA">🇨🇦 Canada (CA)</option>
+            <option value="AU">🇦🇺 Úc (AU)</option>
+          </select>
+
           {realDiscoveredNiches.length > 0 && (
             <button
               type="button"
@@ -10988,7 +11010,7 @@ function TopNgachSection({
             type="text"
             value={customKeywordInput}
             onChange={e => setCustomKeywordInput(e.target.value)}
-            placeholder="vd: stoicism, gta 6, scp..."
+            placeholder="vd: case study, BeyondVN, stoicism..."
             className="w-36 sm:w-48 bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
           />
           <button
