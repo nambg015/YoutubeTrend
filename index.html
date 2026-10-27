@@ -10407,6 +10407,7 @@ function TopNgachSection({
   const [showApiGuideModal, setShowApiGuideModal] = React.useState(false);
   const [subLimitFilter, setSubLimitFilter] = React.useState(30000); // 30k sub mặc định
   const [selectedRegion, setSelectedRegion] = React.useState(''); // '' = Toàn cầu (Worldwide) tìm kiếm không giới hạn quốc gia
+  const [videoFormatFilter, setVideoFormatFilter] = React.useState('all'); // 'all' | 'long' | 'short' | 'live'
   const [lastScannedTime, setLastScannedTime] = React.useState(() => {
     try {
       return localStorage.getItem(TIME_KEY) || '';
@@ -10482,6 +10483,18 @@ function TopNgachSection({
   const activeNiche = React.useMemo(() => {
     return visibleNiches.find(n => n.id === activeNicheId) || visibleNiches[0] || null;
   }, [visibleNiches, activeNicheId]);
+
+  // Phân loại định dạng video: 'short' | 'long' | 'live'
+  const getVideoFormat = React.useCallback((v) => {
+    if (v.format) return v.format;
+    if (v.isLive) return 'live';
+    const d = Number(v.dur) || 0;
+    const title = (v.title || '').toLowerCase();
+    if (title.includes('#live') || title.includes('livestream') || title.includes('trực tiếp')) return 'live';
+    if (d > 0 && d <= 60) return 'short';
+    if (title.includes('#shorts') || title.includes('#short')) return 'short';
+    return 'long';
+  }, []);
 
   // Tự động phân tích từ khóa và đặt tên ngách sinh động
   const inferNicheTitle = (baseLabel, videos) => {
@@ -10651,6 +10664,9 @@ function TopNgachSection({
           const engRate = views > 0 ? ((((likes || 0) + (comments || 0)) / views) * 100).toFixed(2) : '0';
           const durSeconds = typeof parseDur === 'function' ? parseDur(v.contentDetails?.duration) : 1800;
           const isBreakout = (chInfo.ageDays <= 90 || chInfo.videoCount <= 15) && views >= 3000;
+          const isLiveVid = v.snippet.liveBroadcastContent === 'live' || v.snippet.liveBroadcastContent === 'upcoming' || (v.snippet.title || '').toLowerCase().includes('#live') || (v.snippet.title || '').toLowerCase().includes('livestream');
+          const isShortVid = !isLiveVid && (durSeconds <= 60 || (v.snippet.title || '').toLowerCase().includes('#shorts') || (v.snippet.title || '').toLowerCase().includes('#short') || (v.snippet.tags || []).some(t => t.toLowerCase() === 'shorts' || t.toLowerCase() === 'short'));
+          const vFormat = isLiveVid ? 'live' : (isShortVid ? 'short' : 'long');
 
           const videoObj = {
             id: v.id,
@@ -10673,6 +10689,9 @@ function TopNgachSection({
             channelPublishedAt: chInfo.publishedAt,
             uploadsId: chInfo.uploadsId,
             isBreakout: isBreakout,
+            format: vFormat,
+            isLive: isLiveVid,
+            isShort: isShortVid,
             hasCaptions: v.contentDetails?.caption === 'true',
             licensedContent: !!v.contentDetails?.licensedContent,
             tags: v.snippet.tags || [],
@@ -11029,189 +11048,298 @@ function TopNgachSection({
         </form>
       </div>
 
-      {/* 5. DANH SÁCH VIDEO THỰC TẾ CỦA NGÁCH ĐANG CHỌN (100% KÊNH THẬT & VIDEO THẬT) */}
-      {activeNiche && (
-        <div className="space-y-3 pt-2">
-          {/* Header ngách đang chọn */}
-          <div className="bg-[#121316] border border-zinc-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span>🎬</span> Video Thực Tế: <b className="text-zinc-200">{activeNiche.name}</b>
-                </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-800 text-zinc-300 border border-zinc-700">
-                  {activeNiche.videos.length} video kênh &lt;30k sub trong 10 ngày qua
-                </span>
+            {/* 5. DANH SÁCH VIDEO THỰC TẾ CỦA NGÁCH ĐANG CHỌN (100% KÊNH THẬT & PHÂN LOẠI SHORT / DÀI / LIVE) */}
+      {activeNiche && (() => {
+        const vids = activeNiche.videos || [];
+        const formatCounts = {
+          all: vids.length,
+          long: vids.filter(v => getVideoFormat(v) === 'long').length,
+          short: vids.filter(v => getVideoFormat(v) === 'short').length,
+          live: vids.filter(v => getVideoFormat(v) === 'live').length
+        };
+
+        const filteredVideos = vids.filter(v => {
+          if (videoFormatFilter === 'all') return true;
+          return getVideoFormat(v) === videoFormatFilter;
+        });
+
+        return (
+          <div className="space-y-3 pt-2">
+            {/* Header ngách đang chọn */}
+            <div className="bg-[#121316] border border-zinc-800 rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>🎬</span> Video Thực Tế: <b className="text-zinc-200">{activeNiche.name}</b>
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-800 text-zinc-300 border border-zinc-700">
+                    {vids.length} video kênh &lt;30k sub trong 10 ngày qua
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-400 pt-0.5">
+                  Các video này đạt view vượt trội so với số lượng sub của kênh (Outlier). Bấm &quot;Soi Video &amp; Tags&quot; để copy tags ẩn và soi 50 video chỉ với 1 quota.
+                </p>
               </div>
-              <p className="text-[11px] text-zinc-400 pt-0.5">
-                Các video này đạt view vượt trội so với số lượng sub của kênh (Outlier). Bấm &quot;Soi Video &amp; Tags&quot; để copy tags ẩn và soi 50 video chỉ với 1 quota.
-              </p>
+
+              {/* BỘ LỌC PHÂN LOẠI ĐỊNH DẠNG: TẤT CẢ / VIDEO DÀI / SHORTS / TRỰC TIẾP */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1 p-0.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setVideoFormatFilter('all')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                      videoFormatFilter === 'all'
+                        ? 'bg-zinc-800 text-white font-semibold shadow-sm'
+                        : 'text-zinc-400 hover:text-zinc-200'
+                    }`}>
+                    <span>Tất Cả</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-zinc-300 font-mono">
+                      {formatCounts.all}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setVideoFormatFilter('long')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                      videoFormatFilter === 'long'
+                        ? 'bg-zinc-800 text-white font-semibold shadow-sm'
+                        : 'text-zinc-400 hover:text-zinc-200'
+                    }`}>
+                    <span>🎬 Video Dài</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-zinc-300 font-mono">
+                      {formatCounts.long}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setVideoFormatFilter('short')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                      videoFormatFilter === 'short'
+                        ? 'bg-rose-950/80 text-rose-200 border border-rose-800 font-semibold shadow-sm'
+                        : 'text-zinc-400 hover:text-rose-300'
+                    }`}>
+                    <span>⚡ Shorts</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-rose-300 font-mono">
+                      {formatCounts.short}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setVideoFormatFilter('live')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                      videoFormatFilter === 'live'
+                        ? 'bg-red-950/80 text-red-200 border border-red-800 font-semibold shadow-sm'
+                        : 'text-zinc-400 hover:text-red-300'
+                    }`}>
+                    <span>🔴 Trực Tiếp</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-red-300 font-mono">
+                      {formatCounts.live}
+                    </span>
+                  </button>
+                </div>
+
+                {onSelectKeywordForSearch && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectKeywordForSearch(activeNiche.category || activeNiche.name)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer">
+                    Bắt Trend Từ Khóa ↗
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {onSelectKeywordForSearch && (
+            {/* Thông báo nếu không có video thuộc phân loại đang chọn */}
+            {filteredVideos.length === 0 ? (
+              <div className="p-8 text-center border border-dashed border-zinc-800 rounded-xl bg-[#121316] space-y-2">
+                <span className="text-2xl block">🔍</span>
+                <p className="text-xs text-zinc-300 font-semibold">
+                  Không có video nào thuộc dạng {videoFormatFilter === 'short' ? 'Shorts' : videoFormatFilter === 'live' ? 'Trực Tiếp (Live)' : 'Video Dài'} trong ngách này
+                </p>
+                <p className="text-[11px] text-zinc-500">
+                  Hãy bấm &quot;Tất Cả&quot; để xem toàn bộ {vids.length} video của ngách.
+                </p>
                 <button
                   type="button"
-                  onClick={() => onSelectKeywordForSearch(activeNiche.category || activeNiche.name)}
-                  className="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer">
-                  Bắt Trend Từ Khóa ↗
+                  onClick={() => setVideoFormatFilter('all')}
+                  className="mt-1 px-3 py-1 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 cursor-pointer">
+                  Xem Tất Cả Video
                 </button>
-              )}
-            </div>
-          </div>
+              </div>
+            ) : (
+              /* Lưới video thực tế */
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
+                {filteredVideos.map((v, idx) => {
+                  const ytUrl = 'https://www.youtube.com/watch?v=' + v.id;
+                  const chUrl = 'https://www.youtube.com/channel/' + (v.channelId || '');
+                  const saved = isSaved && isSaved(v.id);
+                  const rev = typeof calcEstimatedRev === 'function' ? calcEstimatedRev(v.views, v.dur, activeNiche.avgRpm || 30) : { low: 50, high: 150, midrolls: 6 };
+                  const vFmt = getVideoFormat(v);
 
-          {/* Lưới video thực tế */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
-            {activeNiche.videos.map((v, idx) => {
-              const ytUrl = 'https://www.youtube.com/watch?v=' + v.id;
-              const chUrl = 'https://www.youtube.com/channel/' + (v.channelId || '');
-              const saved = isSaved && isSaved(v.id);
-              const rev = typeof calcEstimatedRev === 'function' ? calcEstimatedRev(v.views, v.dur, activeNiche.avgRpm || 30) : { low: 50, high: 150, midrolls: 6 };
-
-              return (
-                <article
-                  key={v.id || idx}
-                  className="bg-[#121316] border border-zinc-800 hover:border-zinc-600 rounded-xl overflow-hidden flex flex-col group transition shadow-sm hover:shadow-md">
-                  {/* Thumbnail Container */}
-                  <a
-                    href={ytUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="relative aspect-video bg-zinc-900 overflow-hidden block"
-                    title="Mở xem trên YouTube">
-                    <img
-                      src={v.thumb}
-                      alt=""
-                      className="w-full h-full object-cover group-hover:scale-102 transition duration-200"
-                      loading="lazy"
-                    />
-
-                    {/* Sub Count Badge */}
-                    <div className="absolute top-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-700/80">
-                      {v.subs ? (typeof fmt === 'function' ? fmt(v.subs) : v.subs) + ' subs' : 'Kênh nhỏ'}
-                    </div>
-
-                    {/* Outlier Ratio Badge */}
-                    {v.outlierRatio && (
-                      <div className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-zinc-900/90 text-amber-300 backdrop-blur-sm border border-amber-500/40">
-                        🔥 x{v.outlierRatio} View/Sub
-                      </div>
-                    )}
-
-                    {/* Breakout Channel Indicator */}
-                    {v.isBreakout && (
-                      <div className="absolute bottom-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-zinc-900/90 text-zinc-200 border border-zinc-600 backdrop-blur-sm">
-                        🚀 Tân binh
-                      </div>
-                    )}
-
-                    {/* Duration & Mid-roll Ads Badge */}
-                    <div className="absolute bottom-1.5 right-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-800 flex items-center gap-1">
-                      <span>{typeof fmtDur === 'function' ? fmtDur(v.dur) : '25:00'}</span>
-                      <span className="text-zinc-400 border-l border-zinc-700 pl-1">~{rev.midrolls} Ads</span>
-                    </div>
-                  </a>
-
-                  {/* Card Body */}
-                  <div className="p-2.5 flex flex-col gap-1.5 flex-1 justify-between text-xs">
-                    <div className="space-y-1">
+                  return (
+                    <article
+                      key={v.id || idx}
+                      className="bg-[#121316] border border-zinc-800 hover:border-zinc-600 rounded-xl overflow-hidden flex flex-col group transition shadow-sm hover:shadow-md">
+                      {/* Thumbnail Container */}
                       <a
                         href={ytUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs sm:text-[13px] font-semibold text-zinc-200 line-clamp-2 leading-snug hover:text-white transition"
-                        title={v.title}>
-                        {v.title}
+                        className="relative aspect-video bg-zinc-900 overflow-hidden block"
+                        title="Mở xem trên YouTube">
+                        <img
+                          src={v.thumb}
+                          alt=""
+                          className="w-full h-full object-cover group-hover:scale-102 transition duration-200"
+                          loading="lazy"
+                        />
+
+                        {/* Sub Count Badge */}
+                        <div className="absolute top-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-700/80">
+                          {v.subs ? (typeof fmt === 'function' ? fmt(v.subs) : v.subs) + ' subs' : 'Kênh nhỏ'}
+                        </div>
+
+                        {/* Outlier Ratio Badge */}
+                        {v.outlierRatio && (
+                          <div className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-zinc-900/90 text-amber-300 backdrop-blur-sm border border-amber-500/40">
+                            🔥 x{v.outlierRatio} View/Sub
+                          </div>
+                        )}
+
+                        {/* Breakout Channel Indicator */}
+                        {v.isBreakout && (
+                          <div className="absolute bottom-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-zinc-900/90 text-zinc-200 border border-zinc-600 backdrop-blur-sm">
+                            🚀 Tân binh
+                          </div>
+                        )}
+
+                        {/* Duration & Phân Loại Badge (Short / Dài / Live) */}
+                        {vFmt === 'live' ? (
+                          <div className="absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-600 text-white backdrop-blur-sm border border-red-500 flex items-center gap-1 shadow-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                            <span>LIVE</span>
+                          </div>
+                        ) : vFmt === 'short' ? (
+                          <div className="absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-950/95 text-rose-300 backdrop-blur-sm border border-rose-500/60 flex items-center gap-1 shadow-sm">
+                            <span>⚡ Shorts</span>
+                            <span className="text-zinc-400 font-mono pl-0.5">{typeof fmtDur === 'function' ? fmtDur(v.dur) : '0:45'}</span>
+                          </div>
+                        ) : (
+                          <div className="absolute bottom-1.5 right-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-800 flex items-center gap-1">
+                            <span>🎬 {typeof fmtDur === 'function' ? fmtDur(v.dur) : '25:00'}</span>
+                            {rev.midrolls > 0 && (
+                              <span className="text-zinc-400 border-l border-zinc-700 pl-1">~{rev.midrolls} Ads</span>
+                            )}
+                          </div>
+                        )}
                       </a>
 
-                      <div className="text-[11px] text-zinc-400 flex items-center justify-between gap-1">
-                        <a
-                          href={chUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="truncate max-w-[120px] font-medium text-zinc-300 hover:text-white flex items-center gap-1 transition"
-                          title="Mở kênh trên YouTube">
-                          <span>📺</span>
-                          <span className="truncate">{v.channel}</span>
-                          {v.country && v.country !== 'N/A' && (
-                            <span className="text-[9px] text-zinc-500 font-mono">[{v.country}]</span>
+                      {/* Card Body */}
+                      <div className="p-2.5 flex flex-col gap-1.5 flex-1 justify-between text-xs">
+                        <div className="space-y-1">
+                          <a
+                            href={ytUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs sm:text-[13px] font-semibold text-zinc-200 line-clamp-2 leading-snug hover:text-white transition"
+                            title={v.title}>
+                            {v.title}
+                          </a>
+
+                          <div className="text-[11px] text-zinc-400 flex items-center justify-between gap-1">
+                            <a
+                              href={chUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="truncate max-w-[120px] font-medium text-zinc-300 hover:text-white flex items-center gap-1 transition"
+                              title="Mở kênh trên YouTube">
+                              <span>📺</span>
+                              <span className="truncate">{v.channel}</span>
+                              {v.country && v.country !== 'N/A' && (
+                                <span className="text-[9px] text-zinc-500 font-mono">[{v.country}]</span>
+                              )}
+                            </a>
+                            <span className="text-[10px] text-zinc-500 shrink-0 font-medium">
+                              RPM {activeNiche.rpmRange ? activeNiche.rpmRange.split('-')[0].trim() : '$25+'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Metric Row */}
+                        <div className="pt-1 border-t border-zinc-800/80 flex items-center justify-between text-[10px] text-zinc-400">
+                          <span className="text-zinc-300 font-medium">
+                            👁️ {typeof fmt === 'function' ? fmt(v.views) : v.views}
+                          </span>
+                          {v.vph ? (
+                            <span className="text-zinc-300 font-medium">
+                              ⚡+{typeof fmt === 'function' ? fmt(v.vph) : v.vph}/h
+                            </span>
+                          ) : null}
+                          <span className="text-zinc-300 font-medium">
+                            ${typeof fmt === 'function' ? fmt(rev.low) : rev.low}-${typeof fmt === 'function' ? fmt(rev.high) : rev.high}
+                          </span>
+                        </div>
+
+                        {/* Nút Soi Video & Tags (1 Quota) */}
+                        <button
+                          type="button"
+                          onClick={() => setInspectingVideo(v)}
+                          className="w-full py-1 px-2 rounded-lg font-medium text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-500 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                          title="Soi tags ẩn, bản quyền, tương tác và lấy 50 video của kênh chỉ tốn 1 quota">
+                          <span>🔍</span>
+                          <span>Soi Video &amp; Tags</span>
+                          {v.tags && v.tags.length > 0 && (
+                            <span className="text-[9px] px-1 py-0.2 rounded bg-zinc-900 text-zinc-400 font-mono">
+                              {v.tags.length}
+                            </span>
                           )}
-                        </a>
-                        <span className="text-[10px] text-zinc-500 shrink-0 font-medium">
-                          RPM {activeNiche.rpmRange ? activeNiche.rpmRange.split('-')[0].trim() : '$25+'}
-                        </span>
+                        </button>
+
+                        {/* Quick Action Buttons */}
+                        <div className="flex items-center gap-1 text-[10px]">
+                          {onToggleSave && (
+                            <button
+                              type="button"
+                              onClick={() => onToggleSave(v)}
+                              className={`flex-1 py-1 px-1.5 rounded-md font-medium transition text-center truncate cursor-pointer ${
+                                saved
+                                  ? 'bg-zinc-200 text-zinc-950 font-semibold'
+                                  : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
+                              }`}>
+                              {saved ? '✓ Đã Lưu' : '🔖 Lưu'}
+                            </button>
+                          )}
+                          {onAddCompetitor && (
+                            <button
+                              type="button"
+                              onClick={() => onAddCompetitor(v.channel)}
+                              className="py-1 px-1.5 rounded-md font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition truncate cursor-pointer"
+                              title="Thêm kênh này vào danh sách theo dõi đối thủ">
+                              + Kênh
+                            </button>
+                          )}
+                          <a
+                            href={ytUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-1 px-2 rounded-md font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700 hover:text-white transition text-center truncate shrink-0"
+                            title="Xem trực tiếp trên YouTube">
+                            YT ↗
+                          </a>
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Metric Row */}
-                    <div className="pt-1 border-t border-zinc-800/80 flex items-center justify-between text-[10px] text-zinc-400">
-                      <span className="text-zinc-300 font-medium">
-                        👁️ {typeof fmt === 'function' ? fmt(v.views) : v.views}
-                      </span>
-                      {v.vph ? (
-                        <span className="text-zinc-300 font-medium">
-                          ⚡+{typeof fmt === 'function' ? fmt(v.vph) : v.vph}/h
-                        </span>
-                      ) : null}
-                      <span className="text-zinc-300 font-medium">
-                        ${typeof fmt === 'function' ? fmt(rev.low) : rev.low}-${typeof fmt === 'function' ? fmt(rev.high) : rev.high}
-                      </span>
-                    </div>
-
-                    {/* Nút Soi Video & Tags (1 Quota) */}
-                    <button
-                      type="button"
-                      onClick={() => setInspectingVideo(v)}
-                      className="w-full py-1 px-2 rounded-lg font-medium text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-500 flex items-center justify-center gap-1.5 transition cursor-pointer"
-                      title="Soi tags ẩn, bản quyền, tương tác và lấy 50 video của kênh chỉ tốn 1 quota">
-                      <span>🔍</span>
-                      <span>Soi Video &amp; Tags</span>
-                      {v.tags && v.tags.length > 0 && (
-                        <span className="text-[9px] px-1 py-0.2 rounded bg-zinc-900 text-zinc-400 font-mono">
-                          {v.tags.length}
-                        </span>
-                      )}
-                    </button>
-
-                    {/* Quick Action Buttons */}
-                    <div className="flex items-center gap-1 text-[10px]">
-                      {onToggleSave && (
-                        <button
-                          type="button"
-                          onClick={() => onToggleSave(v)}
-                          className={`flex-1 py-1 px-1.5 rounded-md font-medium transition text-center truncate cursor-pointer ${
-                            saved
-                              ? 'bg-zinc-200 text-zinc-950 font-semibold'
-                              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
-                          }`}>
-                          {saved ? '✓ Đã Lưu' : '🔖 Lưu'}
-                        </button>
-                      )}
-                      {onAddCompetitor && (
-                        <button
-                          type="button"
-                          onClick={() => onAddCompetitor(v.channel)}
-                          className="py-1 px-1.5 rounded-md font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition truncate cursor-pointer"
-                          title="Thêm kênh này vào danh sách theo dõi đối thủ">
-                          + Kênh
-                        </button>
-                      )}
-                      <a
-                        href={ytUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="py-1 px-2 rounded-md font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700 hover:text-white transition text-center truncate shrink-0"
-                        title="Xem trực tiếp trên YouTube">
-                        YT ↗
-                      </a>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
+
 
       {/* Video Inspector Modal (Hidden Tags, 1-Quota 50 Videos, Copyright & Organic Check) */}
       {inspectingVideo && (
