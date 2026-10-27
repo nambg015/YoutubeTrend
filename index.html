@@ -138,11 +138,9 @@ const SORTS = [
 // Quick Trending Preset Modes
 const PRESETS = [
   { id: 'realtime', label: 'Mới nhất (24h)', period: 24, cat: '', sort: 'vph' },
-  { id: 'viral', label: 'Bứt phá 48h', period: 48, cat: '', sort: 'vph' },
   { id: 'trending', label: 'Thịnh hành (7 ngày)', period: 168, cat: '', sort: 'total' },
   { id: 'topview', label: 'Triệu View (30 ngày)', period: 720, cat: '', sort: 'views' },
   { id: 'shorts', label: 'Shorts Hot', period: 48, cat: '', vtype: 'short', sort: 'vph' },
-  { id: 'music', label: 'Âm nhạc 24h', period: 24, cat: '10', sort: 'views' },
   { id: 'gaming', label: 'Gaming 24h', period: 24, cat: '20', sort: 'views' }
 ];
 
@@ -4593,7 +4591,7 @@ const calcEstimatedRev = (views, durSeconds, avgRpm = 30) => {
 
 const QUICK_TAGS = ['Tin tức', 'AI công nghệ', 'Remix hot', 'Review phim', 'Highlight bóng đá', 'Podcast', 'Lập trình', 'MV mới'];
 
-const DEF = { cat: '', region: 'VN', period: 24, vtype: 'all', minViews: '' };
+const DEF = { cat: '', region: '', period: 24, vtype: 'all', minViews: '' };
 
 const clamp = x => Math.max(0, Math.min(1, x));
 const fmt = n => n == null ? 'N/A' : new Intl.NumberFormat('vi-VN').format(Math.round(n));
@@ -5323,10 +5321,12 @@ function F12BlockedModal({ onClose }) {
 }
 
 // Car Speedometer Gauge Component (Strictly No Icons, Pure Modern Sports Car Cluster)
-function CarSpeedometerGauge({ value = 0, max = 240, label = 'TỐC ĐỘ PHỦ SÓNG NGÁCH', unit = 'KM/H', tripText = '', statusText = '' }) {
-  const clamped = Math.max(0, Math.min(max, Number(value) || 0));
-  // Needle angle: -120 deg at 0 km/h, 0 deg at 120 km/h, +120 deg at 240 km/h
-  const needleAngle = -120 + (clamped / max) * 240;
+function CarSpeedometerGauge({ value, speed, max = 240, maxSpeed, label = 'TỐC ĐỘ PHỦ SÓNG NGÁCH', unit = '', tripText = '', subText = '', statusText = '' }) {
+  const rawVal = speed !== undefined ? speed : (value !== undefined ? value : 0);
+  const maxVal = maxSpeed || max || 240;
+  const clamped = Math.max(0, Math.min(maxVal, Number(rawVal) || 0));
+  // Needle angle: -120 deg at 0, 0 deg at 120, +120 deg at 240
+  const needleAngle = -120 + (clamped / maxVal) * 240;
 
   // Determine color theme based on speed / saturation
   let zoneBadge = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
@@ -5423,15 +5423,17 @@ function CarSpeedometerGauge({ value = 0, max = 240, label = 'TỐC ĐỘ PHỦ 
           <circle cx="130" cy="130" r="5" fill="#e2e8f0" />
         </svg>
 
-        {/* Digital Speedometer Center Display */}
+        {/* Digital Speedometer Center Display (No KM/H) */}
         <div className="absolute bottom-1 flex flex-col items-center">
           <div className="flex items-baseline gap-1">
             <span className="font-mono text-2xl font-black tracking-tight text-white drop-shadow-md">
               {Math.round(clamped)}
             </span>
-            <span className="text-[10px] font-mono font-bold text-zinc-400">
-              {unit}
-            </span>
+            {unit ? (
+              <span className="text-[10px] font-mono font-bold text-zinc-400">
+                {unit}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -5441,9 +5443,9 @@ function CarSpeedometerGauge({ value = 0, max = 240, label = 'TỐC ĐỘ PHỦ 
         <div className={"text-[10px] font-mono font-bold px-2.5 py-0.5 rounded border " + zoneBadge}>
           {statusText || zoneLabel}
         </div>
-        {tripText && (
-          <div className="font-mono text-[10px] text-zinc-400 bg-black/60 px-2 py-0.5 rounded border border-zinc-800">
-            {tripText}
+        {(subText || tripText) && (
+          <div className="font-mono text-[10px] text-zinc-400 bg-black/60 px-2 py-0.5 rounded border border-zinc-800 text-center">
+            {subText || tripText}
           </div>
         )}
       </div>
@@ -6010,24 +6012,29 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
     : Math.round((successCount / Math.max(1, successCount + flopCount)) * 100);
 
   // Coherent Saturation Speed & Status Text
-  let saturationSpeed = 35;
+  const kwSeed = (video?.title || video?.niche?.name || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 25;
+  const avgVphSpeed = currentFormatList.length > 0
+    ? Math.min(50, Math.round(currentFormatList.reduce((s, it) => s + (it.vph || 0), 0) / (currentFormatList.length * 30)))
+    : 15;
+
+  let saturationSpeed = 35 + kwSeed + avgVphSpeed;
   let statusBadgeText = '';
 
   if (isRareNiche) {
-    saturationSpeed = 35;
+    saturationSpeed = Math.max(30, Math.min(60, 35 + kwSeed));
     statusBadgeText = 'NGÁCH MỚI - RẤT ÍT ĐỐI THỦ';
-  } else if (flopCount === 0) {
-    saturationSpeed = Math.min(130, Math.max(65, Math.round(60 + totalChannels * 2)));
+  } else if (flopCount === 0 && successCount > 0) {
+    saturationSpeed = Math.min(130, Math.max(65, Math.round(60 + totalChannels * 2 + avgVphSpeed)));
     statusBadgeText = 'NGÁCH BỨT PHÁ - TOÀN KÊNH VIEW TỐT';
   } else if (flopCount >= successCount * 1.5) {
     const flopPercent = Math.round((flopCount / totalChannels) * 100);
-    saturationSpeed = Math.min(235, Math.max(165, Math.round(160 + flopPercent * 0.75)));
+    saturationSpeed = Math.min(235, Math.max(165, Math.round(160 + flopPercent * 0.75 + kwSeed)));
     statusBadgeText = 'BÃO HÒA CAO - NHIỀU KÊNH LẸT ĐẸT';
   } else if (successCount > flopCount) {
-    saturationSpeed = Math.min(135, Math.max(75, Math.round(75 + totalChannels * 1.8)));
+    saturationSpeed = Math.min(135, Math.max(75, Math.round(75 + totalChannels * 1.8 + avgVphSpeed)));
     statusBadgeText = 'CẠNH TRANH VỪA - CƠ HỘI BỨT PHÁ';
   } else {
-    saturationSpeed = Math.min(155, Math.max(90, Math.round(90 + totalChannels * 2)));
+    saturationSpeed = Math.min(155, Math.max(90, Math.round(90 + totalChannels * 2 + kwSeed)));
     statusBadgeText = 'CẠNH TRANH TRUNG BÌNH';
   }
 
@@ -6414,7 +6421,7 @@ function NicheDeepAnalyzeModal({ video, onClose, apiKey, competitors = [], onTog
                   "- Chủ đề: " + nicheCtx.domain + "\n" +
                   "- Khung thời gian: " + (NICHE_TIME_PERIODS.find(p => p.id === timeFilter)?.label || '') + "\n" +
                   "- Định dạng: " + formatFilter.toUpperCase() + "\n" +
-                  "- Tốc độ bão hòa: " + saturationSpeed + " KM/H\n" +
+                  "- Tốc độ bão hòa: " + saturationSpeed + " / 240\n" +
                   "- Tỷ lệ bứt phá: " + winRate + "%\n" +
                   "- Kênh thành công cùng ngách: " + successfulList.length + "\n" +
                   "- Kênh lẹt đẹt cùng ngách: " + flopList.length;
@@ -7322,24 +7329,29 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
     ? 85 
     : Math.round((successCount / Math.max(1, successCount + flopCount)) * 100);
 
-  let saturationSpeed = 35;
+  const kwSeed = (nicheQuery || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 25;
+  const avgVphSpeed = currentFormatList.length > 0
+    ? Math.min(50, Math.round(currentFormatList.reduce((s, it) => s + (it.vph || 0), 0) / (currentFormatList.length * 30)))
+    : 15;
+
+  let saturationSpeed = 35 + kwSeed + avgVphSpeed;
   let statusBadgeText = '';
 
   if (isRareNiche) {
-    saturationSpeed = 35;
+    saturationSpeed = Math.max(30, Math.min(60, 35 + kwSeed));
     statusBadgeText = 'NGÁCH MỚI - RẤT ÍT ĐỐI THỦ';
-  } else if (flopCount === 0) {
-    saturationSpeed = Math.min(130, Math.max(65, Math.round(60 + totalChannels * 2)));
+  } else if (flopCount === 0 && successCount > 0) {
+    saturationSpeed = Math.min(130, Math.max(65, Math.round(60 + totalChannels * 2 + avgVphSpeed)));
     statusBadgeText = 'NGÁCH BỨT PHÁ - TOÀN KÊNH VIEW TỐT';
   } else if (flopCount >= successCount * 1.5) {
     const flopPercent = Math.round((flopCount / totalChannels) * 100);
-    saturationSpeed = Math.min(235, Math.max(165, Math.round(160 + flopPercent * 0.75)));
+    saturationSpeed = Math.min(235, Math.max(165, Math.round(160 + flopPercent * 0.75 + kwSeed)));
     statusBadgeText = 'BÃO HÒA CAO - NHIỀU KÊNH LẸT ĐẸT';
   } else if (successCount > flopCount) {
-    saturationSpeed = Math.min(135, Math.max(75, Math.round(75 + totalChannels * 1.8)));
+    saturationSpeed = Math.min(135, Math.max(75, Math.round(75 + totalChannels * 1.8 + avgVphSpeed)));
     statusBadgeText = 'CẠNH TRANH VỪA - CƠ HỘI BỨT PHÁ';
   } else {
-    saturationSpeed = Math.min(155, Math.max(90, Math.round(90 + totalChannels * 2)));
+    saturationSpeed = Math.min(155, Math.max(90, Math.round(90 + totalChannels * 2 + kwSeed)));
     statusBadgeText = 'CẠNH TRANH TRUNG BÌNH';
   }
 
@@ -7954,7 +7966,7 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {keywordClusters.map((cluster, cIdx) => {
                     const isUltraTrend = cluster.channelCount >= 4;
                     const isHotTrend = cluster.channelCount === 3;
@@ -7970,52 +7982,52 @@ function NicheKeywordScannerSection({ apiKey, competitors = [], onToggleCompetit
                             ? 'bg-brand-card border-cyan-500/40'
                             : 'bg-brand-card/70 border-brand-border'
                         )}>
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                          <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-col justify-between gap-2.5">
+                          <div className="space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
                               {isUltraTrend ? (
-                                <span className="text-[10px] font-black px-2.5 py-0.5 rounded bg-amber-500 text-black shadow-sm flex items-center gap-1 animate-pulse">
-                                  <span>🔥🔥🔥 4+ KÊNH CÙNG NỔ — THỊ TRƯỜNG ĐANG RẤT KHÁT</span>
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-500 text-black shadow-sm flex items-center gap-1 animate-pulse">
+                                  <span>🔥🔥🔥 4+ KÊNH CÙNG NỔ</span>
                                 </span>
                               ) : isHotTrend ? (
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                  🔥🔥 3 KÊNH ĐANG LÊN — TREND TĂNG TỐC MẠNH
+                                  🔥🔥 3 KÊNH ĐANG LÊN
                                 </span>
                               ) : (
                                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                                   🔥 2 KÊNH BẮT ĐẦU VÀO CUỘC
                                 </span>
                               )}
-                              <span className="text-xs text-zinc-400 font-mono">
-                                Áp dụng bởi <b>{cluster.channelCount}</b> kênh độc lập
+                              <span className="text-[11px] text-zinc-400 font-mono">
+                                <b>{cluster.channelCount}</b> kênh độc lập
                               </span>
                             </div>
 
-                            <h3 className="text-base sm:text-lg font-black text-white hover:text-cyan-400 transition cursor-pointer" onClick={() => setSelectedClusterForRemix(cluster)}>
+                            <h3 className="text-base font-black text-white hover:text-cyan-400 transition cursor-pointer" onClick={() => setSelectedClusterForRemix(cluster)}>
                               "{phraseTitle}"
                             </h3>
 
-                            <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-300 font-mono pt-0.5">
-                              <span>Tổng lượt xem cụm: <b className="text-white">{fmt(cluster.totalViews)}</b></span>
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-300 font-mono pt-0.5">
+                              <span>Lượt xem: <b className="text-white">{fmt(cluster.totalViews)}</b></span>
                               <span>•</span>
                               <span>Tốc độ: <b className="text-emerald-400">+{fmt(cluster.avgVph)}/h</b></span>
                               <span>•</span>
-                              <span>Số video phát hiện: <b className="text-amber-300">{cluster.videoCount}</b></span>
+                              <span>Video: <b className="text-amber-300">{cluster.videoCount}</b></span>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-2 pt-1">
                             <button
                               onClick={() => setSelectedClusterForRemix(cluster)}
-                              className="py-2 px-4 rounded-xl text-xs font-black bg-cyan-500 hover:bg-cyan-400 text-black shadow-lg shadow-cyan-500/20 transition flex items-center gap-1.5">
+                              className="flex-1 py-1.5 px-3 rounded-xl text-xs font-black bg-cyan-500 hover:bg-cyan-400 text-black shadow-lg shadow-cyan-500/20 transition flex items-center justify-center gap-1.5">
                               <span>🎯 1-Click Remix Video</span>
                             </button>
                             <button
                               onClick={() => {
                                 if (showToast) showToast('Đã lưu cụm từ khóa ' + phraseTitle + ' vào danh sách theo dõi!');
                               }}
-                              className="py-2 px-3 rounded-xl text-xs font-bold bg-brand-surface hover:bg-brand-hover text-zinc-300 border border-brand-border transition">
-                              🔖 Lưu Cụm
+                              className="py-1.5 px-3 rounded-xl text-xs font-bold bg-brand-surface hover:bg-brand-hover text-zinc-300 border border-brand-border transition whitespace-nowrap">
+                              🔖 Lưu
                             </button>
                           </div>
                         </div>
@@ -10239,6 +10251,206 @@ function VideoIdeaPlannerModal({ onClose, onAddIdeaFromOutside }) {
       </div>
     </div>
   );
+// Cửa Sổ Chi Tiết Ngách (Clean & Focused Niche Intelligence Modal)
+function NicheDetailModal({ niche, onClose, onSelectKeywordForSearch, onAddCompetitor, onToggleSave, isSaved, showToast }) {
+  const [activeTab, setActiveTab] = React.useState('overview'); // 'overview' | 'videos' | 'prompts'
+
+  if (!niche) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-brand-surface border border-brand-border rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+        {/* Modal Header */}
+        <div className="p-4 sm:p-5 border-b border-brand-border flex items-start justify-between gap-3 bg-gradient-to-r from-zinc-900 to-brand-surface">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-400 text-black">
+                {niche.tag || 'High-RPM'}
+              </span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                RPM: {niche.rpmRange} / 1k view
+              </span>
+              <span className="text-xs text-zinc-400">
+                Kênh mẫu: <b className="text-white">{niche.exampleChannel}</b>
+              </span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-black text-white">
+              {niche.name}
+            </h2>
+            <p className="text-xs text-zinc-400">
+              {niche.subtitle}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition">
+            ✕
+          </button>
+        </div>
+
+        {/* Modal Sub-navigation tabs */}
+        <div className="flex border-b border-brand-border px-4 sm:px-5 gap-4 text-xs font-semibold bg-brand-card/50">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`py-3 border-b-2 transition ${activeTab === 'overview' ? 'border-amber-400 text-white font-bold' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>
+            1. Tổng Quan & Tiềm Năng
+          </button>
+          <button
+            onClick={() => setActiveTab('videos')}
+            className={`py-3 border-b-2 transition ${activeTab === 'videos' ? 'border-amber-400 text-white font-bold' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>
+            2. Video Mẫu ({niche.sampleVideos?.length || 0})
+          </button>
+          <button
+            onClick={() => setActiveTab('prompts')}
+            className={`py-3 border-b-2 transition ${activeTab === 'prompts' ? 'border-amber-400 text-white font-bold' : 'border-transparent text-zinc-400 hover:text-zinc-200'}`}>
+            3. Câu Lệnh AI (Prompts)
+          </button>
+        </div>
+
+        {/* Modal Body Content */}
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+          {activeTab === 'overview' && (
+            <div className="space-y-4">
+              <div className="bg-brand-card p-4 rounded-xl border border-brand-border space-y-2">
+                <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wider">Vì sao ngách này kiếm được nhiều tiền?</h4>
+                <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed">
+                  {niche.whyText || niche.desc}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="bg-brand-card p-3.5 rounded-xl border border-brand-border">
+                  <span className="text-zinc-400 block text-[11px]">Đặc điểm video:</span>
+                  <p className="text-zinc-200 mt-1 font-medium">{niche.desc}</p>
+                </div>
+                <div className="bg-brand-card p-3.5 rounded-xl border border-brand-border">
+                  <span className="text-zinc-400 block text-[11px]">Giọng đọc AI phù hợp:</span>
+                  <p className="text-emerald-400 mt-1 font-medium">{niche.aiVoice || 'ElevenLabs / Lovo AI'}</p>
+                </div>
+              </div>
+
+              {/* Keywords to target */}
+              {niche.queries && niche.queries.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-zinc-300">Từ khóa tìm kiếm ăn khách nhất của ngách:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {niche.queries.map((q, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          onSelectKeywordForSearch(q);
+                          onClose();
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs bg-zinc-800 hover:bg-zinc-700 text-cyan-300 border border-zinc-700 hover:border-cyan-500 transition flex items-center gap-1.5"
+                        title="Bấm để chuyển sang tab Phân Tích cụm từ khóa này">
+                        <span>🔍</span>
+                        <span>{q}</span>
+                        <span className="text-[10px] text-zinc-400">→ Phân tích</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'videos' && (
+            <div className="space-y-3">
+              {(niche.sampleVideos || []).map((v) => (
+                <div key={v.id} className="p-3 rounded-xl bg-brand-card border border-brand-border flex flex-col sm:flex-row gap-3 items-start justify-between">
+                  <div className="flex gap-3">
+                    <img src={v.thumb} alt={v.title} className="w-24 aspect-video rounded-lg object-cover bg-zinc-800 shrink-0" />
+                    <div className="space-y-1">
+                      <h4 className="text-xs sm:text-sm font-bold text-white line-clamp-2">{v.title}</h4>
+                      <div className="text-[11px] text-zinc-400 flex flex-wrap gap-2">
+                        <span>Kênh: <b className="text-zinc-200">{v.channel}</b> ({fmt(v.subs)} sub)</span>
+                        <span>•</span>
+                        <span>View: <b className="text-emerald-400">{fmt(v.views)}</b></span>
+                        <span>•</span>
+                        <span>Thời lượng: {fmtDur(v.dur)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                    <button
+                      onClick={() => onAddCompetitor(v)}
+                      className="px-2.5 py-1 text-xs rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition">
+                      + Đối thủ
+                    </button>
+                    <button
+                      onClick={() => onToggleSave(v)}
+                      className={`px-2.5 py-1 text-xs rounded-lg border transition ${isSaved(v.id) ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700'}`}>
+                      {isSaved(v.id) ? '★ Đã lưu' : '☆ Lưu'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'prompts' && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Prompt Viết Kịch Bản Chi Tiết (ChatGPT / Claude):</span>
+                  <button
+                    onClick={() => {
+                      const tpl = niche.scriptPromptTpl ? niche.scriptPromptTpl(niche.sampleVideos?.[0]?.title || niche.name, niche.exampleChannel) : 'Kịch bản ngách ' + niche.name;
+                      navigator.clipboard.writeText(tpl);
+                      if (showToast) showToast('Đã sao chép prompt kịch bản!');
+                    }}
+                    className="text-xs text-amber-400 hover:text-amber-300 font-semibold">
+                    Sao chép prompt
+                  </button>
+                </div>
+                <pre className="p-3 rounded-xl bg-black/60 border border-zinc-800 text-[11px] text-zinc-300 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  {niche.scriptPromptTpl ? niche.scriptPromptTpl(niche.sampleVideos?.[0]?.title || niche.name, niche.exampleChannel) : 'Chưa có prompt mẫu'}
+                </pre>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">Prompt Tạo Thumbnail (Midjourney):</span>
+                  <button
+                    onClick={() => {
+                      const tpl = niche.thumbPromptTpl ? niche.thumbPromptTpl(niche.sampleVideos?.[0]?.title || niche.name) : 'Thumbnail prompt';
+                      navigator.clipboard.writeText(tpl);
+                      if (showToast) showToast('Đã sao chép prompt thumbnail!');
+                    }}
+                    className="text-xs text-amber-400 hover:text-amber-300 font-semibold">
+                    Sao chép prompt
+                  </button>
+                </div>
+                <pre className="p-3 rounded-xl bg-black/60 border border-zinc-800 text-[11px] text-zinc-300 font-mono whitespace-pre-wrap max-h-36 overflow-y-auto">
+                  {niche.thumbPromptTpl ? niche.thumbPromptTpl(niche.sampleVideos?.[0]?.title || niche.name) : 'Chưa có prompt thumbnail'}
+                </pre>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="p-3 sm:p-4 border-t border-brand-border bg-brand-card/40 flex items-center justify-between">
+          <button
+            onClick={() => {
+              if (niche.queries && niche.queries[0]) {
+                onSelectKeywordForSearch(niche.queries[0]);
+                onClose();
+              }
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-black transition flex items-center gap-1.5 shadow-md">
+            <span>🎯 Bắt Trend Cụm Từ Khóa Ngách Này</span>
+            <span>→</span>
+          </button>
+          <button
+            onClick={onClose}
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition">
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 
@@ -10271,6 +10483,10 @@ function App() {
   const [showDemandValidationModal, setShowDemandValidationModal] = useState(false);
   const [showTitlePatternModal, setShowTitlePatternModal] = useState(false);
   const [showIdeaPlannerModal, setShowIdeaPlannerModal] = useState(false);
+  const [showAutoUpdateBubblePopup, setShowAutoUpdateBubblePopup] = useState(false);
+  const [selectedNicheModal, setSelectedNicheModal] = useState(null);
+  const [rpmSearchQuery, setRpmSearchQuery] = useState('');
+  const [showSuggestionsTab, setShowSuggestionsTab] = useState(false);
   const [showFloatingTools, setShowFloatingTools] = useState(false);
 
   const toggleWikiRead = (id) => {
@@ -11881,7 +12097,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                   ? 'text-white font-semibold' 
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}>
-              <span>Trend SRT</span>
+              <span>Phân Tích</span>
               {tab === 'niche' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
@@ -11900,23 +12116,6 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             </button>
 
             <button 
-              onClick={() => {
-                setTab('competitors');
-                if (!compVideos.length) refreshCompetitorVideos();
-              }} 
-              className={`h-full flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
-                tab === 'competitors' 
-                  ? 'text-white font-semibold' 
-                  : 'text-zinc-400 hover:text-zinc-200'
-              }`}>
-              <span>Đối thủ</span>
-              {competitors.length > 0 && (
-                <span className="text-[11px] text-zinc-500">({competitors.length})</span>
-              )}
-              {tab === 'competitors' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
-            </button>
-
-            <button 
               onClick={() => setTab('autoupdate')} 
               className={`h-full flex items-center gap-1.5 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
                 tab === 'autoupdate' 
@@ -11930,19 +12129,57 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               {tab === 'autoupdate' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full"></span>}
             </button>
 
-            <button 
-              onClick={() => setTab('wiki')} 
-              className={`h-full flex items-center gap-1.5 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
-                tab === 'wiki' 
-                  ? 'text-white font-semibold' 
-                  : 'text-zinc-400 hover:text-amber-300'
-              }`}
-              title="Wiki YouTubeTrend: Từ điển thuật ngữ & cẩm nang tìm ngách toàn diện">
-              <span className="text-amber-400">📖</span>
-              <span>Wiki</span>
-              {tab === 'wiki' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400 rounded-full"></span>}
-            </button>
+            {/* Wiki with 3 Research Tools in Hover Dropdown */}
+            <div className="relative group h-full flex items-center">
+              <button 
+                onClick={() => setTab('wiki')} 
+                className={`h-full flex items-center gap-1 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 relative ${
+                  tab === 'wiki' 
+                    ? 'text-white font-semibold' 
+                    : 'text-zinc-400 hover:text-amber-300'
+                }`}
+                title="Wiki YouTubeTrend: Từ điển thuật ngữ & cẩm nang tìm ngách toàn diện">
+                <span className="text-amber-400">📖</span>
+                <span>Wiki</span>
+                <span className="text-[10px] text-zinc-500 group-hover:text-amber-400 transition-transform group-hover:rotate-180">▾</span>
+                {tab === 'wiki' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-400 rounded-full"></span>}
+              </button>
 
+              {/* Hover Dropdown Menu with 3 Practical Tools */}
+              <div className="absolute top-full left-0 pt-2 hidden group-hover:block z-50 min-w-[220px] animate-in fade-in slide-in-from-top-1 duration-150">
+                <div className="bg-zinc-900 border border-zinc-700/80 rounded-xl p-1.5 shadow-2xl backdrop-blur-xl space-y-1">
+                  <div className="px-2.5 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-800">
+                    3 Công Cụ Nghiên Cứu
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowDemandValidationModal(true); }}
+                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold text-zinc-200 hover:text-emerald-300 hover:bg-zinc-800 flex items-center gap-2 transition">
+                    <span>🧪</span>
+                    <span>Kiểm Chứng Nhu Cầu</span>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowTitlePatternModal(true); }}
+                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold text-zinc-200 hover:text-purple-300 hover:bg-zinc-800 flex items-center gap-2 transition">
+                    <span>🎯</span>
+                    <span>Khuôn Tiêu Đề</span>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowIdeaPlannerModal(true); }}
+                    className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold text-zinc-200 hover:text-amber-300 hover:bg-zinc-800 flex items-center gap-2 transition">
+                    <span>📋</span>
+                    <span>Kế Hoạch Video</span>
+                  </button>
+                  <div className="pt-1 border-t border-zinc-800">
+                    <button
+                      onClick={() => setTab('wiki')}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-amber-400 hover:bg-zinc-800 flex items-center justify-between transition">
+                      <span>Mở toàn bộ 24 bài Wiki</span>
+                      <span>→</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <button
               onClick={() => setShowSavedVideosModal(true)}
@@ -11955,8 +12192,25 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             </button>
           </nav>
 
-          {/* Right: Actions like CUTLAB ("Tạo phiếu" + "Đăng nhập") */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* Right: Distinct Yellow Gradient "Đối thủ" button + API Status + Account */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              onClick={() => {
+                setTab('competitors');
+                if (!compVideos.length) refreshCompetitorVideos();
+              }}
+              className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold flex items-center gap-1.5 transition shrink-0 bg-gradient-to-b from-white via-amber-200 to-amber-400 text-zinc-950 border border-amber-300 shadow-md hover:brightness-105 active:scale-95 cursor-pointer ${
+                tab === 'competitors' ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-950' : ''
+              }`}
+              title="Theo dõi các kênh đối thủ">
+              <span>Đối thủ</span>
+              {competitors.length > 0 && (
+                <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-black/20 text-black font-black">
+                  {competitors.length}
+                </span>
+              )}
+            </button>
+
             <button 
               onClick={() => { setApiModalOpen(true); setApiModalTab('tester'); }} 
               className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition shrink-0 ${
@@ -11981,29 +12235,6 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
       {/* Main Body */}
       <main className="max-w-7xl mx-auto px-4 py-5 space-y-4 flex-1 w-full">
-        {/* Daily Auto-Update Notification Banner */}
-        {tab !== 'autoupdate' && autoUpdateData.pendingTrends?.length > 0 && (
-          <div className="border border-purple-500/40 bg-gradient-to-r from-purple-950/60 via-indigo-950/50 to-brand-surface rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping"></span>
-              <div>
-                <div className="text-xs font-bold text-purple-200 flex items-center gap-2">
-                  <span>Cập nhật tự động: Phát hiện {autoUpdateData.pendingTrends.length} xu hướng mới hôm nay đang bứt phá!</span>
-                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.2 rounded border border-purple-500/30">Mới</span>
-                </div>
-                <div className="text-[11px] text-zinc-400 mt-0.5">
-                  Hệ thống vừa tìm thấy các video dài bứt phá từ kênh sub thấp. Bạn có muốn duyệt và cập nhật thêm các trend này không?
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => setTab('autoupdate')}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md transition flex items-center gap-1.5">
-              <span>Xem & Duyệt Trend Ngay</span>
-              <span>→</span>
-            </button>
-          </div>
-        )}
         {/* Missing Key Banner with Direct Diagnostic & Guide */}
         {!key && (
           <div className="border border-zinc-800 bg-brand-surface rounded-xl p-4 text-sm space-y-2 shadow-md">
@@ -12138,20 +12369,29 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
             {/* Sub-row: Quick Keyword Tags & Video Type Filter */}
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-brand-border/60 text-xs">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-zinc-500 font-medium text-[11px]">Gợi ý từ khóa:</span>
-                {QUICK_TAGS.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => { setKw(tag); load('new', { kw: tag, cat: f.cat, region: f.region, period: f.period }); }}
-                    className="px-2 py-0.5 rounded-md bg-brand-card hover:bg-brand-hover text-zinc-300 hover:text-white border border-brand-border transition text-[11px]">
-                    {tag}
-                  </button>
-                ))}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowSuggestionsTab(!showSuggestionsTab)}
+                  className={`px-2.5 py-1 rounded-lg border transition text-[11px] font-semibold flex items-center gap-1 ${
+                    showSuggestionsTab 
+                      ? 'bg-amber-400 text-black border-amber-400 font-bold shadow-sm' 
+                      : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border'
+                  }`}>
+                  <span>💡 Đề xuất từ khóa</span>
+                  <span className="text-[10px] opacity-75">({QUICK_TAGS.length})</span>
+                  <span className="text-[9px]">{showSuggestionsTab ? '▲' : '▼'}</span>
+                </button>
+
                 {kw && (
-                  <button onClick={() => { setKw(''); load('new', { kw: '', cat: f.cat, region: f.region, period: f.period }); }} className="text-zinc-500 hover:text-red-400 ml-1 text-xs">
-                    Xóa
-                  </button>
+                  <span className="text-[11px] text-zinc-400 flex items-center gap-1 bg-brand-card px-2 py-0.5 rounded-md border border-brand-border">
+                    <span>Đang lọc: <b className="text-white">{kw}</b></span>
+                    <button 
+                      onClick={() => { setKw(''); load('new', { kw: '', cat: f.cat, region: f.region, period: f.period }); }} 
+                      className="text-zinc-500 hover:text-red-400 ml-0.5 text-xs font-bold">
+                      ✕
+                    </button>
+                  </span>
                 )}
               </div>
 
@@ -12166,6 +12406,21 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                 </select>
               </div>
             </div>
+
+            {/* Collapsible Recommendations Tab */}
+            {showSuggestionsTab && (
+              <div className="pt-2 border-t border-brand-border/60 flex flex-wrap items-center gap-1.5 animate-in fade-in duration-150">
+                <span className="text-zinc-500 text-[11px] mr-1">Chủ đề đề xuất:</span>
+                {QUICK_TAGS.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => { setKw(tag); load('new', { kw: tag, cat: f.cat, region: f.region, period: f.period }); }}
+                    className="px-2 py-0.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 transition text-[11px]">
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Quick Statistics Overview */}
@@ -12745,737 +13000,130 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           </section>
         )}
 
-        {/* TAB 2: HIGH-RPM HIDDEN CASH-COW CHANNEL SPY (SĂN KÊNH MỎ VÀNG NGẦM) */}
-        {tab === 'rpm' && (
-          <section className="space-y-4">
-            {/* Header & Strategic Overview */}
-            <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-brand-border pb-3">
-                <div>
+        {/* TAB 2: HIGH-RPM CASH-COW NICHES (TOP NGÁCH - CLEAN & MINIMALIST) */}
+        {tab === 'rpm' && (() => {
+          const q = (rpmSearchQuery || '').trim().toLowerCase();
+          const visibleNiches = q
+            ? CASHCOW_NICHES.filter(n =>
+                (n.name || '').toLowerCase().includes(q) ||
+                (n.subtitle || '').toLowerCase().includes(q) ||
+                (n.exampleChannel || '').toLowerCase().includes(q) ||
+                (n.desc || '').toLowerCase().includes(q) ||
+                (n.queries || []).some(k => k.toLowerCase().includes(q))
+              )
+            : CASHCOW_NICHES;
+
+          return (
+            <section className="space-y-4">
+              {/* Clean Minimalist Header */}
+              <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
-                      High-RPM Radar
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                      Bảng Xếp Hạng High-RPM
                     </span>
-                    <span className="text-xs text-zinc-400">Thị trường Mỹ & Quốc tế (Tier 1)</span>
+                    <span className="text-xs text-zinc-400">Thị trường Mỹ & Quốc tế</span>
                   </div>
-                  <h2 className="font-extrabold text-base sm:text-xl text-white mt-1">
-                    Săn Kênh Mỏ Vàng Ngầm (Sub Thấp - RPM Cao)
+                  <h2 className="text-lg sm:text-xl font-black text-white">
+                    Top Ngách Kiếm Tiền Cao (RPM $20 - $50+)
                   </h2>
-                  <p className="text-xs text-zinc-400 mt-0.5 max-w-3xl leading-relaxed">
-                    Dò tìm các kênh nước ngoài ít sub (5k - 50k), video dài chèn nhiều quảng cáo mid-roll với RPM cao ($25 - $48/1k view).
+                  <p className="text-xs text-zinc-400 max-w-2xl">
+                    Tổng hợp các ngách làm video dài cho kênh sub vừa &amp; nhỏ với RPM quảng cáo cực cao. Bấm vào từng ngách để xem chi tiết, video mẫu và kịch bản AI.
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 self-start lg:self-auto shrink-0">
-                  <button
-                    onClick={() => loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery)}
-                    disabled={rpmLoading}
-                    className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition flex items-center gap-1.5 disabled:opacity-50 shadow-sm">
-                    <span>{rpmLoading ? 'Đang quét...' : 'Quét Dữ Liệu Ngay'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* DYNAMIC NICHE LEADERBOARD & TIME-TRAVEL FILTER */}
-              <div className="space-y-3.5">
-                {/* Section Header with Actions */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-brand-border/70 pb-2.5">
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                      <span>Bảng Xếp Hạng Top 20 Kênh Sub Thấp - View Khủng (Mọi Chủ Đề)</span>
-                    </h3>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Lọc các kênh quy mô nhỏ (&lt;50k sub) có video bứt phá view gấp 5x - 20x lần sub, tự động gom nhóm ngách &amp; từ khóa liên quan từ video.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => runLiveNicheRescore()}
-                      disabled={isRescoringNiches}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition flex items-center gap-1.5 disabled:opacity-50">
-                      <span className={isRescoringNiches ? 'animate-spin' : ''}>⚡</span>
-                      <span>{isRescoringNiches ? 'Đang Chấm Điểm...' : 'Chấm Điểm Lại Top 20'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowScoreFormulaModal(true)}
-                      className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border transition flex items-center gap-1"
-                      title="Xem cách thuật toán tính điểm và lọc top">
-                      <span>ℹ️ Công Thức Chấm Điểm</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Live Scanning Progress Ticker */}
-                {isRescoringNiches && (
-                  <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center gap-3 animate-pulse text-xs text-zinc-200">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
-                    <span className="font-medium">{rescoreProgressStep}</span>
-                  </div>
-                )}
-
-                {/* Timeframe Selector Pills (24h, 1d, 2d, 3d, 7d, 14d, 30d, 90d) */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] text-zinc-400">
-                    <span className="font-medium text-zinc-300">Khung thời gian xếp hạng:</span>
-                    <span className="text-zinc-500 hidden sm:inline">Bấm mốc để xem lịch sử thăng/tụt hạng của ngách</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5">
-                    {NICHE_TIMEFRAMES.map(tf => {
-                      const isActive = nicheTimeframe === tf.id;
-                      return (
-                        <button
-                          key={tf.id}
-                          type="button"
-                          onClick={() => setNicheTimeframe(tf.id)}
-                          className={`px-2.5 py-2 rounded-xl text-left border transition flex flex-col justify-between ${
-                            isActive
-                              ? 'bg-zinc-200 text-zinc-950 font-bold border-zinc-200 shadow-sm'
-                              : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border hover:border-zinc-700'
-                          }`}>
-                          <div className="flex items-center justify-between w-full">
-                            <span className="text-xs font-bold truncate">{tf.label}</span>
-                            {isActive && <span className="w-1.5 h-1.5 rounded-full bg-zinc-950"></span>}
-                          </div>
-                          <span className={`text-[10px] mt-0.5 truncate ${isActive ? 'text-zinc-800 font-semibold' : 'text-zinc-500'}`}>
-                            {tf.badge}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Leaderboard Status Pill */}
-                {(() => {
-                  const currentTfObj = NICHE_TIMEFRAMES.find(t => t.id === nicheTimeframe) || NICHE_TIMEFRAMES[0];
-                  return (
-                    <div className="bg-brand-card/70 border border-brand-border rounded-xl px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px]">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                        <span className="text-zinc-300">
-                          Đang xem: <b className="text-white">{currentTfObj.label}</b> (Top 20 Kênh Sub Thấp - View Khủng Đa Chủ Đề)
-                        </span>
-                      </div>
-                      <div className="text-zinc-400 text-[10px]">
-                        Thuật toán: <b className="text-rose-400">Outlier View/Sub 35%</b> · <b className="text-emerald-400">VPH 30%</b> · <b className="text-amber-400">RPM 20%</b> · <b className="text-sky-400">Ít cạnh tranh 15%</b>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* TOP 20 RANKED OUTLIER CHANNELS & NICHES - 2 ROWS COMPACT HORIZONTAL SCROLLER */}
-                {(() => {
-                  const currentTfObj = NICHE_TIMEFRAMES.find(t => t.id === nicheTimeframe) || NICHE_TIMEFRAMES[0];
-                  const fullRanked = getNicheLeaderboard(nicheTimeframe);
-                  const top20 = fullRanked.slice(0, 20);
-                  const dropped = fullRanked.slice(20);
-                  const selectedNicheObj = top20.find(n => n.id === activeRpmNiche) || fullRanked.find(n => n.id === activeRpmNiche) || top20[0];
-
-                  return (
-                    <div className="space-y-3.5">
-                      {/* 2-Rows Container with Scroll Controls */}
-                      <div className="relative group/scroller">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const el = document.getElementById('top20-scroller');
-                            if (el) el.scrollBy({ left: -450, behavior: 'smooth' });
-                          }}
-                          className="hidden sm:flex absolute -left-2.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 items-center justify-center shadow-lg transition">
-                          ◀
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const el = document.getElementById('top20-scroller');
-                            if (el) el.scrollBy({ left: 450, behavior: 'smooth' });
-                          }}
-                          className="hidden sm:flex absolute -right-2.5 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 items-center justify-center shadow-lg transition">
-                          ▶
-                        </button>
-
-                        <div
-                          id="top20-scroller"
-                          className="grid grid-rows-2 auto-cols-[280px] sm:auto-cols-[305px] md:auto-cols-[325px] grid-flow-col gap-2.5 overflow-x-auto pb-3 pt-1 scrollbar-thin scroll-smooth px-1">
-                          {top20.map(niche => {
-                            const isSelected = activeRpmNiche === niche.id;
-                            const isTop1 = niche.rank === 1;
-                            const isTop2 = niche.rank === 2;
-                            const isTop3 = niche.rank === 3;
-
-                            return (
-                              <button
-                                key={niche.id}
-                                type="button"
-                                onClick={() => {
-                                  setActiveRpmNiche(niche.id);
-                                  loadRpm(niche.id, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery);
-                                }}
-                                className={`p-2.5 rounded-xl border text-left transition relative flex flex-col justify-between group overflow-hidden ${
-                                  isSelected
-                                    ? 'bg-zinc-900 border-zinc-200 shadow-xl ring-2 ring-zinc-400'
-                                    : isTop1
-                                    ? 'bg-gradient-to-br from-amber-950/25 via-zinc-900 to-zinc-900 border-amber-500/60 hover:border-amber-400 shadow-md'
-                                    : 'bg-zinc-900/80 hover:bg-zinc-900 border-zinc-800 hover:border-zinc-700'
-                                }`}>
-                                
-                                <div>
-                                  {/* Rank Header Row */}
-                                  <div className="flex items-center justify-between gap-1 mb-1">
-                                    <div className="flex items-center gap-1.5">
-                                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 ${
-                                        isTop1
-                                          ? 'bg-amber-400 text-zinc-950 font-black'
-                                          : isTop2
-                                          ? 'bg-zinc-300 text-zinc-950 font-extrabold'
-                                          : isTop3
-                                          ? 'bg-amber-600 text-white font-extrabold'
-                                          : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
-                                      }`}>
-                                        {isTop1 ? '👑 #1' : isTop2 ? '🥈 #2' : isTop3 ? '🥉 #3' : `#${niche.rank}`}
-                                      </span>
-
-                                      {/* Outlier Ratio Badge */}
-                                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                                        🔥 x{niche.outlierMultiplier || '12'} View/Sub
-                                      </span>
-
-                                      {niche.changeType === 'new' && (
-                                        <span className="text-[9px] font-black px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                          ⭐ MỚI
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    <span className="text-[11px] font-black text-amber-400">
-                                      {niche.timeScore}đ
-                                    </span>
-                                  </div>
-
-                                  {/* Channel Name */}
-                                  <div className="flex items-center gap-1.5 mt-1">
-                                    <span className="text-zinc-400 text-xs">📺</span>
-                                    <span className="font-bold text-xs text-white truncate group-hover:text-amber-300 transition" title={niche.channelName || niche.exampleChannel}>
-                                      {niche.channelName || niche.exampleChannel || 'Kênh Mỏ Vàng'}
-                                    </span>
-                                    <span className="text-[10px] text-zinc-500 shrink-0">
-                                      ({fmt(niche.subs || 15000)} sub)
-                                    </span>
-                                  </div>
-
-                                  {/* Niche Detected from Video */}
-                                  <div className="mt-1 flex items-center gap-1">
-                                    <span className="text-[10px] text-zinc-400 truncate" title={niche.name}>
-                                      Ngách: <b className="text-zinc-200">{niche.name}</b>
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Bottom Quick Metrics Row */}
-                                <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-2 pt-1 border-t border-zinc-800/80">
-                                  <span className="font-medium text-amber-300">⚡ +{fmt(niche.vph)}/h</span>
-                                  <span className="text-emerald-400 font-semibold">{niche.rpmRange}</span>
-                                  <span className="text-sky-300 font-medium">Đỉnh {fmt(niche.views || 250000)} v</span>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* ACTIVE CHANNEL & RELATED NICHES DRILLDOWN PANEL */}
-                      {selectedNicheObj && (() => {
-                        const relatedNichesList = selectedNicheObj.relatedNiches || [
-                          selectedNicheObj.name,
-                          selectedNicheObj.subtitle,
-                          'Khán Giả US 50+ Tuổi',
-                          'Kiếm Tiền RPM Cao'
-                        ];
-                        const mainKeywords = (selectedNicheObj.queries || []).slice(0, 4);
-
-                        return (
-                          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 sm:p-4 space-y-3 shadow-md">
-                            {/* Channel Header Row */}
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-zinc-800 border border-amber-500/30 flex items-center justify-center text-lg font-black text-amber-400 shrink-0">
-                                  📺
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <h4 className="font-bold text-sm text-white">
-                                      {selectedNicheObj.channelName || selectedNicheObj.exampleChannel || selectedNicheObj.name}
-                                    </h4>
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                                      🔥 Outlier: View gấp {selectedNicheObj.outlierMultiplier || '12'}x Sub
-                                    </span>
-                                    <span className="text-xs text-zinc-400">
-                                      · {fmt(selectedNicheObj.subs || 18400)} Subscribers · RPM {selectedNicheObj.rpmRange}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-zinc-400 mt-0.5">
-                                    {selectedNicheObj.desc || selectedNicheObj.whyText}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Action Buttons */}
-                              <div className="flex items-center gap-2 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setNicheScannerKeyword(selectedNicheObj.queries?.[0] || selectedNicheObj.name);
-                                    setTab('niche');
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 hover:bg-white text-zinc-950 transition flex items-center gap-1 shadow-sm">
-                                  <span>🎯 Bắt Trend Cụm Từ Khóa</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (selectedNicheObj.channelName || selectedNicheObj.exampleChannel) {
-                                      addCompetitor(selectedNicheObj.channelName || selectedNicheObj.exampleChannel);
-                                    }
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition flex items-center gap-1">
-                                  <span>+ Thêm Đối Thủ</span>
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Discovered Related Niches & Keywords */}
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">
-                                  📡 Ngách Liên Quan Bóc Tách Từ Video Của Kênh:
-                                </span>
-                                <span className="text-[10px] text-zinc-500">
-                                  (Bấm vào ngách để lọc video)
-                                </span>
-                              </div>
-                              
-                              <div className="flex flex-wrap gap-1.5">
-                                {relatedNichesList.map((rn, idx) => (
-                                  <button
-                                    key={idx}
-                                    type="button"
-                                    onClick={() => {
-                                      setRpmQuery(rn);
-                                      loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rn);
-                                    }}
-                                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-500 transition flex items-center gap-1">
-                                    <span>🏷️ {rn}</span>
-                                  </button>
-                                ))}
-                              </div>
-
-                              {/* Golden Keywords Row */}
-                              {mainKeywords.length > 0 && (
-                                <div className="flex items-center gap-2 pt-1 flex-wrap text-xs text-zinc-400">
-                                  <span className="text-[11px] font-bold text-zinc-400">Từ khóa ăn khách:</span>
-                                  {mainKeywords.map((kw, idx) => (
-                                    <button
-                                      key={idx}
-                                      type="button"
-                                      onClick={() => {
-                                        setNicheScannerKeyword(kw);
-                                        setTab('niche');
-                                      }}
-                                      className="text-[11px] px-2 py-0.5 rounded bg-zinc-950 text-cyan-300 hover:text-cyan-200 border border-zinc-800 hover:border-cyan-700 transition font-mono">
-                                      🔍 {kw}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* DROPPED NICHES / COOLING DOWN DRAWER */}
-                      {dropped.length > 0 && (
-                        <div className="border border-brand-border/70 rounded-xl overflow-hidden bg-brand-surface/60">
-                          <button
-                            type="button"
-                            onClick={() => setShowDroppedNiches(!showDroppedNiches)}
-                            className="w-full px-4 py-2.5 bg-brand-card/40 hover:bg-brand-card text-left flex items-center justify-between text-xs text-zinc-400 hover:text-white transition">
-                            <div className="flex items-center gap-2">
-                              <span className="text-rose-400 font-bold">📉 Các ngách ngoài Top 20 / Đang hạ nhiệt ({dropped.length} ngách)</span>
-                              <span className="text-[11px] text-zinc-500 hidden sm:inline">Dò ngách nào bị bão hòa hoặc giảm lượt xem ở mốc {currentTfObj.label}</span>
-                            </div>
-                            <span className="text-zinc-400 font-bold text-xs">
-                              {showDroppedNiches ? '▲ Thu gọn' : '▼ Xem chi tiết'}
-                            </span>
-                          </button>
-
-                          {showDroppedNiches && (
-                            <div className="p-3 bg-brand-card/20 border-t border-brand-border/60">
-                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                                {dropped.map(niche => {
-                                  const isSelected = activeRpmNiche === niche.id;
-                                  return (
-                                    <button
-                                      key={niche.id}
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveRpmNiche(niche.id);
-                                        loadRpm(niche.id, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery);
-                                      }}
-                                      className={`p-2.5 rounded-lg border text-left transition flex flex-col justify-between ${
-                                        isSelected
-                                          ? 'bg-brand-card border-amber-500/80 shadow ring-1 ring-amber-500/30'
-                                          : 'bg-brand-card/30 hover:bg-brand-card/70 border-brand-border/60 opacity-80 hover:opacity-100'
-                                      }`}>
-                                      <div>
-                                        <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1">
-                                          <span className="font-extrabold text-zinc-400">Rank #{niche.rank}</span>
-                                          <span className="font-bold text-zinc-400">{niche.timeScore}đ</span>
-                                        </div>
-                                        <div className="font-semibold text-[11px] text-zinc-300 line-clamp-1">{niche.name}</div>
-                                        <div className="text-[10px] text-emerald-400/90 font-medium mt-1">RPM {niche.rpmRange}</div>
-                                      </div>
-                                      <div className="text-[9px] text-rose-400/90 mt-2 truncate font-medium">
-                                        {niche.trendNote || 'Cạnh tranh cao / Giảm nhiệt'}
-                                      </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Custom Search Bar for Specific Channel or Keywords */}
-              <div className="space-y-1.5 pt-1">
-                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-                  2. Hoặc tìm theo từ khóa / Kênh cụ thể (VD: Echoes of Hope 16, Catholic prayer...):
-                </span>
-                <form 
-                  onSubmit={e => {
-                    e.preventDefault();
-                    loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery);
-                  }}
-                  className="flex gap-2">
+                {/* Minimalist Search Box */}
+                <div className="relative w-full md:w-72 shrink-0">
                   <input
                     type="text"
-                    value={rpmQuery}
-                    onChange={e => setRpmQuery(e.target.value)}
-                    placeholder="Nhập tên kênh (VD: @EchoesofHope-16) hoặc từ khóa ngách..."
-                    className="flex-1 bg-brand-card border border-brand-border rounded-xl px-3.5 py-2 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-500/60"
+                    value={rpmSearchQuery}
+                    onChange={e => setRpmSearchQuery(e.target.value)}
+                    placeholder="Tìm ngách hoặc tên kênh..."
+                    className="w-full bg-brand-card border border-brand-border rounded-xl px-3.5 py-2 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition"
                   />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-brand-card hover:bg-brand-hover text-zinc-200 border border-brand-border transition">
-                    Tìm kiếm
-                  </button>
-                  {rpmQuery && (
+                  {rpmSearchQuery && (
                     <button
-                      type="button"
-                      onClick={() => {
-                        setRpmQuery('');
-                        loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, '');
-                      }}
-                      className="px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white bg-brand-card border border-brand-border">
-                      Đặt lại
+                      onClick={() => setRpmSearchQuery('')}
+                      className="absolute right-3 top-2 text-zinc-400 hover:text-white text-xs">
+                      ✕
                     </button>
                   )}
-                </form>
-              </div>
-
-              {/* Smart Filters: Sub Count Limit, Video Duration, Steady Views, Timeframe */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-brand-border/60">
-                {/* Sub Filter */}
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase">Quy mô Sub kênh:</label>
-                  <select
-                    value={rpmSubFilter}
-                    onChange={e => {
-                      const v = e.target.value;
-                      setRpmSubFilter(v);
-                      loadRpm(activeRpmNiche, rpmPeriod, v, rpmDurFilter, rpmViewFilter, rpmQuery);
-                    }}
-                    className="mt-1 w-full bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none">
-                    <option value="under30k">Dưới 30.000 Subs (Kênh ngầm)</option>
-                    <option value="under50k">Dưới 50.000 Subs (Chuẩn mỏ vàng)</option>
-                    <option value="under100k">Dưới 100.000 Subs</option>
-                    <option value="all">Tất cả quy mô kênh</option>
-                  </select>
-                </div>
-
-                {/* Duration Filter */}
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase">Độ dài video:</label>
-                  <select
-                    value={rpmDurFilter}
-                    onChange={e => {
-                      const v = e.target.value;
-                      setRpmDurFilter(v);
-                      loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, v, rpmViewFilter, rpmQuery);
-                    }}
-                    className="mt-1 w-full bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none">
-                    <option value="long">Dài &gt; 20 phút (Đạt chuẩn Mid-roll Ads)</option>
-                    <option value="all">Tất cả độ dài video</option>
-                  </select>
-                </div>
-
-                {/* Views Range */}
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase">Mức độ lượt xem:</label>
-                  <select
-                    value={rpmViewFilter}
-                    onChange={e => {
-                      const v = e.target.value;
-                      setRpmViewFilter(v);
-                      loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, rpmDurFilter, v, rpmQuery);
-                    }}
-                    className="mt-1 w-full bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none">
-                    <option value="steady">View đều đặn (1.000 - 60.000 view)</option>
-                    <option value="all">Tất cả số lượng view</option>
-                  </select>
-                </div>
-
-                {/* Published Period */}
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase">Thời gian phát hành:</label>
-                  <select
-                    value={rpmPeriod}
-                    onChange={e => {
-                      const v = Number(e.target.value);
-                      setRpmPeriod(v);
-                      loadRpm(activeRpmNiche, v, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery);
-                    }}
-                    className="mt-1 w-full bg-brand-card border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none">
-                    <option value={720}>30 ngày qua (1 tháng)</option>
-                    <option value={2160}>90 ngày qua (3 tháng)</option>
-                    <option value={168}>7 ngày qua (1 tuần)</option>
-                    <option value={48}>48 giờ qua</option>
-                    <option value={0}>Tất cả thời gian</option>
-                  </select>
                 </div>
               </div>
-            </div>
 
-            {/* Financial Logic Education Banner */}
-            <div className="bg-gradient-to-r from-amber-950/30 via-brand-surface to-brand-card border border-amber-500/30 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-lg">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-amber-300">CƠ CHẾ MỎ VÀNG:</span>
-                  <span className="text-xs text-zinc-300 font-semibold">Vì sao video view thấp nhưng chủ kênh vẫn kiếm hàng nghìn USD?</span>
-                </div>
-                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  Video dài 30 - 90 phút cho phép chèn <b>6 - 12 quảng cáo mid-roll</b>. Khán giả Mỹ lớn tuổi (50 - 75+ tuổi) nghe thụ động không tắt quảng cáo $\rightarrow$ <b>RPM đạt $25 - $48/1k view</b>. Kênh đăng 1-2 video/ngày đều đặn mang về <b>$3.000 - $7.000 USD/tháng (~75 triệu - 175 triệu VNĐ/tháng)</b> hoàn toàn tự động bằng AI!
-                </p>
+              {/* Niches Count & State */}
+              <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
+                <span>Hiển thị <b className="text-white">{visibleNiches.length}</b> ngách tiềm năng</span>
+                {rpmSearchQuery && (
+                  <span>Kết quả lọc cho: <b className="text-amber-400">"{rpmSearchQuery}"</b></span>
+                )}
               </div>
-              <div className="text-[11px] bg-amber-500/10 border border-amber-500/30 text-amber-300 px-3 py-1.5 rounded-lg font-bold whitespace-nowrap self-stretch md:self-auto text-center">
-                1 View Dài = 8 - 10 View Ngắn
-              </div>
-            </div>
 
-            {/* Loading Indicator */}
-            {rpmLoading && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="bg-brand-surface border border-brand-border rounded-xl overflow-hidden animate-pulse">
-                    <div className="aspect-video bg-zinc-800"></div>
-                    <div className="p-4 space-y-2">
-                      <div className="h-4 bg-zinc-800 rounded w-5/6"></div>
-                      <div className="h-3 bg-zinc-800 rounded w-1/2"></div>
-                      <div className="h-8 bg-zinc-800 rounded w-full mt-3"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Empty State */}
-            {!rpmLoading && !rpmItems.length && (
-              <div className="text-center border border-dashed border-brand-border rounded-xl p-10 bg-brand-surface/40 space-y-2">
-                <h3 className="font-bold text-base text-white">Chưa tìm thấy video phù hợp với bộ lọc</h3>
-                <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                  Hãy thử nới lỏng bộ lọc: chọn "Dưới 100.000 Subs" hoặc "Tất cả quy mô kênh", hoặc mở rộng thời gian sang "90 ngày qua".
-                </p>
-                <div className="flex justify-center gap-2 pt-2">
-                  <button 
-                    onClick={() => {
-                      setRpmSubFilter('all');
-                      loadRpm(activeRpmNiche, rpmPeriod, 'all', rpmDurFilter, rpmViewFilter, rpmQuery);
-                    }} 
-                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-card hover:bg-brand-hover text-zinc-200 border border-brand-border">
-                    Xem tất cả kênh (Không giới hạn Sub)
-                  </button>
-                  <button 
-                    onClick={() => loadRpm(activeRpmNiche, rpmPeriod, rpmSubFilter, rpmDurFilter, rpmViewFilter, rpmQuery)} 
-                    className={bPrimary}>
-                    Quét lại
+              {/* Minimalist Uniform Grid */}
+              {visibleNiches.length === 0 ? (
+                <div className="p-12 text-center border border-dashed border-brand-border rounded-2xl bg-brand-surface/40 space-y-2">
+                  <span className="text-2xl block">🔍</span>
+                  <h4 className="text-sm font-bold text-white">Không tìm thấy ngách phù hợp</h4>
+                  <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                    Không có ngách hoặc kênh nào khớp với từ khóa "{rpmSearchQuery}". Hãy thử tìm với từ khóa khác hoặc bấm xóa tìm kiếm.
+                  </p>
+                  <button
+                    onClick={() => setRpmSearchQuery('')}
+                    className="mt-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-700">
+                    Xóa tìm kiếm
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* Cash-Cow Video Cards Grid */}
-            {!rpmLoading && rpmItems.length > 0 && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {rpmItems.map((v, idx) => {
-                  const ytUrl = 'https://www.youtube.com/watch?v=' + v.id;
-                  const niche = v.niche || CASHCOW_NICHES[0];
-                  const rev = calcEstimatedRev(v.views, v.dur, niche.avgRpm || 35);
-                  return (
-                    <article key={v.id} className="bg-brand-surface border border-brand-border hover:border-zinc-700 rounded-xl overflow-hidden flex flex-col group transition shadow-lg">
-                      {/* Thumbnail Container */}
-                      <a 
-                        href={ytUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="relative aspect-video bg-zinc-900 overflow-hidden block"
-                        title="Mở xem trên YouTube">
-                        <img src={v.thumb} alt="" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
-                        
-                        {/* Sub Count Badge */}
-                        <div className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded bg-black/85 text-emerald-300 backdrop-blur-sm border border-emerald-500/30">
-                          {v.subs ? fmt(v.subs) + ' subs' : 'Kênh nhỏ'}
-                        </div>
-
-                        {/* Estimated RPM Badge */}
-                        <div className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-600/95 text-white shadow-md">
-                          RPM {niche.rpmRange}
-                        </div>
-
-                        {/* Duration & Mid-roll Ads Badge */}
-                        <div className="absolute bottom-2 right-2 text-[11px] font-semibold px-2 py-0.5 rounded bg-black/85 text-white backdrop-blur-sm flex items-center gap-1.5">
-                          <span>{fmtDur(v.dur)}</span>
-                          <span className="text-amber-400 font-bold border-l border-zinc-700 pl-1.5">~{rev.midrolls} Ads</span>
-                        </div>
-                      </a>
-
-                      {/* Card Body */}
-                      <div className="p-3.5 flex flex-col gap-2.5 flex-1">
-                        <a 
-                          href={ytUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-xs sm:text-sm font-bold text-white line-clamp-2 leading-snug hover:text-amber-400 transition" 
-                          title={v.title}>
-                          {v.title}
-                        </a>
-
-                        <div className="text-xs text-zinc-400 flex items-center justify-between">
-                          <span className="truncate max-w-[170px] font-medium text-zinc-300">{v.channel}</span>
-                          <span className="text-[11px] text-zinc-500">{v.videoCount ? v.videoCount + ' video' : ''}</span>
-                        </div>
-
-                        {/* Revenue & Metrics Highlight Box */}
-                        <div className="bg-brand-card p-2.5 rounded-xl border border-brand-border space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] text-zinc-400">Doanh thu video ước tính:</span>
-                            <span className="text-xs font-black text-emerald-400">
-                              ${fmt(rev.low)} - ${fmt(rev.high)} USD
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {visibleNiches.map((niche, idx) => {
+                    return (
+                      <div
+                        key={niche.id}
+                        onClick={() => setSelectedNicheModal(niche)}
+                        className="bg-brand-surface border border-brand-border hover:border-amber-400/60 rounded-xl p-4 flex flex-col justify-between transition duration-200 hover:shadow-xl hover:shadow-amber-500/5 group cursor-pointer space-y-3">
+                        <div className="space-y-2">
+                          {/* Card Header: Rank & RPM */}
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                              #{idx + 1}
+                            </span>
+                            <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                              RPM {niche.rpmRange}
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-1 text-[11px] border-t border-brand-border/60 pt-1.5">
-                            <div>
-                              <span className="text-zinc-500">Lượt xem:</span> <b className="text-white">{fmt(v.views)}</b>
-                              {v.subs > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); openWikiArticle('performance_multiple'); }}
-                                  className="ml-1.5 text-[9px] font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-1 py-0.2 rounded border border-amber-500/30"
-                                  title="Performance Multiple: Bội số lượt xem so với median kênh. Bấm xem Wiki!">
-                                  ⚡{Math.max(1, Math.round(v.views / Math.max(100, Math.round(v.subs * 0.15))))}x Med
-                                </button>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <span className="text-zinc-500">Tốc độ:</span> <b className="text-emerald-400">+{fmt(v.vph)}/h</b>
-                            </div>
-                            <div className="col-span-2 text-zinc-400 text-[10px] flex justify-between mt-0.5">
-                              <span>Đăng: {fmtD(v.published).split(' ')[0]}</span>
-                              <span className="text-amber-400">Score: {v.total}/100</span>
-                            </div>
+                          {/* Niche Title */}
+                          <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition line-clamp-1">
+                            {niche.name}
+                          </h3>
+
+                          {/* Channel Info */}
+                          <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+                            <span>📺</span>
+                            <span className="truncate">{niche.exampleChannel}</span>
                           </div>
+
+                          {/* Short Description */}
+                          <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+                            {niche.desc}
+                          </p>
                         </div>
 
-                        {/* Streamlined Card Actions (Clean, Balanced & Organized) */}
-                        <div className="mt-auto pt-3 space-y-2 border-t border-brand-border/60">
-                          {/* Main Analytical Actions (2 Balanced Full-Featured Buttons) */}
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              onClick={() => setNicheAnalyzeVideo(v)}
-                              className="py-2 px-2.5 rounded-xl text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 transition text-center truncate flex items-center justify-center gap-1 shadow-sm"
-                              title="Phân tích độ bão hòa ngách & các kênh tương tự">
-                              <span>Đo ngách & Đối thủ</span>
-                            </button>
-                            <button
-                              onClick={() => setExplainVideo(v)}
-                              className="py-2 px-2.5 rounded-xl text-xs font-bold bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/40 text-purple-300 transition text-center truncate flex items-center justify-center gap-1 shadow-sm"
-                              title="Bóc tách vì sao view thấp mà vẫn doanh thu cao">
-                              <span>Vì sao ra tiền? →</span>
-                            </button>
-                          </div>
-
-                          {/* Quick Utility Row (Compact, Equal-Width Action Pills) */}
-                          <div className="grid grid-cols-4 gap-1.5 text-[11px]">
-                            <button
-                              onClick={() => copyRemakePrompt(v)}
-                              className="py-1.5 px-1 rounded-lg font-semibold bg-brand-card hover:bg-brand-hover text-zinc-300 border border-brand-border transition text-center truncate"
-                              title="Copy prompt kịch bản cho ChatGPT/Claude">
-                              Prompt AI
-                            </button>
-                            {(() => {
-                              const isComp = isCompetitorChannel(v.channelId, v.channel);
-                              return (
-                                <button
-                                  onClick={() => addCompetitorFromVideo(v)}
-                                  className={`py-1.5 px-1 rounded-lg font-semibold border transition text-center truncate ${isComp ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30' : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border'}`}
-                                  title={isComp ? "Hủy theo dõi kênh đối thủ này" : "Thêm vào danh sách theo dõi đối thủ"}>
-                                  {isComp ? "- Đối thủ" : "+ Đối thủ"}
-                                </button>
-                              );
-                            })()}
-                            <button
-                              type="button"
-                              onClick={() => toggleSaveVideo(v)}
-                              className={`py-1.5 px-1 rounded-lg font-semibold border transition text-center truncate ${
-                                isSavedVideo(v.id)
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 font-bold'
-                                  : 'bg-brand-card hover:bg-brand-hover text-zinc-300 border-brand-border'
-                              }`}
-                              title={isSavedVideo(v.id) ? "Bỏ lưu video" : "Lưu video để xem khi rảnh"}>
-                              {isSavedVideo(v.id) ? '★ Đã Lưu' : '☆ Lưu xem'}
-                            </button>
-                            <button 
-                              onClick={() => setDownloadVideo(v)} 
-                              className="py-1.5 px-1 rounded-lg font-semibold bg-emerald-600/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/25 transition text-center truncate"
-                              title="Tải video MP4, MP3">
-                              Tải về
-                            </button>
-                            <a 
-                              href={ytUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="py-1.5 px-1 rounded-lg font-semibold bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 transition text-center truncate"
-                              title="Xem trực tiếp trên YouTube">
-                              YouTube ↗
-                            </a>
-                          </div>
+                        {/* Card Footer */}
+                        <div className="pt-2 border-t border-brand-border/60 flex items-center justify-between text-[11px]">
+                          <span className="text-zinc-500 font-medium">Cạnh tranh: <b className="text-emerald-400 font-semibold">{niche.scores?.['24h']?.comp || 'Thấp'}</b></span>
+                          <span className="text-amber-400 font-bold group-hover:translate-x-0.5 transition flex items-center gap-0.5">
+                            Chi tiết <span>→</span>
+                          </span>
                         </div>
                       </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        )}
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })()}
 
         {/* TAB 3: SRT VIRAL TREND HUNTER & NICHE CLUSTERING SCANNER */}
         {tab === 'niche' && (
@@ -14520,51 +14168,61 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
         />
       )}
 
-      {/* Floating Speed Dial: Bộ 3 Công Cụ Nghiên Cứu Ngách (Gọn gàng ở góc màn hình, không chiếm hotbar) */}
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2 select-none">
-        {showFloatingTools && (
-          <div className="bg-brand-surface/95 backdrop-blur-md border border-brand-border rounded-2xl p-2.5 shadow-2xl flex flex-col gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150 min-w-[210px]">
-            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider px-2 py-1 border-b border-brand-border/60 flex items-center justify-between">
-              <span>Công Cụ Nghiên Cứu</span>
-              <span className="text-[10px] text-amber-400 font-semibold">3 Tools</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => { setShowDemandValidationModal(true); setShowFloatingTools(false); }}
-              className="px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition flex items-center gap-2 text-left">
-              <span>🧪</span>
-              <span>Kiểm Chứng Nhu Cầu</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowTitlePatternModal(true); setShowFloatingTools(false); }}
-              className="px-3 py-2 rounded-xl text-xs font-semibold bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition flex items-center gap-2 text-left">
-              <span>🎯</span>
-              <span>Khuôn Tiêu Đề</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowIdeaPlannerModal(true); setShowFloatingTools(false); }}
-              className="px-3 py-2 rounded-xl text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition flex items-center gap-2 text-left">
-              <span>📋</span>
-              <span>Kế Hoạch Video</span>
-            </button>
-          </div>
-        )}
+      {/* Niche Detail Modal Window */}
+      {selectedNicheModal && (
+        <NicheDetailModal
+          niche={selectedNicheModal}
+          onClose={() => setSelectedNicheModal(null)}
+          onSelectKeywordForSearch={(kwd) => {
+            setNicheScannerKeyword(kwd);
+            setTab('niche');
+            showToast('Đang chuyển sang tab Phân Tích với từ khóa: ' + kwd);
+          }}
+          onAddCompetitor={addCompetitorFromVideo}
+          onToggleSave={toggleSaveVideo}
+          isSaved={isSavedVideo}
+          showToast={showToast}
+        />
+      )}
 
-        <button
-          type="button"
-          onClick={() => setShowFloatingTools(!showFloatingTools)}
-          className={`h-10 px-3 rounded-full shadow-2xl flex items-center gap-1.5 transition border ${
-            showFloatingTools 
-              ? 'bg-zinc-200 text-zinc-950 border-white shadow-white/10' 
-              : 'bg-brand-card hover:bg-zinc-800 text-zinc-200 hover:text-white border-brand-border hover:border-zinc-500 shadow-black/80'
-          }`}
-          title="Mở menu 3 công cụ: Kiểm Chứng Nhu Cầu, Khuôn Tiêu Đề, Kế Hoạch Video">
-          <span className="text-sm">🛠️</span>
-          <span className="text-xs font-bold">{showFloatingTools ? 'Đóng' : 'Công cụ'}</span>
-        </button>
-      </div>
+      {/* Floating Messenger-Style Notification Bubble for Auto-Update Trends */}
+      {tab !== 'autoupdate' && autoUpdateData.pendingTrends?.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end">
+          {showAutoUpdateBubblePopup && (
+            <div className="mb-2 w-72 sm:w-80 p-3.5 rounded-2xl bg-zinc-900/95 border border-purple-500/40 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping"></span>
+                  <span className="text-xs font-bold text-white">Xu hướng mới bứt phá!</span>
+                </div>
+                <button
+                  onClick={() => setShowAutoUpdateBubblePopup(false)}
+                  className="text-zinc-400 hover:text-white text-xs">✕</button>
+              </div>
+              <p className="text-[11px] text-zinc-300 mt-1.5 leading-relaxed">
+                Hôm nay phát hiện <b className="text-purple-300">{autoUpdateData.pendingTrends.length} xu hướng mới</b> bứt phá từ kênh sub thấp!
+              </p>
+              <button
+                onClick={() => { setTab('autoupdate'); setShowAutoUpdateBubblePopup(false); }}
+                className="mt-2.5 w-full py-1.5 px-3 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>Xem & Duyệt Trend Ngay</span>
+                <span>→</span>
+              </button>
+            </div>
+          )}
+
+          {/* The Chat Head / Bubble */}
+          <button
+            onClick={() => setShowAutoUpdateBubblePopup(!showAutoUpdateBubblePopup)}
+            className="relative w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-800 text-white shadow-xl shadow-purple-950/60 border-2 border-purple-300/40 hover:scale-110 active:scale-95 transition-all flex items-center justify-center group cursor-pointer"
+            title="Thông báo: Có xu hướng mới đang bứt phá!">
+            <span className="text-lg">⚡</span>
+            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center shadow-md animate-pulse">
+              {autoUpdateData.pendingTrends.length}
+            </span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
