@@ -1704,9 +1704,7 @@ function KeywordDetailModal({ item, onClose, onSearchVideo, onCopy }) {
               <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
                 Điểm Hot: {item.hotScore || 85}/100
               </span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                100% Real API v3
-              </span>
+
             </div>
             <h2 className="text-base sm:text-xl font-extrabold text-white leading-tight">
               {item.kw || 'Từ khóa'}
@@ -9863,7 +9861,7 @@ function App() {
     }
     setLiveScanning(true);
     const reg = targetRegion || (kwRegion !== 'all' ? kwRegion : 'VN');
-    showToast('Đang kết nối YouTube Data API v3 để quét 50 video thịnh hành (' + reg + ')...');
+    showToast('Đang quét từ khóa thịnh hành (' + reg + ')...');
     try {
       let vids = [];
       if (reg === 'GLOBAL' || reg === 'all') {
@@ -10022,7 +10020,7 @@ function App() {
         try {
           localStorage.setItem('yt_real_trending_keywords', JSON.stringify(extractedList));
         } catch (e) {}
-        showToast('Đã quét thành công ' + extractedList.length + ' từ khóa 100% Real từ YouTube Trending (' + reg + ')!');
+        showToast('Đã tìm thấy ' + extractedList.length + ' từ khóa xu hướng thịnh hành (' + reg + ')!');
       } else {
         showToast('Đã quét xong nhưng chưa tìm thấy từ khóa đủ tiêu chuẩn.');
       }
@@ -11664,14 +11662,11 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="font-bold text-base sm:text-lg text-white">
-                      Từ Khóa Xu Hướng Real
+                      Từ Khóa Xu Hướng
                     </h2>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      YouTube API v3 (100% Real)
-                    </span>
                   </div>
                   <p className="text-xs text-zinc-400 mt-0.5">
-                    Trích xuất 100% thời gian thực từ bảng xếp hạng 50 video thịnh hành (chart=mostPopular) & thẻ tags video chính thống. Không dùng số liệu giả.
+                    Phân tích tốc độ tăng trưởng, độ hot và tìm kiếm ý tưởng video đón đầu xu hướng trên YouTube.
                   </p>
                 </div>
 
@@ -11683,10 +11678,10 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                     {liveScanning ? (
                       <>
                         <span className="inline-block w-3 h-3 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin"></span>
-                        <span>Đang quét API v3...</span>
+                        <span>Đang quét từ khóa...</span>
                       </>
                     ) : (
-                      <span>Quét Từ Khóa Real (API v3)</span>
+                      <span>Quét Từ Khóa</span>
                     )}
                   </button>
 
@@ -11719,11 +11714,11 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               {showKwTips && (
                 <div className="p-3.5 bg-brand-card/90 border border-zinc-800 rounded-xl text-xs space-y-2 animate-in fade-in duration-150">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-zinc-200">Mẹo khai thác từ khóa YouTube Real:</span>
+                    <span className="font-semibold text-zinc-200">Mẹo tìm kiếm và phân tích từ khóa:</span>
                     <button onClick={() => setShowKwTips(false)} className="text-zinc-500 hover:text-zinc-300 text-[11px]">Đóng ✕</button>
                   </div>
                   <div className="text-zinc-400 text-xs leading-relaxed space-y-1.5">
-                    <p>• Dữ liệu lấy trực tiếp từ API <code>videos.list (chart=mostPopular)</code> của YouTube, bóc tách toàn bộ tags thật mà các kênh thịnh hành đang sử dụng.</p>
+                    <p>• Dữ liệu tổng hợp từ các video thịnh hành của YouTube, bóc tách toàn bộ thẻ tags mà các kênh đang sử dụng.</p>
                     <p>• Chỉ số <strong>Tổng View Trending</strong> và <strong>Tốc độ (VPH)</strong> là số liệu thống kê thực tế đo lường trên các video đang lên xu hướng tại thời điểm quét.</p>
                     <p>• Từ khóa có độ cạnh tranh <strong>Thấp</strong> là những ngách mới xuất hiện trong 1 video bứt phá, kênh nhỏ dễ dàng làm nội dung ăn theo đề xuất thuật toán.</p>
                   </div>
@@ -11856,9 +11851,9 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               <div className="bg-brand-surface border border-brand-border rounded-xl p-3 sm:p-4">
                 <div className="text-[11px] font-medium text-zinc-400">Nguồn dữ liệu</div>
                 <div className="text-base sm:text-xl font-extrabold text-zinc-200 mt-1">
-                  YouTube API v3
+                  YouTube Trending
                 </div>
-                <div className="text-[11px] text-zinc-500 mt-0.5">100% Real - Không số ảo</div>
+                <div className="text-[11px] text-zinc-500 mt-0.5">Thời gian thực</div>
               </div>
             </div>
 
@@ -11866,7 +11861,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             <div className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-xl">
               <div className="p-4 border-b border-brand-border flex items-center justify-between">
                 <div className="text-xs font-bold text-white uppercase tracking-wider">
-                  Bảng Xếp Hạng Từ Khóa Thịnh Hành Real ({filteredKeywords.length})
+                  Bảng Xếp Hạng Từ Khóa Thịnh Hành ({filteredKeywords.length})
                 </div>
                 <div className="text-[11px] text-zinc-400">
                   Bấm "Chi tiết" để xem thẻ tags & video thịnh hành
@@ -11878,10 +11873,10 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                   {customKeywords.length === 0 ? (
                     <div className="max-w-md mx-auto space-y-3">
                       <div className="text-base font-bold text-white">
-                        Chưa Có Dữ Liệu Từ Khóa Real Từ YouTube
+                        Chưa Có Dữ Liệu Từ Khóa
                       </div>
                       <p className="text-xs text-zinc-400 leading-relaxed">
-                        Hệ thống sẽ kết nối trực tiếp đến YouTube Data API v3 (chart=mostPopular), tự động bóc tách các thẻ tags, tiêu đề, số view thật và tốc độ VPH của 50 video thịnh hành nhất. Cam kết 100% dữ liệu chính thống.
+                        Hệ thống sẽ phân tích các video thịnh hành nhất của YouTube, tự động bóc tách các thẻ tags, tiêu đề, lượt xem và tốc độ tăng trưởng.
                       </p>
                       <div className="pt-2">
                         <button
@@ -11891,10 +11886,10 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                           {liveScanning ? (
                             <>
                               <span className="inline-block w-3.5 h-3.5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin"></span>
-                              <span>Đang kết nối YouTube API v3...</span>
+                              <span>Đang tìm kiếm từ khóa...</span>
                             </>
                           ) : (
-                            <span>Quét Từ Khóa Real Ngay (YouTube API v3)</span>
+                            <span>Quét Từ Khóa Ngay</span>
                           )}
                         </button>
                       </div>
