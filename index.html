@@ -11020,8 +11020,8 @@ function TopNgachSection({
       </div>
 
             {/* 4. THANH CÔNG CỤ TINH GỌN (1 HÀNG): BÊN TRÁI TÌM KIẾM, BÊN PHẢI BỘ LỌC ĐỊNH DẠNG */}
-      <div className="bg-[#121316] border border-zinc-800 rounded-xl p-2 sm:p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-sm">
-        {/* Bên trái: Thanh tìm kiếm / Quét chủ đề tinh gọn */}
+      <div className="bg-[#121316] border border-zinc-800 rounded-xl p-3 sm:p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+        {/* Bên trái: Thanh tìm kiếm / Quét chủ đề tinh gọn & to rõ */}
         <form
           onSubmit={e => {
             e.preventDefault();
@@ -11029,26 +11029,26 @@ function TopNgachSection({
               runDeepNicheDiscovery(customKeywordInput.trim());
             }
           }}
-          className="flex items-center gap-1.5 flex-1 max-w-sm">
+          className="flex items-center gap-2 flex-1 max-w-md">
           <div className="relative flex-1">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs pointer-events-none">🔍</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">🔍</span>
             <input
               type="text"
               value={customKeywordInput}
               onChange={e => setCustomKeywordInput(e.target.value)}
-              placeholder="Quét theo chủ đề (BeyondVN, case study...)"
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-7 pr-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+              placeholder="Quét theo chủ đề (vd: BeyondVN, case study, ai film...)"
+              className="w-full bg-zinc-900/90 border border-zinc-800 rounded-lg pl-9 pr-3.5 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition"
             />
           </div>
           <button
             type="submit"
             disabled={isScanningNiches}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition cursor-pointer disabled:opacity-50 shrink-0">
+            className="px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition cursor-pointer disabled:opacity-50 shrink-0 shadow-sm">
             Quét
           </button>
         </form>
 
-        {/* Bên phải: Bộ lọc định dạng video (Tất Cả / Dài / Shorts / Live) */}
+        {/* Bên phải: Bộ lọc định dạng video (Tất Cả / Video Dài / Shorts / Live) - Bỏ icon, nút to lên & đơn giản hoá */}
         {activeNiche && (() => {
           const vids = activeNiche.videos || [];
           const formatCounts = {
@@ -11058,18 +11058,18 @@ function TopNgachSection({
             live: vids.filter(v => getVideoFormat(v) === 'live').length
           };
           return (
-            <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-              <div className="flex items-center gap-0.5 p-0.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs">
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
+              <div className="flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl text-xs sm:text-sm">
                 <button
                   type="button"
                   onClick={() => setVideoFormatFilter('all')}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                  className={`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${
                     videoFormatFilter === 'all'
-                      ? 'bg-zinc-800 text-white font-semibold shadow-sm'
-                      : 'text-zinc-400 hover:text-zinc-200'
+                      ? 'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
                   }`}>
-                  <span>Tất Cả</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-zinc-300 font-mono">
+                  <span>Tất cả</span>
+                  <span className={`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter === 'all' ? 'bg-zinc-950 text-zinc-200' : 'bg-zinc-950/80 text-zinc-400'}`}>
                     {formatCounts.all}
                   </span>
                 </button>
@@ -11077,13 +11077,13 @@ function TopNgachSection({
                 <button
                   type="button"
                   onClick={() => setVideoFormatFilter('long')}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                  className={`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${
                     videoFormatFilter === 'long'
-                      ? 'bg-zinc-800 text-white font-semibold shadow-sm'
-                      : 'text-zinc-400 hover:text-zinc-200'
+                      ? 'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
                   }`}>
-                  <span>🎬 Dài</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-zinc-300 font-mono">
+                  <span>Video dài</span>
+                  <span className={`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter === 'long' ? 'bg-zinc-950 text-zinc-200' : 'bg-zinc-950/80 text-zinc-400'}`}>
                     {formatCounts.long}
                   </span>
                 </button>
@@ -11091,13 +11091,13 @@ function TopNgachSection({
                 <button
                   type="button"
                   onClick={() => setVideoFormatFilter('short')}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                  className={`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${
                     videoFormatFilter === 'short'
-                      ? 'bg-rose-950/80 text-rose-200 border border-rose-800 font-semibold shadow-sm'
-                      : 'text-zinc-400 hover:text-rose-300'
+                      ? 'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
                   }`}>
-                  <span>⚡ Shorts</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-rose-300 font-mono">
+                  <span>Shorts</span>
+                  <span className={`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter === 'short' ? 'bg-zinc-950 text-zinc-200' : 'bg-zinc-950/80 text-zinc-400'}`}>
                     {formatCounts.short}
                   </span>
                 </button>
@@ -11105,13 +11105,13 @@ function TopNgachSection({
                 <button
                   type="button"
                   onClick={() => setVideoFormatFilter('live')}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                  className={`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${
                     videoFormatFilter === 'live'
-                      ? 'bg-red-950/80 text-red-200 border border-red-800 font-semibold shadow-sm'
-                      : 'text-zinc-400 hover:text-red-300'
+                      ? 'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
                   }`}>
-                  <span>🔴 Live</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-950 text-red-300 font-mono">
+                  <span>Live</span>
+                  <span className={`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter === 'live' ? 'bg-zinc-950 text-zinc-200' : 'bg-zinc-950/80 text-zinc-400'}`}>
                     {formatCounts.live}
                   </span>
                 </button>
@@ -11121,7 +11121,7 @@ function TopNgachSection({
                 <button
                   type="button"
                   onClick={() => onSelectKeywordForSearch(activeNiche.category || activeNiche.name)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer shrink-0">
+                  className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition cursor-pointer shrink-0">
                   Bắt Trend ↗
                 </button>
               )}
