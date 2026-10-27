@@ -4464,22 +4464,6 @@ function Actions({ v, saved, isCompetitor, onDetail, onDownload, onSave, onCopy,
           rel="noopener noreferrer" 
           className="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-500 text-white transition text-center shadow-sm truncate"
           title="Mở xem trên YouTube">
-                        {/* Bookmark Button to Save for Later */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            toggleSaveVideo(v);
-                          }}
-                          className={`absolute top-2 right-2 px-2 py-1 rounded-lg text-[10px] font-bold backdrop-blur-md border transition flex items-center gap-1 shadow-lg z-10 ${
-                            isSavedVideo(v.id)
-                              ? 'bg-amber-500 text-black border-amber-400 font-black'
-                              : 'bg-black/80 text-zinc-300 hover:text-white border-white/20 hover:border-amber-400/60'
-                          }`}
-                          title={isSavedVideo(v.id) ? "Bỏ lưu video này" : "Lưu video để xem khi rảnh"}>
-                          <span>{isSavedVideo(v.id) ? '★ Đã Lưu' : '☆ Lưu xem sau'}</span>
-                        </button>
           Xem trên YouTube ↗
         </a>
         {onNicheAnalyze && (
@@ -5101,8 +5085,8 @@ function F12BlockedModal({ onClose }) {
         <div className="pt-2">
           <button
             onClick={onClose}
-            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition shadow-lg">
-            Đã hiểu và tiếp tục làm việc
+            className="w-full py-2 px-4 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 transition">
+            Đã hiểu và tiếp tục
           </button>
         </div>
       </div>
@@ -8081,19 +8065,6 @@ function App() {
       return false;
     };
 
-    // DevTools detection via window dimension discrepancy
-    let devToolsTimer = null;
-    try {
-      devToolsTimer = setInterval(() => {
-        const threshold = 160;
-        const widthDiff = window.outerWidth - window.innerWidth;
-        const heightDiff = window.outerHeight - window.innerHeight;
-        if (widthDiff > threshold || heightDiff > threshold) {
-          setShowF12Blocked(true);
-        }
-      }, 1500);
-    } catch (_) {}
-
     window.addEventListener('keydown', handleKeyDown, true);
     document.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('contextmenu', handleContextMenu, true);
@@ -8104,7 +8075,6 @@ function App() {
       document.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('contextmenu', handleContextMenu, true);
       document.removeEventListener('contextmenu', handleContextMenu, true);
-      if (devToolsTimer) clearInterval(devToolsTimer);
     };
   }, []);
 
@@ -9662,13 +9632,13 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           <div className="flex items-center gap-3 shrink-0">
             <button 
               onClick={() => { setApiModalOpen(true); setApiModalTab('tester'); }} 
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition shrink-0 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition shrink-0 ${
                 key 
-                  ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20' 
-                  : 'border-red-500 text-red-500 hover:bg-red-500/10 shadow-sm'
+                  ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20' 
+                  : 'border-zinc-700 text-zinc-300 bg-zinc-900/80 hover:bg-zinc-800 hover:text-white hover:border-zinc-600'
               }`}
               title={key ? ('API đã kết nối: ' + key + '. Bấm để mở kiểm tra & thiết lập') : 'Chưa cài đặt API. Bấm để kết nối ngay'}>
-              <span className={`w-1.5 h-1.5 rounded-full ${key ? 'bg-emerald-400' : 'bg-red-500 animate-ping'}`}></span>
+              <span className={`w-1.5 h-1.5 rounded-full ${key ? 'bg-emerald-400' : 'bg-zinc-500'}`}></span>
               <span>{key ? 'API Đã Kết Nối' : 'Cài Đặt API'}</span>
             </button>
 
@@ -9709,27 +9679,27 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
         )}
         {/* Missing Key Banner with Direct Diagnostic & Guide */}
         {!key && (
-          <div className="border border-amber-500/40 bg-gradient-to-r from-amber-950/40 via-brand-surface to-brand-surface rounded-2xl p-4 text-sm space-y-2 shadow-xl">
+          <div className="border border-zinc-800 bg-brand-surface rounded-xl p-4 text-sm space-y-2 shadow-md">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <div className="font-extrabold text-amber-300 text-sm flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+                <div className="font-bold text-zinc-200 text-sm flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                   <span>Kết Nối API Google / YouTube Để Quét Toàn Bộ Dữ Liệu Thật 100%</span>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-bold">100% Miễn Phí</span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold">100% Miễn Phí</span>
                 </div>
-                <p className="text-zinc-300 text-xs mt-1 max-w-3xl leading-relaxed">
+                <p className="text-zinc-400 text-xs mt-1 max-w-3xl leading-relaxed">
                   Để tính toán VPH thời gian thực, bóc tách kênh nhỏ bứt phá và gom cụm từ khóa chuẩn xác nhất, bạn chỉ cần 1 mã YouTube Data API v3 miễn phí từ Google (Google cấp 10.000 quota/ngày hoàn toàn không mất tiền, không cần thẻ tín dụng).
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 flex-shrink-0">
                 <button 
                   onClick={() => { setApiModalOpen(true); setApiModalTab('guide'); }} 
-                  className="px-4 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black shadow-lg shadow-amber-500/20 transition flex items-center gap-1.5">
-                  <span>📖 Xem Hướng Dẫn Lấy Key (2 Phút)</span>
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition flex items-center gap-1.5">
+                  <span>Hướng dẫn lấy Key</span>
                 </button>
                 <button 
                   onClick={() => { setApiModalOpen(true); setApiModalTab('tester'); }} 
-                  className="px-3.5 py-2 rounded-xl text-xs font-bold bg-brand-card hover:bg-brand-hover text-zinc-200 border border-brand-border transition">
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-100 hover:bg-white text-zinc-950 transition">
                   <span>Dán & Kiểm Tra Key</span>
                 </button>
               </div>
@@ -9739,10 +9709,21 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
         {/* Error Notification */}
         {ei && (
-          <div className="border border-red-500/40 bg-red-950/50 rounded-2xl p-4 text-sm shadow-lg">
-            <div className="font-bold text-red-300 mb-1">{ei.t}</div>
-            <ul className="list-disc ml-5 space-y-1 text-zinc-300 text-xs">{ei.s.map((x, i) => <li key={i}>{x}</li>)}</ul>
-            <button onClick={() => setError(null)} className={bSecondary + ' mt-3 py-1'}>Đóng thông báo</button>
+          <div className="border border-zinc-700 bg-zinc-900/95 rounded-xl p-4 text-xs shadow-lg space-y-2">
+            <div className="font-semibold text-zinc-200">{ei.t}</div>
+            <ul className="list-disc ml-5 space-y-1 text-zinc-400">{ei.s.map((x, i) => <li key={i}>{x}</li>)}</ul>
+            <div className="flex items-center gap-2 pt-1">
+              {ei.t.includes('YouTube API Key') && (
+                <button
+                  onClick={() => { setApiModalOpen(true); setApiModalTab('tester'); }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-100 hover:bg-white text-zinc-950 transition">
+                  Cài Đặt API Key
+                </button>
+              )}
+              <button onClick={() => setError(null)} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition">
+                Đóng thông báo
+              </button>
+            </div>
           </div>
         )}
 
@@ -9961,6 +9942,23 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                         {v.total}
                       </div>
 
+                      {/* Bookmark Button to Save for Later */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleSaveVideo(v);
+                        }}
+                        className={`absolute top-2.5 left-2.5 px-2 py-0.5 rounded-lg text-[10px] font-bold backdrop-blur-md border transition flex items-center gap-1 shadow-lg z-10 ${
+                          isSavedVideo(v.id)
+                            ? 'bg-amber-500 text-black border-amber-400 font-black'
+                            : 'bg-black/70 text-zinc-300 hover:text-white border-white/20 hover:border-amber-400/60'
+                        }`}
+                        title={isSavedVideo(v.id) ? "Bỏ lưu video này" : "Lưu video để xem khi rảnh"}>
+                        <span>{isSavedVideo(v.id) ? '★ Đã Lưu' : '☆ Lưu'}</span>
+                      </button>
+
                       {/* Duration Badge */}
                       <div className="absolute bottom-2.5 right-2.5 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-black/85 text-white backdrop-blur-sm">
                         {v.dur <= 60 && <span className="text-red-400 font-bold mr-1">Shorts</span>}
@@ -10146,8 +10144,8 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                 </div>
                 <button
                   onClick={() => { setApiModalOpen(true); setApiModalTab('guide'); }}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 transition flex items-center gap-1 self-start sm:self-auto flex-shrink-0">
-                  <span>🔑 Hướng Dẫn Cài Đặt API (2 Phút)</span>
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition flex items-center gap-1.5 self-start sm:self-auto flex-shrink-0">
+                  <span>Hướng Dẫn Cài Đặt API</span>
                 </button>
               </div>
 
@@ -11669,33 +11667,33 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               <button
                 type="button"
                 onClick={() => setApiModalTab('tester')}
-                className={`pb-2.5 px-3 font-bold border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
+                className={`pb-2.5 px-3 text-xs font-medium border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
                   apiModalTab === 'tester'
-                    ? 'border-amber-400 text-amber-300'
+                    ? 'border-zinc-200 text-white font-semibold'
                     : 'border-transparent text-zinc-400 hover:text-zinc-200'
                 }`}>
-                <span>⚡ Nhập & Test Key Trực Tiếp</span>
-                {key && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>}
+                <span>Nhập & Test Key</span>
+                {key && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>}
               </button>
               <button
                 type="button"
                 onClick={() => setApiModalTab('guide')}
-                className={`pb-2.5 px-3 font-bold border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
+                className={`pb-2.5 px-3 text-xs font-medium border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
                   apiModalTab === 'guide'
-                    ? 'border-amber-400 text-amber-300'
+                    ? 'border-zinc-200 text-white font-semibold'
                     : 'border-transparent text-zinc-400 hover:text-zinc-200'
                 }`}>
-                <span>📖 Hướng Dẫn 5 Bước Lấy Key (2 Phút)</span>
+                <span>Hướng dẫn lấy Key</span>
               </button>
               <button
                 type="button"
                 onClick={() => setApiModalTab('quota')}
-                className={`pb-2.5 px-3 font-bold border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
+                className={`pb-2.5 px-3 text-xs font-medium border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
                   apiModalTab === 'quota'
-                    ? 'border-amber-400 text-amber-300'
+                    ? 'border-zinc-200 text-white font-semibold'
                     : 'border-transparent text-zinc-400 hover:text-zinc-200'
                 }`}>
-                <span>🚀 Mẹo x3 Quota & Google Trends</span>
+                <span>Mẹo Quota miễn phí</span>
               </button>
             </div>
 
@@ -11712,7 +11710,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                       <button
                         type="button"
                         onClick={() => setApiModalTab('guide')}
-                        className="text-amber-400 hover:underline text-[11px] font-semibold">
+                        className="text-zinc-400 hover:text-zinc-200 hover:underline text-[11px] font-medium">
                         Chưa có key? Xem hướng dẫn lấy key miễn phí →
                       </button>
                     </div>
@@ -11734,7 +11732,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                     </div>
 
                     <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5">
-                      <span>Trạng thái hiện tại: <b className={key ? 'text-emerald-400' : 'text-red-400'}>{key ? 'Đã kích hoạt API' : 'Chưa lưu Key'}</b></span>
+                      <span>Trạng thái hiện tại: <b className={key ? 'text-emerald-400' : 'text-zinc-400'}>{key ? 'Đã kích hoạt API' : 'Chưa lưu Key'}</b></span>
                       <span>Bảo mật: Lưu cục bộ 100% trong localStorage</span>
                     </div>
                   </div>
@@ -11745,8 +11743,8 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                       type="button"
                       onClick={() => testApiKey(keyDraft)}
                       disabled={isTestingApi}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black shadow-md shadow-amber-500/20 transition flex items-center gap-1.5 disabled:opacity-50">
-                      <span>{isTestingApi ? '⚡ Đang kiểm tra kết nối...' : '⚡ Kiểm Tra Kết Nối Ngay (Live Ping Test)'}</span>
+                      className="px-3.5 py-2 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition flex items-center gap-1.5 disabled:opacity-50">
+                      <span>{isTestingApi ? 'Đang kiểm tra kết nối...' : 'Kiểm tra kết nối'}</span>
                     </button>
                     <button
                       type="button"
@@ -11755,8 +11753,8 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                         setShowKeyBox(false);
                         setApiModalOpen(false);
                       }}
-                      className={bPrimary + ' py-2'}>
-                      Lưu API Key & Áp Dụng
+                      className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition flex items-center justify-center">
+                      Lưu API Key
                     </button>
                     {key && (
                       <button
@@ -11766,7 +11764,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                           setKeyDraft('');
                           setApiTestStatus(null);
                         }}
-                        className="px-3 py-2 rounded-xl text-xs font-semibold bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-800/60 transition">
+                        className="px-3 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-transparent hover:bg-zinc-800 border border-zinc-800 transition">
                         Xóa Key
                       </button>
                     )}
@@ -11866,8 +11864,8 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                     <button
                       type="button"
                       onClick={() => setApiModalTab('tester')}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 text-black hover:bg-amber-400 transition">
-                      Đã có Key? Chuyển sang dán và kiểm tra ngay →
+                      className="px-3.5 py-2 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition">
+                      Đã có Key? Chuyển sang dán và kiểm tra →
                     </button>
                   </div>
                 </div>
@@ -11927,7 +11925,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               <span className="text-[11px]">YouTrend Pro · Kết nối trực tiếp Google Cloud API</span>
               <button 
                 onClick={() => { setShowKeyBox(false); setApiModalOpen(false); }} 
-                className="px-4 py-1.5 rounded-xl font-bold bg-brand-card hover:bg-brand-hover text-white border border-brand-border transition">
+                className="px-4 py-1.5 rounded-lg font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 transition">
                 Đóng
               </button>
             </div>
@@ -12090,7 +12088,44 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#0b0c10] text-zinc-200 flex flex-col items-center justify-center p-6 text-center">
+          <div className="max-w-md bg-[#181b26] border border-[#232738] rounded-2xl p-6 shadow-2xl space-y-4">
+            <h2 className="text-base font-bold text-white">Đã xảy ra sự cố hiển thị</h2>
+            <p className="text-xs text-zinc-400">
+              Trang web đã tự động phục hồi khỏi lỗi. Bạn có thể bấm nút bên dưới để tải lại dữ liệu.
+            </p>
+            <button
+              onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
+              className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition">
+              Tải lại trang web
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);
 </script>
 </body>
 </html>
