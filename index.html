@@ -9135,11 +9135,31 @@ function App() {
   // Niche Deep Saturation Modal State
   const [nicheAnalyzeVideo, setNicheAnalyzeVideo] = useState(null);
 
-  // Competitor Spy Tab States
+  // Helper: Lưu danh sách kênh đối thủ riêng biệt cho từng API Key
+  const getCompetitorsStorageKey = (apiKey) => {
+    const cleanKey = (apiKey || '').trim();
+    if (!cleanKey) return 'yt_competitors_nokey';
+    let hash = 0;
+    for (let i = 0; i < cleanKey.length; i++) {
+      hash = ((hash << 5) - hash) + cleanKey.charCodeAt(i);
+      hash |= 0;
+    }
+    return 'yt_competitors_key_' + Math.abs(hash);
+  };
+
+  // Competitor Spy Tab States - Phân tách dữ liệu riêng biệt theo từng API key
   const [competitors, setCompetitors] = useState(() => {
+    const initialKey = st.get('yt_api_key') || '';
+    const sKey = getCompetitorsStorageKey(initialKey);
     try {
-      const saved = JSON.parse(st.get('yt_competitors') || 'null');
-      if (Array.isArray(saved) && saved.length > 0) return saved;
+      const saved = JSON.parse(st.get(sKey) || 'null');
+      if (Array.isArray(saved)) return saved;
+      // Khởi tạo kênh đối thủ mặc định nếu lần đầu sử dụng
+      const legacy = JSON.parse(st.get('yt_competitors') || 'null');
+      if (Array.isArray(legacy) && legacy.length > 0) {
+        st.set(sKey, JSON.stringify(legacy));
+        return legacy;
+      }
     } catch (e) {}
     return [
       {
@@ -9175,9 +9195,33 @@ function App() {
     ];
   });
 
+  const compActiveKeyRef = useRef(key);
+
+  // Khi người dùng chuyển đổi sang API key khác, tự động load danh sách kênh của API đó
   useEffect(() => {
-    st.set('yt_competitors', JSON.stringify(competitors));
-  }, [competitors]);
+    if (compActiveKeyRef.current === key) return;
+    compActiveKeyRef.current = key;
+    const sKey = getCompetitorsStorageKey(key);
+    try {
+      const raw = st.get(sKey);
+      if (raw !== null && raw !== undefined) {
+        const saved = JSON.parse(raw);
+        if (Array.isArray(saved)) {
+          setCompetitors(saved);
+          setCompVideos([]);
+          return;
+        }
+      }
+    } catch (e) {}
+    setCompetitors([]);
+    setCompVideos([]);
+  }, [key]);
+
+  // Tự động lưu danh sách kênh đối thủ cho API key đang kích hoạt
+  useEffect(() => {
+    const sKey = getCompetitorsStorageKey(key);
+    st.set(sKey, JSON.stringify(competitors));
+  }, [competitors, key]);
 
   const [compInput, setCompInput] = useState('');
   const [compPeriod, setCompPeriod] = useState('48'); // '24' | '48' | '168' | 'all'
@@ -9359,61 +9403,8 @@ function App() {
         }
       }
 
-      if (!allVids.length) {
-        allVids = [
-          {
-            id: 'comp_vid_1',
-            title: "Billionaire Came Home By Surprise... What The Maid Was Doing With His Elderly Mother Shocked The House",
-            channel: "Echoes of Hope & Life",
-            channelId: 'ch_comp_1',
-            thumb: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80",
-            published: new Date(Date.now() - 36e5 * 6).toISOString(),
-            views: 24500,
-            vph: 850,
-            dur: 2840,
-            hoursAgo: 6,
-            isOldApiSample: true
-          },
-          {
-            id: 'comp_vid_2',
-            title: "Catholic Morning Prayer | Christ Sees Your Suffering & Rest In God's Grace",
-            channel: "Sacred Echoes of Grace",
-            channelId: 'ch_comp_2',
-            thumb: "https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=600&q=80",
-            published: new Date(Date.now() - 36e5 * 18).toISOString(),
-            views: 18900,
-            vph: 410,
-            dur: 2125,
-            hoursAgo: 18,
-            isOldApiSample: true
-          },
-          {
-            id: 'comp_vid_3',
-            title: "Things I Wish I Knew Before 70: A Dying Billionaire's Final Words To The World",
-            channel: "Stoic Wisdom & Elder Tales",
-            channelId: 'ch_comp_3',
-            thumb: "https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=600&q=80",
-            published: new Date(Date.now() - 36e5 * 28).toISOString(),
-            views: 38200,
-            vph: 720,
-            dur: 2540,
-            hoursAgo: 28,
-            isOldApiSample: true
-          },
-          {
-            id: 'comp_vid_4',
-            title: "He Thought The Orphan Was Stealing Bread, Until He Read The Note In His Pocket",
-            channel: "Echoes of Hope & Life",
-            channelId: 'ch_comp_1',
-            thumb: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80",
-            published: new Date(Date.now() - 36e5 * 52).toISOString(),
-            views: 74000,
-            vph: 680,
-            dur: 2400,
-            hoursAgo: 52,
-            isOldApiSample: true
-          }
-        ];
+      if (!allVids.length && !key) {
+        showToast('Vui lòng kết nối YouTube API key để quét video đối thủ');
       }
 
       allVids.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
@@ -10943,20 +10934,22 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             </button>
           </nav>
 
-          {/* Desktop Right: Distinct Yellow Gradient "Đối thủ" button + API Status + Account */}
+          {/* Desktop Right: Gradient cam nhẹ "Đối thủ" button + API Status + Account */}
           <div className="hidden md:flex items-center gap-2.5 shrink-0">
             <button
               onClick={() => {
                 setTab('competitors');
                 if (!compVideos.length) refreshCompetitorVideos();
               }}
-              className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold flex items-center gap-1.5 transition shrink-0 bg-gradient-to-b from-white via-amber-200 to-amber-400 text-zinc-950 border border-amber-300 shadow-md hover:brightness-105 active:scale-95 cursor-pointer ${
-                tab === 'competitors' ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-zinc-950' : ''
-              }`}
+              className={'px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition shrink-0 cursor-pointer ' + (
+                tab === 'competitors'
+                  ? 'bg-gradient-to-r from-orange-500/30 via-amber-500/25 to-orange-500/20 text-white font-semibold border-orange-500/60 shadow-sm shadow-orange-500/20'
+                  : 'bg-gradient-to-r from-orange-500/15 via-amber-500/10 to-orange-500/10 hover:from-orange-500/25 hover:via-amber-500/15 hover:to-orange-500/15 text-orange-200 hover:text-white border-orange-500/30 hover:border-orange-500/50'
+              )}
               title="Theo dõi các kênh đối thủ">
               <span>Đối thủ</span>
               {competitors.length > 0 && (
-                <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-black/20 text-black font-black">
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-orange-500/25 text-orange-200 font-bold border border-orange-500/35 leading-tight">
                   {competitors.length}
                 </span>
               )}
@@ -12103,7 +12096,8 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {competitors.length > 0 ? (
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {competitors.map(comp => (
                 <div key={comp.id} className="bg-brand-surface p-3.5 rounded-xl border border-brand-border flex items-center justify-between gap-3 group hover:border-zinc-700 transition">
                   <div className="flex items-center gap-3 min-w-0">
@@ -12137,6 +12131,14 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                 </div>
               ))}
             </div>
+            ) : (
+              <div className="border border-dashed border-brand-border bg-brand-surface/30 rounded-xl p-6 text-center">
+                <p className="text-xs font-semibold text-zinc-300">Chưa có kênh đối thủ nào cho API này</p>
+                <p className="text-[11px] text-zinc-500 mt-1 max-w-md mx-auto">
+                  Dữ liệu đối thủ được lưu riêng biệt theo từng API key. Hãy dán link kênh YouTube hoặc @handle vào ô bên trên để thêm đối thủ cho API này.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Competitor Uploads Feed */}
@@ -12149,9 +12151,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                 <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/15 px-2 py-0.5 rounded border border-indigo-500/30">
                   {compVideos.length} video
                 </span>
-                <span className="text-xs text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/25 italic font-medium">
-                  *đây là đối thủ của API cũ đả từng dùng trên máy*
-                </span>
+                
               </div>
 
               {/* Period Filter for Competitor Videos */}
@@ -12173,21 +12173,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             </div>
 
             {/* Note banner explaining old API competitor data */}
-            <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl px-3.5 py-2.5 text-xs text-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-sm">
-              <div className="flex items-start sm:items-center gap-2">
-                <span className="text-sm shrink-0">📌</span>
-                <span className="leading-relaxed">
-                  <span className="font-bold underline">*đây là đối thủ của API cũ đả từng dùng trên máy*</span> (Khi API key gặp lỗi hoặc chưa đồng bộ kênh mới, hệ thống tự động lưu giữ video của các kênh đối thủ trước đó).
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={refreshCompetitorVideos}
-                disabled={compLoading}
-                className="px-3 py-1 rounded-lg text-[11px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 transition shrink-0 whitespace-nowrap self-start sm:self-auto">
-                {compLoading ? 'Đang quét...' : 'Quét với API hiện tại ↻'}
-              </button>
-            </div>
+            
 
             {/* Video Cards Grid */}
             {compVideos.length > 0 ? (
@@ -12219,11 +12205,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                         
                         <div className="text-xs text-zinc-400 flex items-center justify-between">
                           <span className="truncate max-w-[170px] font-medium text-zinc-300">{v.channel}</span>
-                          {(v.id.startsWith('comp_vid_') || v.isOldApiSample) && (
-                            <span className="text-[10px] text-amber-400/90 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20 italic">
-                              *API cũ*
-                            </span>
-                          )}
+                          
                         </div>
 
                         {/* Metric Row */}
