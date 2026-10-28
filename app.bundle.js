@@ -555,6 +555,13 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
   const [isSamplingFingerprint, setIsSamplingFingerprint] = React.useState(false);
   const [targetChannelInput, setTargetChannelInput] = React.useState('');
   const [showAddFingerprint, setShowAddFingerprint] = React.useState(false);
+
+  // PATCH v2: Debug Panel & Progressive Relaxation state
+  const [debugLogs, setDebugLogs] = React.useState([]);
+  const [debugRawJson, setDebugRawJson] = React.useState(null);
+  const [showDebugPanel, setShowDebugPanel] = React.useState(false);
+  const [relaxationInfo, setRelaxationInfo] = React.useState(null);
+  const [scannedVideoCount, setScannedVideoCount] = React.useState(0);
   const [zoomImage, setZoomImage] = React.useState(null);
   const fileInputRef = React.useRef(null);
   const MARKET_OPTIONS = [{
@@ -625,7 +632,58 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     try {
       let extractedData = null;
 
-      // 1. Thử gọi backend proxy /api/extract-clues (Gemini Vision)
+      // PATCH v2 - Yêu cầu C: Tiền xử lý ảnh (Không thu nhỏ. Nếu rộng < 1600px thì upscale 2x trên canvas + cắt crop theo vùng)
+      let processedDataUrl = dataUrl;
+      let regionCrops = {};
+      try {
+        const prepResult = await new Promise(resolve => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            const origW = img.naturalWidth || img.width;
+            const origH = img.naturalHeight || img.height;
+            const scale = origW < 1600 ? 2 : 1;
+            const c = document.createElement('canvas');
+            c.width = origW * scale;
+            c.height = origH * scale;
+            const ctx = c.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            const crop = (sx, sy, sw, sh) => {
+              const cc = document.createElement('canvas');
+              cc.width = Math.max(1, sw);
+              cc.height = Math.max(1, sh);
+              const cctx = cc.getContext('2d');
+              cctx.drawImage(c, sx, sy, sw, sh, 0, 0, cc.width, cc.height);
+              return cc.toDataURL('image/jpeg', 0.9);
+            };
+            const W = c.width;
+            const H = c.height;
+            const cropsMap = {
+              header: crop(0, 0, W, Math.round(H * 0.25)),
+              kpiCards: crop(0, Math.round(H * 0.15), Math.round(W * 0.75), Math.round(H * 0.35)),
+              rightSidebar: crop(Math.round(W * 0.65), Math.round(H * 0.15), Math.round(W * 0.35), Math.round(H * 0.80)),
+              chart: crop(0, Math.round(H * 0.35), Math.round(W * 0.75), Math.round(H * 0.50))
+            };
+            resolve({
+              fullDataUrl: c.toDataURL('image/jpeg', 0.92),
+              crops: cropsMap
+            });
+          };
+          img.onerror = () => resolve({
+            fullDataUrl: dataUrl,
+            crops: {}
+          });
+          img.src = dataUrl;
+        });
+        processedDataUrl = prepResult.fullDataUrl;
+        regionCrops = prepResult.crops;
+      } catch (e) {
+        console.warn('Canvas prep fallback to original:', e);
+      }
+
+      // 1. Thử gọi backend proxy /api/extract-clues (Gemini Vision với ảnh upscale + crops các vùng)
       try {
         const resp = await fetch('/api/extract-clues', {
           method: 'POST',
@@ -633,13 +691,17 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            dataUrl: dataUrl
+            dataUrl: processedDataUrl,
+            crops: regionCrops
           })
         });
         if (resp.ok) {
           const json = await resp.json();
           if (json.success && json.clues) {
             extractedData = json;
+            if (json.debugRawJson) {
+              setDebugRawJson(json.debugRawJson);
+            }
           }
         }
       } catch (proxyErr) {
@@ -2036,7 +2098,67 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => setZoomImage(null),
     className: "absolute top-4 right-4 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-white text-xs font-medium transition"
-  }, "\u0110\xF3ng"))));
+  }, "\u0110\xF3ng"))), /*#__PURE__*/React.createElement("div", {
+    className: "border border-zinc-800 bg-[#12141c] rounded-xl p-4 space-y-3 text-xs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold text-zinc-200"
+  }, "Debug & Ch\u1EA9n \u0110o\xE1n Chi Ti\u1EBFt"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-zinc-500 font-mono"
+  }, "[Forensic Tracing]")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      const debugPayload = {
+        screenType,
+        hasAnchor,
+        anchorCount: cluesList.filter(c => c.type === 'publishDate' || c.type === 'totalViews').length,
+        clues: cluesList,
+        manualClues,
+        scannedVideoCount,
+        relaxationInfo,
+        candidatesCount: candidates?.length || 0,
+        debugLogs,
+        debugRawJson
+      };
+      navigator.clipboard.writeText(JSON.stringify(debugPayload, null, 2));
+      if (showToast) showToast('Đã copy toàn bộ Debug Log vào Clipboard');
+    },
+    className: "px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-medium transition-colors"
+  }, "Copy Debug Log"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowDebugPanel(!showDebugPanel),
+    className: "px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-[11px] transition-colors"
+  }, showDebugPanel ? 'Thu gọn' : 'Mở rộng'))), showDebugPanel && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3 pt-2 border-t border-zinc-800 text-[11px] font-mono"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "p-3 rounded bg-[#181b26] border border-zinc-800 space-y-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-zinc-300 font-bold"
+  }, "Danh s\xE1ch Manh M\u1ED1i \u0110\xE3 B\xF3c T\xE1ch (", cluesList.length, "):"), cluesList.map((c, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "text-zinc-400 pl-2"
+  }, "\u2022 ", /*#__PURE__*/React.createElement("strong", {
+    className: "text-zinc-200"
+  }, c.type), ": ", JSON.stringify(c.value), " (", c.strength, ") - ", c.note))), debugRawJson && /*#__PURE__*/React.createElement("div", {
+    className: "p-3 rounded bg-[#181b26] border border-zinc-800 space-y-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-zinc-300 font-bold"
+  }, "JSON Th\xF4 T\u1EEB Vision / Extractor:"), /*#__PURE__*/React.createElement("pre", {
+    className: "text-[10px] text-zinc-400 max-h-48 overflow-y-auto whitespace-pre-wrap"
+  }, JSON.stringify(debugRawJson, null, 2))), debugLogs.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "p-3 rounded bg-[#181b26] border border-zinc-800 space-y-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-zinc-300 font-bold"
+  }, "L\u1ECBch S\u1EED Qu\xE9t & \u0110\u1ED1i Chi\u1EBFu:"), /*#__PURE__*/React.createElement("div", {
+    className: "max-h-36 overflow-y-auto space-y-1 text-[10px] text-zinc-400"
+  }, debugLogs.map((log, idx) => /*#__PURE__*/React.createElement("div", {
+    key: idx
+  }, "[", log.time, "] ", /*#__PURE__*/React.createElement("span", {
+    className: "text-purple-300"
+  }, log.action), ": ", JSON.stringify(log.details))))))));
 }
 
 function App(){const[key,setKey]=useState(()=>typeof ytKeyManager!=='undefined'?ytKeyManager.getActiveKey():st.get('yt_key')||'');const[showSubscriptionModal,setShowSubscriptionModal]=useState(false);const[subscriptionModalReason,setSubscriptionModalReason]=useState('manual');const[showAuthModal,setShowAuthModal]=useState(false);

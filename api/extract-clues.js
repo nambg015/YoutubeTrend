@@ -1,6 +1,7 @@
 const https = require('https');
 const { parseVNNumber, getVNNumberBounds } = require('./lib/vn_parser');
 const { validateVisibleTitleChars, createClue } = require('./lib/types_and_clues');
+const { parseStudioDate } = require('./lib/date_parser');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
@@ -30,6 +31,7 @@ module.exports = async (req, res) => {
   }
 
   const imageBase64 = body?.imageBase64 || (body?.dataUrl ? body.dataUrl.replace(/^data:image\/[a-z]+;base64,/, '') : null);
+  const crops = body?.crops || {}; // { header, kpiCards, rightSidebar, chart }
   const mimeType = body?.mimeType || 'image/jpeg';
   const customApiKey = req.headers['x-gemini-key'] || body?.geminiKey || GEMINI_API_KEY;
 
@@ -46,66 +48,107 @@ module.exports = async (req, res) => {
   }
 
   const promptText = `You are an expert YouTube Studio analytics forensic reverse-engineering system.
-Analyze the provided YouTube Studio screenshot (Desktop or Mobile) and extract all metrics into JSON.
+Analyze the provided YouTube Studio screenshot (full image plus optional high-res region crops).
+Perform REGION-BASED extraction across distinct areas of the interface:
 
-IMPORTANT FORENSIC RULES:
-1. screenType: Identify the exact screen:
-   - "studio_video_analytics": Single video analytics overview (shows "Số liệu phân tích về video", views, watch time, subs, timeline chart).
-   - "studio_channel_realtime": Channel realtime 48h card (shows "Thời gian thực / 48 GIỜ", 48h views, top video list).
-   - "studio_content_list": Content/video list table.
-   - "channel_overview": Channel overview tab.
-   - "unknown": None of the above.
+1. HEADER / DATE REGION:
+   - Look for date text like "30 thg 9, 2026 tới nay", "Từ khi xuất bản", "Since published", "26 thg 9, 2026 – 24 thg 10, 2026", "30/09/2026".
+   - Extract raw text in dateRangeText.
+   - If "Từ khi xuất bản" / "tới nay" is present, note isPublishedSince = true.
 
-2. Metric parsing guidelines:
-   - views48h: View count in 48 hours. DO NOT pick single digits or chart axis numbers like 870, 580, 290. E.g., "20.869", "29.238".
-   - totalViews: Total views metric (e.g., "2,4 Tr", "1 Tr", "100k").
-   - watchHours: Watch time in hours (e.g., "126,5 N", "12,5 N", "500").
-   - subsGained: Net subscriber gain (e.g., "+717", "+874", "717").
-   - topVideos48h: List of view counts of top videos shown in 48h list (e.g. ["4,5 N", "3,8 N", "2,9 N", "2,1 N", "1,8 N"]).
-   - vsNormalRatio: Multiplier vs normal (e.g., 30 from "gấp 30 lần so với thường lệ" or "30x").
-   - vsNormalDelta: Text describing comparison to typical.
-   - publishDateText: Visible publish date text (e.g., "30 thg 9, 2026", "26 thg 9, 2026", or from tooltip "X ngày Y giờ đầu tiên").
-   - publishDateIso: Best estimated date in YYYY-MM-DD.
-   - trafficMix: Traffic sources object with percentages, e.g. { "browse": 76.5, "suggested": 14.4, "search": 5.4, "channelPages": 3.0, "other": 0.3 }.
-   - captureAgeDays: Number of days elapsed on the x-axis from publish to capture (e.g. 12 to 14 days).
-   - visibleTitleChars: Any unmasked characters visible in the VIDEO TITLE area.
-     * MUST NOT be bare numbers (e.g., NOT "870").
-     * MUST NOT be chart axis labels or studio UI words ("tổng quan", "phân tích", etc.).
-     * If there are no unmasked characters or only dots/lines, output "".
-     * If single particle like "々の" or "の", output it.
+2. KPI METRIC CARDS REGION:
+   - "Số lượt xem" / Views: e.g. "2,4 Tr", "1,2 M", "450 K", "125.000". Extract totalViewsText.
+   - "Thời gian xem (giờ)" / Watch time: e.g. "126,5 N", "12,5 N", "500 h". Extract watchHoursText.
+   - "Người đăng ký" / Subscribers gained: e.g. "+717", "717", "+1,2 N". Extract subsGainedText.
 
-Output MUST be strictly valid JSON matching this schema:
+3. REALTIME SIDEBAR / PANEL (Often on the right):
+   - "Thời gian thực" / Realtime 48 hours: e.g. "29.238", "20.869". Extract views48hText.
+   - Top videos listed under 48h: list of view strings e.g. ["4,5 N", "3,8 N", "2,9 N"]. DO NOT take axis labels (870, 580, 290, 0).
+
+4. CHART & TIMELINE REGION:
+   - Tooltip text (if visible on hover): e.g. "Thứ 7, 10 thg 10, 2026 (10 ngày 18 giờ đầu tiên)". Extract tooltipText.
+   - Comparison banner vs normal: e.g. "gấp 30 lần so với thường lệ", extract vsNormalRatio = 30.
+   - Elapsed days on x-axis: captureAgeDays.
+
+5. CHANNEL OVERVIEW REGION (For channel-level screenshots):
+   - Total channel subscribers: e.g. "45,2 N người đăng ký", extract subscriberTotalText.
+   - Channel views in date range: extract channelViewsText.
+
+6. VISIBLE TITLE CHARACTERS:
+   - Any unmasked Japanese/CJK or Latin letters visible in the video title or breadcrumb.
+   - Must NOT be axis labels (870, 580) or UI words ("Tổng quan", "Phân tích"). E.g. "々の".
+
+IMPORTANT CLASSIFICATION RULE:
+- screenType is an informative tag ("studio_video_analytics" | "studio_channel_realtime" | "channel_overview" | "unknown").
+- A screenshot is NOT realtime-only if ANY region contains a date or total views!
+
+Output strictly valid JSON:
 {
-  "screenType": "studio_video_analytics" | "studio_channel_realtime" | "studio_content_list" | "channel_overview" | "unknown",
-  "views48h": string or null,
-  "totalViews": string or null,
-  "watchHours": string or null,
-  "subsGained": string or null,
-  "topVideos48h": string[],
-  "vsNormalRatio": number or null,
-  "vsNormalDelta": string or null,
-  "publishDateText": string or null,
-  "publishDateIso": string or null,
-  "trafficMix": object or null,
-  "captureAgeDays": number or null,
+  "screenType": "studio_video_analytics" | "studio_channel_realtime" | "channel_overview" | "unknown",
+  "headerRegion": {
+    "dateRangeText": string or null,
+    "isPublishedSince": boolean
+  },
+  "kpiCardsRegion": {
+    "totalViewsText": string or null,
+    "watchHoursText": string or null,
+    "subsGainedText": string or null
+  },
+  "realtimeSidebarRegion": {
+    "views48hText": string or null,
+    "topVideos48h": string[]
+  },
+  "chartRegion": {
+    "tooltipText": string or null,
+    "vsNormalRatio": number or null,
+    "captureAgeDays": number or null
+  },
+  "channelOverviewRegion": {
+    "subscriberTotalText": string or null,
+    "channelViewsText": string or null
+  },
   "visibleTitleChars": string or null
 }`;
 
   try {
-    const geminiPayload = JSON.stringify({
-      contents: [
-        {
-          parts: [
-            { text: promptText },
-            {
-              inlineData: {
-                mimeType: mimeType,
-                data: imageBase64
-              }
-            }
-          ]
+    const parts = [{ text: promptText }];
+
+    // Full image part
+    parts.push({
+      inlineData: {
+        mimeType: mimeType,
+        data: imageBase64
+      }
+    });
+
+    // Add region crops if provided to give high-res zoom
+    if (crops.header) {
+      parts.push({
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: crops.header.replace(/^data:image\/[a-z]+;base64,/, '')
         }
-      ],
+      });
+    }
+    if (crops.kpiCards) {
+      parts.push({
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: crops.kpiCards.replace(/^data:image\/[a-z]+;base64,/, '')
+        }
+      });
+    }
+    if (crops.rightSidebar) {
+      parts.push({
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: crops.rightSidebar.replace(/^data:image\/[a-z]+;base64,/, '')
+        }
+      });
+    }
+
+    const geminiPayload = JSON.stringify({
+      contents: [{ parts }],
       generationConfig: {
         responseMimeType: "application/json",
         temperature: 0.1
@@ -113,7 +156,6 @@ Output MUST be strictly valid JSON matching this schema:
     });
 
     const geminiRes = await new Promise((resolve, reject) => {
-      // Use gemini-2.5-flash or gemini-1.5-flash
       const model = 'gemini-2.5-flash';
       const reqPath = `/v1beta/models/${model}:generateContent?key=${customApiKey}`;
       const options = {
@@ -156,13 +198,45 @@ Output MUST be strictly valid JSON matching this schema:
     const parsedJson = JSON.parse(rawText);
     const screenType = parsedJson.screenType || 'unknown';
 
-    // Build structured Clues
+    // Extract sub-regions
+    const header = parsedJson.headerRegion || {};
+    const kpi = parsedJson.kpiCardsRegion || {};
+    const realtime = parsedJson.realtimeSidebarRegion || {};
+    const chart = parsedJson.chartRegion || {};
+    const channelOverview = parsedJson.channelOverviewRegion || {};
+
     const clues = [];
     let anchorCount = 0;
 
-    // 1. Total views
-    if (parsedJson.totalViews) {
-      const b = getVNNumberBounds(parsedJson.totalViews);
+    // 1. Publish Date (from header dateRangeText or chart tooltip)
+    const dateCandidate = header.dateRangeText || chart.tooltipText;
+    if (dateCandidate) {
+      const dateParsed = parseStudioDate(dateCandidate);
+      if (dateParsed && dateParsed.publishDate) {
+        clues.push(createClue({
+          type: 'publishDate',
+          value: dateParsed.publishDate,
+          confidence: 0.95,
+          strength: 'hard',
+          source: { raw: dateCandidate, parsed: dateParsed },
+          note: `Ngày xuất bản: ${dateParsed.publishDate} (Đệm ±1 ngày: ${dateParsed.paddedStart} - ${dateParsed.paddedEnd})`
+        }));
+        anchorCount++;
+      } else if (dateParsed && dateParsed.startDate) {
+        clues.push(createClue({
+          type: 'dateRange',
+          value: { start: dateParsed.startDate, end: dateParsed.endDate },
+          confidence: 0.85,
+          strength: 'soft',
+          note: `Khoảng ngày: ${dateParsed.startDate} - ${dateParsed.endDate}`
+        }));
+      }
+    }
+
+    // 2. Total views (from KPI card or top level)
+    const rawTotalViews = kpi.totalViewsText || parsedJson.totalViews;
+    if (rawTotalViews) {
+      const b = getVNNumberBounds(rawTotalViews);
       if (b && b.value >= 1000) {
         clues.push(createClue({
           type: 'totalViews',
@@ -171,36 +245,16 @@ Output MUST be strictly valid JSON matching this schema:
           max: b.max,
           confidence: 0.95,
           strength: 'hard',
-          note: `Trích xuất từ ảnh Studio: ${parsedJson.totalViews} [${b.min.toLocaleString('vi-VN')} - ${b.max.toLocaleString('vi-VN')}]`
+          note: `Tổng lượt xem: ${rawTotalViews} [${b.min.toLocaleString('vi-VN')} - ${b.max.toLocaleString('vi-VN')}]`
         }));
         anchorCount++;
       }
     }
 
-    // 2. Publish date
-    if (parsedJson.publishDateIso) {
-      // Create padded window (±1 day)
-      const d = new Date(parsedJson.publishDateIso + 'T00:00:00Z');
-      const startD = new Date(d);
-      startD.setDate(startD.getDate() - 1);
-      const endD = new Date(d);
-      endD.setDate(endD.getDate() + 1);
-
-      clues.push(createClue({
-        type: 'publishDate',
-        value: parsedJson.publishDateIso,
-        min: null,
-        max: null,
-        confidence: 0.95,
-        strength: 'hard',
-        note: `Ngày xuất bản ghi nhận: ${parsedJson.publishDateText || parsedJson.publishDateIso} (Đệm ±1 ngày: ${startD.toISOString().slice(0, 10)} đến ${endD.toISOString().slice(0, 10)})`
-      }));
-      anchorCount++;
-    }
-
     // 3. Watch hours
-    if (parsedJson.watchHours) {
-      const b = getVNNumberBounds(parsedJson.watchHours);
+    const rawWatchHours = kpi.watchHoursText || parsedJson.watchHours;
+    if (rawWatchHours) {
+      const b = getVNNumberBounds(rawWatchHours);
       if (b && b.value > 0) {
         clues.push(createClue({
           type: 'watchHours',
@@ -209,47 +263,50 @@ Output MUST be strictly valid JSON matching this schema:
           max: b.max,
           confidence: 0.90,
           strength: 'soft',
-          note: `Thời gian xem: ${parsedJson.watchHours} giờ [${b.min.toLocaleString('vi-VN')} - ${b.max.toLocaleString('vi-VN')}]`
+          note: `Thời gian xem: ${rawWatchHours} (${b.value.toLocaleString('vi-VN')} giờ)`
         }));
       }
     }
 
-    // 4. Sub gain
-    if (parsedJson.subsGained) {
-      const subVal = parseVNNumber(parsedJson.subsGained);
-      if (subVal !== null) {
+    // 4. Subscribers gained
+    const rawSubsGained = kpi.subsGainedText || parsedJson.subsGained;
+    if (rawSubsGained) {
+      const subs = parseVNNumber(rawSubsGained);
+      if (subs !== null) {
         clues.push(createClue({
           type: 'subsGained',
-          value: subVal,
+          value: subs,
           confidence: 0.90,
           strength: 'soft',
-          note: `Số người đăng ký tăng: +${subVal.toLocaleString('vi-VN')}`
+          note: `Số người đăng ký tăng: +${subs.toLocaleString('vi-VN')}`
         }));
       }
     }
 
-    // 5. Views 48h
-    if (parsedJson.views48h) {
-      const v48 = parseVNNumber(parsedJson.views48h);
+    // 5. Views 48h (from realtime panel)
+    const rawViews48h = realtime.views48hText || parsedJson.views48h;
+    if (rawViews48h) {
+      const v48 = parseVNNumber(rawViews48h);
       if (v48 && v48 >= 100) {
         clues.push(createClue({
           type: 'views48h',
           value: v48,
-          confidence: 0.92,
+          confidence: 0.95,
           strength: 'soft',
           note: `Lượt xem 48 giờ qua: ${v48.toLocaleString('vi-VN')}`
         }));
       }
     }
 
-    // 6. Top videos 48h list
-    if (Array.isArray(parsedJson.topVideos48h) && parsedJson.topVideos48h.length > 0) {
-      const parsedTop = parsedJson.topVideos48h
-        .map(v => parseVNNumber(v))
-        .filter(v => v !== null && v > 0);
+    // 6. Top videos 48h
+    const rawTopVideos = realtime.topVideos48h || parsedJson.topVideos48h || [];
+    if (Array.isArray(rawTopVideos) && rawTopVideos.length > 0) {
+      const parsedTop = rawTopVideos
+        .map(s => parseVNNumber(s))
+        .filter(v => v !== null && v >= 1000);
       if (parsedTop.length > 0) {
         clues.push(createClue({
-          type: 'topVideos48h',
+          type: 'top_videos_48h',
           value: parsedTop,
           confidence: 0.90,
           strength: 'soft',
@@ -258,85 +315,77 @@ Output MUST be strictly valid JSON matching this schema:
       }
     }
 
-    // 7. vsNormalRatio
-    if (parsedJson.vsNormalRatio && parsedJson.vsNormalRatio > 0) {
+    // 7. Multiplier vs Normal Ratio
+    const vsNorm = chart.vsNormalRatio || parsedJson.vsNormalRatio;
+    if (vsNorm && vsNorm > 1) {
       clues.push(createClue({
         type: 'vsNormalRatio',
-        value: Number(parsedJson.vsNormalRatio),
-        confidence: 0.90,
-        strength: 'soft',
-        note: `Đột biến so với thường lệ: ${parsedJson.vsNormalRatio}x`
-      }));
-    }
-
-    // 8. Traffic mix
-    if (parsedJson.trafficMix && typeof parsedJson.trafficMix === 'object') {
-      clues.push(createClue({
-        type: 'trafficMix',
-        value: parsedJson.trafficMix,
-        confidence: 0.95,
-        strength: 'weak', // reference only, public API cannot match traffic sources
-        note: `Cơ cấu nguồn lưu lượng (Chỉ tham khảo): ${JSON.stringify(parsedJson.trafficMix)}`
-      }));
-    }
-
-    // 9. Capture age days
-    if (parsedJson.captureAgeDays && parsedJson.captureAgeDays > 0) {
-      clues.push(createClue({
-        type: 'captureAgeDays',
-        value: Number(parsedJson.captureAgeDays),
+        value: vsNorm,
         confidence: 0.85,
         strength: 'soft',
-        note: `Ảnh chụp vào khoảng ngày thứ ${parsedJson.captureAgeDays} sau xuất bản`
+        note: `Vận tốc đột biến: gấp ${vsNorm}x so với thường lệ`
       }));
     }
 
-    // 10. Visible title characters
-    if (parsedJson.visibleTitleChars) {
-      const validated = validateVisibleTitleChars(parsedJson.visibleTitleChars);
-      if (validated) {
+    // 8. Capture Age Days
+    const captureAge = chart.captureAgeDays || parsedJson.captureAgeDays;
+    if (captureAge && captureAge > 0) {
+      clues.push(createClue({
+        type: 'captureAgeDays',
+        value: captureAge,
+        confidence: 0.85,
+        strength: 'soft',
+        note: `Tuổi video tại thời điểm chụp: ~${captureAge} ngày`
+      }));
+    }
+
+    // 9. Channel Overview: Subscriber Total (for channel screenshots)
+    if (channelOverview.subscriberTotalText) {
+      const b = getVNNumberBounds(channelOverview.subscriberTotalText);
+      if (b && b.value > 0) {
         clues.push(createClue({
-          type: 'visibleTitleChars',
-          value: validated.text,
-          confidence: validated.confidence,
-          strength: validated.strength,
-          note: validated.strength === 'weak' ? `Ký tự trợ từ / lặp '${validated.text}' (Dùng hậu kiểm, không làm query tìm kiếm)` : `Ký tự tiêu đề lộ ra: '${validated.text}'`
+          type: 'subscriberTotal',
+          value: b.value,
+          min: b.min,
+          max: b.max,
+          confidence: 0.85,
+          strength: 'soft',
+          note: `Tổng sub kênh trong ảnh: ~${channelOverview.subscriberTotalText} (Dùng làm soft filter)`
         }));
-        if (validated.strength !== 'weak') {
-          anchorCount++;
-        }
       }
     }
 
-    // Calculate estimated average view duration if watch hours and total views exist
-    const totalViewsClue = clues.find(c => c.type === 'totalViews');
-    const watchHoursClue = clues.find(c => c.type === 'watchHours');
-    let avgViewDuration = null;
-    if (totalViewsClue && watchHoursClue && totalViewsClue.value > 0) {
-      avgViewDuration = Math.round((watchHoursClue.value * 3600) / totalViewsClue.value);
-      clues.push(createClue({
-        type: 'avgViewDuration',
-        value: avgViewDuration,
-        confidence: 0.90,
-        strength: 'soft',
-        note: `Thời lượng xem trung bình ước tính: ~${avgViewDuration}s (${Math.floor(avgViewDuration / 60)}:${String(avgViewDuration % 60).padStart(2, '0')}). Độ dài video tối thiểu ≥ ${Math.round(avgViewDuration * 0.9)}s`
-      }));
+    // 10. Visible Title Chars
+    const rawTitleChars = parsedJson.visibleTitleChars;
+    if (rawTitleChars) {
+      const validChars = validateVisibleTitleChars(rawTitleChars);
+      if (validChars) {
+        clues.push(createClue({
+          type: 'visibleTitleChars',
+          value: validChars.text,
+          confidence: validChars.confidence,
+          strength: validChars.strength,
+          note: `Ký tự tiêu đề lộ diện: "${validChars.text}" (${validChars.strength === 'weak' ? 'Dấu hiệu yếu, chỉ dùng lọc phụ' : 'Dấu hiệu lọc tốt'})`
+        }));
+      }
     }
+
+    // Determine hasAnchor: MUST have publishDate OR totalViews
+    const hasAnchor = (anchorCount > 0);
 
     return res.status(200).json({
       success: true,
       screenType: screenType,
-      clues: clues,
-      rawMetrics: parsedJson,
-      hasAnchor: anchorCount > 0,
+      hasAnchor: hasAnchor,
       anchorCount: anchorCount,
-      avgViewDuration: avgViewDuration
+      clues: clues,
+      debugRawJson: parsedJson
     });
+
   } catch(err) {
-    console.error('Extraction error:', err);
     return res.status(500).json({
       success: false,
-      message: err.message
+      message: 'Lỗi trích xuất Gemini Vision: ' + err.message
     });
   }
 };
