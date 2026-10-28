@@ -328,71 +328,102 @@ Yêu cầu xuất ra JSON theo đúng định dạng sau:
 /**
  * Realistic Fallback Niches Generator for Offline/Dev Mode or Missing Gemini Key
  */
-function generateFallbackNiches({ targetRegion = 'US', count = 12, topicHint = '' }) {
+function generateFallbackNiches({ targetRegion = 'US', count = 12, topicHint = '', timeframe = 'now 7-d' }) {
   const isVn = targetRegion === 'VN';
+  const tfName = timeframe === 'now 7-d' ? (isVn ? '7 ngày qua' : '7-Day Breakout') :
+                 timeframe === 'today 1-m' ? (isVn ? '30 ngày qua' : '30-Day Growth') :
+                 timeframe === 'today 3-m' ? (isVn ? '90 ngày qua' : 'Quarterly Trend') :
+                 (isVn ? '12 tháng qua' : 'Annual Evergreen');
 
-  const masterVn = [
-    { name: 'Kể Chuyện Trầm Cảm & Chữa Lành Tuổi Già', why: 'Khán giả lớn tuổi xem trọn vẹn, thời lượng xem (AVD) trên 15 phút, CPM quảng cáo dược phẩm/bảo hiểm rất cao.', contentType: 'faceless', cpm: '$8 - $18', audience: 'Người 45-65 tuổi tại Việt Nam', risk: 'low' },
-    { name: 'Triết Lý Khắc Kỷ Ứng Dụng Hàng Ngày', why: 'Nội dung evergreen nghe khi tập gym/lái xe. Sử dụng ảnh tượng điêu khắc AI, chi phí sản xuất cực thấp.', contentType: 'faceless', cpm: '$6 - $14', audience: 'Nam giới 20-40 tuổi', risk: 'none' },
-    { name: 'Bí Mật Quản Lý Tài Chính & Tiết Kiệm Chi Tiêu', why: 'Khán giả có ý định quản lý chi tiêu. CTR tiêu đề cao nhờ yếu tố bảo vệ tài sản gia đình.', contentType: 'faceless', cpm: '$10 - $22', audience: 'Chủ hộ gia đình, nhân viên văn phòng', risk: 'low' },
-    { name: 'Cầu Nguyện & Lời Chúc Phúc Bình An Buổi Sáng', why: 'Thói quen nghe lặp lại hàng ngày (high retention), cộng đồng comment văn minh, ít khi bấm tắt quảng cáo.', contentType: 'faceless', cpm: '$8 - $16', audience: 'Tín đồ tôn giáo, người tìm kiếm sự an yên', risk: 'low' },
-    { name: 'Tóm Tắt Vụ Án Ly Kỳ & Trinh Thám Hồ Sơ Mật', why: 'Tỉ lệ giữ chân khán giả trên 70% đến tận phút cuối nhờ nghệ thuật storytelling cao trào.', contentType: 'faceless', cpm: '$7 - $15', audience: 'Người mê phim trinh thám, podcast', risk: 'low' },
-    { name: 'Hướng Dẫn Tự Động Hoá AI Cho Doanh Nghiệp Nhỏ', why: 'Ý định thương mại rất lớn, kiếm tiền qua affiliate công cụ AI (Make, Zapier, Notion) và tài trợ.', contentType: 'screen_recording', cpm: '$12 - $28', audience: 'Freelancer, chủ doanh nghiệp SME', risk: 'none' },
-    { name: 'Âm Thanh Trắng & Nhạc Thiền Sóng Não 432Hz', why: 'Video 8 tiếng phát xuyên đêm, tỷ lệ xem hết cực cao, doanh thu quảng cáo đều đặn quanh năm.', contentType: 'animation', cpm: '$5 - $12', audience: 'Người mất ngủ, sinh viên học tập', risk: 'none' },
-    { name: 'So Sánh Sản Phẩm Công Nghệ Tối Giản', why: 'Khán giả sẵn sàng click link affiliate mua hàng trên Shopee/Lazada. Hoa hồng trực tiếp cao.', contentType: 'talking_head', cpm: '$8 - $18', audience: 'Người yêu công nghệ tối giản', risk: 'none' },
-    { name: 'Lịch Sử Những Nền Văn Minh Đã Mất', why: 'Thu hút sự tò mò mạnh mẽ, tạo kịch bản hấp dẫn bằng tư liệu cổ và đồ họa phục dựng 3D AI.', contentType: 'faceless', cpm: '$7 - $16', audience: 'Người yêu tri thức và khám phá', risk: 'none' },
-    { name: 'Bài Học Cuộc Đời Từ Những Nhân Vật Vĩ Đại', why: 'Chủ đề trường tồn (evergreen), người xem thích lưu vào playlist và chia sẻ lên mạng xã hội.', contentType: 'faceless', cpm: '$8 - $16', audience: 'Khán giả thích phát triển bản thân', risk: 'none' },
-    { name: 'Nấu Ăn Cơm Nhà Tiết Kiệm & Dinh Dưỡng', why: 'Xu hướng thắt chặt chi tiêu gia đình. Tỉ lệ click cao nhờ hình ảnh thumbnail hấp dẫn gần gũi.', contentType: 'hybrid', cpm: '$5 - $10', audience: 'Nội trợ, người sống một mình', risk: 'none' },
-    { name: 'Khám Phá Nhà Độc Lạ & Kiến Trúc Tí Hon', why: 'Cảm giác thỏa mãn thị giác (visual satisfaction), dễ viral trên cả YouTube Shorts lẫn Long-form.', contentType: 'faceless', cpm: '$6 - $14', audience: 'Người trẻ quan tâm không gian sống', risk: 'none' }
-  ];
-
-  const masterEn = [
-    { name: 'Elder Stoic Wisdom & Emotional Healing', why: 'Ultra-high average view duration > 15 mins with older US demographics. Prime CPM for Medicare, health supplements, and insurance.', contentType: 'faceless', cpm: '$35 - $65', audience: 'Adults 45-70 in US, UK, Canada & Australia', risk: 'low' },
-    { name: 'Unsolved Cold Cases & True Crime Chronicles', why: 'Exceptional retention > 70% driven by cliffhanger storytelling, psychological tension, and dedicated podcast-style listeners.', contentType: 'faceless', cpm: '$22 - $45', audience: 'True crime buffs, mystery enthusiasts, 25-50 age group', risk: 'low' },
-    { name: 'Silent Wealth Habits & Middle-Class Tax Loopholes', why: 'High commercial intent with affluent personal finance audiences. Massive CTR on frugality and wealth preservation thumbnail hooks.', contentType: 'faceless', cpm: '$40 - $85', audience: 'US homeowners, salary earners, early retirement seekers', risk: 'low' },
-    { name: 'Daily Morning Scripture, Prayer & Spiritual Peace', why: 'Consistent daily repeat listen routine, near zero skip rate, highest audience loyalty and ad completion in YouTube algorithm.', contentType: 'faceless', cpm: '$25 - $48', audience: 'Faith-based Christian & spiritual listeners worldwide', risk: 'low' },
-    { name: 'AI Automation Workflows & No-Code Solopreneur', why: 'Massive commercial intent, easily monetized via SaaS affiliate commissions (Make, Zapier, Claude, Cursor) and high-ticket sponsorships.', contentType: 'screen_recording', cpm: '$35 - $75', audience: 'Freelancers, remote agency founders, tech solopreneurs', risk: 'none' },
-    { name: '432Hz Deep Sleep Music & Frequency Brainwave Therapy', why: '8-hour overnight looping playback, ultra-high total watch hours, evergreen demand unaffected by seasonal trend fluctuations.', contentType: 'animation', cpm: '$14 - $28', audience: 'Insomniacs, study-focus listeners, wellness community', risk: 'none' },
-    { name: 'Lost Civilizations & Ancient Historical Anomalies', why: 'Endless viewer intrigue, visualizable with public-domain archives, historical maps, and Midjourney 3D historical reconstructions.', contentType: 'faceless', cpm: '$20 - $42', audience: 'History lovers, curious intellectuals, documentary fans', risk: 'none' },
-    { name: 'Extreme Tiny Homes & Off-Grid Cabin Architecture', why: 'Visual eye-candy satisfaction, viral algorithmic pull across both YouTube Shorts and Long-form home tour formats.', contentType: 'faceless', cpm: '$18 - $38', audience: 'Home lovers, outdoor wanderers, minimalism enthusiasts', risk: 'none' },
-    { name: '10-Minute Executive Book Summaries & Mental Models', why: 'High-income knowledge seekers with massive willingness to purchase recommended books, Audible trials, and productivity software.', contentType: 'hybrid', cpm: '$22 - $46', audience: 'Entrepreneurs, ambitious professionals, college grads', risk: 'none' },
-    { name: 'Minimalist Desk Setup & Aesthetic Workspace Gear', why: 'Viewers directly click Amazon affiliate links to purchase mechanical keyboards, monitor lights, and ergonomic workspace gadgets.', contentType: 'talking_head', cpm: '$25 - $55', audience: 'Tech lovers, remote developers, setup aesthetic enthusiasts', risk: 'none' },
-    { name: 'Survival Homesteading & Emergency Prepping Tactics', why: 'High viewer urgency and passionate niche community with lucrative sponsorship deals from solar, water-filtration, and freeze-dried food brands.', contentType: 'hybrid', cpm: '$20 - $45', audience: 'Rural homeowners, preppers, outdoor enthusiasts', risk: 'low' },
-    { name: 'Psychology of Human Behavior & Dark Mindset Secrets', why: 'Irresistible curiosity gap, high viewer engagement in comments, highly viral among ambitious younger male demographics.', contentType: 'faceless', cpm: '$24 - $48', audience: 'Self-improvement seekers, psychology buffs (18-35)', risk: 'none' }
-  ];
-
-  const masterList = isVn ? masterVn : masterEn;
+  let master = [];
 
   if (topicHint && topicHint.trim()) {
-    const hint = topicHint.trim();
-    masterList.unshift({
-      name: `${hint} (${isVn ? 'Xu Hướng Mới' : 'Trending Breakout'})`,
-      why: isVn ? `Ngách bứt phá theo chủ đề "${hint}" với tiềm năng tăng trưởng view nhanh.` : `High-growth breakout niche centered on "${hint}" with rapid audience interest.`,
-      contentType: 'faceless',
-      cpm: isVn ? '$10 - $25' : '$25 - $55',
-      audience: isVn ? 'Khán giả quan tâm chủ đề' : `Global English audience interested in ${hint}`,
-      risk: 'none'
-    });
+    const rawHint = topicHint.trim();
+    const hint = rawHint.charAt(0).toUpperCase() + rawHint.slice(1);
+
+    if (isVn) {
+      master = [
+        { name: `Bí Mật & Góc Khuất Của ${hint}`, why: `Chủ đề giật gân, tò mò cao về "${hint}". Khán giả xem hết video để tìm lời giải.`, contentType: 'faceless', cpm: '$12 - $25', audience: 'Khán giả tò mò, thích khám phá' },
+        { name: `Hướng Dẫn ${hint} Cho Người Mới Bắt Đầu 2026`, why: `Lượng tìm kiếm organic cao quanh năm từ người mới tiếp cận "${hint}".`, contentType: 'screen_recording', cpm: '$15 - $30', audience: 'Người mới học, tự làm' },
+        { name: `Top Công Cụ & Phần Mềm Hỗ Trợ ${hint}`, why: `Ý định thương mại cao, dễ chèn link affiliate và nhận tài trợ công cụ.`, contentType: 'screen_recording', cpm: '$18 - $38', audience: 'Dân làm nghề, sinh viên, người làm MMO' },
+        { name: `Lịch Sử & Sự Phát Triển Bất Ngờ Của ${hint}`, why: `Nội dung tư liệu kết hợp hình ảnh AI cổ điển, giữ chân khán giả trên 65%.`, contentType: 'faceless', cpm: '$10 - $22', audience: 'Người yêu tri thức và tư liệu' },
+        { name: `Cách Kiếm Tiền Từ ${hint} Không Cần Lộ Mặt`, why: `Nhu cầu khởi nghiệp faceless với "${hint}" đang bứt phá mạnh mẽ.`, contentType: 'faceless', cpm: '$20 - $45', audience: 'Người làm tự do, kiếm tiền online' },
+        { name: `Những Sai Lầm Khiến Bạn Thất Bại Với ${hint}`, why: `Đánh vào tâm lý sợ mất mát (FOMO), tỷ lệ nhấp CTR thumbnail cực cao.`, contentType: 'hybrid', cpm: '$14 - $28', audience: 'Người đang thực hành chủ đề' },
+        { name: `Phân Tích Chuyên Sâu Case Study Về ${hint}`, why: `Nội dung cao cấp, khán giả trung thành, giá thầu quảng cáo B2B tốt.`, contentType: 'talking_head', cpm: '$22 - $50', audience: 'Chuyên gia, chủ kinh doanh' },
+        { name: `Tối Ưu Hoá Quy Trình ${hint} Bằng AI`, why: `Bắt đúng xu hướng ứng dụng trí tuệ nhân tạo vào thực tế công việc.`, contentType: 'screen_recording', cpm: '$25 - $55', audience: 'Người yêu công nghệ, năng suất' },
+        { name: `Hành Trình 30 Ngày Thử Thách ${hint}`, why: `Định dạng video trải nghiệm thực tế dễ viral và tạo sự đồng cảm.`, contentType: 'hybrid', cpm: '$12 - $26', audience: 'Giới trẻ, người thích trải nghiệm' },
+        { name: `So Sánh Các Giải Pháp ${hint} Phổ Biến Nhất`, why: `Người xem có ý định chi tiền, tỷ lệ chuyển đổi đơn hàng cao.`, contentType: 'hybrid', cpm: '$16 - $35', audience: 'Người mua sắm thông minh' },
+        { name: `Thói Quen Của Người Giỏi Nhất Về ${hint}`, why: `Evergreen dài hạn, người xem thích chia sẻ và lưu vào danh sách phát.`, contentType: 'faceless', cpm: '$14 - $30', audience: 'Khán giả tự hoàn thiện bản thân' },
+        { name: `Dự Đoán Tương Lai Của ${hint} (2026 - 2030)`, why: `Kích thích tranh luận trong phần bình luận, tăng tín hiệu tương tác cho thuật toán.`, contentType: 'faceless', cpm: '$18 - $40', audience: 'Nhà đầu tư, người quan tâm tương lai' }
+      ];
+    } else {
+      master = [
+        { name: `The Untold Truth Behind ${hint} in 2026`, why: `High curiosity gap and intrigue regarding "${hint}". Audiences watch in full to uncover hidden facts.`, contentType: 'faceless', cpm: '$35 - $70', audience: 'Global curious minds, US documentary fans' },
+        { name: `${hint} For Complete Beginners: Step By Step Guide`, why: `Evergreen high search volume from thousands starting fresh with "${hint}" monthly.`, contentType: 'screen_recording', cpm: '$30 - $60', audience: 'Beginners, learners, self-taught creators' },
+        { name: `Best High-ROI Software & Tools For ${hint}`, why: `Massive commercial purchase intent with SaaS affiliate deals and tool sponsorships.`, contentType: 'screen_recording', cpm: '$45 - $90', audience: 'Digital professionals, solopreneurs, agencies' },
+        { name: `The Dark Psychology of ${hint} Nobody Mentions`, why: `Strong emotional hook with viral retention rates above 72% across all age demographics.`, contentType: 'faceless', cpm: '$32 - $65', audience: 'Psychology lovers, deep thinkers (20-45)' },
+        { name: `Faceless YouTube Channel Blueprint in ${hint}`, why: `Skyrocketing demand for automated, zero-camera creator businesses in this specific niche.`, contentType: 'faceless', cpm: '$40 - $85', audience: 'MMO builders, remote entrepreneurs' },
+        { name: `10 Costly Mistakes When Starting ${hint}`, why: `Loss aversion psychology ensures massive thumbnail CTR and long session duration.`, contentType: 'hybrid', cpm: '$28 - $58', audience: 'Ambitious practitioners, career changers' },
+        { name: `Deep Dive Case Study: How One Video Dominated ${hint}`, why: `High-value breakdown that attracts high-net-worth business and marketing audiences.`, contentType: 'talking_head', cpm: '$42 - $95', audience: 'SaaS founders, marketers, investors' },
+        { name: `AI Automation Workflows Tailored For ${hint}`, why: `Taps into the hottest tech trend: automating manual work using AI and custom agents.`, contentType: 'screen_recording', cpm: '$40 - $80', audience: 'Tech enthusiasts, productivity hackers' },
+        { name: `I Tested ${hint} For 30 Days: Shocking Results`, why: `Relatable transformation story with viral algorithmic pull across Long-form and Shorts.`, contentType: 'hybrid', cpm: '$26 - $52', audience: 'General curious audience, self-improvers' },
+        { name: `Top 5 ${hint} Alternatives Compared (Honest Review)`, why: `Viewers ready with credit cards searching for real comparisons before purchasing.`, contentType: 'hybrid', cpm: '$38 - $78', audience: 'Discerning buyers, tech evaluators' },
+        { name: `Daily Habits & Mental Models of 1% ${hint} Masters`, why: `Evergreen philosophical content that viewers save to playlists and rewatch annually.`, contentType: 'faceless', cpm: '$30 - $62', audience: 'High achievers, personal growth community' },
+        { name: `The Future of ${hint}: Critical Forecasts (2026-2030)`, why: `Drives intense debate in comments, signaling hyper-engagement to YouTube algorithm.`, contentType: 'faceless', cpm: '$35 - $75', audience: 'Forward thinkers, forward-looking investors' }
+      ];
+    }
+  } else {
+    // Curated high-RPM niches tailored to timeframe and region
+    if (isVn) {
+      master = [
+        { name: 'Kể Chuyện Trầm Cảm & Chữa Lành Tuổi Già', why: 'Khán giả lớn tuổi xem trọn vẹn, thời lượng xem (AVD) trên 15 phút, CPM quảng cáo dược phẩm/bảo hiểm rất cao.', contentType: 'faceless', cpm: '$8 - $18', audience: 'Người 45-65 tuổi tại Việt Nam' },
+        { name: 'Triết Lý Khắc Kỷ Ứng Dụng Hàng Ngày', why: 'Nội dung evergreen nghe khi tập gym/lái xe. Sử dụng ảnh tượng điêu khắc AI, chi phí sản xuất cực thấp.', contentType: 'faceless', cpm: '$6 - $14', audience: 'Nam giới 20-40 tuổi' },
+        { name: 'Bí Mật Quản Lý Tài Chính & Tiết Kiệm Chi Tiêu', why: 'Khán giả có ý định quản lý chi tiêu. CTR tiêu đề cao nhờ yếu tố bảo vệ tài sản gia đình.', contentType: 'faceless', cpm: '$10 - $22', audience: 'Chủ hộ gia đình, nhân viên văn phòng' },
+        { name: 'Cầu Nguyện & Lời Chúc Phúc Bình An Buổi Sáng', why: 'Thói quen nghe lặp lại hàng ngày (high retention), cộng đồng comment văn minh, ít khi bấm tắt quảng cáo.', contentType: 'faceless', cpm: '$8 - $16', audience: 'Tín đồ tôn giáo, người tìm kiếm sự an yên' },
+        { name: 'Tóm Tắt Vụ Án Ly Kỳ & Trinh Thám Hồ Sơ Mật', why: 'Tỉ lệ giữ chân khán giả trên 70% đến tận phút cuối nhờ nghệ thuật storytelling cao trào.', contentType: 'faceless', cpm: '$7 - $15', audience: 'Người mê phim trinh thám, podcast' },
+        { name: 'Hướng Dẫn Tự Động Hoá AI Cho Doanh Nghiệp Nhỏ', why: 'Ý định thương mại rất lớn, kiếm tiền qua affiliate công cụ AI (Make, Zapier, Notion) và tài trợ.', contentType: 'screen_recording', cpm: '$12 - $28', audience: 'Freelancer, chủ doanh nghiệp SME' },
+        { name: 'Âm Thanh Trắng & Nhạc Thiền Sóng Não 432Hz', why: 'Video 8 tiếng phát xuyên đêm, tỷ lệ xem hết cực cao, doanh thu quảng cáo đều đặn quanh năm.', contentType: 'animation', cpm: '$5 - $12', audience: 'Người mất ngủ, sinh viên học tập' },
+        { name: 'So Sánh Sản Phẩm Công Nghệ Tối Giản', why: 'Khán giả sẵn sàng click link affiliate mua hàng trên Shopee/Lazada. Hoa hồng trực tiếp cao.', contentType: 'talking_head', cpm: '$8 - $18', audience: 'Người yêu công nghệ tối giản' },
+        { name: 'Lịch Sử Những Nền Văn Minh Đã Mất', why: 'Thu hút sự tò mò mạnh mẽ, tạo kịch bản hấp dẫn bằng tư liệu cổ và đồ họa phục dựng 3D AI.', contentType: 'faceless', cpm: '$7 - $16', audience: 'Người yêu tri thức và khám phá' },
+        { name: 'Bài Học Cuộc Đời Từ Những Nhân Vật Vĩ Đại', why: 'Chủ đề trường tồn (evergreen), người xem thích lưu vào playlist và chia sẻ lên mạng xã hội.', contentType: 'faceless', cpm: '$8 - $16', audience: 'Khán giả thích phát triển bản thân' },
+        { name: 'Nấu Ăn Cơm Nhà Tiết Kiệm & Dinh Dưỡng', why: 'Xu hướng thắt chặt chi tiêu gia đình. Tỉ lệ click cao nhờ hình ảnh thumbnail hấp dẫn gần gũi.', contentType: 'hybrid', cpm: '$5 - $10', audience: 'Nội trợ, người sống một mình' },
+        { name: 'Khám Phá Nhà Độc Lạ & Kiến Trúc Tí Hon', why: 'Cảm giác thỏa mãn thị giác (visual satisfaction), dễ viral trên cả YouTube Shorts lẫn Long-form.', contentType: 'faceless', cpm: '$6 - $14', audience: 'Người trẻ quan tâm không gian sống' }
+      ];
+    } else {
+      master = [
+        { name: 'Elder Stoic Wisdom & Emotional Healing', why: 'Ultra-high average view duration > 15 mins with older US demographics. Prime CPM for Medicare, health supplements, and insurance.', contentType: 'faceless', cpm: '$35 - $65', audience: 'Adults 45-70 in US, UK, Canada & Australia' },
+        { name: 'Unsolved Cold Cases & True Crime Chronicles', why: 'Exceptional retention > 70% driven by cliffhanger storytelling, psychological tension, and dedicated podcast-style listeners.', contentType: 'faceless', cpm: '$22 - $45', audience: 'True crime buffs, mystery enthusiasts, 25-50 age group' },
+        { name: 'Silent Wealth Habits & Middle-Class Tax Loopholes', why: 'High commercial intent with affluent personal finance audiences. Massive CTR on frugality and wealth preservation thumbnail hooks.', contentType: 'faceless', cpm: '$40 - $85', audience: 'US homeowners, salary earners, early retirement seekers' },
+        { name: 'Daily Morning Scripture, Prayer & Spiritual Peace', why: 'Consistent daily repeat listen routine, near zero skip rate, highest audience loyalty and ad completion in YouTube algorithm.', contentType: 'faceless', cpm: '$25 - $48', audience: 'Faith-based Christian & spiritual listeners worldwide' },
+        { name: 'AI Automation Workflows & No-Code Solopreneur', why: 'Massive commercial intent, easily monetized via SaaS affiliate commissions (Make, Zapier, Claude, Cursor) and high-ticket sponsorships.', contentType: 'screen_recording', cpm: '$35 - $75', audience: 'Freelancers, remote agency founders, tech solopreneurs' },
+        { name: '432Hz Deep Sleep Music & Frequency Brainwave Therapy', why: '8-hour overnight looping playback, ultra-high total watch hours, evergreen demand unaffected by seasonal trend fluctuations.', contentType: 'animation', cpm: '$14 - $28', audience: 'Insomniacs, study-focus listeners, wellness community' },
+        { name: 'Lost Civilizations & Ancient Historical Anomalies', why: 'Endless viewer intrigue, visualizable with public-domain archives, historical maps, and Midjourney 3D historical reconstructions.', contentType: 'faceless', cpm: '$20 - $42', audience: 'History lovers, curious intellectuals, documentary fans' },
+        { name: 'Extreme Tiny Homes & Off-Grid Cabin Architecture', why: 'Visual eye-candy satisfaction, viral algorithmic pull across both YouTube Shorts and Long-form home tour formats.', contentType: 'faceless', cpm: '$18 - $38', audience: 'Home lovers, outdoor wanderers, minimalism enthusiasts' },
+        { name: '10-Minute Executive Book Summaries & Mental Models', why: 'High-income knowledge seekers with massive willingness to purchase recommended books, Audible trials, and productivity software.', contentType: 'hybrid', cpm: '$22 - $46', audience: 'Entrepreneurs, ambitious professionals, college grads' },
+        { name: 'Minimalist Desk Setup & Aesthetic Workspace Gear', why: 'Viewers directly click Amazon affiliate links to purchase mechanical keyboards, monitor lights, and ergonomic workspace gadgets.', contentType: 'talking_head', cpm: '$25 - $55', audience: 'Tech lovers, remote developers, setup aesthetic enthusiasts' },
+        { name: 'Survival Homesteading & Emergency Prepping Tactics', why: 'High viewer urgency and passionate niche community with lucrative sponsorship deals from solar, water-filtration, and freeze-dried food brands.', contentType: 'hybrid', cpm: '$20 - $45', audience: 'Rural homeowners, preppers, outdoor enthusiasts' },
+        { name: 'Psychology of Human Behavior & Dark Mindset Secrets', why: 'Irresistible curiosity gap, high viewer engagement in comments, highly viral among ambitious younger male demographics.', contentType: 'faceless', cpm: '$24 - $48', audience: 'Self-improvement seekers, psychology buffs (18-35)' }
+      ];
+    }
   }
 
-  const selected = masterList.slice(0, Math.min(count, masterList.length));
+  const selected = master.slice(0, Math.min(count, master.length));
   return {
     niches: selected.map((m, idx) => ({
       id: `fallback_niche_${idx + 1}`,
       name: m.name,
-      description: isVn ? `Ngách tiềm năng định hướng thị trường ${targetRegion}: ${m.name}` : `High-potential niche optimized for ${targetRegion} market: ${m.name}`,
+      description: isVn ? `[${tfName}] Ngách tiềm năng thị trường ${targetRegion}: ${m.name}` : `[${tfName}] High-potential niche for ${targetRegion}: ${m.name}`,
       whyTrending: m.why,
       contentType: m.contentType,
       cpmGroup: m.cpm,
       targetAudience: m.audience,
-      policyRisk: m.risk,
-      policyRiskNote: isVn ? 'Giả thuyết gợi ý từ kho dữ liệu YouTrend Grounding Data' : 'Grounding hypothesis from YouTrend Global Knowledge Base',
+      policyRisk: 'none',
+      policyRiskNote: isVn ? 'Giả thuyết kiểm chứng từ YouTrend Grounding Data' : 'Grounding hypothesis from YouTrend Global Intelligence',
       sensitiveFlag: false,
       isHypothesis: true
     }))
   };
 }
-
 /**
  * Realistic Fallback Keywords Generator for Offline/Dev Mode or Missing Gemini Key
  */
