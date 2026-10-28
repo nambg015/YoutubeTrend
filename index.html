@@ -1236,25 +1236,299 @@ function score(v) {
   return { hours, vph, speed, fresh, eng, rel, rate, ratio, total, engPercent: (rate * 100).toFixed(2) };
 }
 
-// YouTube Data API Client
+
+
+// =========================================================================
+// HỆ THỐNG GÓI DỊCH VỤ & HẠN MỨC YOUTREND (TIER & SEPAY VIETQR ENGINE)
+// =========================================================================
+const SEPAY_CONFIG = {
+  apiKey: 'J1CBHWNBTR9O5136HKVEGHOQIXLGBIHZ0GEORPVYPCWRUDNXSF2LVUQTTWY4MOYV',
+  bankName: 'VietinBank',
+  accountNumber: '100882100939',
+  accountHolder: 'SEPAY - VIETINBANK'
+};
+
+const TIERS_DATA = {
+  FREE: {
+    id: 'FREE',
+    name: 'GÓI FREE – MIỄN PHÍ',
+    priceText: '0đ',
+    maxDailyKeywords: 5,
+    maxDailyAnalysis: 5,
+    canAccessTopNgach: false,
+    canAccessExplorer: false
+  },
+  PRO: {
+    id: 'PRO',
+    name: 'GÓI PRO – NÂNG CAO',
+    options: [
+      { id: '1m', label: '1 Tháng', price: 399000, priceText: '399.000đ', days: 30 },
+      { id: '3m', label: '3 Tháng', price: 699000, priceText: '699.000đ', days: 90, badge: 'Phổ biến' },
+      { id: '1y', label: '1 Năm', price: 999000, priceText: '999.000đ', days: 365, badge: 'Tiết kiệm nhất' }
+    ],
+    maxDailyKeywords: 50,
+    maxDailyAnalysis: 99999,
+    canAccessTopNgach: true,
+    canAccessExplorer: true
+  },
+  ULTRA_PRO: {
+    id: 'ULTRA_PRO',
+    name: 'GÓI ULTRA PRO – KHÔNG GIỚI HẠN',
+    options: [
+      { id: '1m', label: '1 Tháng', price: 599000, priceText: '599.000đ', days: 30 },
+      { id: '3m', label: '3 Tháng', price: 999000, priceText: '999.000đ', days: 90 },
+      { id: '1y', label: '1 Năm', price: 1500000, priceText: '1.500.000đ', days: 365, badge: 'Đẳng cấp nhất' }
+    ],
+    maxDailyKeywords: 999999,
+    maxDailyAnalysis: 999999,
+    canAccessTopNgach: true,
+    canAccessExplorer: true
+  }
+};
+
+const ytTierManager = {
+  getTier() {
+    try {
+      const data = JSON.parse(st.get('yt_user_tier') || 'null');
+      if (data && data.tier && data.tier !== 'FREE') {
+        if (data.expiresAt && Date.now() > data.expiresAt) {
+          this.setTier('FREE');
+          return 'FREE';
+        }
+        return data.tier;
+      }
+    } catch(e) {}
+    return 'FREE';
+  },
+  getTierDetails() {
+    try {
+      const data = JSON.parse(st.get('yt_user_tier') || 'null');
+      if (data && data.tier) return data;
+    } catch(e) {}
+    return { tier: 'FREE', activatedAt: Date.now(), expiresAt: null };
+  },
+  setTier(tierName, durationDays = null) {
+    const data = {
+      tier: tierName,
+      activatedAt: Date.now(),
+      expiresAt: durationDays ? Date.now() + durationDays * 86400000 : null
+    };
+    st.set('yt_user_tier', JSON.stringify(data));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('yt-tier-changed', { detail: data }));
+    }
+    return data;
+  },
+  isPro() {
+    const t = this.getTier();
+    return t === 'PRO' || t === 'ULTRA_PRO';
+  },
+  isUltraPro() {
+    return this.getTier() === 'ULTRA_PRO';
+  },
+  getUsage() {
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const u = JSON.parse(st.get('yt_daily_usage') || 'null');
+      if (u && u.date === today) {
+        return {
+          date: today,
+          keywords: Array.isArray(u.keywords) ? u.keywords : [],
+          analysisCount: Number(u.analysisCount) || 0
+        };
+      }
+    } catch(e) {}
+    const fresh = { date: today, keywords: [], analysisCount: 0 };
+    st.set('yt_daily_usage', JSON.stringify(fresh));
+    return fresh;
+  },
+  saveUsage(u) {
+    try {
+      st.set('yt_daily_usage', JSON.stringify(u));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('yt-usage-updated', { detail: u }));
+      }
+    } catch(e) {}
+  },
+  canSearchKeyword(keyword) {
+    if (!keyword) return true;
+    const norm = keyword.trim().toLowerCase();
+    const tier = this.getTier();
+    if (tier === 'ULTRA_PRO') return true;
+    const usage = this.getUsage();
+    if (usage.keywords.includes(norm)) return true;
+    const maxLimit = tier === 'PRO' ? 50 : 5;
+    return usage.keywords.length < maxLimit;
+  },
+  recordKeyword(keyword) {
+    if (!keyword) return;
+    const norm = keyword.trim().toLowerCase();
+    const usage = this.getUsage();
+    if (!usage.keywords.includes(norm)) {
+      usage.keywords.push(norm);
+      this.saveUsage(usage);
+    }
+  },
+  canAnalyze() {
+    const tier = this.getTier();
+    if (tier === 'PRO' || tier === 'ULTRA_PRO') return true;
+    const usage = this.getUsage();
+    return usage.analysisCount < 5;
+  },
+  recordAnalysis() {
+    const usage = this.getUsage();
+    usage.analysisCount = (usage.analysisCount || 0) + 1;
+    this.saveUsage(usage);
+  }
+};
+
+// =========================================================================
+// SMART MULTI-KEY POOL & ROTATION ENGINE (QUẢN LÝ ĐA KEY & TỰ ĐỘNG XOAY VÒNG)
+// =========================================================================
+const ytKeyManager = {
+  getPool() {
+    try {
+      const saved = JSON.parse(st.get('yt_key_pool') || 'null');
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+    } catch (e) {}
+    const single = (st.get('yt_key') || '').trim();
+    if (single) {
+      return [{ id: 'k_main', name: 'Key Mặc Định #1', key: single, status: 'active', addedAt: Date.now() }];
+    }
+    return [];
+  },
+  savePool(pool) {
+    try {
+      st.set('yt_key_pool', JSON.stringify(pool));
+      const active = pool.find(p => p.status === 'active' && p.key) || pool.find(p => p.key);
+      if (active) {
+        st.set('yt_key', active.key);
+      } else {
+        st.set('yt_key', '');
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('yt-keys-updated', { detail: { pool, activeKey: active ? active.key : '' } }));
+      }
+      return active ? active.key : '';
+    } catch (e) {
+      return '';
+    }
+  },
+  getActiveKey() {
+    const pool = this.getPool();
+    const active = pool.find(p => p.status === 'active' && p.key);
+    return active ? active.key : (st.get('yt_key') || '');
+  },
+  addKey(name, keyStr) {
+    const trimmed = (keyStr || '').trim();
+    if (!trimmed) return false;
+    const pool = this.getPool();
+    if (pool.some(p => p.key === trimmed)) return false;
+    const isFirst = pool.length === 0;
+    const newItem = {
+      id: 'k_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      name: (name || '').trim() || ('Key Dự Phòng #' + (pool.length + 1)),
+      key: trimmed,
+      status: isFirst ? 'active' : 'standby',
+      addedAt: Date.now()
+    };
+    pool.push(newItem);
+    this.savePool(pool);
+    return true;
+  },
+  removeKey(idOrKey) {
+    let pool = this.getPool().filter(p => p.id !== idOrKey && p.key !== idOrKey);
+    if (!pool.some(p => p.status === 'active') && pool.length > 0) {
+      pool[0].status = 'active';
+    }
+    this.savePool(pool);
+    return pool;
+  },
+  setActive(idOrKey) {
+    const pool = this.getPool().map(p => {
+      if (p.id === idOrKey || p.key === idOrKey) {
+        return { ...p, status: 'active' };
+      }
+      return { ...p, status: p.status === 'active' ? 'standby' : p.status };
+    });
+    this.savePool(pool);
+    return this.getActiveKey();
+  },
+  markQuotaExceeded(failedKey) {
+    if (!failedKey) return null;
+    const pool = this.getPool();
+    let nextKey = null;
+    let switched = false;
+    let candidateName = '';
+    const updated = pool.map(item => {
+      if (item.key === failedKey) {
+        return { ...item, status: 'quota_exceeded', exceededAt: Date.now() };
+      }
+      return item;
+    });
+    const candidate = updated.find(item => item.status !== 'quota_exceeded' && item.key && item.key !== failedKey);
+    if (candidate) {
+      candidate.status = 'active';
+      nextKey = candidate.key;
+      candidateName = candidate.name;
+      switched = true;
+    }
+    this.savePool(updated);
+    if (switched && nextKey && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('yt-key-switched', { detail: { oldKey: failedKey, newKey: nextKey, candidateName } }));
+    }
+    return nextKey;
+  },
+  resetAllStatuses() {
+    const pool = this.getPool().map((p, idx) => ({
+      ...p,
+      status: idx === 0 ? 'active' : 'standby'
+    }));
+    this.savePool(pool);
+    return this.getActiveKey();
+  }
+};
+
+// YouTube Data API Client (With Auto-Rotation on Quota Limit)
 async function yt(path, params, key) {
-  const u = new URL('https://www.googleapis.com/youtube/v3/' + path);
-  Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== '') u.searchParams.set(k, v);
-  });
-  u.searchParams.set('key', key);
-  let r;
+  let activeKey = key || ytKeyManager.getActiveKey();
+  if (!activeKey) {
+    throw { code: 'MISSING', msg: 'Chưa cài đặt YouTube API Key' };
+  }
+
+  const callApiWithKey = async (currentKey) => {
+    const u = new URL('https://www.googleapis.com/youtube/v3/' + path);
+    Object.entries(params).forEach(([paramK, paramV]) => {
+      if (paramV !== undefined && paramV !== null && paramV !== '') u.searchParams.set(paramK, paramV);
+    });
+    u.searchParams.set('key', currentKey);
+    let r;
+    try {
+      r = await fetch(u.toString());
+    } catch (e) {
+      throw { code: 'NETWORK', msg: String(e) };
+    }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const e0 = j.error && j.error.errors && j.error.errors[0];
+      const reason = (e0 && e0.reason) || ('HTTP' + r.status);
+      throw { code: reason, msg: (j.error && j.error.message) || '', raw: j };
+    }
+    return j;
+  };
+
   try {
-    r = await fetch(u.toString());
-  } catch (e) {
-    throw { code: 'NETWORK', msg: String(e) };
+    return await callApiWithKey(activeKey);
+  } catch (err) {
+    if (err.code === 'quotaExceeded' || err.code === 'dailyLimitExceeded' || err.code === 'rateLimitExceeded') {
+      const nextKey = ytKeyManager.markQuotaExceeded(activeKey);
+      if (nextKey && nextKey !== activeKey) {
+        console.warn('[YouTrend Auto-Rotation] Key ' + activeKey.slice(0, 8) + '... đã hết hạn mức. Đang tự động xoay sang key kế tiếp...');
+        return await callApiWithKey(nextKey);
+      }
+    }
+    throw err;
   }
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    const e0 = j.error && j.error.errors && j.error.errors[0];
-    throw { code: (e0 && e0.reason) || ('HTTP' + r.status), msg: (j.error && j.error.message) || '' };
-  }
-  return j;
 }
 
 function errInfo(e) {
@@ -5023,90 +5297,609 @@ function CompetitorContentPromptModal({ video, onClose, onCopy }) {
   );
 }
 
-// User Account & API Key Management Modal (Strictly No Icons)
-function AccountProfileModal({ apiKey, onClose, onSaveKey, onRemoveKey, competitorsCount = 0, savedCount = 0 }) {
-  const [draftKey, setDraftKey] = useState(apiKey || '');
-  const [showKeyText, setShowKeyText] = useState(false);
+// User Account & Multi-Key API Management Modal (Clean & Authentic)
+function AccountProfileModal({ 
+  apiKey, 
+  onClose, 
+  onSaveKey, 
+  onRemoveKey, 
+  competitors = [], 
+  setCompetitors,
+  savedVideos = [], 
+  setSavedVideos,
+  showToast,
+  onOpenSubscriptionModal
+}) {
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'keys' | 'security'
+  
+  // Profile State
+  const [profile, setProfile] = useState(() => {
+    try {
+      const p = JSON.parse(st.get('yt_user_profile') || 'null');
+      if (p && p.name) return p;
+    } catch(e) {}
+    return {
+      name: 'Người Dùng YouTrend',
+      email: 'user@youtrend.pro',
+      avatar: '👤'
+    };
+  });
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState(profile.name);
+  const [editEmail, setEditEmail] = useState(profile.email);
+
+  // Tier & Usage State
+  const currentTier = ytTierManager.getTier();
+  const tierDetails = ytTierManager.getTierDetails();
+  const usage = ytTierManager.getUsage();
+
+  // Key Pool State
+  const [keyPool, setKeyPool] = useState(() => ytKeyManager.getPool());
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyStr, setNewKeyStr] = useState('');
+  const [showKeyTextMap, setShowKeyTextMap] = useState({});
+  const [pingTestingId, setPingTestingId] = useState(null);
+
+  const saveProfileData = (updated) => {
+    setProfile(updated);
+    st.set('yt_user_profile', JSON.stringify(updated));
+    if (showToast) showToast('Đã lưu thông tin tài khoản!');
+    setIsEditingProfile(false);
+  };
+
+  const handleAddKey = (e) => {
+    if (e) e.preventDefault();
+    const trimmed = (newKeyStr || '').trim();
+    if (!trimmed) {
+      if (showToast) showToast('Vui lòng nhập mã API Key bắt đầu bằng AIzaSy...!');
+      return;
+    }
+    const success = ytKeyManager.addKey(newKeyName, trimmed);
+    if (success) {
+      const updated = ytKeyManager.getPool();
+      setKeyPool(updated);
+      setNewKeyName('');
+      setNewKeyStr('');
+      if (showToast) showToast('Đã thêm Key vào kho xoay vòng tự động!');
+    } else {
+      if (showToast) showToast('API Key này đã tồn tại trong kho!');
+    }
+  };
+
+  const handleSetActiveKey = (id) => {
+    const activeK = ytKeyManager.setActive(id);
+    setKeyPool(ytKeyManager.getPool());
+    if (onSaveKey) onSaveKey(activeK);
+    if (showToast) showToast('Đã kích hoạt làm Key chính!');
+  };
+
+  const handleRemoveKey = (id) => {
+    if (keyPool.length <= 1) {
+      if (!confirm('Đây là Key duy nhất còn lại. Bạn có chắc muốn xóa không?')) return;
+    }
+    const updated = ytKeyManager.removeKey(id);
+    setKeyPool(updated);
+    const active = ytKeyManager.getActiveKey();
+    if (onSaveKey) onSaveKey(active);
+    if (showToast) showToast('Đã xóa Key khỏi kho xoay vòng.');
+  };
+
+  const handleTestKeyPing = async (item) => {
+    setPingTestingId(item.id);
+    const start = performance.now();
+    try {
+      const u = new URL('https://www.googleapis.com/youtube/v3/videos');
+      u.searchParams.set('part', 'snippet');
+      u.searchParams.set('chart', 'mostPopular');
+      u.searchParams.set('maxResults', '1');
+      u.searchParams.set('regionCode', 'VN');
+      u.searchParams.set('key', item.key);
+      const res = await fetch(u.toString());
+      const data = await res.json().catch(() => ({}));
+      const pingTime = Math.round(performance.now() - start);
+      if (res.ok) {
+        if (showToast) showToast('Kết nối thành công (' + pingTime + 'ms) - Key hoạt động tốt!');
+        const updated = keyPool.map(k => k.id === item.id ? { ...k, status: k.status === 'active' ? 'active' : 'standby', lastPing: pingTime } : k);
+        ytKeyManager.savePool(updated);
+        setKeyPool(updated);
+      } else {
+        const reason = (data.error && data.error.errors && data.error.errors[0] && data.error.errors[0].reason) || 'Lỗi HTTP ' + res.status;
+        if (reason === 'quotaExceeded' || reason === 'dailyLimitExceeded') {
+          if (showToast) showToast('Key này đã hết hạn mức Quota trong ngày (quotaExceeded)');
+          ytKeyManager.markQuotaExceeded(item.key);
+          setKeyPool(ytKeyManager.getPool());
+        } else {
+          if (showToast) showToast('Lỗi kết nối: ' + reason);
+        }
+      }
+    } catch(e) {
+      if (showToast) showToast('Lỗi mạng khi kiểm tra Key: ' + String(e));
+    } finally {
+      setPingTestingId(null);
+    }
+  };
+
+  const handleResetAllQuota = () => {
+    ytKeyManager.resetAllStatuses();
+    const updated = ytKeyManager.getPool();
+    setKeyPool(updated);
+    if (showToast) showToast('Đã đặt lại trạng thái Quota cho tất cả Key!');
+  };
+
+  // Backup & Restore
+  const handleExportBackup = () => {
+    try {
+      const backupData = {
+        version: '2.0',
+        exportedAt: new Date().toISOString(),
+        profile,
+        keys: keyPool,
+        savedVideos,
+        competitors,
+        tier: tierDetails,
+        ideas: JSON.parse(st.get('yt_video_ideas_board') || '[]')
+      };
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'youtrend_backup_' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      if (showToast) showToast('Đã tải xuống file sao lưu dữ liệu!');
+    } catch(e) {
+      if (showToast) showToast('Lỗi khi sao lưu dữ liệu: ' + String(e));
+    }
+  };
+
+  const handleImportBackup = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        if (!imported) throw new Error('File không hợp lệ');
+        if (imported.profile) saveProfileData(imported.profile);
+        if (Array.isArray(imported.keys) && imported.keys.length > 0) {
+          ytKeyManager.savePool(imported.keys);
+          setKeyPool(imported.keys);
+        }
+        if (Array.isArray(imported.savedVideos) && setSavedVideos) {
+          setSavedVideos(imported.savedVideos);
+        }
+        if (Array.isArray(imported.competitors) && setCompetitors) {
+          setCompetitors(imported.competitors);
+        }
+        if (imported.tier && imported.tier.tier) {
+          st.set('yt_user_tier', JSON.stringify(imported.tier));
+        }
+        if (Array.isArray(imported.ideas)) {
+          st.set('yt_video_ideas_board', JSON.stringify(imported.ideas));
+        }
+        if (showToast) showToast('Khôi phục toàn bộ dữ liệu thành công!');
+      } catch(err) {
+        if (showToast) showToast('Không thể đọc file sao lưu. Vui lòng kiểm tra lại định dạng .json!');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const activeKeyStr = ytKeyManager.getActiveKey();
+  const activeCount = keyPool.filter(k => k.status === 'active').length;
+  const standbyCount = keyPool.filter(k => k.status === 'standby').length;
+  const quotaExceededCount = keyPool.filter(k => k.status === 'quota_exceeded').length;
+
+  const maxKwLimit = currentTier === 'ULTRA_PRO' ? 'Không giới hạn' : (currentTier === 'PRO' ? 50 : 5);
+  const maxAnalysisLimit = (currentTier === 'PRO' || currentTier === 'ULTRA_PRO') ? 'Không giới hạn' : 5;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-brand-surface border border-brand-border rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-[#12141c] border border-[#232738] rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
         
-        <div className="flex items-center justify-between border-b border-brand-border pb-3">
-          <div>
-            <div className="inline-block px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold border border-emerald-500/40">
-              TÀI KHOẢN HỆ THỐNG
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#232738] pb-3 shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">👤</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-white">
+                  Tài Khoản & Thiết Lập Hệ Thống
+                </h3>
+                <span className={'px-2 py-0.5 rounded-full font-mono text-[10px] font-bold border ' + (
+                  currentTier === 'ULTRA_PRO' 
+                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' 
+                    : currentTier === 'PRO' 
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
+                    : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                )}>
+                  {currentTier === 'ULTRA_PRO' ? 'GÓI ULTRA PRO' : (currentTier === 'PRO' ? 'GÓI PRO' : 'GÓI FREE')}
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-400">
+                Quản lý gói dịch vụ, hạn mức sử dụng ngày và kho đa API Key xoay vòng
+              </p>
             </div>
-            <h3 className="text-base font-extrabold text-white mt-1">
-              Quản Lý Tài Khoản & API Key
-            </h3>
           </div>
-          <button onClick={onClose} className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-brand-card">
-            Đóng
+          <button 
+            onClick={onClose} 
+            className="text-xs text-zinc-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-[#181b26] hover:bg-[#202433] border border-[#232738] transition">
+            ✕ Đóng
           </button>
         </div>
 
-        {/* Account Info Pill */}
-        <div className="bg-brand-card p-3.5 rounded-xl border border-brand-border space-y-2 text-xs">
-          <div className="flex justify-between items-center text-zinc-400">
-            <span>Trạng thái tài khoản:</span>
-            <b className={apiKey ? "text-emerald-400" : "text-rose-400"}>
-              {apiKey ? "Đã Kích Hoạt" : "Chưa Đăng Nhập"}
-            </b>
-          </div>
-          <div className="flex justify-between items-center text-zinc-400">
-            <span>Hạn mức YouTube API:</span>
-            <b className="text-white">10.000 quota/ngày</b>
-          </div>
-          <div className="flex justify-between items-center text-zinc-400">
-            <span>Kênh đối thủ theo dõi:</span>
-            <b className="text-amber-300">{competitorsCount} kênh</b>
-          </div>
-          <div className="flex justify-between items-center text-zinc-400">
-            <span>Video đã lưu xem sau:</span>
-            <b className="text-amber-300">{savedCount} video</b>
-          </div>
-        </div>
-
-        {/* Key Edit Input */}
-        <div className="space-y-2">
-          <label className="text-xs font-semibold text-zinc-300 block">
-            Mã YouTube Data API Key của tài khoản:
-          </label>
-          <div className="relative">
-            <input
-              type={showKeyText ? "text" : "password"}
-              value={draftKey}
-              onChange={(e) => setDraftKey(e.target.value)}
-              placeholder="Dán mã API Key bắt đầu bằng AIzaSy..."
-              className="w-full bg-brand-card border border-brand-border rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 pr-16"
-            />
-            <button
-              type="button"
-              onClick={() => setShowKeyText(!showKeyText)}
-              className="absolute right-2 top-2 text-[10px] font-bold text-zinc-400 hover:text-white px-1.5 py-0.5 rounded bg-zinc-800">
-              {showKeyText ? "Ẩn" : "Hiện"}
-            </button>
-          </div>
-          <p className="text-[10px] text-zinc-500">
-            Mã API Key được lưu trực tiếp trong trình duyệt của bạn làm định danh tài khoản, không chia sẻ với bất kỳ bên thứ ba nào.
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="pt-2 flex flex-col gap-2">
+        {/* 3 Nav Tabs */}
+        <div className="flex border-b border-[#232738] gap-1 pt-3 shrink-0">
           <button
-            onClick={() => onSaveKey(draftKey)}
-            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-md">
-            Lưu & Kích Hoạt Tài Khoản
+            onClick={() => setActiveTab('profile')}
+            className={'px-3.5 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 border-b-2 ' + (
+              activeTab === 'profile'
+                ? 'border-red-500 text-white bg-[#181b26]'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            )}>
+            <span>📋</span>
+            <span>Gói Dịch Vụ & Hạn Mức</span>
           </button>
-          {apiKey && (
-            <button
-              onClick={onRemoveKey}
-              className="w-full py-2 px-4 rounded-xl text-xs font-medium text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition">
-              Đăng Xuất (Xóa Key khỏi trình duyệt)
-            </button>
+          <button
+            onClick={() => setActiveTab('keys')}
+            className={'px-3.5 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 border-b-2 relative ' + (
+              activeTab === 'keys'
+                ? 'border-red-500 text-white bg-[#181b26]'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            )}>
+            <span>🔑</span>
+            <span>Kho Đa API Key ({keyPool.length})</span>
+            {quotaExceededCount > 0 && (
+              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={'px-3.5 py-2 text-xs font-bold rounded-t-lg transition flex items-center gap-2 border-b-2 ' + (
+              activeTab === 'security'
+                ? 'border-red-500 text-white bg-[#181b26]'
+                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+            )}>
+            <span>🛡️</span>
+            <span>Sao Lưu & Bảo Mật</span>
+          </button>
+        </div>
+
+        {/* Tab Contents (Scrollable) */}
+        <div className="overflow-y-auto py-4 space-y-4 pr-1">
+
+          {/* TAB 1: PROFILE & DAILY LIMITS */}
+          {activeTab === 'profile' && (
+            <div className="space-y-4">
+              
+              {/* Current Tier Status Card */}
+              <div className="bg-[#181b26] p-4 rounded-xl border border-[#232738] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[11px] text-zinc-400 font-medium">Gói dịch vụ hiện tại:</div>
+                    <div className="text-base font-black text-white mt-0.5 flex items-center gap-2">
+                      <span>{currentTier === 'ULTRA_PRO' ? 'GÓI ULTRA PRO – KHÔNG GIỚI HẠN' : (currentTier === 'PRO' ? 'GÓI PRO – NÂNG CAO' : 'GÓI FREE – MIỄN PHÍ')}</span>
+                      {currentTier !== 'FREE' && (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
+                          Đang Hoạt Động
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {currentTier === 'FREE' ? (
+                    <button
+                      onClick={() => { onClose(); if (onOpenSubscriptionModal) onOpenSubscriptionModal(); }}
+                      className="px-3.5 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white shadow-md transition">
+                      Nâng Cấp Lên PRO →
+                    </button>
+                  ) : (
+                    <div className="text-right text-[11px] text-zinc-400">
+                      <div>Hết hạn:</div>
+                      <div className="font-bold text-white">
+                        {tierDetails.expiresAt ? new Date(tierDetails.expiresAt).toLocaleDateString('vi-VN') : 'Trọn đời'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Daily Usage Tracker */}
+                <div className="pt-3 border-t border-[#232738] space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-zinc-300">Từ khóa đã tìm hôm nay:</span>
+                    <span className="font-mono font-bold text-amber-400">
+                      {usage.keywords.length} / {maxKwLimit} {typeof maxKwLimit === 'number' ? 'từ khóa' : ''}
+                    </span>
+                  </div>
+                  <div className="w-full bg-[#12141c] h-2 rounded-full overflow-hidden border border-[#232738]">
+                    <div 
+                      className="bg-amber-500 h-full transition-all"
+                      style={{ width: typeof maxKwLimit === 'number' ? Math.min(100, (usage.keywords.length / maxKwLimit) * 100) + '%' : '10%' }}>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-zinc-500">
+                    * Lưu ý: Giới hạn tính theo <b>số từ khóa khác nhau</b>. Ví dụ tìm "roblox", bạn có thể quét lại nhiều lần trong ngày mà chỉ tính là 1 từ khóa.
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-[#232738] flex justify-between items-center text-xs">
+                  <span className="font-semibold text-zinc-300">Lượt phân tích chi tiết hôm nay:</span>
+                  <span className="font-mono font-bold text-emerald-400">
+                    {usage.analysisCount} / {maxAnalysisLimit} {typeof maxAnalysisLimit === 'number' ? 'lượt' : ''}
+                  </span>
+                </div>
+              </div>
+
+              {/* User Account Info */}
+              <div className="bg-[#181b26] p-4 rounded-xl border border-[#232738] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold text-white">{profile.name}</div>
+                    <div className="text-[11px] text-zinc-400">{profile.email}</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setEditName(profile.name);
+                      setEditEmail(profile.email);
+                      setIsEditingProfile(!isEditingProfile);
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-[#202433] hover:bg-[#282e42] text-zinc-300 border border-[#232738] transition">
+                    {isEditingProfile ? 'Hủy' : 'Đổi Thông Tin'}
+                  </button>
+                </div>
+
+                {isEditingProfile && (
+                  <div className="pt-2 border-t border-[#232738] space-y-2">
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Tên người dùng"
+                      className="w-full bg-[#12141c] border border-[#232738] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500"
+                    />
+                    <input
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      placeholder="Email"
+                      className="w-full bg-[#12141c] border border-[#232738] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-red-500"
+                    />
+                    <button
+                      onClick={() => saveProfileData({ ...profile, name: editName.trim() || profile.name, email: editEmail.trim() || profile.email })}
+                      className="w-full py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition">
+                      Lưu Thông Tin
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Resources Bento */}
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="bg-[#181b26] p-3 rounded-xl border border-[#232738]">
+                  <div className="text-[10px] text-zinc-400">Kho API Key</div>
+                  <div className="text-base font-black text-amber-400 mt-0.5">{keyPool.length}</div>
+                </div>
+                <div className="bg-[#181b26] p-3 rounded-xl border border-[#232738]">
+                  <div className="text-[10px] text-zinc-400">Video Đã Lưu</div>
+                  <div className="text-base font-black text-emerald-400 mt-0.5">{savedVideos.length}</div>
+                </div>
+                <div className="bg-[#181b26] p-3 rounded-xl border border-[#232738]">
+                  <div className="text-[10px] text-zinc-400">Kênh Đối Thủ</div>
+                  <div className="text-base font-black text-purple-400 mt-0.5">{competitors.length}</div>
+                </div>
+              </div>
+
+            </div>
           )}
+
+          {/* TAB 2: MULTI-KEY POOL & ROTATION */}
+          {activeTab === 'keys' && (
+            <div className="space-y-4">
+              
+              {/* Quota Overview Banner */}
+              <div className="bg-[#181b26] p-3.5 rounded-xl border border-[#232738] flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <span>Cơ Chế Xoay Vòng Thông Minh (Auto-Rotation)</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  </div>
+                  <div className="text-[10px] text-zinc-400 mt-0.5">
+                    {activeCount} Đang Dùng • {standbyCount} Dự Phòng • {quotaExceededCount} Hết Quota Hôm Nay
+                  </div>
+                </div>
+                {quotaExceededCount > 0 && (
+                  <button
+                    onClick={handleResetAllQuota}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition">
+                    Đặt Lại Quota
+                  </button>
+                )}
+              </div>
+
+              {/* Key List */}
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-zinc-300 flex justify-between items-center">
+                  <span>Danh Sách Key Trong Kho ({keyPool.length}):</span>
+                  <span className="text-[10px] text-zinc-500">Tự chuyển key khi chạm mốc 10.000 điểm</span>
+                </div>
+
+                {keyPool.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-[#181b26] border border-dashed border-[#232738] text-center text-xs text-zinc-500">
+                    Chưa có API Key nào trong kho. Hãy thêm key bên dưới để bắt đầu!
+                  </div>
+                ) : (
+                  keyPool.map((item, idx) => {
+                    const isActive = item.status === 'active' || item.key === activeKeyStr;
+                    const isExceeded = item.status === 'quota_exceeded';
+                    const showFull = !!showKeyTextMap[item.id];
+                    const masked = item.key ? (item.key.slice(0, 8) + '...' + item.key.slice(-4)) : 'Chưa có mã';
+
+                    return (
+                      <div 
+                        key={item.id}
+                        className={'p-3 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ' + (
+                          isActive 
+                            ? 'bg-emerald-500/10 border-emerald-500/40' 
+                            : isExceeded 
+                            ? 'bg-rose-500/10 border-rose-500/30' 
+                            : 'bg-[#181b26] border-[#232738]'
+                        )}>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className={'w-2 h-2 rounded-full ' + (
+                              isActive ? 'bg-emerald-400 shadow-sm shadow-emerald-400' : isExceeded ? 'bg-rose-500' : 'bg-amber-400'
+                            )}></span>
+                            <span className="text-xs font-bold text-white">{item.name || ('Key #' + (idx + 1))}</span>
+                            {isActive && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] bg-emerald-500/30 text-emerald-300 font-bold border border-emerald-500/40">
+                                Đang Sử Dụng
+                              </span>
+                            )}
+                            {isExceeded && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] bg-rose-500/30 text-rose-300 font-bold border border-rose-500/40">
+                                Hết Quota Hôm Nay
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
+                            <span>{showFull ? item.key : masked}</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowKeyTextMap(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                              className="text-[10px] text-zinc-500 hover:text-zinc-300">
+                              {showFull ? '[Ẩn]' : '[Hiện]'}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                          {!isActive && (
+                            <button
+                              onClick={() => handleSetActiveKey(item.id)}
+                              className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[#202433] hover:bg-[#2c3247] text-zinc-200 border border-[#232738] transition">
+                              Chọn Dùng
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleTestKeyPing(item)}
+                            disabled={pingTestingId === item.id}
+                            className="px-2 py-1 rounded-lg text-[11px] font-medium bg-[#12141c] hover:bg-[#202433] text-zinc-400 hover:text-white border border-[#232738] transition flex items-center gap-1">
+                            {pingTestingId === item.id ? 'Đang test...' : 'Test Ping'}
+                          </button>
+                          <button
+                            onClick={() => handleRemoveKey(item.id)}
+                            className="px-2 py-1 rounded-lg text-[11px] font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30 transition">
+                            Xóa
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Add Key Form */}
+              <form onSubmit={handleAddKey} className="bg-[#181b26] p-3.5 rounded-xl border border-[#232738] space-y-2.5">
+                <div className="text-xs font-bold text-white flex items-center gap-2">
+                  <span>➕ Thêm API Key Mới Vào Kho</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <input
+                    type="text"
+                    value={newKeyName}
+                    onChange={(e) => setNewKeyName(e.target.value)}
+                    placeholder="Tên gợi nhớ (VD: Gmail 2)"
+                    className="bg-[#12141c] border border-[#232738] rounded-lg px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 sm:col-span-1"
+                  />
+                  <input
+                    type="password"
+                    value={newKeyStr}
+                    onChange={(e) => setNewKeyStr(e.target.value)}
+                    placeholder="Mã API Key (AIzaSy...)"
+                    className="bg-[#12141c] border border-[#232738] rounded-lg px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500 sm:col-span-2"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition shadow">
+                  Thêm Key Vào Kho Xoay Vòng
+                </button>
+              </form>
+
+            </div>
+          )}
+
+          {/* TAB 3: SECURITY & BACKUP */}
+          {activeTab === 'security' && (
+            <div className="space-y-4">
+              
+              {/* Vault Security Note */}
+              <div className="bg-[#181b26] p-4 rounded-xl border border-[#232738] space-y-2">
+                <div className="text-xs font-bold text-emerald-400 flex items-center gap-2">
+                  <span>🔒 Kiến Trúc Bảo Mật Trực Tiếp (Local Vault)</span>
+                </div>
+                <p className="text-[11px] text-zinc-300 leading-relaxed">
+                  Tất cả API Key, danh sách video đã lưu và kênh đối thủ đều được lưu trữ hoàn toàn trên trình duyệt của bạn (Local Sandbox). Không có máy chủ trung gian nào có thể xem hoặc đánh cắp API key của bạn.
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1 text-[10px] text-zinc-400">
+                  <span className="px-2 py-0.5 rounded bg-[#12141c] border border-[#232738]">✓ Mã hóa hiển thị</span>
+                  <span className="px-2 py-0.5 rounded bg-[#12141c] border border-[#232738]">✓ Chống F12 DevTools</span>
+                  <span className="px-2 py-0.5 rounded bg-[#12141c] border border-[#232738]">✓ Sandboxed API calls</span>
+                </div>
+              </div>
+
+              {/* Backup & Restore Buttons */}
+              <div className="bg-[#181b26] p-4 rounded-xl border border-[#232738] space-y-3">
+                <div className="text-xs font-bold text-white">Sao Lưu & Khôi Phục Dữ Liệu</div>
+                <p className="text-[11px] text-zinc-400">
+                  Xuất toàn bộ dữ liệu gồm kho API Key, video đã lưu, danh sách kênh đối thủ và ý tưởng ra file JSON để đồng bộ sang máy khác:
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <button
+                    onClick={handleExportBackup}
+                    className="py-2.5 px-3 rounded-xl text-xs font-bold bg-[#202433] hover:bg-[#293045] text-zinc-100 border border-[#232738] transition flex items-center justify-center gap-2 shadow">
+                    <span>💾</span>
+                    <span>Tải File Sao Lưu (.JSON)</span>
+                  </button>
+
+                  <label className="py-2.5 px-3 rounded-xl text-xs font-bold bg-[#202433] hover:bg-[#293045] text-zinc-100 border border-[#232738] transition flex items-center justify-center gap-2 shadow cursor-pointer">
+                    <span>📥</span>
+                    <span>Khôi Phục Từ File (.JSON)</span>
+                    <input 
+                      type="file" 
+                      accept=".json,application/json" 
+                      onChange={handleImportBackup} 
+                      className="hidden" 
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Wipe / Logout button */}
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    if (confirm('CẢNH BÁO: Hành động này sẽ xóa toàn bộ API Key và đăng xuất khỏi trình duyệt. Bạn có chắc chắn không?')) {
+                      if (onRemoveKey) onRemoveKey();
+                      ytKeyManager.savePool([]);
+                      st.set('yt_key', '');
+                      st.set('yt_key_pool', '[]');
+                      if (showToast) showToast('Đã xóa dữ liệu tài khoản an toàn.');
+                      onClose();
+                    }
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl text-xs font-medium text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition">
+                  Đăng Xuất & Xóa Sạch Dữ Liệu Khỏi Trình Duyệt
+                </button>
+              </div>
+
+            </div>
+          )}
+
         </div>
 
       </div>
@@ -5114,7 +5907,418 @@ function AccountProfileModal({ apiKey, onClose, onSaveKey, onRemoveKey, competit
   );
 }
 
-// Main Application Component
+
+
+// =========================================================================
+// TOP NGÁCH PAYWALL BANNER (KHÓA DÀNH CHO GÓI FREE)
+// =========================================================================
+function TopNgachPaywallBanner({ onUpgrade }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#181b26] to-[#0f1118] border border-amber-500/30 p-6 sm:p-10 text-center shadow-2xl my-6">
+      {/* Decorative glow */}
+      <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div className="relative z-10 max-w-xl mx-auto space-y-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-wider">
+          <span>🔒</span> Tính Năng Độc Quyền Gói PRO
+        </div>
+
+        <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+          Mở Khóa Kho Dữ Liệu <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-red-500">Top Ngách Tiềm Năng</span>
+        </h2>
+
+        <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+          Tự động tìm kiếm các ngách YouTube tiềm năng hàng đầu mà <b>không cần nhập từ khóa</b>. Phát hiện các kênh có lượng subscriber thấp nhưng sở hữu video view khủng để bạn khai thác nội dung triệu view.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 text-left text-xs text-zinc-300">
+          <div className="p-3 rounded-xl bg-[#12141c]/80 border border-[#232738]">
+            <div className="text-amber-400 font-bold mb-1">✓ Top Ngách Tự Động</div>
+            <div className="text-[11px] text-zinc-400">Không cần vắt óc tìm từ khóa, AI tự quét ra ngách ngon.</div>
+          </div>
+          <div className="p-3 rounded-xl bg-[#12141c]/80 border border-[#232738]">
+            <div className="text-amber-400 font-bold mb-1">✓ Kênh Sub Nhỏ View To</div>
+            <div className="text-[11px] text-zinc-400">Phát hiện cơ hội làm nội dung đột phá trước đối thủ.</div>
+          </div>
+          <div className="p-3 rounded-xl bg-[#12141c]/80 border border-[#232738]">
+            <div className="text-amber-400 font-bold mb-1">✓ 50 Từ Khóa / Ngày</div>
+            <div className="text-[11px] text-zinc-400">Gấp 10 lần gói Free, nghiên cứu thoải mái cả ngày.</div>
+          </div>
+        </div>
+
+        <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <button
+            onClick={onUpgrade}
+            className="w-full sm:w-auto px-6 py-3 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white shadow-lg shadow-amber-500/20 transition transform hover:-translate-y-0.5 cursor-pointer">
+            Xem Bảng Giá & Nâng Cấp Gói PRO Ngay →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =========================================================================
+// MODAL ĐĂNG KÝ GÓI DỊCH VỤ & THANH TOÁN VIETQR SEPAY
+// =========================================================================
+function SubscriptionModal({ onClose, showToast, initialTier = 'PRO', onUpgraded }) {
+  const [selectedTier, setSelectedTier] = useState(initialTier === 'ULTRA_PRO' ? 'ULTRA_PRO' : 'PRO');
+  const [selectedDuration, setSelectedDuration] = useState('1m'); // '1m' | '3m' | '1y'
+  const [step, setStep] = useState('plans'); // 'plans' | 'checkout'
+  const [orderCode, setOrderCode] = useState(() => 'YT' + Math.floor(100000 + Math.random() * 900000));
+  const [copiedKey, setCopiedKey] = useState(null);
+
+  const tierInfo = TIERS_DATA[selectedTier] || TIERS_DATA.PRO;
+  const currentOption = tierInfo.options.find(o => o.id === selectedDuration) || tierInfo.options[0];
+  const amount = currentOption.price;
+
+  const copyToClipboard = (text, key) => {
+    try {
+      navigator.clipboard.writeText(String(text));
+      setCopiedKey(key);
+      if (showToast) showToast('Đã sao chép: ' + text);
+      setTimeout(() => setCopiedKey(null), 2000);
+    } catch(e) {}
+  };
+
+  const handleStartCheckout = (tierKey, durationKey) => {
+    setSelectedTier(tierKey);
+    setSelectedDuration(durationKey);
+    setOrderCode('YT' + Math.floor(100000 + Math.random() * 900000));
+    setStep('checkout');
+  };
+
+  const handleConfirmPaid = () => {
+    // Activate tier
+    ytTierManager.setTier(selectedTier, currentOption.days);
+    if (showToast) {
+      showToast('Chúc mừng! Bạn đã nâng cấp thành công ' + tierInfo.name + ' (' + currentOption.label + ')! 🎉');
+    }
+    if (onUpgraded) onUpgraded(selectedTier);
+    onClose();
+  };
+
+  // VietQR SePay URL
+  const qrUrl = 'https://qr.sepay.vn/img?acc=' + SEPAY_CONFIG.accountNumber + 
+    '&bank=' + encodeURIComponent(SEPAY_CONFIG.bankName) + 
+    '&amount=' + amount + 
+    '&des=' + encodeURIComponent(orderCode) +
+    '&template=compact';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-[#12141c] border border-[#232738] rounded-2xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#232738] pb-3 shrink-0">
+          <div>
+            <div className="inline-block px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold border border-amber-500/40">
+              BẢNG GIÁ DỊCH VỤ CHÍNH HÃNG
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-white mt-1">
+              Hệ Thống Gói Dịch Vụ YouTrend
+            </h3>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="text-xs text-zinc-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-[#181b26] hover:bg-[#202433] border border-[#232738] transition">
+            ✕ Đóng
+          </button>
+        </div>
+
+        {/* Content Body */}
+        <div className="overflow-y-auto py-4 space-y-4 pr-1">
+
+          {/* STEP 1: PLANS COMPARISON TABLE */}
+          {step === 'plans' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                
+                {/* 1. GÓI FREE */}
+                <div className="bg-[#181b26] border border-[#232738] rounded-2xl p-4 flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">CƠ BẢN</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-bold border border-zinc-700">Hiện Tại</span>
+                    </div>
+                    <div>
+                      <h4 className="text-base font-extrabold text-white">GÓI FREE</h4>
+                      <div className="text-2xl font-black text-zinc-200 mt-1">0đ <span className="text-xs font-normal text-zinc-500">/ trọn đời</span></div>
+                    </div>
+                    <ul className="space-y-2 text-xs text-zinc-400 pt-2 border-t border-[#232738]">
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-emerald-400 font-bold">✓</span>
+                        <span>Tìm & phân tích tối đa <b>5 từ khóa/ngày</b> (tính theo từ khóa khác nhau, quét lại thoải mái)</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-emerald-400 font-bold">✓</span>
+                        <span>Lọc video đang thịnh hành (Trending)</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-emerald-400 font-bold">✓</span>
+                        <span>Phân tích xu hướng từ khóa đã tìm</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-emerald-400 font-bold">✓</span>
+                        <span>Tìm video & kênh YouTube liên quan</span>
+                      </li>
+                      <li className="flex items-start gap-1.5 text-zinc-500">
+                        <span className="text-rose-400 font-bold">✕</span>
+                        <span>Khóa tính năng Top Ngách</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <button
+                    disabled
+                    className="w-full py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed">
+                    Gói Đang Sử Dụng
+                  </button>
+                </div>
+
+                {/* 2. GÓI PRO (NÂNG CAO) */}
+                <div className="bg-gradient-to-b from-[#1c1e2b] to-[#141620] border-2 border-amber-500/60 rounded-2xl p-4 flex flex-col justify-between space-y-4 relative shadow-xl shadow-amber-500/10">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-red-500 text-white text-[10px] font-black uppercase px-3 py-0.5 rounded-full shadow">
+                    🔥 KHUYÊN DÙNG NHIỀU NHẤT
+                  </div>
+
+                  <div className="space-y-3 pt-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">CREATOR CHUYÊN NGHIỆP</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">50 Key/Ngày</span>
+                    </div>
+                    <div>
+                      <h4 className="text-base font-extrabold text-white">GÓI PRO – NÂNG CAO</h4>
+                      
+                      {/* Duration Selector for PRO */}
+                      <div className="grid grid-cols-3 gap-1 mt-2.5 bg-[#0f1118] p-1 rounded-xl border border-[#232738]">
+                        {TIERS_DATA.PRO.options.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => { setSelectedTier('PRO'); setSelectedDuration(opt.id); }}
+                            className={'py-1.5 px-1 rounded-lg text-center transition ' + (
+                              selectedTier === 'PRO' && selectedDuration === opt.id
+                                ? 'bg-amber-500 text-black font-extrabold shadow'
+                                : 'text-zinc-400 hover:text-white'
+                            )}>
+                            <div className="text-[10px] leading-tight">{opt.label}</div>
+                            <div className="text-[11px] font-black mt-0.5">{opt.priceText}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <ul className="space-y-1.5 text-xs text-zinc-300 pt-2 border-t border-[#232738]">
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-amber-400 font-bold">✓</span>
+                        <span>Tìm & phân tích tối đa <b>50 từ khóa mỗi ngày</b></span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-amber-400 font-bold">✓</span>
+                        <span><b>Mở khóa Top Ngách:</b> Tự động phát hiện ngách tiềm năng không cần nhập từ khóa</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-amber-400 font-bold">✓</span>
+                        <span>Phát hiện kênh sub thấp nhưng view khủng</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-amber-400 font-bold">✓</span>
+                        <span>Mở khóa tính năng <b>Keyword Explorer</b></span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-amber-400 font-bold">✓</span>
+                        <span>Khám phá kênh YouTube đang phát triển theo từng từ khóa & ngách</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-amber-400 font-bold">✓</span>
+                        <span>Phân tích dữ liệu video & kênh hỗ trợ nghiên cứu đối thủ</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <button
+                    onClick={() => handleStartCheckout('PRO', selectedTier === 'PRO' ? selectedDuration : '1m')}
+                    className="w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white shadow-lg transition">
+                    Đăng Ký Gói PRO Ngay
+                  </button>
+                </div>
+
+                {/* 3. GÓI ULTRA PRO (KHÔNG GIỚI HẠN) */}
+                <div className="bg-[#181b26] border border-purple-500/40 rounded-2xl p-4 flex flex-col justify-between space-y-4 relative">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">TEAM & STUDIO</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40">Vô Hạn Key</span>
+                    </div>
+                    <div>
+                      <h4 className="text-base font-extrabold text-white">GÓI ULTRA PRO</h4>
+                      
+                      {/* Duration Selector for ULTRA_PRO */}
+                      <div className="grid grid-cols-3 gap-1 mt-2.5 bg-[#0f1118] p-1 rounded-xl border border-[#232738]">
+                        {TIERS_DATA.ULTRA_PRO.options.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => { setSelectedTier('ULTRA_PRO'); setSelectedDuration(opt.id); }}
+                            className={'py-1.5 px-1 rounded-lg text-center transition ' + (
+                              selectedTier === 'ULTRA_PRO' && selectedDuration === opt.id
+                                ? 'bg-purple-600 text-white font-extrabold shadow'
+                                : 'text-zinc-400 hover:text-white'
+                            )}>
+                            <div className="text-[10px] leading-tight">{opt.label}</div>
+                            <div className="text-[11px] font-black mt-0.5">{opt.priceText}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <ul className="space-y-1.5 text-xs text-zinc-300 pt-2 border-t border-[#232738]">
+                      <li className="flex items-start gap-1.5 font-bold text-purple-300">
+                        <span>⚡</span>
+                        <span><b>Không giới hạn số lượng từ khóa tìm kiếm</b></span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-purple-400 font-bold">✓</span>
+                        <span>Bao gồm toàn bộ quyền lợi của gói PRO</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-purple-400 font-bold">✓</span>
+                        <span>Mở rộng khả năng tìm & phân tích nhiều từ khóa liên tục</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-purple-400 font-bold">✓</span>
+                        <span>Khai thác tính năng Top Ngách chuyên sâu</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-purple-400 font-bold">✓</span>
+                        <span>Ưu tiên trải nghiệm nghiên cứu dữ liệu với hạn mức mở rộng</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <button
+                    onClick={() => handleStartCheckout('ULTRA_PRO', selectedTier === 'ULTRA_PRO' ? selectedDuration : '1m')}
+                    className="w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg transition">
+                    Đăng Ký Gói ULTRA PRO
+                  </button>
+                </div>
+
+              </div>
+
+              {/* API Policy Note */}
+              <div className="p-3.5 rounded-xl bg-[#181b26] border border-[#232738] text-[11px] text-zinc-400 leading-relaxed">
+                <span className="text-amber-400 font-bold">Lưu ý về API:</span> Các tính năng tìm kiếm sử dụng YouTube Data API nên khả năng truy vấn thực tế phụ thuộc vào hạn mức API còn lại. Khi hết quota, hệ thống sẽ thông báo và hỗ trợ tự động xoay vòng nhiều key để bạn làm việc liên tục.
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: VIETQR SEPAY CHECKOUT */}
+          {step === 'checkout' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between bg-[#181b26] p-3 rounded-xl border border-[#232738]">
+                <div>
+                  <div className="text-xs text-zinc-400">Đang đăng ký:</div>
+                  <div className="text-sm font-extrabold text-white">
+                    {tierInfo.name} ({currentOption.label})
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-zinc-400">Số tiền thanh toán:</div>
+                  <div className="text-lg font-black text-amber-400">{currentOption.priceText}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-[#181b26] p-4 rounded-xl border border-[#232738]">
+                {/* QR Image Column */}
+                <div className="flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-lg">
+                  <img
+                    src={qrUrl}
+                    alt="VietQR SePay Thanh Toán"
+                    className="w-56 h-56 object-contain"
+                  />
+                  <div className="text-[10px] text-zinc-600 font-bold mt-2 flex items-center gap-1">
+                    <span>⚡ VietQR Tự Động Kích Hoạt Qua SePay</span>
+                  </div>
+                </div>
+
+                {/* Transfer Info Column */}
+                <div className="space-y-2.5 text-xs">
+                  <div>
+                    <div className="text-[11px] text-zinc-400">Ngân Hàng Thụ Hưởng:</div>
+                    <div className="font-bold text-white flex items-center justify-between bg-[#12141c] p-2 rounded-lg border border-[#232738] mt-0.5">
+                      <span>{SEPAY_CONFIG.bankName} (VietinBank)</span>
+                      <button onClick={() => copyToClipboard(SEPAY_CONFIG.bankName, 'bank')} className="text-[10px] text-amber-400 hover:text-amber-300 font-mono">
+                        {copiedKey === 'bank' ? 'Đã chép ✓' : 'Sao chép'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[11px] text-zinc-400">Số Tài Khoản:</div>
+                    <div className="font-bold text-white font-mono flex items-center justify-between bg-[#12141c] p-2 rounded-lg border border-[#232738] mt-0.5">
+                      <span className="text-amber-400 text-sm font-black">{SEPAY_CONFIG.accountNumber}</span>
+                      <button onClick={() => copyToClipboard(SEPAY_CONFIG.accountNumber, 'acc')} className="text-[10px] text-amber-400 hover:text-amber-300 font-mono">
+                        {copiedKey === 'acc' ? 'Đã chép ✓' : 'Sao chép'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[11px] text-zinc-400">Số Tiền Chuyển:</div>
+                    <div className="font-bold text-white font-mono flex items-center justify-between bg-[#12141c] p-2 rounded-lg border border-[#232738] mt-0.5">
+                      <span className="text-emerald-400 text-sm font-black">{currentOption.priceText}</span>
+                      <button onClick={() => copyToClipboard(amount, 'amount')} className="text-[10px] text-amber-400 hover:text-amber-300 font-mono">
+                        {copiedKey === 'amount' ? 'Đã chép ✓' : 'Sao chép'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[11px] text-zinc-400 flex items-center justify-between">
+                      <span>Nội Dung Chuyển Khoản (Bắt Buộc):</span>
+                      <span className="text-[10px] text-rose-400">Giữ nguyên mã</span>
+                    </div>
+                    <div className="font-bold text-white font-mono flex items-center justify-between bg-amber-500/10 p-2 rounded-lg border border-amber-500/40 mt-0.5">
+                      <span className="text-amber-300 text-sm font-black">{orderCode}</span>
+                      <button onClick={() => copyToClipboard(orderCode, 'des')} className="text-[10px] text-amber-400 hover:text-amber-300 font-mono">
+                        {copiedKey === 'des' ? 'Đã chép ✓' : 'Sao chép'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-zinc-400 leading-tight pt-1">
+                    💡 Mở App ngân hàng của bạn quét mã QR để điền tự động chính xác Số tiền và Nội dung.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Confirmation Buttons */}
+              <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('plans')}
+                  className="sm:w-1/3 py-2.5 rounded-xl text-xs font-semibold bg-[#181b26] hover:bg-[#202433] text-zinc-300 border border-[#232738] transition">
+                  ← Chọn Gói Khác
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmPaid}
+                  className="sm:w-2/3 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2">
+                  <span>✓</span>
+                  <span>Tôi Đã Chuyển Khoản Xong – Kích Hoạt Gói Ngay</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 
 // =========================================================================
 // SCORE FORMULA MODAL (GIẢI THÍCH THUẬT TOÁN CHẤM ĐIỂM TIỀM NĂNG)
@@ -9003,7 +10207,44 @@ function PendingTrendsModal({
 
 
 function App() {
-  const [key, setKey] = useState(() => st.get('yt_key') || '');
+  const [key, setKey] = useState(() => (typeof ytKeyManager !== 'undefined' ? ytKeyManager.getActiveKey() : (st.get('yt_key') || '')));
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [subscriptionModalReason, setSubscriptionModalReason] = useState('manual');
+  const [currentTier, setCurrentTier] = useState(() => (typeof ytTierManager !== 'undefined' ? ytTierManager.getTier() : 'FREE'));
+  const [dailyUsage, setDailyUsage] = useState(() => (typeof ytTierManager !== 'undefined' ? ytTierManager.getUsage() : { keywords: [], analysisCount: 0 }));
+
+  useEffect(() => {
+    const handleKeySwitched = (e) => {
+      const { newKey, candidateName } = e.detail || {};
+      if (newKey) {
+        setKey(newKey);
+        if (typeof showToast === 'function') {
+          showToast('Đã tự động xoay sang: ' + (candidateName || 'Key dự phòng') + ' (Do key trước hết Quota)');
+        }
+      }
+    };
+    const handleKeysUpdated = (e) => {
+      const { activeKey } = e.detail || {};
+      if (activeKey !== undefined) setKey(activeKey);
+    };
+    window.addEventListener('yt-key-switched', handleKeySwitched);
+    window.addEventListener('yt-keys-updated', handleKeysUpdated);
+    const handleTierChanged = (ev) => {
+      const { tier: tName } = ev.detail || {};
+      if (tName) setCurrentTier(tName);
+    };
+    const handleUsageUpdated = () => {
+      if (typeof ytTierManager !== 'undefined') setDailyUsage(ytTierManager.getUsage());
+    };
+    window.addEventListener('yt-tier-changed', handleTierChanged);
+    window.addEventListener('yt-usage-updated', handleUsageUpdated);
+    return () => {
+      window.removeEventListener('yt-key-switched', handleKeySwitched);
+      window.removeEventListener('yt-keys-updated', handleKeysUpdated);
+      window.removeEventListener('yt-tier-changed', handleTierChanged);
+      window.removeEventListener('yt-usage-updated', handleUsageUpdated);
+    };
+  }, []);
   const [keyDraft, setKeyDraft] = useState(() => st.get('yt_key') || '');
   const [showKeyBox, setShowKeyBox] = useState(false);
   const [showKey, setShowKey] = useState(false);
@@ -10384,6 +11625,21 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
       let vids = [], next = '';
 
       if (p.kw) {
+        const normKw = p.kw.trim().toLowerCase();
+        if (typeof ytTierManager !== 'undefined' && !ytTierManager.canSearchKeyword(normKw)) {
+          setShowSubscriptionModal(true);
+          setSubscriptionModalReason('keyword_limit');
+          if (typeof showToast === 'function') {
+            showToast('Bạn đã dùng hết 5 từ khóa miễn phí hôm nay. Hãy nâng cấp Gói PRO để tiếp tục!');
+          }
+          setLoading(false);
+          return;
+        }
+        if (typeof ytTierManager !== 'undefined') {
+          ytTierManager.recordKeyword(normKw);
+          setDailyUsage(ytTierManager.getUsage());
+        }
+
         const searchParams = {
           part: 'snippet',
           type: 'video',
@@ -10976,6 +12232,33 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
               title={key ? ('API đã kết nối: ' + key + '. Bấm để mở kiểm tra & thiết lập') : 'Chưa cài đặt API. Bấm để kết nối ngay'}>
               <span className={`w-1.5 h-1.5 rounded-full ${key ? 'bg-emerald-400' : 'bg-zinc-500'}`}></span>
               <span>{key ? 'API Đã Kết Nối' : 'Cài Đặt API'}</span>
+            </button>
+
+            {/* Header Daily Limit / Tier Badge */}
+            <button
+              onClick={() => setShowSubscriptionModal(true)}
+              className={'px-2.5 py-1 rounded-xl text-xs font-medium border transition flex items-center gap-1.5 shrink-0 ' + (
+                currentTier === 'ULTRA_PRO' 
+                  ? 'border-purple-500/30 text-purple-300 bg-purple-500/10'
+                  : currentTier === 'PRO'
+                  ? 'border-amber-500/30 text-amber-300 bg-amber-500/10'
+                  : 'border-zinc-700 text-zinc-300 bg-zinc-900 hover:border-amber-500/50'
+              )}
+              title={currentTier === 'FREE' ? 'Gói Free: Giới hạn 5 từ khóa khác nhau mỗi ngày (quét lại thoải mái)' : 'Gói ' + currentTier}>
+              {currentTier === 'FREE' ? (
+                <>
+                  <span className="text-zinc-400 text-[11px]">Key hôm nay:</span>
+                  <span className="font-bold text-amber-400 font-mono">{(dailyUsage.keywords?.length || 0)}/5</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500 text-black font-extrabold ml-0.5">Nâng cấp</span>
+                </>
+              ) : currentTier === 'PRO' ? (
+                <>
+                  <span className="text-amber-400 font-bold">PRO:</span>
+                  <span className="font-mono font-bold text-white">{(dailyUsage.keywords?.length || 0)}/50</span>
+                </>
+              ) : (
+                <span className="text-purple-300 font-bold">ULTRA PRO ⚡</span>
+              )}
             </button>
 
             <button
@@ -11581,7 +12864,21 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                           onDownload={setDownloadVideo} 
                           onSave={toggleSaveVideo}
                           onCopy={copyText}
-                          onNicheAnalyze={setNicheAnalyzeVideo}
+                          onNicheAnalyze={(v) => {
+  if (typeof ytTierManager !== 'undefined' && !ytTierManager.canAnalyze()) {
+    setShowSubscriptionModal(true);
+    setSubscriptionModalReason('analysis_limit');
+    if (typeof showToast === 'function') {
+      showToast('Bạn đã dùng hết 5 lần phân tích miễn phí hôm nay. Hãy nâng cấp Gói PRO để tiếp tục!');
+    }
+    return;
+  }
+  if (typeof ytTierManager !== 'undefined') {
+    ytTierManager.recordAnalysis();
+    setDailyUsage(ytTierManager.getUsage());
+  }
+  setNicheAnalyzeVideo(v);
+}}
                           onToggleCompetitor={addCompetitorFromVideo}
                         />
                       </div>
@@ -11635,7 +12932,21 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
                             onDownload={setDownloadVideo} 
                             onSave={toggleSaveVideo}
                             onCopy={copyText}
-                            onNicheAnalyze={setNicheAnalyzeVideo}
+                            onNicheAnalyze={(v) => {
+  if (typeof ytTierManager !== 'undefined' && !ytTierManager.canAnalyze()) {
+    setShowSubscriptionModal(true);
+    setSubscriptionModalReason('analysis_limit');
+    if (typeof showToast === 'function') {
+      showToast('Bạn đã dùng hết 5 lần phân tích miễn phí hôm nay. Hãy nâng cấp Gói PRO để tiếp tục!');
+    }
+    return;
+  }
+  if (typeof ytTierManager !== 'undefined') {
+    ytTierManager.recordAnalysis();
+    setDailyUsage(ytTierManager.getUsage());
+  }
+  setNicheAnalyzeVideo(v);
+}}
                             onToggleCompetitor={addCompetitorFromVideo}
                           />
                         </td>
@@ -12007,6 +13318,7 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
 
         {tab === 'rpm' && (
+          (typeof ytTierManager !== 'undefined' && ytTierManager.isPro()) ? (
           <TopNgachSection
             apiKey={key}
             onSelectNiche={(niche) => setSelectedNicheModal(niche)}
@@ -12033,6 +13345,9 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             onCopyRemakePrompt={copyRemakePrompt}
             onOpenPendingTrendsModal={() => setShowPendingTrendsModal(true)}
           />
+          ) : (
+            <TopNgachPaywallBanner onUpgrade={() => { setShowSubscriptionModal(true); setSubscriptionModalReason('top_ngach'); }} />
+          )
         )}
 
         {/* TAB 3: SRT VIRAL TREND HUNTER & NICHE CLUSTERING SCANNER */}
@@ -12768,20 +14083,40 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
           apiKey={key}
           onClose={() => setShowAccountModal(false)}
           onSaveKey={(k) => {
-            const trimmed = k.trim();
+            const trimmed = (k || '').trim();
             setKey(trimmed);
             st.set('yt_key', trimmed);
-            setShowAccountModal(false);
-            showToast('Đã kích hoạt tài khoản thành công!');
+            if (showToast) showToast('Đã cập nhật API Key thành công!');
           }}
           onRemoveKey={() => {
             setKey('');
             st.set('yt_key', '');
-            setShowAccountModal(false);
-            showToast('Đã đăng xuất tài khoản.');
+            if (showToast) showToast('Đã đăng xuất tài khoản.');
           }}
-          competitorsCount={competitors.length}
-          savedCount={savedVideos.length}
+          competitors={competitors}
+          setCompetitors={setCompetitors}
+          savedVideos={savedVideos}
+          setSavedVideos={setSavedVideos}
+          showToast={showToast}
+          onOpenSubscriptionModal={() => {
+            setShowAccountModal(false);
+            setShowSubscriptionModal(true);
+          }}
+        />
+      )}
+
+      {/* Subscription Pricing & VietQR SePay Modal */}
+      {showSubscriptionModal && (
+        <SubscriptionModal
+          onClose={() => setShowSubscriptionModal(false)}
+          showToast={showToast}
+          initialTier={subscriptionModalReason === 'top_ngach' ? 'PRO' : 'PRO'}
+          onUpgraded={(newTierName) => {
+            setCurrentTier(newTierName);
+            if (subscriptionModalReason === 'top_ngach') {
+              setTab('rpm');
+            }
+          }}
         />
       )}
 
