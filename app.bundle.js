@@ -360,13 +360,15 @@ function sha256Hex(ascii){function rightRotate(v,a){return(v>>>a)|(v<<(32-a));}v
 // =========================================================================
 const ytFirebasePhoneAuth = {
   getConfig() {
+    if (typeof window !== 'undefined' && window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) {
+      return window.FIREBASE_CONFIG;
+    }
     try {
       const raw = localStorage.getItem('yt_firebase_config');
       if (raw) return JSON.parse(raw);
     } catch (e) {}
-    if (typeof window !== 'undefined' && window.FIREBASE_CONFIG) return window.FIREBASE_CONFIG;
     return {
-      apiKey: "AIzaSyBGmBHW0FA2NeHneybZwps_s-ZBL_t2KUg",
+      apiKey: "AIzaSyBGmBHWOFA2NeHneybZwps_s-ZBL_t2KUg",
       authDomain: "sdt2804-84801.firebaseapp.com",
       projectId: "sdt2804-84801",
       storageBucket: "sdt2804-84801.firebasestorage.app",
