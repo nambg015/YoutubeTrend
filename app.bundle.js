@@ -543,6 +543,18 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     } catch (e) {}
     return [];
   });
+
+  // Phase 3: Danh sách các kênh theo dõi Fingerprint Realtime 48h
+  const [fingerprintJobs, setFingerprintJobs] = React.useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('yt_spy_fingerprint_jobs') || '[]');
+      if (Array.isArray(saved)) return saved;
+    } catch (e) {}
+    return [];
+  });
+  const [isSamplingFingerprint, setIsSamplingFingerprint] = React.useState(false);
+  const [targetChannelInput, setTargetChannelInput] = React.useState('');
+  const [showAddFingerprint, setShowAddFingerprint] = React.useState(false);
   const [zoomImage, setZoomImage] = React.useState(null);
   const fileInputRef = React.useRef(null);
   const MARKET_OPTIONS = [{
@@ -1249,6 +1261,225 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
       setInvestigationStep('');
     }
   };
+
+  // --- PHASE 3: FINGERPRINT TRACKING METHODS ---
+  const vectorCosineSimilarity = (vecA, vecB) => {
+    if (!vecA || !vecB || vecA.length === 0 || vecB.length === 0) return 0;
+    const len = Math.min(vecA.length, vecB.length);
+    let dot = 0,
+      normA = 0,
+      normB = 0;
+    for (let i = 0; i < len; i++) {
+      dot += vecA[i] * vecB[i];
+      normA += vecA[i] * vecA[i];
+      normB += vecB[i] * vecB[i];
+    }
+    if (normA === 0 || normB === 0) return 0;
+    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+  };
+  const computeFingerprintScore = ({
+    actualDeltas = [],
+    actualTotalDelta = 0,
+    targetTopVideos = [],
+    targetViews48h = 0,
+    elapsedHours = 48
+  }) => {
+    const sortedTarget = [...targetTopVideos].sort((a, b) => b - a);
+    const sortedActual = [...actualDeltas].sort((a, b) => b - a);
+    const timeScale = elapsedHours > 0 ? 48 / elapsedHours : 1;
+    const scaledActual = sortedActual.map(v => Math.max(0, Math.round(v * timeScale)));
+    const scaledTotal = Math.max(0, Math.round(actualTotalDelta * timeScale));
+    const compareLen = Math.min(5, Math.max(sortedTarget.length, scaledActual.length));
+    const vecTarget = [];
+    const vecActual = [];
+    for (let i = 0; i < compareLen; i++) {
+      vecTarget.push(sortedTarget[i] || 0);
+      vecActual.push(scaledActual[i] || 0);
+    }
+    const shapeSim = vectorCosineSimilarity(vecTarget, vecActual);
+    let volumeScore = 0;
+    if (targetViews48h > 0 && scaledTotal > 0) {
+      volumeScore = Math.min(scaledTotal, targetViews48h) / Math.max(scaledTotal, targetViews48h);
+    } else if (targetTopVideos.length > 0 && scaledActual.length > 0) {
+      const sumT = vecTarget.reduce((acc, v) => acc + v, 0);
+      const sumA = vecActual.reduce((acc, v) => acc + v, 0);
+      if (sumT > 0 && sumA > 0) {
+        volumeScore = Math.min(sumA, sumT) / Math.max(sumA, sumT);
+      }
+    }
+    const volumePenaltyFactor = volumeScore < 0.2 ? Math.pow(volumeScore / 0.2, 2) : 1;
+    let rankMatchCount = 0;
+    for (let i = 0; i < Math.min(vecTarget.length - 1, vecActual.length - 1); i++) {
+      if (vecTarget[i] >= vecTarget[i + 1] === vecActual[i] >= vecActual[i + 1]) {
+        rankMatchCount++;
+      }
+    }
+    const rankRatio = compareLen > 1 ? rankMatchCount / (compareLen - 1) : 1;
+    let composite = (shapeSim * 0.45 + volumeScore * 0.40 + rankRatio * 0.15) * volumePenaltyFactor;
+    const matchPercentage = Math.min(99, Math.max(0, Math.round(composite * 100)));
+    return {
+      matchPercentage,
+      vectorSimilarity: Math.round(shapeSim * 100),
+      volumeRatio: Math.round(volumeScore * 100),
+      scaledActualTop: scaledActual.slice(0, 5),
+      targetTop: vecTarget,
+      scaledTotalDelta: scaledTotal,
+      targetTotal: targetViews48h,
+      isStrongMatch: matchPercentage >= 75
+    };
+  };
+  const fetchChannelUploadsSnapshot = async channelId => {
+    if (!channelId || !channelId.startsWith('UC')) {
+      throw new Error('ID kênh không hợp lệ (cần dạng UC...)');
+    }
+    const uploadsPlaylistId = 'UU' + channelId.slice(2);
+    const playResp = await fetch('https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=' + uploadsPlaylistId + '&maxResults=15&key=' + apiKey);
+    const playData = await playResp.json();
+    if (playData.error) throw new Error(playData.error.message || 'Lỗi lấy playlist uploads');
+    const items = playData.items || [];
+    if (items.length === 0) return {
+      channelTitle: '',
+      videos: []
+    };
+    const channelTitle = items[0]?.snippet?.channelTitle || '';
+    const videoIds = items.map(it => it.contentDetails?.videoId).filter(Boolean);
+    const vidResp = await fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=' + videoIds.join(',') + '&key=' + apiKey);
+    const vidData = await vidResp.json();
+    if (vidData.error) throw new Error(vidData.error.message || 'Lỗi lấy thống kê video');
+    const videoSnapshots = (vidData.items || []).map(v => ({
+      id: v.id,
+      title: v.snippet?.title || '',
+      publishedAt: v.snippet?.publishedAt || '',
+      viewCount: parseInt(v.statistics?.viewCount || 0, 10)
+    }));
+    return {
+      channelTitle,
+      videos: videoSnapshots
+    };
+  };
+  const handleStartFingerprintTracking = async (channelIdOrUrl, channelTitleHint = '') => {
+    if (!apiKey) {
+      if (showToast) showToast('Chưa cấu hình YouTube API Key');
+      return;
+    }
+    setIsSamplingFingerprint(true);
+    try {
+      let channelId = String(channelIdOrUrl || '').trim();
+      if (channelId.includes('watch?v=') || channelId.includes('youtu.be/')) {
+        const vidMatch = new RegExp('(?:watch\?v=|youtu\.be/)([a-zA-Z0-9_-]{11})').exec(channelId);
+        if (vidMatch) {
+          const vResp = await fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet&id=' + vidMatch[1] + '&key=' + apiKey);
+          const vData = await vResp.json();
+          if (vData.items && vData.items[0]) {
+            channelId = vData.items[0].snippet.channelId;
+          }
+        }
+      } else if (channelId.includes('youtube.com/channel/')) {
+        channelId = channelId.split('youtube.com/channel/')[1].split('/')[0].split('?')[0];
+      }
+      if (!channelId.startsWith('UC')) {
+        throw new Error('Không nhận diện được Channel ID (cần dạng UC...)');
+      }
+      const snapshot = await fetchChannelUploadsSnapshot(channelId);
+      setQuotaUsed(prev => prev + 2);
+      const targetViews = parseVNNumber(manualClues.views48h) || 0;
+      const targetTop = cluesList.find(c => c.type === 'top_videos_48h')?.value || [];
+      const newJob = {
+        id: 'fp_' + Date.now(),
+        channelId: channelId,
+        channelTitle: snapshot.channelTitle || channelTitleHint || channelId,
+        t0: Date.now(),
+        t0Date: new Date().toLocaleString('vi-VN'),
+        targetViews48h: targetViews,
+        targetTopVideos: targetTop,
+        videos_t0: snapshot.videos,
+        status: 'tracking',
+        t1: null,
+        t1Date: null,
+        videos_t1: null,
+        result: null
+      };
+      const updatedJobs = [newJob, ...fingerprintJobs];
+      setFingerprintJobs(updatedJobs);
+      try {
+        localStorage.setItem('yt_spy_fingerprint_jobs', JSON.stringify(updatedJobs));
+      } catch (e) {}
+      if (showToast) showToast('Đã bắt đầu lấy mẫu t0 cho kênh ' + (snapshot.channelTitle || channelId));
+      setShowAddFingerprint(false);
+      setTargetChannelInput('');
+    } catch (err) {
+      alert('Lỗi lấy mẫu Fingerprint: ' + err.message);
+    } finally {
+      setIsSamplingFingerprint(false);
+    }
+  };
+  const handleResampleFingerprint = async jobId => {
+    if (!apiKey) {
+      if (showToast) showToast('Chưa cấu hình YouTube API Key');
+      return;
+    }
+    const job = fingerprintJobs.find(j => j.id === jobId);
+    if (!job) return;
+    setIsSamplingFingerprint(true);
+    try {
+      const videoIds = (job.videos_t0 || []).map(v => v.id).filter(Boolean);
+      if (videoIds.length === 0) throw new Error('Không có danh sách video t0');
+      const vidResp = await fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=' + videoIds.join(',') + '&key=' + apiKey);
+      const vidData = await vidResp.json();
+      if (vidData.error) throw new Error(vidData.error.message || 'Lỗi lấy thống kê video');
+      setQuotaUsed(prev => prev + 1);
+      const t1ViewsMap = {};
+      (vidData.items || []).forEach(v => {
+        t1ViewsMap[v.id] = parseInt(v.statistics?.viewCount || 0, 10);
+      });
+      const deltas = [];
+      let totalObservedDelta = 0;
+      job.videos_t0.forEach(v0 => {
+        const v1Views = t1ViewsMap[v0.id];
+        if (v1Views !== undefined && v1Views >= v0.viewCount) {
+          const delta = v1Views - v0.viewCount;
+          deltas.push(delta);
+          totalObservedDelta += delta;
+        } else {
+          deltas.push(0);
+        }
+      });
+      const elapsedHours = Math.max(0.1, (Date.now() - job.t0) / (3600 * 1000));
+      const scoreResult = computeFingerprintScore({
+        actualDeltas: deltas,
+        actualTotalDelta: totalObservedDelta,
+        targetTopVideos: job.targetTopVideos || [],
+        targetViews48h: job.targetViews48h || 0,
+        elapsedHours: elapsedHours
+      });
+      const updatedJob = {
+        ...job,
+        t1: Date.now(),
+        t1Date: new Date().toLocaleString('vi-VN'),
+        elapsedHours: Math.round(elapsedHours * 10) / 10,
+        result: scoreResult,
+        status: 'completed'
+      };
+      const updatedJobs = fingerprintJobs.map(j => j.id === jobId ? updatedJob : j);
+      setFingerprintJobs(updatedJobs);
+      try {
+        localStorage.setItem('yt_spy_fingerprint_jobs', JSON.stringify(updatedJobs));
+      } catch (e) {}
+      if (showToast) showToast('Đã đối chiếu Fingerprint: ' + scoreResult.matchPercentage + '%');
+    } catch (err) {
+      alert('Lỗi tính so khớp Fingerprint: ' + err.message);
+    } finally {
+      setIsSamplingFingerprint(false);
+    }
+  };
+  const handleDeleteFingerprint = jobId => {
+    const updated = fingerprintJobs.filter(j => j.id !== jobId);
+    setFingerprintJobs(updated);
+    try {
+      localStorage.setItem('yt_spy_fingerprint_jobs', JSON.stringify(updated));
+    } catch (e) {}
+    if (showToast) showToast('Đã xóa mẫu theo dõi Fingerprint');
+  };
   const handleSaveCase = cand => {
     const newCase = {
       id: 'case_' + Date.now(),
@@ -1322,7 +1553,12 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     className: "font-bold flex items-center gap-2 text-amber-300"
   }, /*#__PURE__*/React.createElement("span", null, "[!] Ph\xE1t hi\u1EC7n m\xE0n h\xECnh th\u1EDDi gian th\u1EF1c (Thi\u1EBFu m\u1ECF neo nh\u1EADn di\u1EC7n)")), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-amber-300/80 leading-relaxed"
-  }, "\u1EA2nh ch\u1EE5p l\xE0 m\xE0n h\xECnh Th\u1EDDi gian th\u1EF1c 48h, kh\xF4ng ch\u1EE9a ng\xE0y xu\u1EA5t b\u1EA3n ho\u1EB7c t\u1ED5ng view t\xEDch l\u0169y (Ch\u1EC9 s\u1ED1 m\u1ECF neo = 0). B\u1EA1n h\xE3y ch\u1ECDn kho\u1EA3ng ng\xE0y xu\u1EA5t b\u1EA3n ho\u1EB7c nh\u1EADp ng\xE1ch/qu\u1ED1c gia nghi v\u1EA5n b\xEAn d\u01B0\u1EDBi \u0111\u1EC3 h\u1EC7 th\u1ED1ng khoanh v\xF9ng ch\xEDnh x\xE1c!")), /*#__PURE__*/React.createElement("div", {
+  }, "\u1EA2nh ch\u1EE5p l\xE0 m\xE0n h\xECnh Th\u1EDDi gian th\u1EF1c 48h, kh\xF4ng ch\u1EE9a ng\xE0y xu\u1EA5t b\u1EA3n ho\u1EB7c t\u1ED5ng view t\xEDch l\u0169y (Ch\u1EC9 s\u1ED1 m\u1ECF neo = 0)."), /*#__PURE__*/React.createElement("div", {
+    className: "pt-1 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowAddFingerprint(true),
+    className: "px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-[11px] font-semibold transition-colors"
+  }, "[+] K\xEDch ho\u1EA1t Theo D\xF5i Fingerprint 48h (So s\xE1nh vector Delta View)"))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-1 lg:grid-cols-12 gap-5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lg:col-span-5 space-y-4"
@@ -1681,7 +1917,86 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     className: "font-bold shrink-0 " + (item.pass ? "text-emerald-400" : "text-zinc-500")
   }, item.pass ? "[✔]" : "[✖]"), /*#__PURE__*/React.createElement("span", {
     className: item.pass ? "text-zinc-200" : "text-zinc-500"
-  }, item.text))))))))), savedCases.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, item.text))))))))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#12141c] border border-zinc-800 rounded-xl p-4 space-y-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between border-b border-zinc-800 pb-2.5"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-zinc-200"
+  }, "Theo D\xF5i Fingerprint 48h (", fingerprintJobs.length, ")"), /*#__PURE__*/React.createElement("span", {
+    className: "ml-2 text-[10px] text-zinc-500 font-mono"
+  }, "[Vector Matching]")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowAddFingerprint(!showAddFingerprint),
+    className: "px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-medium transition-colors"
+  }, showAddFingerprint ? 'Đóng' : '[+] Thêm kênh nghi vấn')), showAddFingerprint && /*#__PURE__*/React.createElement("div", {
+    className: "p-3 rounded-lg bg-[#181b26] border border-zinc-800 space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-zinc-300 font-medium"
+  }, "Nh\u1EADp link k\xEAnh, ID k\xEAnh (UC...) ho\u1EB7c link video c\u1EE7a k\xEAnh:"), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: targetChannelInput,
+    onChange: e => setTargetChannelInput(e.target.value),
+    placeholder: "https://www.youtube.com/@channel ho\u1EB7c UC...",
+    className: "flex-1 px-2.5 py-1.5 rounded bg-zinc-900 border border-zinc-700 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+  }), /*#__PURE__*/React.createElement("button", {
+    disabled: isSamplingFingerprint || !targetChannelInput.trim(),
+    onClick: () => handleStartFingerprintTracking(targetChannelInput),
+    className: "px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-medium transition-colors shrink-0"
+  }, isSamplingFingerprint ? 'Đang lấy t0...' : 'Lấy mẫu t0')), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-zinc-500"
+  }, "* T\u1ED1n 2 quota units. H\u1EC7 th\u1ED1ng s\u1EBD l\u01B0u s\u1ED1 view hi\u1EC7n t\u1EA1i c\u1EE7a 15 video g\u1EA7n nh\u1EA5t.")), fingerprintJobs.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-4 text-xs text-zinc-500"
+  }, "Ch\u01B0a c\xF3 k\xEAnh n\xE0o \u0111\u01B0\u1EE3c theo d\xF5i. Th\xEAm k\xEAnh nghi v\u1EA5n ho\u1EB7c b\u1EA5m [+] Fingerprint t\u1EEB danh s\xE1ch \u1EE9ng vi\xEAn \u0111\u1EC3 b\u1EAFt \u0111\u1EA7u.") : /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2.5"
+  }, fingerprintJobs.map(job => /*#__PURE__*/React.createElement("div", {
+    key: job.id,
+    className: "p-3 rounded-lg bg-[#181b26] border border-zinc-800 space-y-2 text-xs"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "truncate font-semibold text-white"
+  }, job.channelTitle), /*#__PURE__*/React.createElement("span", {
+    className: 'px-2 py-0.5 rounded text-[10px] font-semibold border ' + (job.status === 'completed' ? job.result?.isStrongMatch ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300' : 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-amber-950/40 border-amber-800/60 text-amber-300')
+  }, job.status === 'completed' ? job.result?.matchPercentage + '% Trùng khớp' : 'Đang theo dõi t0')), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-zinc-400 space-y-0.5"
+  }, /*#__PURE__*/React.createElement("div", null, "K\xEAnh: ", /*#__PURE__*/React.createElement("code", {
+    className: "text-zinc-300 font-mono"
+  }, job.channelId)), /*#__PURE__*/React.createElement("div", null, "L\u1EA5y m\u1EABu t0 l\xFAc: ", job.t0Date), job.t1Date && /*#__PURE__*/React.createElement("div", null, "\u0110\u1ED1i chi\u1EBFu t1 l\xFAc: ", job.t1Date, " (sau ", job.elapsedHours, " gi\u1EDD)")), job.result && /*#__PURE__*/React.createElement("div", {
+    className: "p-2.5 rounded bg-zinc-900/80 border border-zinc-800 space-y-1.5 text-[11px]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-zinc-400"
+  }, "\u0110\u1ED9 t\u01B0\u01A1ng \u0111\u1ED3ng h\xECnh d\u1EA1ng vector:"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-bold text-white"
+  }, job.result.vectorSimilarity, "%")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-zinc-400"
+  }, "T\u1EF7 l\u1EC7 quy m\xF4 view (Volume Ratio):"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-bold text-white"
+  }, job.result.volumeRatio, "%")), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-zinc-400 pt-1 border-t border-zinc-800"
+  }, /*#__PURE__*/React.createElement("div", null, "M\u1EE5c ti\xEAu \u1EA3nh: ", job.result.targetTop?.join(', '), " (T\u1ED5ng: ", job.result.targetTotal?.toLocaleString(), ")"), /*#__PURE__*/React.createElement("div", null, "Delta k\xEAnh (Quy \u0111\u1ED5i 48h): ", job.result.scaledActualTop?.join(', '), " (T\u1ED5ng: ", job.result.scaledTotalDelta?.toLocaleString(), ")"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between pt-1 gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: isSamplingFingerprint,
+    onClick: () => handleResampleFingerprint(job.id),
+    className: "px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white text-[11px] font-medium transition-colors"
+  }, isSamplingFingerprint ? 'Đang đo...' : 'Lấy mẫu t1 & So khớp (1 quota)'), job.result?.isStrongMatch && /*#__PURE__*/React.createElement("button", {
+    onClick: () => onAddCompetitor && onAddCompetitor({
+      channelId: job.channelId,
+      channelTitle: job.channelTitle
+    }),
+    className: "px-2.5 py-1 rounded bg-emerald-900/60 hover:bg-emerald-800 border border-emerald-700 text-emerald-200 text-[11px] font-medium transition-colors"
+  }, "Th\xEAm \u0110\u1ED1i Th\u1EE7")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => handleDeleteFingerprint(job.id),
+    className: "px-2 py-1 rounded text-zinc-500 hover:text-red-400 text-[11px] transition-colors"
+  }, "X\xF3a")))))), savedCases.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#12141c] border border-zinc-800 rounded-xl p-4 space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between border-b border-zinc-800 pb-2.5"
