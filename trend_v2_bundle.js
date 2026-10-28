@@ -732,6 +732,86 @@ window.FEATURE_TREND_V2 = true;
         ]
       }
     ],
+    KR: [
+      {
+        id: 'ch_health_kr',
+        title: '닥터 건강 비결 KR',
+        avatar: 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=200&q=80',
+        subs: 12500,
+        videoCount: 21,
+        country: 'KR',
+        rpm: '$18 - $35',
+        video: {
+          id: 'mNUIrYwBw6Q',
+          title: '의사들이 매일 아침 꼭 챙겨먹는 3가지 음식 (혈관 청소)',
+          views: 185000,
+          vph: 460,
+          dur: '14:50',
+          published: '2 ngày trước',
+          thumb: 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=600&q=80',
+          outlierRatio: 14.8
+        },
+        keywords: [
+          '혈관 건강에 좋은 음식',
+          '시니어 아침 식단 관리',
+          '고혈압 당뇨 예방 비법',
+          '의사 추천 아침 습관',
+          '건강 장수 100세 라이프'
+        ]
+      },
+      {
+        id: 'ch_life_kr',
+        title: '살림 꿀팁 연구소',
+        avatar: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=200&q=80',
+        subs: 8400,
+        videoCount: 17,
+        country: 'KR',
+        rpm: '$14 - $28',
+        video: {
+          id: 'K8d9Xy2w1qA',
+          title: '주부 9단도 감탄한 주방 청소 및 살림 꿀팁 7가지',
+          views: 142000,
+          vph: 350,
+          dur: '11:20',
+          published: '3 ngày trước',
+          thumb: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
+          outlierRatio: 16.9
+        },
+        keywords: [
+          '주방 청소 꿀팁',
+          '살림 노하우 비법',
+          '초간단 생활 꿀팁 모음',
+          '정리 정돈 잘하는 법',
+          '살림 9단 꿀팁'
+        ]
+      },
+      {
+        id: 'ch_crime_kr',
+        title: '미제 사건 수사록',
+        avatar: 'https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=200&q=80',
+        subs: 15200,
+        videoCount: 26,
+        country: 'KR',
+        rpm: '$18 - $36',
+        video: {
+          id: 'P9c4Vb7m1zX',
+          title: '대한민국 3대 미제 사건: 아직 풀리지 않은 충격적 진실',
+          views: 290000,
+          vph: 680,
+          dur: '36:40',
+          published: '1 ngày trước',
+          thumb: 'https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=600&q=80',
+          outlierRatio: 19.0
+        },
+        keywords: [
+          '대한민국 미제 사건 다큐',
+          '범죄 심리 프로파일링',
+          '그것이 알고싶다 미스터리',
+          '풀리지 않은 미제 사건',
+          '사건 사고 탐사 보도'
+        ]
+      }
+    ],
     VN: [
       {
         id: 'ch_bimat_deche',

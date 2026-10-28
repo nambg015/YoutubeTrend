@@ -980,6 +980,52 @@ function SpyToolSection({ apiKey, isUltraPro, onUpgradePrompt, onAddCompetitor, 
     if (showToast) showToast('Đã sao chép Debug Log vào bộ nhớ tạm!', 'success');
   };
 
+  // ULTRA PRO ACCESS GATE (CHẶN TÀI KHOẢN THƯỜNG / FREE / PRO)
+  if (!isUltraPro) {
+    return h('div', { className: 'max-w-4xl mx-auto py-12 px-4 animate-in fade-in duration-200 text-center space-y-6' },
+      h('div', { className: 'p-8 sm:p-12 rounded-3xl bg-gradient-to-b from-purple-950/60 via-[#12141c] to-[#0d0e14] border-2 border-purple-500/50 shadow-2xl relative overflow-hidden' },
+        h('div', { className: 'w-20 h-20 mx-auto rounded-3xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-4xl shadow-xl shadow-purple-600/30' }, '🔒'),
+        h('div', { className: 'mt-6 space-y-2' },
+          h('div', { className: 'inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-xs font-black uppercase tracking-wider' }, 'ĐỘC QUYỀN GÓI ULTRA PRO'),
+          h('h2', { className: 'text-xl sm:text-3xl font-black text-white' }, 'Thám Tử SPY v3 – Truy Vết Kênh Ẩn Danh'),
+          h('p', { className: 'text-xs sm:text-sm text-zinc-300 max-w-xl mx-auto leading-relaxed' },
+            'Tính năng giải mã và bóc tách danh tính kênh YouTube thực tế từ ảnh chụp màn hình YouTube Studio bôi che. Sử dụng thuật toán Bisection & Log-Likelihood độc quyền cao cấp nhất.'
+          )
+        ),
+        h('div', { className: 'grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto my-8 text-left text-xs' },
+          [
+            { icon: '📸', title: 'Tải 1-5 Ảnh Studio Thật', desc: 'Dán trực tiếp Ctrl+V từ clipboard hoặc tải ảnh chụp Studio bôi che.' },
+            { icon: '🔍', title: 'Quét Bisection 800 Quota', desc: 'Chia đôi lát thời gian, trần cứng bảo vệ API key tuyệt đối.' },
+            { icon: '🎯', title: 'Log-Likelihood Xếp Hạng', desc: 'Độ chính xác cao, loại bỏ số liệu ảo và kênh rác 100%.' }
+          ].map((f, i) => h('div', { key: i, className: 'p-3.5 rounded-xl bg-purple-950/30 border border-purple-500/20 space-y-1' },
+            h('div', { className: 'text-xl' }, f.icon),
+            h('div', { className: 'font-bold text-white' }, f.title),
+            h('div', { className: 'text-zinc-400 text-[11px]' }, f.desc)
+          ))
+        ),
+        h('div', { className: 'flex flex-col sm:flex-row items-center justify-center gap-3 pt-2' },
+          h('button', {
+            type: 'button',
+            onClick: () => { if (typeof onUpgradePrompt === 'function') onUpgradePrompt(); },
+            className: 'w-full sm:w-auto px-8 py-3.5 rounded-xl font-black text-sm bg-gradient-to-r from-purple-500 via-pink-500 to-amber-400 hover:from-purple-400 hover:to-amber-300 text-white shadow-xl shadow-purple-500/30 transition transform hover:-translate-y-0.5 cursor-pointer'
+          }, '💎 NÂNG CẤP GÓI ULTRA PRO ĐỂ MỞ KHÓA NGAY'),
+          h('button', {
+            type: 'button',
+            onClick: () => {
+              if (typeof window !== 'undefined') {
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', 'search');
+                window.history.pushState({}, '', url.toString());
+                window.location.reload();
+              }
+            },
+            className: 'w-full sm:w-auto px-5 py-3.5 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition cursor-pointer'
+          }, '← Quay Lại Xu Hướng')
+        )
+      )
+    );
+  }
+
   return h('div', { className: 'space-y-6 max-w-6xl mx-auto px-3 sm:px-4 py-4 animate-in fade-in duration-200' },
     // Ultra Pro Notice / Header Banner
     h('div', { className: 'p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-950/40 via-brand-surface to-brand-surface border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl' },
@@ -994,11 +1040,7 @@ function SpyToolSection({ apiKey, isUltraPro, onUpgradePrompt, onAddCompetitor, 
         )
       ),
       h('div', { className: 'flex items-center gap-2' },
-        h('button', {
-          type: 'button',
-          onClick: () => loadPresetFixture('FIXTURE_AB'),
-          className: 'px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-600/30 hover:bg-purple-600/40 text-purple-200 border border-purple-500/40 transition'
-        }, '⚡ Thử 2 Ảnh Mẫu (A + B)'),
+
         h('button', {
           type: 'button',
           onClick: () => setWizardStep(1),
@@ -1066,27 +1108,7 @@ function SpyToolSection({ apiKey, isUltraPro, onUpgradePrompt, onAddCompetitor, 
         )
       ),
 
-      // Sample Fixture Presets Row
-      h('div', { className: 'p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 flex flex-wrap items-center justify-between gap-3' },
-        h('span', { className: 'text-xs font-bold text-zinc-300' }, 'Hoặc thử nghiệm ngay với 3 bộ ảnh mẫu chuẩn:'),
-        h('div', { className: 'flex flex-wrap items-center gap-2' },
-          h('button', {
-            type: 'button',
-            onClick: () => loadPresetFixture('FIXTURE_A'),
-            className: 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition'
-          }, 'Ảnh Mẫu A (2.4M view)'),
-          h('button', {
-            type: 'button',
-            onClick: () => loadPresetFixture('FIXTURE_B'),
-            className: 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition'
-          }, 'Ảnh Mẫu B (Tiếng Nhật 18:00)'),
-          h('button', {
-            type: 'button',
-            onClick: () => loadPresetFixture('FIXTURE_AB'),
-            className: 'px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow transition'
-          }, '💎 Kết Hợp A + B (Gom kênh)')
-        )
-      ),
+
 
       // Uploaded Images List
       evidenceImages.length > 0 && h('div', { className: 'space-y-3 pt-2' },
