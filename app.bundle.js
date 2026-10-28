@@ -545,6 +545,7 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     return [];
   });
   const [zoomImage, setZoomImage] = React.useState(null);
+  const [isDragging, setIsDragging] = React.useState(false);
   const fileInputRef = React.useRef(null);
 
   // Danh sách các thị trường nghi vấn toàn cầu (Sạch sẽ, không emoji icon)
@@ -833,32 +834,39 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
       if (foundImage) e.preventDefault();
     };
     window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
+    const preventWindowDrop = e => {
+      e.preventDefault();
+    };
+    window.addEventListener('dragover', preventWindowDrop);
+    window.addEventListener('drop', preventWindowDrop);
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+      window.removeEventListener('dragover', preventWindowDrop);
+      window.removeEventListener('drop', preventWindowDrop);
+    };
   }, [addFileToEvidence]);
-  const handlePasteButtonClick = async () => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.read) {
-        const clipboardItems = await navigator.clipboard.read();
-        let found = false;
-        for (const item of clipboardItems) {
-          for (const type of item.types) {
-            if (type.startsWith('image/')) {
-              const blob = await item.getType(type);
-              addFileToEvidence(blob);
-              found = true;
-              break;
-            }
-          }
-          if (found) break;
-        }
-        if (!found) {
-          if (showToast) showToast('Chụp màn hình (Win + Shift + S) rồi bấm Ctrl + V', 'info');
-        }
-      } else {
-        if (showToast) showToast('Bấm Ctrl + V trên bàn phím để dán ảnh', 'info');
-      }
-    } catch (err) {
-      if (showToast) showToast('Bấm Ctrl + V trên bàn phím để dán ảnh', 'info');
+  const handleDragOver = e => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const handleDragEnter = e => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  const handleDragLeave = e => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget && e.currentTarget.contains(e.relatedTarget)) return;
+    setIsDragging(false);
+  };
+  const handleDrop = e => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (files.length) {
+      files.forEach(f => addFileToEvidence(f));
     }
   };
   const handleImageUpload = e => {
@@ -1264,28 +1272,25 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     className: "hidden"
   }), /*#__PURE__*/React.createElement("div", {
     onClick: () => fileInputRef.current && fileInputRef.current.click(),
-    className: "border border-dashed border-zinc-700 hover:border-zinc-500 bg-zinc-900/60 rounded-xl p-4 text-center cursor-pointer transition space-y-2.5"
+    onDragOver: handleDragOver,
+    onDragEnter: handleDragEnter,
+    onDragLeave: handleDragLeave,
+    onDrop: handleDrop,
+    className: "border border-dashed rounded-xl p-5 text-center cursor-pointer transition space-y-2.5 " + (isDragging ? "border-purple-500 bg-purple-950/40 text-purple-200 ring-2 ring-purple-500/30" : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/60 text-zinc-300")
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-xs font-semibold text-zinc-300"
-  }, "D\xE1n tr\u1EF1c ti\u1EBFp (Ctrl + V) ho\u1EB7c t\u1EA3i t\u1EC7p l\xEAn"), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-center gap-2 flex-wrap"
+    className: "text-xs font-semibold"
+  }, isDragging ? "Thả tệp ảnh vào đây ngay" : "Kéo thả tệp ảnh vào đây, hoặc tải tệp lên"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-center gap-2"
   }, /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: e => {
-      e.stopPropagation();
-      handlePasteButtonClick();
-    },
-    className: "px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-[11px] font-semibold transition cursor-pointer"
-  }, "D\xE1n t\u1EEB b\u1ED9 nh\u1EDB t\u1EA1m (Ctrl + V)"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: e => {
       e.stopPropagation();
       if (fileInputRef.current) fileInputRef.current.click();
     },
-    className: "px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 text-[11px] transition cursor-pointer"
+    className: "px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-[11px] font-semibold transition cursor-pointer"
   }, "Ch\u1ECDn t\u1EC7p t\u1EEB m\xE1y")), /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-zinc-500"
-  }, "Ch\u1EE5p m\xE0n h\xECnh (Win + Shift + S) r\u1ED3i b\u1EA5m Ctrl + V tr\u1EF1c ti\u1EBFp v\xE0o trang web")), isScanningImage && /*#__PURE__*/React.createElement("div", {
+  }, "K\xE9o tr\u1EF1c ti\u1EBFp t\u1EC7p t\u1EEB m\xE1y v\xE0o ho\u1EB7c b\u1EA5m Ctrl + V \u1EDF b\u1EA5t k\u1EF3 \u0111\xE2u \u0111\u1EC3 d\xE1n \u1EA3nh")), isScanningImage && /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 text-[11px]"
   }, /*#__PURE__*/React.createElement("span", {
     className: "w-3.5 h-3.5 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin"
