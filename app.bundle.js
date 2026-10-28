@@ -399,22 +399,31 @@ const ytFirebasePhoneAuth = {
       return false;
     }
   },
-  setupRecaptcha(containerId = 'firebase-recaptcha-verifier') {
+  setupRecaptcha() {
     if (typeof firebase === 'undefined' || !this.init()) return null;
     try {
-      if (typeof document !== 'undefined' && !document.getElementById(containerId)) {
-        const d = document.createElement('div');
-        d.id = containerId;
-        document.body.appendChild(d);
-      }
       if (window.phoneRecaptchaVerifier) {
         try { window.phoneRecaptchaVerifier.clear(); } catch (e) {}
+        window.phoneRecaptchaVerifier = null;
       }
-      window.phoneRecaptchaVerifier = new firebase.auth.RecaptchaVerifier(containerId, {
-        size: 'invisible',
-        callback: () => {}
-      });
-      return window.phoneRecaptchaVerifier;
+      
+      const targetId = 'firebase-phone-recaptcha-dynamic';
+      if (typeof document !== 'undefined') {
+        const existing = document.getElementById(targetId);
+        if (existing && existing.parentNode) {
+          existing.parentNode.removeChild(existing);
+        }
+        const newDiv = document.createElement('div');
+        newDiv.id = targetId;
+        document.body.appendChild(newDiv);
+
+        window.phoneRecaptchaVerifier = new firebase.auth.RecaptchaVerifier(targetId, {
+          size: 'invisible',
+          callback: () => {}
+        });
+        return window.phoneRecaptchaVerifier;
+      }
+      return null;
     } catch (e) {
       console.warn('RecaptchaVerifier setup error:', e);
       return null;
@@ -434,7 +443,7 @@ const ytFirebasePhoneAuth = {
       return { success: false, needConfig: true };
     }
 
-    const appVerifier = this.setupRecaptcha(containerId);
+    const appVerifier = this.setupRecaptcha();
     if (!appVerifier) {
       return { success: false, error: 'Không thể khởi tạo bộ xác thực Google reCAPTCHA cho SĐT.' };
     }
