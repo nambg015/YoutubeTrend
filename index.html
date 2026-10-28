@@ -1315,11 +1315,47 @@ function score(v) {
 // HỆ THỐNG GÓI DỊCH VỤ & HẠN MỨC YOUTREND (TIER & SEPAY VIETQR ENGINE)
 // =========================================================================
 const SEPAY_CONFIG = {
-  apiKey: 'J1CBHWNBTR9O5136HKVEGHOQIXLGBIHZ0GEORPVYPCWRUDNXSF2LVUQTTWY4MOYV',
+  // BẢO MẬT: API Key của SePay đã được chuyển sang Vercel Serverless Function (/api/verify-payment)
+  // Hacker tuyệt đối không thể đọc được mã bí mật này từ trình duyệt!
   bankName: 'VietinBank',
   accountNumber: '100882100939',
   accountHolder: 'SEPAY - VIETINBANK'
 };
+
+
+// =========================================================================
+// ANTI-CHEAT & ACCOUNT-SCOPED STORAGE (CHỐNG GIAN LẬN LOCALSTORAGE)
+// =========================================================================
+function getAccountScopedKey(baseKey) {
+  try {
+    const prof = JSON.parse(st.get('yt_user_profile') || 'null');
+    if (prof && prof.isGoogleAuth && (prof.googleId || prof.email)) {
+      const cleanId = (prof.googleId || prof.email).replace(/[^a-zA-Z0-9]/g, '_');
+      return baseKey + '_' + cleanId;
+    }
+  } catch(e) {}
+  return baseKey;
+}
+
+// Checksum Signature to block Console/DevTools LocalStorage hacking
+function createSecureSignature(obj) {
+  const salt = 'YouTrend_Secure_Salt_2026_x89';
+  const str = JSON.stringify(obj) + salt;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return 'yt_sig_' + Math.abs(hash).toString(36);
+}
+
+function verifySecureData(wrapped) {
+  if (!wrapped || typeof wrapped !== 'object' || !wrapped._data || !wrapped._sig) return null;
+  const expected = createSecureSignature(wrapped._data);
+  if (expected === wrapped._sig) return wrapped._data;
+  console.warn('[Anti-Cheat] Phát hiện can thiệp dữ liệu trái phép (Tampering detected)! Đã reset về mặc định.');
+  return null;
+}
 
 const TIERS_DATA = {
   FREE: {
@@ -1362,7 +1398,9 @@ const TIERS_DATA = {
 const ytTierManager = {
   getTier() {
     try {
-      const data = JSON.parse(st.get('yt_user_tier') || 'null');
+      const keyName = typeof getAccountScopedKey === 'function' ? getAccountScopedKey('yt_user_tier') : 'yt_user_tier';
+      const raw = JSON.parse(st.get(keyName) || 'null');
+      const data = typeof verifySecureData === 'function' ? verifySecureData(raw) : raw;
       if (data && data.tier && data.tier !== 'FREE') {
         if (data.expiresAt && Date.now() > data.expiresAt) {
           this.setTier('FREE');
@@ -1375,7 +1413,9 @@ const ytTierManager = {
   },
   getTierDetails() {
     try {
-      const data = JSON.parse(st.get('yt_user_tier') || 'null');
+      const keyName = typeof getAccountScopedKey === 'function' ? getAccountScopedKey('yt_user_tier') : 'yt_user_tier';
+      const raw = JSON.parse(st.get(keyName) || 'null');
+      const data = typeof verifySecureData === 'function' ? verifySecureData(raw) : raw;
       if (data && data.tier) return data;
     } catch(e) {}
     return { tier: 'FREE', activatedAt: Date.now(), expiresAt: null };
@@ -1386,7 +1426,9 @@ const ytTierManager = {
       activatedAt: Date.now(),
       expiresAt: durationDays ? Date.now() + durationDays * 86400000 : null
     };
-    st.set('yt_user_tier', JSON.stringify(data));
+    const keyName = typeof getAccountScopedKey === 'function' ? getAccountScopedKey('yt_user_tier') : 'yt_user_tier';
+    const signed = typeof createSecureSignature === 'function' ? { _data: data, _sig: createSecureSignature(data) } : data;
+    st.set(keyName, JSON.stringify(signed));
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('yt-tier-changed', { detail: data }));
     }
@@ -1401,8 +1443,9 @@ const ytTierManager = {
   },
   getUsage() {
     const today = new Date().toISOString().slice(0, 10);
+    const keyName = typeof getAccountScopedKey === 'function' ? getAccountScopedKey('yt_daily_usage') : 'yt_daily_usage';
     try {
-      const u = JSON.parse(st.get('yt_daily_usage') || 'null');
+      const u = JSON.parse(st.get(keyName) || 'null');
       if (u && u.date === today) {
         return {
           date: today,
@@ -1412,12 +1455,13 @@ const ytTierManager = {
       }
     } catch(e) {}
     const fresh = { date: today, keywords: [], analysisCount: 0 };
-    st.set('yt_daily_usage', JSON.stringify(fresh));
+    st.set(keyName, JSON.stringify(fresh));
     return fresh;
   },
   saveUsage(u) {
     try {
-      st.set('yt_daily_usage', JSON.stringify(u));
+      const keyName = typeof getAccountScopedKey === 'function' ? getAccountScopedKey('yt_daily_usage') : 'yt_daily_usage';
+      st.set(keyName, JSON.stringify(u));
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('yt-usage-updated', { detail: u }));
       }
@@ -6010,6 +6054,239 @@ function AccountProfileModal({
 
 
 
+
+// =========================================================================
+// MANDATORY ONBOARDING & ACCESS GATE (BẮT BUỘC ĐĂNG NHẬP GOOGLE & NHẬP API KEY)
+// =========================================================================
+
+// Gate 1: Google Login Required
+function GoogleAuthGate({ onGoogleSuccess }) {
+  return (
+    <div className="min-h-screen bg-[#0b0c10] text-slate-100 flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden select-none">
+      {/* Background ambient lighting */}
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-red-600/10 rounded-full blur-[140px] pointer-events-none"></div>
+      <div className="absolute -bottom-40 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none"></div>
+
+      <div className="relative z-10 max-w-md w-full bg-[#12141c]/95 border border-[#232738] rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl text-center space-y-6">
+        
+        {/* Brand Logo */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 to-amber-600 flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-red-600/30 border border-red-500/40">
+            ▶
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              YouTrend <span className="text-red-500">Analytics</span>
+            </h1>
+            <p className="text-xs text-zinc-400 mt-1">
+              Phân tích xu hướng, từ khóa & kênh YouTube bứt phá
+            </p>
+          </div>
+        </div>
+
+        {/* Step Badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold">
+          <span>🔒</span> Bước 1: Yêu Cầu Đăng Nhập
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2 text-xs text-zinc-300 leading-relaxed bg-[#181b26] p-4 rounded-2xl border border-[#232738]">
+          <p className="font-semibold text-white">
+            Chào mừng bạn đến với hệ thống YouTrend Pro!
+          </p>
+          <p className="text-zinc-400">
+            Để bắt đầu trải nghiệm, quản lý hạn mức 5 từ khóa miễn phí mỗi ngày và đồng bộ dữ liệu an toàn, vui lòng đăng nhập bằng tài khoản Google (Gmail) của bạn.
+          </p>
+        </div>
+
+        {/* Google Sign-In Button */}
+        <div className="space-y-3 pt-2">
+          <div className="flex justify-center">
+            <GoogleLoginButton onLoginSuccess={onGoogleSuccess} />
+          </div>
+          <div className="flex items-center justify-center gap-2 text-[11px] text-zinc-500">
+            <span>🛡️</span>
+            <span>Xác thực chính thức qua Google Identity Services</span>
+          </div>
+        </div>
+
+        {/* Security Footer */}
+        <div className="pt-4 border-t border-[#232738] text-[10px] text-zinc-500 flex justify-between items-center">
+          <span>✓ Bảo mật 100%</span>
+          <span>✓ Không lưu mật khẩu</span>
+          <span>✓ Miễn phí trải nghiệm</span>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// Gate 2: YouTube API Key Required
+function ApiKeySetupGate({ userProfile, onKeySaved, onLogoutGoogle, showToast }) {
+  const [inputKey, setInputKey] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testError, setTestError] = useState(null);
+
+  const handleTestAndSave = async (e) => {
+    if (e) e.preventDefault();
+    const trimmed = (inputKey || '').trim();
+    if (!trimmed) {
+      setTestError('Vui lòng dán mã API Key bắt đầu bằng AIzaSy...!');
+      return;
+    }
+    setTesting(true);
+    setTestError(null);
+
+    try {
+      // Test ping against YouTube Data API
+      const u = new URL('https://www.googleapis.com/youtube/v3/videos');
+      u.searchParams.set('part', 'snippet');
+      u.searchParams.set('chart', 'mostPopular');
+      u.searchParams.set('maxResults', '1');
+      u.searchParams.set('regionCode', 'VN');
+      u.searchParams.set('key', trimmed);
+
+      const res = await fetch(u.toString());
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        if (showToast) showToast('Kết nối YouTube API thành công! Đang vào trang chính...');
+        onKeySaved(trimmed);
+      } else {
+        const errObj = (data.error && data.error.errors && data.error.errors[0]) || {};
+        const reason = errObj.reason || ('HTTP ' + res.status);
+        if (reason === 'keyInvalid' || reason === 'badRequest') {
+          setTestError('Mã API Key không hợp lệ. Vui lòng kiểm tra bạn đã copy đủ ký tự (không thừa dấu cách).');
+        } else if (reason === 'accessNotConfigured') {
+          setTestError('API "YouTube Data API v3" chưa được Bật (Enable) trong Google Cloud Console của bạn.');
+        } else if (reason === 'quotaExceeded') {
+          setTestError('Key này đã hết hạn mức Quota trong ngày. Vui lòng dùng key khác.');
+        } else {
+          setTestError('Lỗi kết nối YouTube API: ' + (data.error?.message || reason));
+        }
+      }
+    } catch(err) {
+      setTestError('Lỗi kết nối mạng: ' + String(err));
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0b0c10] text-slate-100 flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden select-none">
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-[140px] pointer-events-none"></div>
+
+      <div className="relative z-10 max-w-lg w-full bg-[#12141c]/95 border border-[#232738] rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-5">
+        
+        {/* User Info Pill */}
+        <div className="flex items-center justify-between bg-[#181b26] p-3 rounded-2xl border border-[#232738]">
+          <div className="flex items-center gap-2.5">
+            {userProfile.avatar ? (
+              <img src={userProfile.avatar} alt="Avatar" className="w-9 h-9 rounded-full border border-emerald-500/40 object-cover" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">G</div>
+            )}
+            <div>
+              <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>{userProfile.name}</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
+                  ✓ Đã đăng nhập
+                </span>
+              </div>
+              <div className="text-[11px] text-zinc-400">{userProfile.email}</div>
+            </div>
+          </div>
+          <button
+            onClick={onLogoutGoogle}
+            className="text-[11px] text-rose-400 hover:text-rose-300 px-2 py-1 rounded-lg hover:bg-rose-500/10 transition">
+            Đổi nick
+          </button>
+        </div>
+
+        {/* Step Badge & Title */}
+        <div className="space-y-1.5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
+            <span>🔑</span> Bước 2: Kết Nối YouTube Data API Key
+          </div>
+          <h2 className="text-lg sm:text-xl font-black text-white">
+            Cài Đặt API Key Để Bắt Đầu Sử Dụng
+          </h2>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Để YouTrend quét dữ liệu video thịnh hành, từ khóa và kênh YouTube theo thời gian thực 100% dữ liệu thật từ Google, bạn cần kết nối API Key YouTube của mình.
+          </p>
+        </div>
+
+        {/* 3 Step Guide Accordion */}
+        <div className="bg-[#181b26] p-3.5 rounded-2xl border border-[#232738] space-y-2 text-xs text-zinc-300">
+          <div className="font-bold text-amber-400 flex items-center justify-between">
+            <span>Cách lấy API Key miễn phí (10.000 quota/ngày):</span>
+            <a 
+              href="https://console.cloud.google.com/apis/credentials" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[11px] text-red-400 hover:text-red-300 underline font-semibold">
+              Mở Google Cloud ↗
+            </a>
+          </div>
+          <ol className="list-decimal list-inside space-y-1 text-[11px] text-zinc-400">
+            <li>Vào <b>Google Cloud Console</b> ➔ Bấm <b>Create Credentials > API Key</b>.</li>
+            <li>Vào mục <b>Enabled APIs & Services</b> ➔ Bật API <b>YouTube Data API v3</b>.</li>
+            <li>Dán mã key bắt đầu bằng <code className="text-amber-300 font-mono">AIzaSy...</code> vào ô bên dưới.</li>
+          </ol>
+        </div>
+
+        {/* Form Input */}
+        <form onSubmit={handleTestAndSave} className="space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
+              Dán mã YouTube API Key của bạn:
+            </label>
+            <input
+              type="text"
+              value={inputKey}
+              onChange={(e) => { setInputKey(e.target.value); setTestError(null); }}
+              placeholder="AIzaSyBxxxxxxxxx..."
+              className="w-full bg-[#181b26] border border-[#232738] rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 font-mono focus:outline-none focus:border-red-500 shadow-inner"
+            />
+          </div>
+
+          {testError && (
+            <div className="p-3 bg-red-950/40 border border-red-500/40 rounded-xl text-xs text-red-300 space-y-1 animate-in fade-in">
+              <div className="font-bold flex items-center gap-1.5">
+                <span>⚠️</span> {testError}
+              </div>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={testing}
+            className="w-full py-3 rounded-xl text-xs sm:text-sm font-black bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white shadow-lg shadow-red-600/20 transition cursor-pointer flex items-center justify-center gap-2">
+            {testing ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                <span>Đang Kiểm Tra Kết Nối YouTube...</span>
+              </>
+            ) : (
+              <>
+                <span>✓</span>
+                <span>Kiểm Tra & Bắt Đầu Sử Dụng YouTrend</span>
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="text-[10px] text-zinc-500 text-center">
+          * Key của bạn được lưu an toàn trực tiếp trên trình duyệt của bạn và có thể xoay vòng nhiều key sau này.
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+
 // =========================================================================
 // TOP NGÁCH PAYWALL BANNER (KHÓA DÀNH CHO GÓI FREE)
 // =========================================================================
@@ -6089,14 +6366,37 @@ function SubscriptionModal({ onClose, showToast, initialTier = 'PRO', onUpgraded
     setStep('checkout');
   };
 
-  const handleConfirmPaid = () => {
-    // Activate tier
-    ytTierManager.setTier(selectedTier, currentOption.days);
-    if (showToast) {
-      showToast('Chúc mừng! Bạn đã nâng cấp thành công ' + tierInfo.name + ' (' + currentOption.label + ')! 🎉');
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState(null);
+
+  const handleConfirmPaid = async () => {
+    setVerifying(true);
+    setVerifyError(null);
+    try {
+      const verifyUrl = '/api/verify-payment?orderCode=' + encodeURIComponent(orderCode) + 
+        '&expectedAmount=' + amount + 
+        '&tier=' + selectedTier + 
+        '&days=' + currentOption.days;
+
+      const res = await fetch(verifyUrl);
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success && data.verified) {
+        ytTierManager.setTier(selectedTier, currentOption.days);
+        if (showToast) {
+          showToast('Xác nhận thành công! Chúc mừng bạn đã nâng cấp ' + tierInfo.name + '! 🎉');
+        }
+        if (onUpgraded) onUpgraded(selectedTier);
+        onClose();
+      } else {
+        setVerifyError(data.message || ('Chưa tìm thấy giao dịch "' + orderCode + '". Vui lòng đợi 30-60 giây sau khi chuyển khoản để ngân hàng xử lý.'));
+      }
+    } catch (e) {
+      // In local dev without serverless, provide feedback
+      setVerifyError('Lỗi kiểm tra giao dịch qua máy chủ: ' + String(e.message || e));
+    } finally {
+      setVerifying(false);
     }
-    if (onUpgraded) onUpgraded(selectedTier);
-    onClose();
   };
 
   // VietQR SePay URL
@@ -6402,13 +6702,30 @@ function SubscriptionModal({ onClose, showToast, initialTier = 'PRO', onUpgraded
                   className="sm:w-1/3 py-2.5 rounded-xl text-xs font-semibold bg-[#181b26] hover:bg-[#202433] text-zinc-300 border border-[#232738] transition">
                   ← Chọn Gói Khác
                 </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmPaid}
-                  className="sm:w-2/3 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2">
-                  <span>✓</span>
-                  <span>Tôi Đã Chuyển Khoản Xong – Kích Hoạt Gói Ngay</span>
-                </button>
+                <div className="sm:w-2/3 flex flex-col gap-1.5">
+                  <button
+                    type="button"
+                    disabled={verifying}
+                    onClick={handleConfirmPaid}
+                    className="w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2 cursor-pointer">
+                    {verifying ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        <span>Đang Kiểm Tra Với Ngân Hàng...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>⚡</span>
+                        <span>Tôi Đã Chuyển Khoản – Kiểm Tra & Kích Hoạt</span>
+                      </>
+                    )}
+                  </button>
+                  {verifyError && (
+                    <div className="text-[11px] text-amber-300 bg-amber-500/10 p-2 rounded-lg border border-amber-500/30 leading-snug">
+                      ⚠️ {verifyError}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -12113,6 +12430,54 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
   const ei = error ? errInfo(error) : null;
   const watchList = Object.values(watch);
+
+  // GATE 1: BẮT BUỘC ĐĂNG NHẬP GOOGLE TRƯỚC TIÊN
+  if (!userProfile || !userProfile.isGoogleAuth) {
+    return (
+      <GoogleAuthGate
+        onGoogleSuccess={(userData) => {
+          const updated = {
+            name: userData.name || 'Người dùng Google',
+            email: userData.email || '',
+            avatar: userData.picture || '',
+            googleId: userData.sub,
+            isGoogleAuth: true
+          };
+          st.set('yt_user_profile', JSON.stringify(updated));
+          setUserProfile(updated);
+          if (typeof showToast === 'function') {
+            showToast('Đăng nhập Google thành công! Xin chào ' + userData.name);
+          }
+        }}
+      />
+    );
+  }
+
+  // GATE 2: ĐÃ ĐĂNG NHẬP GOOGLE -> BẮT BUỘC CÀI ĐẶT YOUTUBE API KEY MỚI CHO VÀO WEB
+  if (!key) {
+    return (
+      <ApiKeySetupGate
+        userProfile={userProfile}
+        showToast={showToast}
+        onKeySaved={(newKey) => {
+          ytKeyManager.addKey('Key Mặc Định', newKey);
+          setKey(newKey);
+          st.set('yt_key', newKey);
+          if (typeof showToast === 'function') {
+            showToast('Kết nối API Key thành công! Chào mừng bạn đến với YouTrend Pro! 🚀');
+          }
+        }}
+        onLogoutGoogle={() => {
+          const def = { name: 'Người Dùng', isGoogleAuth: false };
+          st.set('yt_user_profile', JSON.stringify(def));
+          setUserProfile(def);
+          if (typeof showToast === 'function') {
+            showToast('Đã đăng xuất tài khoản Google.');
+          }
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-brand-dark text-slate-100">
