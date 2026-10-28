@@ -586,38 +586,21 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     }
 
     setIsSendingSms(true);
-    // Thử gửi qua Google Firebase Phone Auth (Gửi SMS THẬT về điện thoại SIM)
-    if (ytFirebasePhoneAuth.isConfigured()) {
-      const fbRes = await ytFirebasePhoneAuth.sendRealSms(cleanPhone, 'firebase-phone-recaptcha');
-      setIsSendingSms(false);
-      if (fbRes.success) {
-        setOtpSent(true);
-        setOtpCountdown(60);
-        setSuccessMsg('📱 ĐÃ GỬI TIN NHẮN SMS THẬT từ Google Firebase đến ' + cleanPhone + '! Vui lòng mở tin nhắn trên điện thoại để lấy mã 6 số.');
-        if (showToast) showToast('📱 Tin nhắn SMS đang gửi đến máy ' + cleanPhone + '... Vui lòng kiểm tra điện thoại!', 'success');
-        return;
-      } else {
-        console.warn('Firebase SMS provider error:', fbRes.error);
-        window.confirmationResult = null; // reset to allow fallback OTP
-      }
-    }
-
+    // Gửi tin nhắn SMS thật 100% qua Google Firebase Blaze
+    const fbRes = await ytFirebasePhoneAuth.sendRealSms(cleanPhone, 'firebase-phone-recaptcha');
     setIsSendingSms(false);
-    // Nếu chưa cấu hình Firebase, tự động tạo mã OTP mô phỏng hiển thị trên màn hình
-    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(newOtp);
-    setOtpSent(true);
-    setOtpCountdown(60);
-
-    const smsText = '📱 [MÃ OTP XÁC THỰC]: ' + newOtp + ' (gửi đến SĐT ' + cleanPhone + ', hiệu lực 5 phút)';
-    if (showToast) {
-      showToast(smsText, 'success');
+    if (fbRes.success) {
+      setOtpSent(true);
+      setOtpCountdown(60);
+      setSuccessMsg('📱 ĐÃ GỬI TIN NHẮN SMS THẬT từ Google đến ' + cleanPhone + '! Vui lòng mở tin nhắn trên điện thoại để lấy mã 6 số.');
+      if (showToast) showToast('📱 Tin nhắn SMS đang gửi đến máy ' + cleanPhone + '... Vui lòng kiểm tra điện thoại!', 'success');
+      return;
+    } else {
+      setErrorMsg('Lỗi gửi SMS Firebase: ' + fbRes.error);
+      return;
     }
-    setSuccessMsg('Đã gửi mã xác thực về ' + cleanPhone + '! Mã OTP của bạn là: ' + newOtp);
-    setOtpInput(newOtp);
   };
 
-  // Complete Phone Verification for pending user (either Google or Web user)
   const handleVerifyPhoneOnly = async e => {
     if (e) e.preventDefault();
     setErrorMsg('');
@@ -976,38 +959,7 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     disabled: otpCountdown > 0,
     className: "px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap " + (otpCountdown > 0 ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer")
   }, otpCountdown > 0 ? ("Gửi lại (" + otpCountdown + "s)") : (otpSent ? "Gửi lại OTP" : "Gửi mã OTP")))),
-  otpSent && generatedOtp && /*#__PURE__*/React.createElement("div", {
-      className: "p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/80 to-teal-950/80 border-2 border-emerald-500/80 shadow-lg space-y-2 animate-in fade-in zoom-in-95 duration-200"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-xs font-bold text-emerald-300 flex items-center gap-1.5"
-    }, /*#__PURE__*/React.createElement("span", { className: "text-base" }, "📩"), "Tin nhắn SMS gửi đến SĐT: ", /*#__PURE__*/React.createElement("b", { className: "text-white" }, phone)), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => {
-        setOtpInput(generatedOtp);
-        setErrorMsg('');
-        if (typeof showToast === 'function') showToast('⚡ Đã tự động điền mã OTP: ' + generatedOtp);
-      },
-      className: "px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs cursor-pointer shadow transition"
-    }, "⚡ Tự động điền")), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between bg-black/60 p-2.5 rounded-xl border border-emerald-500/40"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-baseline gap-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] text-zinc-400 uppercase tracking-wider font-semibold"
-    }, "Mã OTP:"), /*#__PURE__*/React.createElement("span", {
-      className: "font-mono font-black text-2xl text-amber-300 tracking-[0.25em]"
-    }, generatedOtp)), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => {
-        try { navigator.clipboard.writeText(generatedOtp); } catch (e) {}
-        if (typeof showToast === 'function') showToast('Đã sao chép mã OTP: ' + generatedOtp);
-      },
-      className: "text-xs text-zinc-300 hover:text-white px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition"
-    }, "Sao chép")), /*#__PURE__*/React.createElement("p", {
-      className: "text-[11px] text-zinc-300 flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement("span", null, "👉"), "Nhập mã 6 số trên vào ô bên dưới rồi bấm Xác Nhận.")),
+
   /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "text-[11px] font-semibold text-zinc-300 block mb-1"
   }, "Mã xác thực OTP (6 chữ số):"), /*#__PURE__*/React.createElement("input", {
