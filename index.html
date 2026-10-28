@@ -21,7 +21,13 @@
 <script src="./wiki_data.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-<!-- Babel Standalone removed for 10x faster loading -->
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      registrations.forEach(r => r.unregister());
+    });
+  }
+</script>
 <script>
   tailwind.config = {
     theme: {
