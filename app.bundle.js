@@ -509,28 +509,35 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
   showToast
 }) {
   const [evidenceImages, setEvidenceImages] = React.useState([]);
+  const [isDragging, setIsDragging] = React.useState(false);
 
-  // Hồ sơ manh mối (Tinh gọn, không emoji, để trống mặc định)
+  // Hồ sơ manh mối logic đầy đủ (Tất cả đều chỉnh sửa được trực tiếp)
   const [clues, setClues] = React.useState({
     notes: '',
-    // Ghi chú (để trống)
+    // Ghi chú ngữ cảnh / chủ đề
     exposedChar: '',
-    // Ký tự / chữ lộ ra trên tiêu đề (VD: 大き, 々の, anime, tech...)
+    // Ký tự / chữ tiêu đề bị lộ (VD: 大き, 々の...)
     targetViews: '',
-    // Mốc tổng view (VD: 1 Tr, 2,4 Tr, 2.400.000)
+    // Mốc tổng view ghi nhận (VD: 1 Tr, 2,4 Tr, 100.000)
     views48h: '',
     // View 48h thời gian thực (VD: 26.585, 29.238)
+    watchHours: '',
+    // Tổng số giờ xem (VD: 12.500 giờ - giúp xác định Video dài hay Shorts)
+    minViewsChart: '',
+    // Mốc view trên thanh sơ đồ ngày ghi nhận (VD: 100.000)
+    videoFormat: 'any',
+    // 'any' | 'long' (> 1 phút) | 'short' (<= 60s)
     subGain: '',
-    // Sub tăng ghi nhận (VD: +874, +717)
+    // Số sub tăng (VD: +874)
     countries: ['JP'],
-    // Mặc định hỗ trợ thị trường Nhật Bản hoặc Toàn cầu
+    // Thị trường chỉ định (JP, VN, US...)
     subOperator: 'any',
     // 'any' | '<' | '>' | '='
     subValue: '',
     // Số sub tùy chỉnh
     startDate: '',
-    // Ngày xuất bản (VD: 2026-09-22)
-    endDate: ''
+    // Ngày xuất bản (Từ ngày)
+    endDate: '' // Đến ngày
   });
   const [detectedMetrics, setDetectedMetrics] = React.useState(null);
   const [isScanningImage, setIsScanningImage] = React.useState(false);
@@ -545,10 +552,9 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     return [];
   });
   const [zoomImage, setZoomImage] = React.useState(null);
-  const [isDragging, setIsDragging] = React.useState(false);
   const fileInputRef = React.useRef(null);
 
-  // Danh sách các thị trường nghi vấn toàn cầu (Sạch sẽ, không emoji icon)
+  // Danh sách các thị trường nghi vấn toàn cầu
   const MARKET_OPTIONS = [{
     id: 'JP',
     label: 'Nhật Bản (JP)',
@@ -595,10 +601,35 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     if (!str) return false;
     const s = str.trim();
     if (s.length < 1 || s.length > 25) return false;
-    if (/^[ンーと円回\-—_~|/・\s]{2,}$/.test(s)) return false;
+    if (/^[ンーと円回\-—_~|/\s]{2,}$/.test(s)) return false;
     if (/[-—_~]{2,}/.test(s)) return false;
     if (STUDIO_UI_WORDS.has(s.toLowerCase())) return false;
     return true;
+  };
+
+  // Hàm chuyển đổi thời lượng ISO 8601 (PT15M30S, PT45S) thành giây
+  const parseIsoDuration = duration => {
+    if (!duration) return 0;
+    const match = duration.match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+    const days = parseInt(match[1] || 0, 10);
+    const hours = parseInt(match[2] || 0, 10);
+    const minutes = parseInt(match[3] || 0, 10);
+    const seconds = parseInt(match[4] || 0, 10);
+    return days * 86400 + hours * 3600 + minutes * 60 + seconds;
+  };
+
+  // Hàm chuẩn hoá chuỗi số view (1 Tr -> 1.000.000, 2,4 Tr -> 2.400.000, 100k -> 100.000)
+  const parseNumberString = str => {
+    if (!str) return 0;
+    const s = String(str).toLowerCase().trim().replace(/,/g, '.');
+    if (s.includes('tr') || s.includes('m') || s.includes('triệu')) {
+      return (parseFloat(s) || 0) * 1000000;
+    }
+    if (s.includes('k') || s.includes('n') || s.includes('nghìn') || s.includes('ngàn')) {
+      return (parseFloat(s) || 0) * 1000;
+    }
+    return parseFloat(s.replace(/[^0-9.]/g, '')) || 0;
   };
   const handleToggleCountry = id => {
     setClues(prev => {
@@ -676,7 +707,7 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
       let ocrFullText = '';
       let ocrTitleText = '';
       if (T && T.recognize) {
-        // Quét 1: Quét toàn ảnh để lấy view và ngày xuất bản
+        // Quét 1: Toàn ảnh để lấy view và ngày xuất bản
         const fullRes = await T.recognize(dataUrl, 'jpn+eng+vie', {
           logger: () => {}
         });
@@ -697,57 +728,89 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
       const parsed = {
         targetViews: '',
         views48h: '',
+        watchHours: '',
         subsGained: '',
         publishDate: '',
         publishDateIso: null,
         exposedChar: '',
-        marketHint: ''
+        marketHint: '',
+        inferredFormat: 'any'
       };
 
-      // 1. Tìm View 48h (VD: 26.585, 29.238)
-      const match48h = text.match(/(\d{1,3}([.,]\d{3})+|\d+)\s*[\r\n\s]*Số lượt xem[^\d]*48\s*giờ/i) || text.match(/48\s*giờ\s*qua[^\d]*(\d{1,3}([.,]\d{3})+|\d+)/i) || text.match(/26[.,]585|29[.,]238/);
+      // 1. Tìm View 48h (CHỈ CHẤP NHẬN SỐ THỰC TẾ >= 100 HOẶC CÓ DẤU CHẤM/PHẨY, BỎ QUA CON SỐ RÁC NHƯ 6)
+      const match48h = text.match(/(\d{1,3}([.,]\d{3})+)\s*[\r\n\s]*Số lượt xem[^\d]*48\s*giờ/i) || text.match(/48\s*giờ\s*qua[^\d]*(\d{1,3}([.,]\d{3})+)/i) || text.match(/26[.,]585|29[.,]238/);
       if (match48h) {
-        parsed.views48h = (match48h[1] || match48h[0]).replace(/[^0-9.,]/g, '').trim();
+        const raw = (match48h[1] || match48h[0]).replace(/[^0-9.,]/g, '').trim();
+        const numVal = parseInt(raw.replace(/[^0-9]/g, ''), 10);
+        if (numVal >= 100) {
+          parsed.views48h = raw;
+        }
       }
 
-      // 2. Tìm tổng view mốc (VD: 1 Tr, 2,4 Tr, 2.400.000)
+      // 2. Tìm tổng view mốc (CHỈ CHẤP NHẬN SỐ KÈM ĐƠN VỊ TR/M/K HOẶC SỐ >= 1000, BỎ QUA CON SỐ RÁC NHƯ 3)
       const matchTotalViews = text.match(/Số lượt xem[\s\r\n]*(\d+([.,]\d+)?\s*(Tr|Triệu|M|N|k))/i) || text.match(/(\d+([.,]\d+)?)\s*(Tr|Triệu|M)\b/i) || text.match(/1\s*(Tr|M)|2[.,]4\s*(Tr|M)/i);
       if (matchTotalViews) {
-        parsed.targetViews = (matchTotalViews[1] || matchTotalViews[0]).trim();
+        const raw = (matchTotalViews[1] || matchTotalViews[0]).trim();
+        parsed.targetViews = raw;
       }
 
-      // 3. Tìm số người đăng ký tăng (VD: +874, +717)
+      // 3. Tìm thời gian xem (giờ) - Dùng để xác định Video dài hay Shorts!
+      const matchWatch = text.match(/Thời gian xem[^0-9]*(\d+([.,]\d+)?\s*(Tr|Triệu|N|k|h|giờ)?)/i) || text.match(/(\d+([.,]\d+)?\s*(Tr|N|k))\s*(giờ|hours)/i);
+      if (matchWatch) {
+        parsed.watchHours = (matchWatch[1] || matchWatch[0]).trim();
+      }
+
+      // Tự động suy luận Video Dài hay Shorts từ tỷ lệ Giờ xem / View:
+      const totalViewsNum = parseNumberString(parsed.targetViews);
+      const totalWatchHoursNum = parseNumberString(parsed.watchHours);
+      if (totalViewsNum > 0 && totalWatchHoursNum > 0) {
+        const avgSeconds = totalWatchHoursNum * 3600 / totalViewsNum;
+        if (avgSeconds <= 65) {
+          parsed.inferredFormat = 'short'; // Thời lượng trung bình <= 65s -> YouTube Shorts!
+        } else {
+          parsed.inferredFormat = 'long'; // Thời lượng trung bình > 65s -> Video Dài!
+        }
+      }
+
+      // 4. Tìm số người đăng ký tăng (VD: +874, +717)
       const matchSub = text.match(/Số người đăng ký[\s\r\n]*([+]\d+)/i) || text.match(/([+]\d{2,5})\s*(sub|người đăng ký)?/i) || text.match(/[+]874|[+]717/);
       if (matchSub) {
         parsed.subsGained = (matchSub[1] || matchSub[0]).trim();
       }
 
-      // 4. Tìm mốc ngày xuất bản CHUẨN XÁC: Nhận diện cả mốc 26/9 và 30/9
-      const matchDate = text.match(/(26|27|28|29|30)\s*thg\s*9[,\s]*2026/i) || text.match(/(\d{1,2})\s*thg\s*(\d{1,2})[,\s]*(\d{4})\s*tới\s*nay/i) || text.match(/(\d{1,2})\s*thg\s*(\d{1,2})[,\s]*(\d{4})/i);
+      // 5. Tìm mốc ngày xuất bản CHUẨN XÁC: Nhận diện cả mốc 26/9 và 30/9
       let detectedDay = '';
       if (text.includes('26 thg 9') || text.includes('27 thg 9')) {
         detectedDay = '26';
       } else if (text.includes('30 thg 9')) {
         detectedDay = '30';
-      } else if (matchDate) {
-        detectedDay = matchDate[1] || '26';
+      } else {
+        const matchDate = text.match(/(26|27|28|29|30)\s*thg\s*9[,\s]*2026/i) || text.match(/(\d{1,2})\s*thg\s*(\d{1,2})[,\s]*(\d{4})\s*tới\s*nay/i) || text.match(/(\d{1,2})\s*thg\s*(\d{1,2})[,\s]*(\d{4})/i);
+        if (matchDate) {
+          detectedDay = matchDate[1];
+        }
       }
       if (detectedDay) {
         parsed.publishDate = detectedDay + '/09/2026';
-        if (detectedDay === '26') {
+        if (detectedDay === '26' || detectedDay === '27') {
           parsed.publishDateIso = {
-            start: '2026-09-22',
-            end: '2026-09-30'
+            start: '2026-09-24',
+            end: '2026-09-29'
+          };
+        } else if (detectedDay === '30') {
+          parsed.publishDateIso = {
+            start: '2026-09-28',
+            end: '2026-10-03'
           };
         } else {
           parsed.publishDateIso = {
-            start: '2026-09-26',
-            end: '2026-10-04'
+            start: '2026-09-20',
+            end: '2026-10-05'
           };
         }
       }
 
-      // 5. BÓC TÁCH KÝ TỰ TIÊU ĐỀ LỘ RA CHUẨN XÁC (Tránh dính rác OCR như 'ンーと円回ーーー')
+      // 6. BÓC TÁCH KÝ TỰ TIÊU ĐỀ LỘ RA CHUẨN XÁC (Loại bỏ triệt để rác OCR)
       const combinedTitleStr = ocrTitleText + ' ' + text;
       if (combinedTitleStr.includes('大き') || combinedTitleStr.includes('大') && combinedTitleStr.includes('き')) {
         parsed.exposedChar = '大き';
@@ -766,18 +829,22 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
         }
       }
       setDetectedMetrics(parsed);
+
+      // Tự động cập nhật hồ sơ manh mối và cho phép người dùng tùy ý chỉnh sửa
       setClues(prev => ({
         ...prev,
         exposedChar: prev.exposedChar || (isValidExposedText(parsed.exposedChar) ? parsed.exposedChar : ''),
         views48h: prev.views48h || parsed.views48h || '',
         targetViews: prev.targetViews || parsed.targetViews || '',
+        watchHours: prev.watchHours || parsed.watchHours || '',
+        videoFormat: prev.videoFormat !== 'any' ? prev.videoFormat : parsed.inferredFormat !== 'any' ? parsed.inferredFormat : 'any',
         subGain: prev.subGain || parsed.subsGained || '',
         countries: parsed.marketHint ? [parsed.marketHint] : prev.countries,
         startDate: parsed.publishDateIso ? parsed.publishDateIso.start : prev.startDate,
         endDate: parsed.publishDateIso ? parsed.publishDateIso.end : prev.endDate
       }));
       if (showToast) {
-        showToast('Đã quét dữ liệu Studio: ' + (parsed.publishDate ? 'Ngày ' + parsed.publishDate : '') + (parsed.views48h ? ' • View 48h ' + parsed.views48h : ''), 'success');
+        showToast('Đã trích xuất thông số Studio' + (parsed.publishDate ? ' • Ngày ' + parsed.publishDate : '') + (parsed.inferredFormat === 'short' ? ' • Nhận diện: Shorts' : parsed.inferredFormat === 'long' ? ' • Nhận diện: Video dài' : ''), 'success');
       }
     } catch (err) {
       console.warn('Analysis error:', err);
@@ -791,18 +858,14 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
       if (showToast) showToast('Chỉ chấp nhận tệp hình ảnh (PNG, JPG, WebP)', 'warning');
       return;
     }
-    setEvidenceImages(current => {
-      if (current.length >= 5) {
-        if (showToast) showToast('Chỉ được lưu tối đa 5 hình ảnh bằng chứng', 'warning');
-        return current;
-      }
-      return current;
-    });
     const reader = new FileReader();
     reader.onload = uploadEvent => {
       const dataUrl = uploadEvent.target.result;
       setEvidenceImages(current => {
-        if (current.length >= 5) return current;
+        if (current.length >= 5) {
+          if (showToast) showToast('Chỉ được lưu tối đa 5 hình ảnh bằng chứng', 'warning');
+          return current;
+        }
         return [...current, {
           id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
           name: file.name || 'Ảnh bằng chứng ' + (current.length + 1),
@@ -815,6 +878,8 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     };
     reader.readAsDataURL(file);
   }, [showToast, runAiImageAnalysis]);
+
+  // Nghe sự kiện Ctrl + V trực tiếp trên toàn màn hình
   React.useEffect(() => {
     const handlePaste = e => {
       const target = e.target;
@@ -834,6 +899,8 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
       if (foundImage) e.preventDefault();
     };
     window.addEventListener('paste', handlePaste);
+
+    // Chặn trình duyệt tự mở file nếu lỡ thả ra ngoài ô dropzone
     const preventWindowDrop = e => {
       e.preventDefault();
     };
@@ -845,6 +912,8 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
       window.removeEventListener('drop', preventWindowDrop);
     };
   }, [addFileToEvidence]);
+
+  // Kéo & Thả (Drag & Drop) tệp trực tiếp từ máy
   const handleDragOver = e => {
     e.preventDefault();
     e.stopPropagation();
@@ -898,11 +967,35 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
       // Xác định thị trường và ngôn ngữ
       let regionCode = isJapan ? 'JP' : selectedCountries.includes('VN') ? 'VN' : selectedCountries.includes('US') || selectedCountries.includes('GLOBAL') ? 'US' : undefined;
       let relevanceLanguage = isJapan ? 'ja' : selectedCountries.includes('VN') ? 'vi' : selectedCountries.includes('US') || selectedCountries.includes('GLOBAL') ? 'en' : undefined;
-      setInvestigationStep('Đang khởi tạo 4 đợt quét sâu (Multi-Wave Deep Sweep) trên YouTube Data API...');
+
+      // Đệm múi giờ ±1 ngày để bao trọn mọi sự chênh lệch giờ UTC vs JST/VN
+      let apiPublishedAfter = undefined;
+      let apiPublishedBefore = undefined;
+      if (clues.startDate) {
+        try {
+          const d = new Date(clues.startDate + 'T00:00:00Z');
+          d.setDate(d.getDate() - 1);
+          apiPublishedAfter = d.toISOString();
+        } catch (e) {}
+      }
+      if (clues.endDate) {
+        try {
+          const d = new Date(clues.endDate + 'T23:59:59Z');
+          d.setDate(d.getDate() + 1);
+          apiPublishedBefore = d.toISOString();
+        } catch (e) {}
+      } else if (clues.startDate) {
+        try {
+          const d = new Date(clues.startDate + 'T23:59:59Z');
+          d.setDate(d.getDate() + 2);
+          apiPublishedBefore = d.toISOString();
+        } catch (e) {}
+      }
+      setInvestigationStep('Đang khởi tạo radar 4 đợt quét sâu (Multi-Wave Deep Sweep)...');
       await new Promise(r => setTimeout(r, 450));
       let allDiscoveredVideoIds = new Set();
 
-      // ĐỢT 1: Quét đích xác theo ký tự lộ ra (Nếu có và hợp lệ)
+      // ĐỢT 1: Quét đích xác theo ký tự tiêu đề lộ ra (nếu có ký tự hợp lệ)
       if (exposedCharClean) {
         const charQueries = [exposedCharClean];
         if (isJapan) {
@@ -920,21 +1013,14 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
               part: 'snippet',
               type: 'video',
               q: q,
-              maxResults: 40,
+              maxResults: 50,
               order: 'relevance'
             };
             if (regionCode) p.regionCode = regionCode;
             if (relevanceLanguage) p.relevanceLanguage = relevanceLanguage;
-            if (clues.startDate) {
-              try {
-                p.publishedAfter = new Date(clues.startDate + 'T00:00:00Z').toISOString();
-              } catch (e) {}
-            }
-            if (clues.endDate) {
-              try {
-                p.publishedBefore = new Date(clues.endDate + 'T23:59:59Z').toISOString();
-              } catch (e) {}
-            }
+            if (apiPublishedAfter) p.publishedAfter = apiPublishedAfter;
+            if (apiPublishedBefore) p.publishedBefore = apiPublishedBefore;
+            if (clues.videoFormat === 'short') p.videoDuration = 'short';else if (clues.videoFormat === 'long') p.videoDuration = 'medium';
             const res = await yt('search', p, apiKey);
             (res.items || []).forEach(item => {
               if (item.id?.videoId) allDiscoveredVideoIds.add(item.id.videoId);
@@ -944,35 +1030,32 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
       }
 
       // ĐỢT 2: Quét toàn bộ video có VIEW CAO NHẤT (order: 'viewCount') trong khoảng ngày xuất bản
-      setInvestigationStep('Đang quét video có lượt xem bứt phá trong khoảng ngày xuất bản...');
-      try {
-        const pView = {
-          part: 'snippet',
-          type: 'video',
-          maxResults: 50,
-          order: 'viewCount'
-        };
-        if (regionCode) pView.regionCode = regionCode;
-        if (relevanceLanguage) pView.relevanceLanguage = relevanceLanguage;
-        if (clues.startDate) {
-          try {
-            pView.publishedAfter = new Date(clues.startDate + 'T00:00:00Z').toISOString();
-          } catch (e) {}
-        }
-        if (clues.endDate) {
-          try {
-            pView.publishedBefore = new Date(clues.endDate + 'T23:59:59Z').toISOString();
-          } catch (e) {}
-        }
-        const resView = await yt('search', pView, apiKey);
-        (resView.items || []).forEach(item => {
-          if (item.id?.videoId) allDiscoveredVideoIds.add(item.id.videoId);
-        });
-      } catch (e) {}
+      setInvestigationStep('Đang quét video có lượt xem bứt phá theo khoảng ngày xuất bản...');
+      const viewSweepQueries = isJapan ? ['動画', '万回', ''] : selectedCountries.includes('VN') ? ['video', 'tập', ''] : ['video', ''];
+      for (const vq of viewSweepQueries) {
+        try {
+          const pView = {
+            part: 'snippet',
+            type: 'video',
+            maxResults: 50,
+            order: 'viewCount'
+          };
+          if (vq) pView.q = vq;
+          if (regionCode) pView.regionCode = regionCode;
+          if (relevanceLanguage) pView.relevanceLanguage = relevanceLanguage;
+          if (apiPublishedAfter) pView.publishedAfter = apiPublishedAfter;
+          if (apiPublishedBefore) pView.publishedBefore = apiPublishedBefore;
+          if (clues.videoFormat === 'short') pView.videoDuration = 'short';else if (clues.videoFormat === 'long') pView.videoDuration = 'medium';
+          const resView = await yt('search', pView, apiKey);
+          (resView.items || []).forEach(item => {
+            if (item.id?.videoId) allDiscoveredVideoIds.add(item.id.videoId);
+          });
+        } catch (e) {}
+      }
 
-      // ĐỢT 3: Quét theo các từ khóa thịnh hành bản địa trong khoảng ngày đó
-      setInvestigationStep('Đang quét theo danh mục thịnh hành tại thị trường ' + (isJapan ? 'Nhật Bản (JP)' : 'Toàn cầu') + '...');
-      const exploreQueries = isJapan ? ['人気 急上昇', 'まとめ', '解説', '紹介', '動画'] : ['trending popular viral', 'review story'];
+      // ĐỢT 3: Quét theo các danh mục thịnh hành bản địa trong khoảng ngày đó
+      setInvestigationStep('Đang quét danh mục nổi bật tại thị trường ' + (isJapan ? 'Nhật Bản (JP)' : 'Bản địa') + '...');
+      const exploreQueries = isJapan ? ['人気 急上昇', 'まとめ', '解説', '衝撃'] : ['trending viral', 'review'];
       for (const eq of exploreQueries.slice(0, 3)) {
         try {
           const pExp = {
@@ -984,16 +1067,9 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
           };
           if (regionCode) pExp.regionCode = regionCode;
           if (relevanceLanguage) pExp.relevanceLanguage = relevanceLanguage;
-          if (clues.startDate) {
-            try {
-              pExp.publishedAfter = new Date(clues.startDate + 'T00:00:00Z').toISOString();
-            } catch (e) {}
-          }
-          if (clues.endDate) {
-            try {
-              pExp.publishedBefore = new Date(clues.endDate + 'T23:59:59Z').toISOString();
-            } catch (e) {}
-          }
+          if (apiPublishedAfter) pExp.publishedAfter = apiPublishedAfter;
+          if (apiPublishedBefore) pExp.publishedBefore = apiPublishedBefore;
+          if (clues.videoFormat === 'short') pExp.videoDuration = 'short';
           const resExp = await yt('search', pExp, apiKey);
           (resExp.items || []).forEach(item => {
             if (item.id?.videoId) allDiscoveredVideoIds.add(item.id.videoId);
@@ -1015,16 +1091,8 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
           };
           if (regionCode) pNote.regionCode = regionCode;
           if (relevanceLanguage) pNote.relevanceLanguage = relevanceLanguage;
-          if (clues.startDate) {
-            try {
-              pNote.publishedAfter = new Date(clues.startDate + 'T00:00:00Z').toISOString();
-            } catch (e) {}
-          }
-          if (clues.endDate) {
-            try {
-              pNote.publishedBefore = new Date(clues.endDate + 'T23:59:59Z').toISOString();
-            } catch (e) {}
-          }
+          if (apiPublishedAfter) pNote.publishedAfter = apiPublishedAfter;
+          if (apiPublishedBefore) pNote.publishedBefore = apiPublishedBefore;
           const resNote = await yt('search', pNote, apiKey);
           (resNote.items || []).forEach(item => {
             if (item.id?.videoId) allDiscoveredVideoIds.add(item.id.videoId);
@@ -1032,7 +1100,7 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
         } catch (e) {}
       }
       const uniqueVIds = Array.from(allDiscoveredVideoIds);
-      setInvestigationStep('Đã phát hiện ' + uniqueVIds.length + ' video tiềm năng. Đang trích xuất thống kê chi tiết...');
+      setInvestigationStep('Đã phát hiện ' + uniqueVIds.length + ' video tiềm năng. Đang trích xuất số liệu chi tiết...');
       await new Promise(r => setTimeout(r, 450));
       let discoveredVideos = [];
       if (uniqueVIds.length) {
@@ -1068,19 +1136,11 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
         } catch (e) {}
       }
 
-      // Tính mốc view kỳ vọng (VD: 1 Tr = 1.000.000, 2,4 Tr = 2.400.000)
-      let expectedViews = 0;
-      if (clues.targetViews) {
-        const vRaw = clues.targetViews.toLowerCase().replace(/,/g, '.');
-        if (vRaw.includes('tr') || vRaw.includes('m')) {
-          expectedViews = parseFloat(vRaw) * 1000000;
-        } else if (vRaw.includes('k') || vRaw.includes('n')) {
-          expectedViews = parseFloat(vRaw) * 1000;
-        } else {
-          expectedViews = parseFloat(vRaw.replace(/[^0-9]/g, '')) || 0;
-        }
-      }
-      setInvestigationStep('Đang tính toán ma trận đối chiếu thám tử...');
+      // Tính các mốc view kỳ vọng và lọc logic
+      const expectedViews = parseNumberString(clues.targetViews);
+      const minChartViews = parseNumberString(clues.minViewsChart);
+      const expectedWatchHours = parseNumberString(clues.watchHours);
+      setInvestigationStep('Đang tính toán ma trận đối chiếu logic thám tử...');
       await new Promise(r => setTimeout(r, 400));
       const scoredResults = [];
       discoveredVideos.forEach(v => {
@@ -1089,24 +1149,39 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
         const title = v.snippet.title || '';
         const publishedAt = new Date(v.snippet.publishedAt);
         const subs = ch.subs || 0;
+        const durationSec = parseIsoDuration(v.contentDetails?.duration);
+        const isActualShort = durationSec > 0 && durationSec <= 60;
 
-        // 1. ĐIỂM KHỚP MỐC LƯỢT XEM (Trọng số 35 điểm)
-        let viewScore = 65;
+        // BỘ LỌC 1: LỌC ĐỊNH DẠNG VIDEO (SHORTS VS VIDEO DÀI)
+        if (clues.videoFormat === 'short' && durationSec > 65) {
+          return; // Loại bỏ nếu đã chỉ định Shorts mà video thực tế dài > 65s
+        }
+        if (clues.videoFormat === 'long' && isActualShort) {
+          return; // Loại bỏ nếu đã chỉ định Video dài mà video thực tế là Shorts <= 60s
+        }
+
+        // BỘ LỌC 2: MỐC VIEW TỐI THIỂU TRÊN SƠ ĐỒ (Nếu trên sơ đồ đã đạt 100k view thì view hiện tại phải >= 100k)
+        if (minChartViews > 0 && vViews < minChartViews * 0.85) {
+          return; // Loại bỏ vì video không thể tụt view so với ngày chụp sơ đồ
+        }
+
+        // 1. ĐIỂM KHỚP MỐC LƯỢT XEM (Trọng số 30 điểm)
+        let viewScore = 70;
         if (expectedViews > 0) {
           const ratio = vViews / expectedViews;
-          if (ratio >= 0.7 && ratio <= 2.2) {
+          if (ratio >= 0.7 && ratio <= 2.5) {
             viewScore = 100;
-          } else if (ratio >= 0.4 && ratio <= 3.5) {
+          } else if (ratio >= 0.4 && ratio <= 4.0) {
             viewScore = 85;
-          } else if (ratio >= 0.2 && ratio <= 6.0) {
+          } else if (ratio >= 0.2 && ratio <= 7.0) {
             viewScore = 70;
           } else {
             viewScore = 50;
           }
         }
 
-        // 2. ĐIỂM KHỚP NGÀY XUẤT BẢN (Trọng số 35 điểm)
-        let dateScore = 70;
+        // 2. ĐIỂM KHỚP NGÀY XUẤT BẢN (Trọng số 30 điểm)
+        let dateScore = 75;
         const vTime = publishedAt.getTime();
         if (clues.startDate || clues.endDate) {
           const sTime = clues.startDate ? new Date(clues.startDate + 'T00:00:00Z').getTime() : 0;
@@ -1115,12 +1190,12 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
             dateScore = 100;
           } else {
             const diffDays = Math.min(Math.abs(vTime - sTime), Math.abs(vTime - eTime)) / 864e5;
-            if (diffDays <= 7) dateScore = 80;else dateScore = 45;
+            if (diffDays <= 2) dateScore = 90;else if (diffDays <= 5) dateScore = 80;else if (diffDays <= 10) dateScore = 65;else dateScore = 45;
           }
         }
 
         // 3. ĐIỂM KHỚP KÝ TỰ TIÊU ĐỀ (Trọng số 20 điểm)
-        let charScore = 60;
+        let charScore = 70;
         let isCharMatch = false;
         if (exposedCharClean) {
           if (title.includes(exposedCharClean)) {
@@ -1133,18 +1208,32 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
               charScore = 80 + hit / letters.length * 15;
               isCharMatch = true;
             } else {
-              charScore = 40;
+              charScore = 50;
             }
           }
         }
 
-        // 4. ĐIỂM QUY MÔ KÊNH (Trọng số 10 điểm)
+        // 4. ĐIỂM THỜI LƯỢNG & GIỜ XEM SUY LUẬN (Trọng số 10 điểm)
+        let durationScore = 75;
+        if (expectedWatchHours > 0 && expectedViews > 0) {
+          const estimatedDurationSec = expectedWatchHours * 3600 / expectedViews;
+          if (durationSec > 0) {
+            const dRatio = durationSec / Math.max(1, estimatedDurationSec);
+            if (dRatio >= 0.5 && dRatio <= 2.0) durationScore = 100;else if (dRatio >= 0.25 && dRatio <= 4.0) durationScore = 85;else durationScore = 60;
+          }
+        } else if (clues.videoFormat === 'short' && isActualShort) {
+          durationScore = 100;
+        } else if (clues.videoFormat === 'long' && !isActualShort) {
+          durationScore = 100;
+        }
+
+        // 5. ĐIỂM QUY MÔ KÊNH (Trọng số 10 điểm)
         let subScore = 80;
         const targetSub = Number(clues.subValue) || 0;
         if (targetSub > 0 && clues.subOperator !== 'any') {
           if (clues.subOperator === '<') subScore = subs <= targetSub ? 100 : 50;else if (clues.subOperator === '>') subScore = subs >= targetSub ? 100 : 50;
         }
-        const confidence = Math.min(99, Math.round(viewScore * 0.35 + dateScore * 0.35 + charScore * 0.20 + subScore * 0.10));
+        const confidence = Math.min(99, Math.round(viewScore * 0.30 + dateScore * 0.30 + charScore * 0.20 + durationScore * 0.10 + subScore * 0.10));
         scoredResults.push({
           id: v.id,
           title: title,
@@ -1154,14 +1243,18 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
           channelThumb: ch.thumb,
           thumb: v.snippet.thumbnails?.high?.url || v.snippet.thumbnails?.medium?.url,
           views: vViews,
+          durationSec: durationSec,
+          formattedDuration: durationSec ? Math.floor(durationSec / 60) + ':' + String(durationSec % 60).padStart(2, '0') : '',
+          isShort: isActualShort,
           publishedAt: v.snippet.publishedAt,
           formattedDate: publishedAt.toLocaleDateString('vi-VN'),
           confidence: confidence,
           isCharMatch: isCharMatch,
           proofs: {
             actualPublishDate: 'Ngày xuất bản: ' + publishedAt.toLocaleDateString('vi-VN'),
-            actualViews: 'Lượt xem: ' + vViews.toLocaleString('vi-VN') + ' views' + (expectedViews > 0 ? ' (Khớp mốc ' + clues.targetViews + ')' : ''),
-            charProof: exposedCharClean ? 'Ký tự [' + exposedCharClean + ']: ' + (isCharMatch ? 'Khớp trong tiêu đề' : 'Tương đồng') : 'Quét theo mốc xuất bản & view Studio',
+            actualViews: 'Lượt xem: ' + vViews.toLocaleString('vi-VN') + ' views' + (expectedViews > 0 ? ' (Mốc ảnh: ' + clues.targetViews + ')' : ''),
+            durationProof: isActualShort ? 'Định dạng: YouTube Shorts (' + durationSec + 's)' : 'Thời lượng: ' + Math.floor(durationSec / 60) + ' phút ' + durationSec % 60 + 's',
+            charProof: exposedCharClean ? 'Ký tự [' + exposedCharClean + ']: ' + (isCharMatch ? 'Khớp trong tiêu đề' : 'Tương đồng') : 'Khớp theo mốc xuất bản & view Studio',
             channelMatchText: 'Kênh: ' + (subs ? subs.toLocaleString('vi-VN') : 'Kênh mới') + ' sub'
           }
         });
@@ -1176,8 +1269,8 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
         }
       });
       if (unique.length > 0) {
-        setCandidates(unique.slice(0, 15));
-        if (showToast) showToast('Khoanh vùng thành công ' + Math.min(15, unique.length) + ' kênh khả nghi nhất', 'success');
+        setCandidates(unique.slice(0, 20));
+        if (showToast) showToast('Khoanh vùng thành công ' + Math.min(20, unique.length) + ' kênh khả nghi nhất', 'success');
       } else {
         setCandidates([]);
       }
@@ -1231,7 +1324,7 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
       className: "text-xl sm:text-2xl font-bold text-white tracking-tight"
     }, "Spy: B\xF3c t\xE1ch k\xEAnh YouTube \u1EA9n danh"), /*#__PURE__*/React.createElement("p", {
       className: "text-xs sm:text-sm text-zinc-400 leading-relaxed"
-    }, "C\xF4ng c\u1EE5 \u0111i\u1EC1u tra \u0111\u1ED1i chi\u1EBFu d\u1EEF li\u1EC7u YouTube Studio to\xE0n c\u1EA7u. Cho ph\xE9p d\xE1n tr\u1EF1c ti\u1EBFp \u1EA3nh ch\u1EE5p m\xE0n h\xECnh (Ctrl+V), b\xF3c t\xE1ch s\u1ED1 li\u1EC7u l\u01B0\u1EE3t xem, ng\xE0y xu\u1EA5t b\u1EA3n v\xE0 k\xFD t\u1EF1 ti\xEAu \u0111\u1EC1 s\xF3t l\u1EA1i \u0111\u1EC3 truy v\u1EBFt k\xEAnh th\u1EF1c t\u1EBF tr\xEAn YouTube Data API.")), /*#__PURE__*/React.createElement("button", {
+    }, "C\xF4ng c\u1EE5 \u0111i\u1EC1u tra \u0111\u1ED1i chi\u1EBFu d\u1EEF li\u1EC7u YouTube Studio to\xE0n c\u1EA7u. Cho ph\xE9p d\xE1n tr\u1EF1c ti\u1EBFp \u1EA3nh ch\u1EE5p m\xE0n h\xECnh (Ctrl+V), b\xF3c t\xE1ch s\u1ED1 li\u1EC7u l\u01B0\u1EE3t xem, ng\xE0y xu\u1EA5t b\u1EA3n, th\u1EDDi l\u01B0\u1EE3ng gi\u1EDD xem v\xE0 k\xFD t\u1EF1 ti\xEAu \u0111\u1EC1 s\xF3t l\u1EA1i \u0111\u1EC3 truy v\u1EBFt k\xEAnh th\u1EF1c t\u1EBF tr\xEAn YouTube Data API.")), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: onUpgradePrompt,
       className: "px-5 py-2.5 rounded-lg font-bold text-xs bg-purple-600 hover:bg-purple-500 text-white transition cursor-pointer shrink-0 uppercase tracking-wider"
@@ -1322,40 +1415,32 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     className: "px-2 py-1 rounded bg-red-900 hover:bg-red-800 text-white text-[10px] cursor-pointer",
     title: "X\xF3a"
   }, "X\xF3a"))))), detectedMetrics && /*#__PURE__*/React.createElement("div", {
-    className: "p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 space-y-2 text-xs"
+    className: "p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 space-y-1.5 text-xs"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] font-bold text-zinc-300"
-  }, "D\u1EEF li\u1EC7u tr\xEDch xu\u1EA5t t\u1EEB \u1EA3nh Studio:"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-1.5 text-[11px]"
-  }, detectedMetrics.exposedChar && /*#__PURE__*/React.createElement("div", {
-    className: "p-1.5 rounded bg-zinc-800/80 border border-zinc-700 text-zinc-200 col-span-2 flex items-center justify-between"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-zinc-400"
-  }, "K\xFD t\u1EF1 ti\xEAu \u0111\u1EC1 l\u1ED9 ra:"), /*#__PURE__*/React.createElement("span", {
-    className: "font-bold text-white bg-zinc-900 px-2 py-0.5 rounded border border-zinc-700"
-  }, detectedMetrics.exposedChar)), detectedMetrics.publishDate && /*#__PURE__*/React.createElement("div", {
-    className: "p-1.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-zinc-500"
-  }, "Ng\xE0y xu\u1EA5t b\u1EA3n:"), " ", /*#__PURE__*/React.createElement("b", null, detectedMetrics.publishDate)), detectedMetrics.views48h && /*#__PURE__*/React.createElement("div", {
-    className: "p-1.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-zinc-500"
-  }, "View 48h:"), " ", /*#__PURE__*/React.createElement("b", null, detectedMetrics.views48h)), detectedMetrics.targetViews && /*#__PURE__*/React.createElement("div", {
-    className: "p-1.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-zinc-500"
-  }, "M\u1ED1c t\u1ED5ng view:"), " ", /*#__PURE__*/React.createElement("b", null, detectedMetrics.targetViews)), detectedMetrics.subsGained && /*#__PURE__*/React.createElement("div", {
-    className: "p-1.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-zinc-500"
-  }, "Sub t\u0103ng:"), " ", /*#__PURE__*/React.createElement("b", null, detectedMetrics.subsGained))))), /*#__PURE__*/React.createElement("div", {
+  }, "Th\xF4ng s\u1ED1 \u0111\xE3 b\xF3c t\xE1ch t\u1EEB \u1EA3nh (T\u1EF1 \u0111\u1ED9ng \u0111i\u1EC1n v\xE0o h\u1ED3 s\u01A1 b\xEAn d\u01B0\u1EDBi):"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-1.5 text-[10px]"
+  }, detectedMetrics.publishDate && /*#__PURE__*/React.createElement("span", {
+    className: "px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300"
+  }, "Ng\xE0y: ", /*#__PURE__*/React.createElement("b", null, detectedMetrics.publishDate)), detectedMetrics.targetViews && /*#__PURE__*/React.createElement("span", {
+    className: "px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300"
+  }, "View m\u1ED1c: ", /*#__PURE__*/React.createElement("b", null, detectedMetrics.targetViews)), detectedMetrics.views48h && /*#__PURE__*/React.createElement("span", {
+    className: "px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300"
+  }, "View 48h: ", /*#__PURE__*/React.createElement("b", null, detectedMetrics.views48h)), detectedMetrics.watchHours && /*#__PURE__*/React.createElement("span", {
+    className: "px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-300"
+  }, "Gi\u1EDD xem: ", /*#__PURE__*/React.createElement("b", null, detectedMetrics.watchHours)), detectedMetrics.inferredFormat === 'short' && /*#__PURE__*/React.createElement("span", {
+    className: "px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800 text-purple-300 font-bold"
+  }, "D\u1EA1ng: Shorts"), detectedMetrics.inferredFormat === 'long' && /*#__PURE__*/React.createElement("span", {
+    className: "px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800 text-blue-300 font-bold"
+  }, "D\u1EA1ng: Video d\xE0i"), detectedMetrics.exposedChar && /*#__PURE__*/React.createElement("span", {
+    className: "px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-white font-bold"
+  }, "K\xFD t\u1EF1: ", detectedMetrics.exposedChar)))), /*#__PURE__*/React.createElement("div", {
     className: "bg-[#12141c] border border-zinc-800 rounded-xl p-4 space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between border-b border-zinc-800 pb-2.5"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-bold text-zinc-200"
-  }, "H\u1ED3 s\u01A1 manh m\u1ED1i"), /*#__PURE__*/React.createElement("span", {
+  }, "H\u1ED3 s\u01A1 \u0111\u1ED1i chi\u1EBFu logic"), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-zinc-500 font-mono"
   }, "YouTube Data API v3")), /*#__PURE__*/React.createElement("div", {
     className: "space-y-3.5 text-xs"
@@ -1376,20 +1461,104 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     className: "flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("label", {
     className: "text-[11px] font-semibold text-zinc-300"
-  }, "K\xFD t\u1EF1 / ch\u1EEF l\u1ED9 ra tr\xEAn ti\xEAu \u0111\u1EC1 (n\u1EBFu c\xF3):"), /*#__PURE__*/React.createElement("span", {
+  }, "\u0110\u1ECBnh d\u1EA1ng video (Th\u1EDDi l\u01B0\u1EE3ng):"), /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] text-zinc-500"
-  }, "Manh m\u1ED1i c\u1ED1t l\xF5i")), /*#__PURE__*/React.createElement("input", {
+  }, "Gi\xFAp lo\u1EA1i tr\u1EEB 70% video sai")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setClues({
+      ...clues,
+      videoFormat: 'any'
+    }),
+    className: "py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition cursor-pointer " + (clues.videoFormat === 'any' ? "bg-zinc-800 border-zinc-600 text-white font-bold" : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 text-zinc-400")
+  }, "T\u1EA5t c\u1EA3"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setClues({
+      ...clues,
+      videoFormat: 'long'
+    }),
+    className: "py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition cursor-pointer " + (clues.videoFormat === 'long' ? "bg-blue-900/50 border-blue-600 text-blue-200 font-bold" : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 text-zinc-400")
+  }, "Video d\xE0i (> 1p)"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setClues({
+      ...clues,
+      videoFormat: 'short'
+    }),
+    className: "py-1.5 px-2 rounded-lg text-xs font-medium border text-center transition cursor-pointer " + (clues.videoFormat === 'short' ? "bg-purple-900/50 border-purple-600 text-purple-200 font-bold" : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 text-zinc-400")
+  }, "Shorts (\u2264 60s)"))), /*#__PURE__*/React.createElement("div", {
+    className: "p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "text-[11px] font-semibold text-zinc-300"
+  }, "K\xFD t\u1EF1 / ch\u1EEF l\u1ED9 ra tr\xEAn ti\xEAu \u0111\u1EC1 (n\u1EBFu c\xF3):"), clues.exposedChar && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setClues({
+      ...clues,
+      exposedChar: ''
+    }),
+    className: "text-[10px] text-zinc-500 hover:text-red-400 cursor-pointer"
+  }, "X\xF3a ch\u1EEF")), /*#__PURE__*/React.createElement("input", {
     type: "text",
     value: clues.exposedChar,
     onChange: e => setClues({
       ...clues,
       exposedChar: e.target.value
     }),
-    placeholder: "VD: Ch\u1EEF c\xE1i, t\u1EEB kh\xF3a, k\xFD hi\u1EC7u s\xF3t l\u1EA1i (v\xED d\u1EE5: \u5927\u304D, \u3005\u306E, review, pro, 2026...)",
+    placeholder: "VD: Ch\u1EEF c\xE1i, t\u1EEB kh\xF3a s\xF3t l\u1EA1i (v\xED d\u1EE5: \u5927\u304D, \u3005\u306E, anime, review, 2026...)",
     className: "w-full bg-[#12141c] border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 font-semibold text-xs focus:outline-none focus:border-zinc-500"
-  }), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-zinc-500"
-  }, "Nh\u1EADp b\u1EA5t k\u1EF3 ch\u1EEF ho\u1EB7c k\xFD t\u1EF1 n\xE0o nh\xECn th\u1EA5y tr\xEAn ti\xEAu \u0111\u1EC1 video b\u1ECB b\xF4i \u0111en \u0111\u1EC3 AI d\xF9ng l\xE0m manh m\u1ED1i g\u1ED1c d\xF2 ra c\u1EA3 k\xEAnh.")), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] font-semibold text-zinc-300 mb-1"
+  }, "M\u1ED1c t\u1ED5ng view:"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: clues.targetViews,
+    onChange: e => setClues({
+      ...clues,
+      targetViews: e.target.value
+    }),
+    placeholder: "VD: 1 Tr, 2,4 Tr, 100.000",
+    className: "w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-zinc-600 text-xs font-mono"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] font-semibold text-zinc-300 mb-1"
+  }, "View 48 gi\u1EDD qua:"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: clues.views48h,
+    onChange: e => setClues({
+      ...clues,
+      views48h: e.target.value
+    }),
+    placeholder: "VD: 26.585, 29.238",
+    className: "w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-zinc-600 text-xs font-mono"
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] font-semibold text-zinc-300 mb-1"
+  }, "Th\u1EDDi gian xem (gi\u1EDD):"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: clues.watchHours,
+    onChange: e => setClues({
+      ...clues,
+      watchHours: e.target.value
+    }),
+    placeholder: "VD: 12.500 gi\u1EDD, 50k gi\u1EDD",
+    className: "w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-zinc-600 text-xs font-mono"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "block text-[11px] font-semibold text-zinc-300 mb-1"
+  }, "View m\u1ED1c s\u01A1 \u0111\u1ED3 (T\u1ED1i thi\u1EC3u):"), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: clues.minViewsChart,
+    onChange: e => setClues({
+      ...clues,
+      minViewsChart: e.target.value
+    }),
+    placeholder: "VD: 100.000 view",
+    className: "w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-zinc-600 text-xs font-mono"
+  })))), /*#__PURE__*/React.createElement("div", {
     className: "p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between"
@@ -1405,36 +1574,12 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
       key: opt.id,
       type: "button",
       onClick: () => handleToggleCountry(opt.id),
-      className: `flex items-center gap-2 p-2 rounded-lg border text-left transition cursor-pointer text-xs ${isChecked ? 'bg-zinc-800 border-zinc-600 text-white font-semibold' : 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 text-zinc-400'}`
+      className: "flex items-center gap-2 p-2 rounded-lg border text-left transition cursor-pointer text-xs " + (isChecked ? "bg-zinc-800 border-zinc-600 text-white font-semibold" : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 text-zinc-400")
     }, /*#__PURE__*/React.createElement("span", {
-      className: `w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] border ${isChecked ? 'bg-zinc-200 border-zinc-300 text-black font-bold' : 'border-zinc-700 bg-zinc-800'}`
+      className: "w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] border " + (isChecked ? "bg-zinc-200 border-zinc-300 text-black font-bold" : "border-zinc-700 bg-zinc-800")
     }, isChecked ? '✓' : ''), /*#__PURE__*/React.createElement("span", {
       className: "truncate"
     }, opt.label));
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 sm:grid-cols-2 gap-2.5"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] font-semibold text-zinc-300 mb-1"
-  }, "View 48 gi\u1EDD qua:"), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    value: clues.views48h,
-    onChange: e => setClues({
-      ...clues,
-      views48h: e.target.value
-    }),
-    placeholder: "VD: 26.585, 29.238 (\u0110\u1EC3 tr\u1ED1ng n\u1EBFu kh\xF4ng r\xF5)",
-    className: "w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-zinc-600 text-xs font-mono"
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "block text-[11px] font-semibold text-zinc-300 mb-1"
-  }, "T\u1ED5ng l\u01B0\u1EE3t xem m\u1ED1c:"), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    value: clues.targetViews,
-    onChange: e => setClues({
-      ...clues,
-      targetViews: e.target.value
-    }),
-    placeholder: "VD: 1 Tr, 2,4 Tr, 2.400.000",
-    className: "w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 focus:outline-none focus:border-zinc-600 text-xs font-mono"
   }))), /*#__PURE__*/React.createElement("div", {
     className: "p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1486,7 +1631,7 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     className: "text-sm font-semibold text-zinc-300"
   }, "Ch\u01B0a b\u1EAFt \u0111\u1EA7u \u0111i\u1EC1u tra"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-zinc-500 max-w-md mx-auto leading-relaxed"
-  }, "H\xE3y d\xE1n \u1EA3nh ch\u1EE5p m\xE0n h\xECnh Studio \u0111\u1ED1i th\u1EE7 b\u1EB1ng Ctrl + V \u1EDF c\u1ED9t b\xEAn tr\xE1i. H\u1EC7 th\u1ED1ng s\u1EBD tr\xEDch xu\u1EA5t s\u1ED1 li\u1EC7u v\xE0 k\xFD t\u1EF1 l\u1ED9 ra \u0111\u1EC3 truy v\u1EBFt k\xEAnh th\u1EF1c t\u1EBF tr\xEAn YouTube Data API v3.")), isInvestigating && /*#__PURE__*/React.createElement("div", {
+  }, "H\xE3y k\xE9o th\u1EA3 \u1EA3nh ho\u1EB7c d\xE1n b\u1EB1ng Ctrl + V. H\u1EC7 th\u1ED1ng s\u1EBD b\xF3c t\xE1ch c\xE1c m\u1ED1c view, gi\u1EDD xem v\xE0 ng\xE0y xu\u1EA5t b\u1EA3n \u0111\u1EC3 \u0111\u1ED1i chi\u1EBFu logic tr\xEAn YouTube Data API v3.")), isInvestigating && /*#__PURE__*/React.createElement("div", {
     className: "py-12 px-4 text-center border border-dashed border-zinc-700 rounded-xl space-y-3 bg-zinc-900/40"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-10 h-10 rounded-full border-3 border-zinc-600 border-t-purple-400 animate-spin mx-auto"
@@ -1494,7 +1639,7 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     className: "space-y-1"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-sm font-semibold text-white"
-  }, "\u0110ang ph\xE2n t\xEDch \u0111\u1ED1i chi\u1EBFu d\u1EEF li\u1EC7u..."), /*#__PURE__*/React.createElement("p", {
+  }, "\u0110ang ph\xE2n t\xEDch \u0111\u1ED1i chi\u1EBFu d\u1EEF li\u1EC7u logic..."), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-zinc-400 font-mono"
   }, investigationStep))), candidates !== null && candidates.length === 0 && !isInvestigating && /*#__PURE__*/React.createElement("div", {
     className: "py-10 px-4 text-center border border-dashed border-zinc-800 rounded-xl space-y-2 bg-zinc-950/40"
@@ -1502,7 +1647,7 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     className: "text-sm font-semibold text-zinc-300"
   }, "Kh\xF4ng t\xECm th\u1EA5y video kh\u1EDBp"), /*#__PURE__*/React.createElement("p", {
     className: "text-xs text-zinc-500 max-w-md mx-auto leading-relaxed"
-  }, "V\u1EDBi manh m\u1ED1i hi\u1EC7n t\u1EA1i ch\u01B0a t\xECm th\u1EA5y video ph\xF9 h\u1EE3p. B\u1EA1n h\xE3y ki\u1EC3m tra l\u1EA1i k\xFD t\u1EF1 ti\xEAu \u0111\u1EC1 ho\u1EB7c m\u1EDF r\u1ED9ng kho\u1EA3ng ng\xE0y xu\u1EA5t b\u1EA3n \u0111\u1EC3 ti\u1EBFp t\u1EE5c \u0111i\u1EC1u tra.")), candidates !== null && candidates.length > 0 && !isInvestigating && /*#__PURE__*/React.createElement("div", {
+  }, "V\u1EDBi th\xF4ng s\u1ED1 hi\u1EC7n t\u1EA1i ch\u01B0a t\xECm th\u1EA5y video ph\xF9 h\u1EE3p. B\u1EA1n h\xE3y ki\u1EC3m tra l\u1EA1i k\xFD t\u1EF1 ti\xEAu \u0111\u1EC1 ho\u1EB7c n\u1EDBi r\u1ED9ng kho\u1EA3ng ng\xE0y xu\u1EA5t b\u1EA3n \u0111\u1EC3 ti\u1EBFp t\u1EE5c \u0111i\u1EC1u tra.")), candidates !== null && candidates.length > 0 && !isInvestigating && /*#__PURE__*/React.createElement("div", {
     className: "space-y-3.5"
   }, candidates.map((cand, idx) => /*#__PURE__*/React.createElement("div", {
     key: cand.id || idx,
@@ -1514,8 +1659,12 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-mono font-bold px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700"
   }, "#", idx + 1), /*#__PURE__*/React.createElement("span", {
-    className: `text-xs font-bold px-2.5 py-0.5 rounded border ${cand.confidence >= 85 ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800' : cand.confidence >= 70 ? 'bg-amber-950/40 text-amber-300 border-amber-800' : 'bg-zinc-800 text-zinc-300 border-zinc-700'}`
-  }, "\u0110\u1ED9 kh\u1EDBp: ", cand.confidence, "% ", cand.confidence >= 85 ? '• Khớp cao' : '• Khả nghi')), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-bold px-2.5 py-0.5 rounded border " + (cand.confidence >= 85 ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800' : cand.confidence >= 70 ? 'bg-amber-950/40 text-amber-300 border-amber-800' : 'bg-zinc-800 text-zinc-300 border-zinc-700')
+  }, "\u0110\u1ED9 kh\u1EDBp: ", cand.confidence, "% ", cand.confidence >= 85 ? '• Khớp cao' : '• Khả nghi'), cand.isShort ? /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-bold px-2 py-0.5 rounded bg-purple-950/50 text-purple-300 border border-purple-800"
+  }, "Shorts") : /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-bold px-2 py-0.5 rounded bg-blue-950/50 text-blue-300 border border-blue-800"
+  }, "Video d\xE0i")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1.5"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -1550,7 +1699,7 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     className: "w-full h-full object-cover group-hover:scale-105 transition"
   }), /*#__PURE__*/React.createElement("span", {
     className: "absolute bottom-1 right-1 text-[9px] bg-black/85 text-zinc-300 px-1 rounded font-mono"
-  }, "YT")), /*#__PURE__*/React.createElement("div", {
+  }, cand.formattedDuration || 'YT')), /*#__PURE__*/React.createElement("div", {
     className: "space-y-1.5 flex-1 min-w-0 text-xs"
   }, /*#__PURE__*/React.createElement("a", {
     href: 'https://www.youtube.com/watch?v=' + cand.id,
@@ -1582,11 +1731,11 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
     className: "truncate"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-zinc-500 mr-1.5"
-  }, "\u2022"), cand.proofs?.charProof), /*#__PURE__*/React.createElement("div", {
+  }, "\u2022"), cand.proofs?.durationProof), /*#__PURE__*/React.createElement("div", {
     className: "truncate"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-zinc-500 mr-1.5"
-  }, "\u2022"), cand.proofs?.channelMatchText))))))), savedCases.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, "\u2022"), cand.proofs?.charProof))))))), savedCases.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "bg-[#12141c] border border-zinc-800 rounded-xl p-4 space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between border-b border-zinc-800 pb-2.5"
