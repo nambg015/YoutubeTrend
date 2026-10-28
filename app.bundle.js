@@ -355,6 +355,101 @@ const u=new URL('https://www.googleapis.com/youtube/v3/videos');u.searchParams.s
 // Synchronous Pure JS SHA-256 for secure client-side password hashing
 function sha256Hex(ascii){function rightRotate(v,a){return(v>>>a)|(v<<(32-a));}var mathPow=Math.pow;var maxWord=mathPow(2,32);var lp='length';var i,j;var result='';var words=[];var asciiBitLength=ascii[lp]*8;var hash=[];var k=[];var primeCounter=0;var isComposite={};for(var candidate=2;primeCounter<64;candidate++){if(!isComposite[candidate]){for(i=0;i<313;i+=candidate){isComposite[i]=candidate;}hash[primeCounter]=(mathPow(candidate,0.5)*maxWord)|0;k[primeCounter++]=(mathPow(candidate,1/3)*maxWord)|0;}}ascii+='\x80';while(ascii[lp]%64-56)ascii+='\x00';for(i=0;i<ascii[lp];i++){j=ascii.charCodeAt(i);if(j>>8)return'';words[i>>2]|=j<<((3-i)%4)*8;}words[words[lp]]=((asciiBitLength/maxWord)|0);words[words[lp]]=(asciiBitLength|0);for(j=0;j<words[lp];){var w=words.slice(j,j+=16);var oldHash=hash;hash=hash.slice(0,8);for(i=0;i<64;i++){var i2=i+j;var w15=w[i-15],w2=w[i-2];var a=hash[0],e=hash[4];var temp1=hash[7]+(rightRotate(e,6)^rightRotate(e,11)^rightRotate(e,25))+((e&hash[5])^((~e)&hash[6]))+k[i]+(w[i]=(i<16)?w[i]:(w[i-16]+(rightRotate(w15,7)^rightRotate(w15,18)^(w15>>>3))+w[i-7]+(rightRotate(w2,17)^rightRotate(w2,19)^(w2>>>10)))|0);var temp2=(rightRotate(a,2)^rightRotate(a,13)^rightRotate(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));hash=[(temp1+temp2)|0].concat(hash);hash[4]=(hash[4]+temp1)|0;}for(i=0;i<8;i++){hash[i]=(hash[i]+oldHash[i])|0;}}for(i=0;i<8;i++){for(var i2=3;i2>=0;i2--){var b=(hash[i]>>(8*i2))&255;result+=((b<16)?0:'')+b.toString(16);}}return result;}
 
+// =========================================================================
+// GOOGLE FIREBASE PHONE AUTHENTICATION SERVICE (GỬI SMS THẬT 10.000 TIN/THÁNG)
+// =========================================================================
+const ytFirebasePhoneAuth = {
+  getConfig() {
+    try {
+      const raw = localStorage.getItem('yt_firebase_config');
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    if (typeof window !== 'undefined' && window.FIREBASE_CONFIG) return window.FIREBASE_CONFIG;
+    return null;
+  },
+  saveConfig(cfg) {
+    try {
+      localStorage.setItem('yt_firebase_config', JSON.stringify(cfg));
+    } catch (e) {}
+  },
+  isConfigured() {
+    const cfg = this.getConfig();
+    return !!(cfg && cfg.apiKey && cfg.projectId);
+  },
+  init() {
+    if (typeof firebase === 'undefined') return false;
+    if (firebase.apps && firebase.apps.length > 0) return true;
+    const cfg = this.getConfig();
+    if (!cfg || !cfg.apiKey) return false;
+    try {
+      firebase.initializeApp(cfg);
+      return true;
+    } catch (e) {
+      console.warn('Firebase init error:', e);
+      return false;
+    }
+  },
+  setupRecaptcha(containerId = 'firebase-recaptcha-verifier') {
+    if (typeof firebase === 'undefined' || !this.init()) return null;
+    try {
+      if (window.phoneRecaptchaVerifier) {
+        try { window.phoneRecaptchaVerifier.clear(); } catch (e) {}
+      }
+      window.phoneRecaptchaVerifier = new firebase.auth.RecaptchaVerifier(containerId, {
+        size: 'invisible',
+        callback: () => {}
+      });
+      return window.phoneRecaptchaVerifier;
+    } catch (e) {
+      console.warn('RecaptchaVerifier setup error:', e);
+      return null;
+    }
+  },
+  async sendRealSms(rawPhone, containerId = 'firebase-recaptcha-verifier') {
+    let clean = (rawPhone || '').replace(/[^0-9]/g, '');
+    if (!clean) return { success: false, error: 'Số điện thoại trống!' };
+    let intlPhone = clean;
+    if (intlPhone.startsWith('0')) {
+      intlPhone = '+84' + intlPhone.slice(1);
+    } else if (!intlPhone.startsWith('+')) {
+      intlPhone = '+' + intlPhone;
+    }
+
+    if (!this.isConfigured() || !this.init()) {
+      return { success: false, needConfig: true };
+    }
+
+    const appVerifier = this.setupRecaptcha(containerId);
+    if (!appVerifier) {
+      return { success: false, error: 'Không thể khởi tạo bộ xác thực Google reCAPTCHA cho SĐT.' };
+    }
+
+    try {
+      const confirmationResult = await firebase.auth().signInWithPhoneNumber(intlPhone, appVerifier);
+      window.confirmationResult = confirmationResult;
+      return { success: true, intlPhone };
+    } catch (err) {
+      console.error('Firebase SMS error:', err);
+      let msg = err.message || 'Lỗi gửi tin nhắn SMS từ Google Firebase';
+      if (err.code === 'auth/invalid-phone-number') msg = 'Số điện thoại không hợp lệ theo chuẩn quốc tế (+84)!';
+      if (err.code === 'auth/too-many-requests') msg = 'Đã gửi quá nhiều SMS trong thời gian ngắn! Vui lòng đợi vài phút rồi thử lại.';
+      if (err.code === 'auth/quota-exceeded') msg = 'Hạn mức SMS miễn phí của dự án Firebase đã đạt giới hạn hôm nay!';
+      return { success: false, error: msg };
+    }
+  },
+  async verifyRealOtp(otpCode) {
+    if (!window.confirmationResult) {
+      return { success: false, error: 'Chưa có phiên gửi mã OTP Firebase! Vui lòng bấm Gửi mã OTP trước.' };
+    }
+    try {
+      const result = await window.confirmationResult.confirm(otpCode);
+      return { success: true, user: result.user };
+    } catch (err) {
+      return { success: false, error: 'Mã OTP từ tin nhắn SMS không chính xác hoặc đã hết hạn!' };
+    }
+  }
+};
+
 function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register' | 'verify_phone'
   const [username, setUsername] = useState('');
@@ -417,7 +512,37 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
   }, [authMode]);
 
   // Handle sending OTP to phone number
-  const handleSendOtp = () => {
+  const [showFirebaseSetup, setShowFirebaseSetup] = useState(false);
+  const [firebaseConfigInput, setFirebaseConfigInput] = useState('');
+  const [isSendingSms, setIsSendingSms] = useState(false);
+
+  const handleSaveFirebaseConfig = () => {
+    try {
+      let parsed = null;
+      let text = firebaseConfigInput.trim();
+      // Auto-extract json or object literal
+      if (text.includes('{') && text.includes('}')) {
+        let jsonStr = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
+        jsonStr = jsonStr.replace(/([a-zA-Z0-9_]+):/g, '"$1":').replace(/'/g, '"');
+        try { parsed = JSON.parse(jsonStr); } catch (e) {
+          // Fallback eval in safe context
+          parsed = Function('"use strict";return (' + text + ')')();
+        }
+      }
+      if (!parsed || !parsed.apiKey) {
+        setErrorMsg('Mã cấu hình Firebase không hợp lệ! Cần chứa ít nhất apiKey và projectId.');
+        return;
+      }
+      ytFirebasePhoneAuth.saveConfig(parsed);
+      setShowFirebaseSetup(false);
+      setErrorMsg('');
+      if (showToast) showToast('✅ Đã lưu cấu hình Firebase! Bây giờ bạn có thể nhận tin nhắn SMS thật về máy.');
+    } catch (e) {
+      setErrorMsg('Lỗi định dạng cấu hình Firebase: ' + e.message);
+    }
+  };
+
+  const handleSendOtp = async () => {
     setErrorMsg('');
     setSuccessMsg('');
     const cleanPhone = phone.replace(/[^0-9]/g, '');
@@ -445,7 +570,25 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
       return;
     }
 
-    // Generate random 6-digit OTP code
+    setIsSendingSms(true);
+    // Thử gửi qua Google Firebase Phone Auth (Gửi SMS THẬT về điện thoại SIM)
+    if (ytFirebasePhoneAuth.isConfigured()) {
+      const fbRes = await ytFirebasePhoneAuth.sendRealSms(cleanPhone, 'firebase-phone-recaptcha');
+      setIsSendingSms(false);
+      if (fbRes.success) {
+        setOtpSent(true);
+        setOtpCountdown(60);
+        setSuccessMsg('📱 ĐÃ GỬI TIN NHẮN SMS THẬT từ Google Firebase đến ' + cleanPhone + '! Vui lòng mở tin nhắn trên điện thoại để lấy mã 6 số.');
+        if (showToast) showToast('📱 Tin nhắn SMS đang gửi đến máy ' + cleanPhone + '... Vui lòng kiểm tra điện thoại!', 'success');
+        return;
+      } else {
+        setErrorMsg('Lỗi gửi SMS Firebase: ' + fbRes.error);
+        return;
+      }
+    }
+
+    setIsSendingSms(false);
+    // Nếu chưa cấu hình Firebase, tự động tạo mã OTP mô phỏng hiển thị trên màn hình
     const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
     setGeneratedOtp(newOtp);
     setOtpSent(true);
@@ -456,12 +599,11 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
       showToast(smsText, 'success');
     }
     setSuccessMsg('Đã gửi mã xác thực về ' + cleanPhone + '! Mã OTP của bạn là: ' + newOtp);
-    // Tự động điền trước cho người dùng trải nghiệm tiện lợi nhất
     setOtpInput(newOtp);
   };
 
   // Complete Phone Verification for pending user (either Google or Web user)
-  const handleVerifyPhoneOnly = e => {
+  const handleVerifyPhoneOnly = async e => {
     if (e) e.preventDefault();
     setErrorMsg('');
 
@@ -474,7 +616,13 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
       setErrorMsg('Vui lòng bấm "Gửi Mã OTP" trước!');
       return;
     }
-    if (otpInput.trim() !== generatedOtp) {
+    if (window.confirmationResult) {
+      const realVerify = await ytFirebasePhoneAuth.verifyRealOtp(otpInput.trim());
+      if (!realVerify.success) {
+        setErrorMsg(realVerify.error || 'Mã OTP từ tin nhắn SMS không chính xác!');
+        return;
+      }
+    } else if (otpInput.trim() !== generatedOtp) {
       setErrorMsg('Mã OTP không chính xác! Vui lòng nhập đúng 6 chữ số đã gửi về SĐT.');
       return;
     }
@@ -517,7 +665,7 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     onClose();
   };
 
-  const handleEmailAuth = e => {
+  const handleEmailAuth = async e => {
     if (e) e.preventDefault();
     setErrorMsg('');
 
@@ -587,7 +735,13 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
         setErrorMsg('Vui lòng bấm "Gửi Mã OTP" về số điện thoại trước!');
         return;
       }
-      if (otpInput.trim() !== generatedOtp) {
+      if (window.confirmationResult) {
+        const realVerify = await ytFirebasePhoneAuth.verifyRealOtp(otpInput.trim());
+        if (!realVerify.success) {
+          setErrorMsg(realVerify.error || 'Mã OTP từ tin nhắn SMS không chính xác!');
+          return;
+        }
+      } else if (otpInput.trim() !== generatedOtp) {
         setErrorMsg('Mã OTP không chính xác! Vui lòng nhập đúng 6 số đã gửi về SĐT.');
         return;
       }
@@ -774,7 +928,46 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     className: "text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-[#181b26] transition"
   }, "✕")), initialNotice && /*#__PURE__*/React.createElement("div", {
     className: "p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", null, "ℹ️"), /*#__PURE__*/React.createElement("span", null, initialNotice)), 
+  }, /*#__PURE__*/React.createElement("span", null, "ℹ️"), /*#__PURE__*/React.createElement("span", null, initialNotice)),
+  /*#__PURE__*/React.createElement("div", { id: "firebase-phone-recaptcha" }),
+  /*#__PURE__*/React.createElement("div", { className: "pt-1 text-center" },
+    /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setShowFirebaseSetup(prev => !prev),
+      className: "text-[11px] font-semibold text-amber-400 hover:text-amber-300 underline flex items-center justify-center gap-1 mx-auto transition"
+    }, /*#__PURE__*/React.createElement("span", null, "⚙️"), ytFirebasePhoneAuth.isConfigured() ? "Đã cấu hình Firebase SMS (Bấm để xem/đổi)" : "Muốn nhận tin nhắn SMS THẬT về điện thoại? (Bấm để cài Firebase miễn phí)"),
+    showFirebaseSetup && /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 p-3 rounded-xl bg-[#181b26] border border-amber-500/40 text-left space-y-2 animate-in fade-in duration-150"
+    },
+      /*#__PURE__*/React.createElement("div", { className: "text-xs font-bold text-amber-300 flex items-center gap-1.5" },
+        /*#__PURE__*/React.createElement("span", null, "🔥"), "Cấu hình Google Firebase (Gửi 10.000 SMS Thật / Tháng Miễn Phí)"
+      ),
+      /*#__PURE__*/React.createElement("p", { className: "text-[11px] text-zinc-300 leading-relaxed" },
+        "1. Vào ", /*#__PURE__*/React.createElement("a", { href: "https://console.firebase.google.com", target: "_blank", rel: "noreferrer", className: "text-amber-400 font-bold underline" }, "console.firebase.google.com"), " -> Tạo dự án miễn phí.", /*#__PURE__*/React.createElement("br", null),
+        "2. Bật ", /*#__PURE__*/React.createElement("b", { className: "text-white" }, "Authentication -> Sign-in method -> Phone (Điện thoại)"), ".", /*#__PURE__*/React.createElement("br", null),
+        "3. Vào ", /*#__PURE__*/React.createElement("b", { className: "text-white" }, "Project Settings -> General -> Web App"), ", sao chép đoạn ", /*#__PURE__*/React.createElement("code", { className: "text-amber-300 font-mono text-[10px] bg-black/40 px-1 py-0.5 rounded" }, "const firebaseConfig = { ... }"), " và dán vào dưới:"
+      ),
+      /*#__PURE__*/React.createElement("textarea", {
+        rows: 4,
+        value: firebaseConfigInput,
+        onChange: e => setFirebaseConfigInput(e.target.value),
+        placeholder: 'Dán firebaseConfig tại đây: { apiKey: "...", projectId: "...", ... }',
+        className: "w-full bg-[#101217] border border-zinc-700 rounded-lg p-2 text-[11px] font-mono text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+      }),
+      /*#__PURE__*/React.createElement("div", { className: "flex justify-end gap-2" },
+        /*#__PURE__*/React.createElement("button", {
+          type: "button",
+          onClick: () => setShowFirebaseSetup(false),
+          className: "px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-400 hover:text-white transition"
+        }, "Đóng"),
+        /*#__PURE__*/React.createElement("button", {
+          type: "button",
+          onClick: handleSaveFirebaseConfig,
+          className: "px-3.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black transition shadow"
+        }, "Lưu Cấu Hình Firebase")
+      )
+    )
+  ), 
 
   // MODE: VERIFY PHONE (Bắt buộc xác minh SĐT cho cả Gmail và Tài khoản Web)
   authMode === 'verify_phone' ? /*#__PURE__*/React.createElement("form", {
