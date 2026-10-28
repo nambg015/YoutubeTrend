@@ -263,43 +263,314 @@ const u=new URL('https://www.googleapis.com/youtube/v3/videos');u.searchParams.s
 // Synchronous Pure JS SHA-256 for secure client-side password hashing
 function sha256Hex(ascii){function rightRotate(v,a){return(v>>>a)|(v<<(32-a));}var mathPow=Math.pow;var maxWord=mathPow(2,32);var lp='length';var i,j;var result='';var words=[];var asciiBitLength=ascii[lp]*8;var hash=[];var k=[];var primeCounter=0;var isComposite={};for(var candidate=2;primeCounter<64;candidate++){if(!isComposite[candidate]){for(i=0;i<313;i+=candidate){isComposite[i]=candidate;}hash[primeCounter]=(mathPow(candidate,0.5)*maxWord)|0;k[primeCounter++]=(mathPow(candidate,1/3)*maxWord)|0;}}ascii+='\x80';while(ascii[lp]%64-56)ascii+='\x00';for(i=0;i<ascii[lp];i++){j=ascii.charCodeAt(i);if(j>>8)return'';words[i>>2]|=j<<((3-i)%4)*8;}words[words[lp]]=((asciiBitLength/maxWord)|0);words[words[lp]]=(asciiBitLength|0);for(j=0;j<words[lp];){var w=words.slice(j,j+=16);var oldHash=hash;hash=hash.slice(0,8);for(i=0;i<64;i++){var i2=i+j;var w15=w[i-15],w2=w[i-2];var a=hash[0],e=hash[4];var temp1=hash[7]+(rightRotate(e,6)^rightRotate(e,11)^rightRotate(e,25))+((e&hash[5])^((~e)&hash[6]))+k[i]+(w[i]=(i<16)?w[i]:(w[i-16]+(rightRotate(w15,7)^rightRotate(w15,18)^(w15>>>3))+w[i-7]+(rightRotate(w2,17)^rightRotate(w2,19)^(w2>>>10)))|0);var temp2=(rightRotate(a,2)^rightRotate(a,13)^rightRotate(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));hash=[(temp1+temp2)|0].concat(hash);hash[4]=(hash[4]+temp1)|0;}for(i=0;i<8;i++){hash[i]=(hash[i]+oldHash[i])|0;}}for(i=0;i<8;i++){for(var i2=3;i2>=0;i2--){var b=(hash[i]>>(8*i2))&255;result+=((b<16)?0:'')+b.toString(16);}}return result;}
 
-function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){const[authMode,setAuthMode]=useState('login');// 'login' | 'register'
-const[email,setEmail]=useState('');const[password,setPassword]=useState('');const[recaptchaToken,setRecaptchaToken]=useState('');const[errorMsg,setErrorMsg]=useState('');const recaptchaContainerRef=React.useRef(null);const widgetIdRef=React.useRef(null);React.useEffect(()=>{const renderRecaptcha=()=>{if(window.grecaptcha&&window.grecaptcha.render&&recaptchaContainerRef.current){try{if(widgetIdRef.current===null){widgetIdRef.current=window.grecaptcha.render(recaptchaContainerRef.current,{sitekey:'6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI',// Google reCAPTCHA official sitekey
-theme:'dark',callback:token=>{setRecaptchaToken(token);setErrorMsg('');},'expired-callback':()=>{setRecaptchaToken('');}});}}catch(e){}}};if(window.grecaptcha&&window.grecaptcha.render){renderRecaptcha();}else{const interval=setInterval(()=>{if(window.grecaptcha&&window.grecaptcha.render){clearInterval(interval);renderRecaptcha();}},300);return()=>clearInterval(interval);}},[authMode]);const handleEmailAuth=e=>{if(e)e.preventDefault();setErrorMsg('');// 1. Verify Google reCAPTCHA
-let currentToken=recaptchaToken;if(!currentToken&&window.grecaptcha&&widgetIdRef.current!==null){try{currentToken=window.grecaptcha.getResponse(widgetIdRef.current);}catch(e){}}if(!currentToken){setErrorMsg('Vui lòng tích chọn "Tôi không phải là người máy" (Google reCAPTCHA)!');return;}const cleanEmail=email.trim().toLowerCase();const cleanPass=password.trim();if(!cleanEmail||!cleanPass){setErrorMsg('Vui lòng điền đầy đủ Email và Mật khẩu.');return;}if(cleanPass.length<6){setErrorMsg('Mật khẩu phải có ít nhất 6 ký tự.');return;}// Get accounts database from storage
-let accounts=[];try{accounts=JSON.parse(st.get('yt_registered_accounts')||'[]');}catch(err){accounts=[];}if(authMode==='register'){if(accounts.some(acc=>acc.email===cleanEmail)){setErrorMsg('Email này đã được đăng ký! Vui lòng chuyển sang Đăng Nhập.');return;}const newAcc={id:'acc_'+Date.now(),email:cleanEmail,name:cleanEmail.split('@')[0],passHash:btoa(cleanPass),// Simple hash for storage
-createdAt:Date.now()};accounts.push(newAcc);st.set('yt_registered_accounts',JSON.stringify(accounts));const userProfile={name:newAcc.name,email:newAcc.email,avatar:'',googleId:newAcc.id,isAuth:true,authType:'email'};st.set('yt_user_profile',JSON.stringify(userProfile));if(showToast)showToast('Đăng ký tài khoản thành công! Xin chào '+newAcc.name);if(onLoginSuccess)onLoginSuccess(userProfile);onClose();}else{// Login mode
-// Kiểm tra đăng nhập tài khoản Quản Trị (Admin) bảo mật qua mã băm SHA-256 (Không lộ mật khẩu gốc)
-const isAdminLogin = (cleanEmail === 'adminh' || cleanEmail === 'adminh@youtrend.pro');
-const adminStoredHash = st.get('yt_admin_pass_hash') || '7126e71f8b490bf451df28169a3a5e533a04249da5853aeeea2c08607ff81dd8';
-if (isAdminLogin) {
-  if (typeof sha256Hex === 'function' && sha256Hex(cleanPass) === adminStoredHash) {
-    const adminProfile = {
-      name: 'adminh',
-      email: 'adminh@youtrend.pro',
-      avatar: '👑',
-      isAdmin: true,
-      isAuth: true,
-      authType: 'admin'
+function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [recaptchaToken, setRecaptchaToken] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const recaptchaContainerRef = React.useRef(null);
+  const widgetIdRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const renderRecaptcha = () => {
+      if (window.grecaptcha && window.grecaptcha.render && recaptchaContainerRef.current) {
+        try {
+          if (widgetIdRef.current === null) {
+            widgetIdRef.current = window.grecaptcha.render(recaptchaContainerRef.current, {
+              sitekey: '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI',
+              theme: 'dark',
+              callback: token => {
+                setRecaptchaToken(token);
+                setErrorMsg('');
+              },
+              'expired-callback': () => {
+                setRecaptchaToken('');
+              }
+            });
+          }
+        } catch (e) {}
+      }
     };
-    st.set('yt_user_profile', JSON.stringify(adminProfile));
-    if (typeof ytTierManager !== 'undefined') {
-      ytTierManager.setTier('ULTRA_PRO');
+
+    if (window.grecaptcha && window.grecaptcha.render) {
+      renderRecaptcha();
+    } else {
+      const interval = setInterval(() => {
+        if (window.grecaptcha && window.grecaptcha.render) {
+          clearInterval(interval);
+          renderRecaptcha();
+        }
+      }, 300);
+      return () => clearInterval(interval);
     }
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('yt-profile-changed', { detail: adminProfile }));
-      window.dispatchEvent(new CustomEvent('yt-tier-changed', { detail: { tier: 'ULTRA_PRO' } }));
+  }, [authMode]);
+
+  const handleEmailAuth = e => {
+    if (e) e.preventDefault();
+    setErrorMsg('');
+
+    // 1. Verify Google reCAPTCHA
+    let currentToken = recaptchaToken;
+    if (!currentToken && window.grecaptcha && widgetIdRef.current !== null) {
+      try {
+        currentToken = window.grecaptcha.getResponse(widgetIdRef.current);
+      } catch (e) {}
     }
-    if (showToast) showToast('👑 Chào mừng Admin Tối Cao adminh! Đã kích hoạt Gói ULTRA PRO vĩnh viễn.');
-    if (onLoginSuccess) onLoginSuccess(adminProfile);
+    if (!currentToken) {
+      setErrorMsg('Vui lòng tích chọn "Tôi không phải là người máy" (Google reCAPTCHA)!');
+      return;
+    }
+
+    const cleanUser = username.trim().toLowerCase();
+    const cleanPass = password.trim();
+
+    if (!cleanUser || !cleanPass) {
+      setErrorMsg('Vui lòng điền đầy đủ Tên đăng nhập và Mật khẩu.');
+      return;
+    }
+
+    if (cleanUser.length < 3) {
+      setErrorMsg('Tên đăng nhập phải có ít nhất 3 ký tự.');
+      return;
+    }
+
+    if (cleanPass.length < 6) {
+      setErrorMsg('Mật khẩu phải có ít nhất 6 ký tự.');
+      return;
+    }
+
+    // Get accounts database from storage
+    let accounts = [];
+    try {
+      accounts = JSON.parse(st.get('yt_registered_accounts') || '[]');
+    } catch (err) {
+      accounts = [];
+    }
+
+    if (authMode === 'register') {
+      const cleanConfirm = confirmPassword.trim();
+      if (!cleanConfirm) {
+        setErrorMsg('Vui lòng nhập lại mật khẩu xác nhận.');
+        return;
+      }
+      if (cleanPass !== cleanConfirm) {
+        setErrorMsg('Mật khẩu nhập lại không khớp! Vui lòng kiểm tra lại.');
+        return;
+      }
+
+      // Check duplicate username or email
+      const isDuplicate = accounts.some(acc => {
+        const accUser = (acc.username || acc.email || acc.name || '').toLowerCase();
+        return accUser === cleanUser || (acc.email && acc.email.toLowerCase() === cleanUser);
+      });
+
+      if (isDuplicate) {
+        setErrorMsg('Tên đăng nhập này đã được sử dụng! Vui lòng chọn tên khác hoặc chuyển sang Đăng Nhập.');
+        return;
+      }
+
+      const newAcc = {
+        id: 'acc_' + Date.now(),
+        username: cleanUser,
+        email: cleanUser.includes('@') ? cleanUser : cleanUser + '@youtrend.user',
+        name: cleanUser,
+        passHash: btoa(cleanPass),
+        createdAt: Date.now()
+      };
+
+      accounts.push(newAcc);
+      st.set('yt_registered_accounts', JSON.stringify(accounts));
+
+      const userProfile = {
+        name: newAcc.name,
+        email: newAcc.email,
+        avatar: '',
+        googleId: newAcc.id,
+        isAuth: true,
+        authType: 'username'
+      };
+
+      st.set('yt_user_profile', JSON.stringify(userProfile));
+      if (showToast) showToast('🎉 Đăng ký tài khoản thành công! Xin chào ' + newAcc.name);
+      if (onLoginSuccess) onLoginSuccess(userProfile);
+      onClose();
+    } else {
+      // Login mode
+      const isAdminLogin = (cleanUser === 'adminh' || cleanUser === 'adminh@youtrend.pro');
+      const adminStoredHash = st.get('yt_admin_pass_hash') || '7126e71f8b490bf451df28169a3a5e533a04249da5853aeeea2c08607ff81dd8';
+
+      if (isAdminLogin) {
+        if (typeof sha256Hex === 'function' && sha256Hex(cleanPass) === adminStoredHash) {
+          const adminProfile = {
+            name: 'adminh',
+            email: 'adminh@youtrend.pro',
+            avatar: '👑',
+            isAdmin: true,
+            isAuth: true,
+            authType: 'admin'
+          };
+          st.set('yt_user_profile', JSON.stringify(adminProfile));
+          if (typeof ytTierManager !== 'undefined') {
+            ytTierManager.setTier('ULTRA_PRO');
+          }
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('yt-profile-changed', { detail: adminProfile }));
+            window.dispatchEvent(new CustomEvent('yt-tier-changed', { detail: { tier: 'ULTRA_PRO' } }));
+          }
+          if (showToast) showToast('👑 Chào mừng Admin Tối Cao adminh! Đã kích hoạt Gói ULTRA PRO vĩnh viễn.');
+          if (onLoginSuccess) onLoginSuccess(adminProfile);
+          onClose();
+          return;
+        } else {
+          setErrorMsg('Mật khẩu Admin không chính xác!');
+          return;
+        }
+      }
+
+      const found = accounts.find(acc => {
+        const accUser = (acc.username || acc.email || acc.name || '').toLowerCase();
+        const matchesIdentity = accUser === cleanUser || (acc.email && acc.email.toLowerCase() === cleanUser);
+        const matchesPass = acc.passHash === btoa(cleanPass) || (typeof sha256Hex === 'function' && acc.passHash === sha256Hex(cleanPass));
+        return matchesIdentity && matchesPass;
+      });
+
+      if (!found) {
+        setErrorMsg('Tên đăng nhập hoặc Mật khẩu không chính xác!');
+        return;
+      }
+
+      const userProfile = {
+        name: found.name || found.username,
+        email: found.email || '',
+        avatar: '',
+        googleId: found.id,
+        isAuth: true,
+        authType: 'username'
+      };
+
+      st.set('yt_user_profile', JSON.stringify(userProfile));
+      if (showToast) showToast('Đăng nhập thành công! Xin chào ' + (found.name || found.username));
+      if (onLoginSuccess) onLoginSuccess(userProfile);
+      onClose();
+    }
+  };
+
+  const handleGoogleSuccess = userData => {
+    const updated = {
+      name: userData.name || 'Người dùng Google',
+      email: userData.email || '',
+      avatar: userData.picture || '',
+      googleId: userData.sub,
+      isAuth: true,
+      authType: 'google'
+    };
+    st.set('yt_user_profile', JSON.stringify(updated));
+    if (showToast) showToast('Đăng nhập Google thành công! Xin chào ' + userData.name);
+    if (onLoginSuccess) onLoginSuccess(updated);
     onClose();
-    return;
-  } else {
-    setErrorMsg('Mật khẩu Admin không chính xác!');
-    return;
-  }
+  };
+
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#12141c] border border-[#232738] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between border-b border-[#232738] pb-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center text-white font-black text-sm shadow"
+  }, "\u25B6"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-base font-extrabold text-white"
+  }, authMode === 'login' ? 'Đăng Nhập YouTrend' : 'Tạo Tài Khoản Mới'), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-zinc-400"
+  }, initialNotice || 'Đăng nhập để phân tích từ khóa và quản lý hạn mức'))), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-[#181b26] transition"
+  }, "\u2715")), initialNotice && /*#__PURE__*/React.createElement("div", {
+    className: "p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", null, "\u2139\uFE0F"), /*#__PURE__*/React.createElement("span", null, initialNotice)), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2 pt-1 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-semibold text-zinc-300"
+  }, "Đăng nhập nhanh 1 chạm:"), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-center"
+  }, /*#__PURE__*/React.createElement(GoogleLoginButton, {
+    onLoginSuccess: handleGoogleSuccess
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 my-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-[1px] bg-[#232738] flex-1"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-zinc-500 font-bold uppercase tracking-wider"
+  }, "HOẶC DÙNG TÀI KHOẢN / MẬT KHẨU"), /*#__PURE__*/React.createElement("div", {
+    className: "h-[1px] bg-[#232738] flex-1"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-1 bg-[#181b26] p-1 rounded-xl border border-[#232738]"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setAuthMode('login');
+      setErrorMsg('');
+    },
+    className: 'py-1.5 rounded-lg text-xs font-bold transition ' + (authMode === 'login' ? 'bg-red-600 text-white shadow' : 'text-zinc-400 hover:text-white')
+  }, "Đăng Nhập"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setAuthMode('register');
+      setErrorMsg('');
+    },
+    className: 'py-1.5 rounded-lg text-xs font-bold transition ' + (authMode === 'register' ? 'bg-red-600 text-white shadow' : 'text-zinc-400 hover:text-white')
+  }, "Đăng Ký Tài Khoản")), /*#__PURE__*/React.createElement("form", {
+    onSubmit: handleEmailAuth,
+    className: "space-y-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-[11px] font-semibold text-zinc-300 block mb-1"
+  }, authMode === 'register' ? 'Tên đăng nhập (Username):' : 'Tên đăng nhập hoặc Email:'), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: username,
+    onChange: e => setUsername(e.target.value),
+    placeholder: authMode === 'register' ? "Ví dụ: hungnguyen99, myuser..." : "Nhập username hoặc email...",
+    className: "w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-[11px] font-semibold text-zinc-300 block mb-1"
+  }, "Mật khẩu:"), /*#__PURE__*/React.createElement("input", {
+    type: "password",
+    value: password,
+    onChange: e => setPassword(e.target.value),
+    placeholder: "Tối thiểu 6 ký tự",
+    className: "w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
+  })), authMode === 'register' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    className: "text-[11px] font-semibold text-zinc-300 block mb-1"
+  }, "Nhập lại mật khẩu:"), /*#__PURE__*/React.createElement("input", {
+    type: "password",
+    value: confirmPassword,
+    onChange: e => setConfirmPassword(e.target.value),
+    placeholder: "Nhập lại chính xác mật khẩu trên",
+    className: "w-full bg-[#181b26] border rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none " + (confirmPassword && confirmPassword !== password ? 'border-rose-500' : 'border-[#232738] focus:border-red-500')
+  }), confirmPassword && confirmPassword !== password && /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-rose-400 mt-1"
+  }, "✕ Mật khẩu nhập lại chưa khớp")), /*#__PURE__*/React.createElement("div", {
+    className: "p-3 bg-[#181b26] rounded-xl border border-[#232738] space-y-2 flex flex-col items-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-xs w-full"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-zinc-300 font-semibold flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDEE1\uFE0F"), " Xác thực Google reCAPTCHA chống Bot:")), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-center w-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    ref: recaptchaContainerRef,
+    className: "my-1 scale-90 sm:scale-100 origin-center"
+  }))), errorMsg && /*#__PURE__*/React.createElement("div", {
+    className: "p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs"
+  }, "\u26A0\uFE0F ", errorMsg), /*#__PURE__*/React.createElement("button", {
+    type: "submit",
+    className: "w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white shadow-lg transition"
+  }, authMode === 'login' ? 'Đăng Nhập Ngay' : 'Hoàn Tất Đăng Ký'))));
 }
-const found=accounts.find(acc=>acc.email===cleanEmail&&(acc.passHash===btoa(cleanPass)||acc.passHash===sha256Hex(cleanPass)));if(!found){setErrorMsg('Email hoặc Mật khẩu không chính xác!');return;}const userProfile={name:found.name,email:found.email,avatar:'',googleId:found.id,isAuth:true,authType:'email'};st.set('yt_user_profile',JSON.stringify(userProfile));if(showToast)showToast('Đăng nhập thành công! Xin chào '+found.name);if(onLoginSuccess)onLoginSuccess(userProfile);onClose();}};const handleGoogleSuccess=userData=>{const updated={name:userData.name||'Người dùng Google',email:userData.email||'',avatar:userData.picture||'',googleId:userData.sub,isAuth:true,authType:'google'};st.set('yt_user_profile',JSON.stringify(updated));if(showToast)showToast('Đăng nhập Google thành công! Xin chào '+userData.name);if(onLoginSuccess)onLoginSuccess(updated);onClose();};return/*#__PURE__*/React.createElement("div",{className:"fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"},/*#__PURE__*/React.createElement("div",{className:"bg-[#12141c] border border-[#232738] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between border-b border-[#232738] pb-3"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2.5"},/*#__PURE__*/React.createElement("div",{className:"w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center text-white font-black text-sm shadow"},"\u25B6"),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h3",{className:"text-base font-extrabold text-white"},authMode==='login'?'Đăng Nhập YouTrend':'Tạo Tài Khoản Mới'),/*#__PURE__*/React.createElement("p",{className:"text-[11px] text-zinc-400"},initialNotice||'Đăng nhập để phân tích từ khóa và quản lý hạn mức'))),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-[#181b26] transition"},"\u2715")),initialNotice&&/*#__PURE__*/React.createElement("div",{className:"p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2"},/*#__PURE__*/React.createElement("span",null,"\u2139\uFE0F"),/*#__PURE__*/React.createElement("span",null,initialNotice)),/*#__PURE__*/React.createElement("div",{className:"space-y-2 pt-1 text-center"},/*#__PURE__*/React.createElement("div",{className:"text-xs font-semibold text-zinc-300"},"\u0110\u0103ng nh\u1EADp nhanh 1 ch\u1EA1m:"),/*#__PURE__*/React.createElement("div",{className:"flex justify-center"},/*#__PURE__*/React.createElement(GoogleLoginButton,{onLoginSuccess:handleGoogleSuccess}))),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-3 my-2"},/*#__PURE__*/React.createElement("div",{className:"h-[1px] bg-[#232738] flex-1"}),/*#__PURE__*/React.createElement("span",{className:"text-[10px] text-zinc-500 font-bold uppercase tracking-wider"},"HO\u1EB6C D\xD9NG EMAIL / M\u1EACT KH\u1EA8U"),/*#__PURE__*/React.createElement("div",{className:"h-[1px] bg-[#232738] flex-1"})),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-2 gap-1 bg-[#181b26] p-1 rounded-xl border border-[#232738]"},/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{setAuthMode('login');setErrorMsg('');},className:'py-1.5 rounded-lg text-xs font-bold transition '+(authMode==='login'?'bg-red-600 text-white shadow':'text-zinc-400 hover:text-white')},"\u0110\u0103ng Nh\u1EADp"),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{setAuthMode('register');setErrorMsg('');},className:'py-1.5 rounded-lg text-xs font-bold transition '+(authMode==='register'?'bg-red-600 text-white shadow':'text-zinc-400 hover:text-white')},"\u0110\u0103ng K\xFD T\xE0i Kho\u1EA3n")),/*#__PURE__*/React.createElement("form",{onSubmit:handleEmailAuth,className:"space-y-3"},/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("label",{className:"text-[11px] font-semibold text-zinc-300 block mb-1"},"Email:"),/*#__PURE__*/React.createElement("input",{type:"email",value:email,onChange:e=>setEmail(e.target.value),placeholder:"tenban@gmail.com",className:"w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"})),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("label",{className:"text-[11px] font-semibold text-zinc-300 block mb-1"},"M\u1EADt kh\u1EA9u:"),/*#__PURE__*/React.createElement("input",{type:"password",value:password,onChange:e=>setPassword(e.target.value),placeholder:"T\u1ED1i thi\u1EC3u 6 k\xFD t\u1EF1",className:"w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"})),/*#__PURE__*/React.createElement("div",{className:"p-3 bg-[#181b26] rounded-xl border border-[#232738] space-y-2 flex flex-col items-center"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs w-full"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-semibold flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDEE1\uFE0F")," X\xE1c th\u1EF1c Google reCAPTCHA ch\u1ED1ng Bot:")),/*#__PURE__*/React.createElement("div",{className:"flex justify-center w-full overflow-hidden"},/*#__PURE__*/React.createElement("div",{ref:recaptchaContainerRef,className:"my-1 scale-90 sm:scale-100 origin-center"}))),errorMsg&&/*#__PURE__*/React.createElement("div",{className:"p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs"},"\u26A0\uFE0F ",errorMsg),/*#__PURE__*/React.createElement("button",{type:"submit",className:"w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white shadow-lg transition"},authMode==='login'?'Đăng Nhập Ngay':'Hoàn Tất Đăng Ký'))));}// Simple API Key Prompt Modal (When user is logged in but hasn't entered key)
+// Simple API Key Prompt Modal (When user is logged in but hasn't entered key)
 function SimpleApiKeyModal({onClose,onKeySaved,showToast,notice=''}){const[inputKey,setInputKey]=useState('');const[testing,setTesting]=useState(false);const[testError,setTestError]=useState('');const handleSubmit=async e=>{if(e)e.preventDefault();const trimmed=(inputKey||'').trim();if(!trimmed){setTestError('Vui lòng dán mã API Key bắt đầu bằng AIzaSy...!');return;}setTesting(true);setTestError('');try{const u=new URL('https://www.googleapis.com/youtube/v3/videos');u.searchParams.set('part','snippet');u.searchParams.set('chart','mostPopular');u.searchParams.set('maxResults','1');u.searchParams.set('regionCode','VN');u.searchParams.set('key',trimmed);const res=await fetch(u.toString());const data=await res.json().catch(()=>({}));if(res.ok){if(showToast)showToast('Kết nối YouTube API thành công!');onKeySaved(trimmed);onClose();}else{const errObj=data.error&&data.error.errors&&data.error.errors[0]||{};const reason=errObj.reason||'HTTP '+res.status;if(reason==='keyInvalid'||reason==='badRequest'){setTestError('Mã API Key không hợp lệ. Vui lòng kiểm tra lại.');}else if(reason==='accessNotConfigured'){setTestError('API "YouTube Data API v3" chưa được Bật trong Google Cloud.');}else{setTestError('Lỗi kết nối YouTube API: '+(data.error?.message||reason));}}}catch(err){setTestError('Lỗi kết nối mạng: '+String(err));}finally{setTesting(false);}};return/*#__PURE__*/React.createElement("div",{className:"fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"},/*#__PURE__*/React.createElement("div",{className:"bg-[#12141c] border border-[#232738] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between border-b border-[#232738] pb-3"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2"},/*#__PURE__*/React.createElement("span",{className:"text-xl"},"\uD83D\uDD11"),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h3",{className:"text-base font-extrabold text-white"},"K\u1EBFt N\u1ED1i YouTube API Key"),/*#__PURE__*/React.createElement("p",{className:"text-[11px] text-zinc-400"},notice||'Cần có API Key để quét dữ liệu thật từ YouTube'))),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-[#181b26]"},"\u2715")),/*#__PURE__*/React.createElement("div",{className:"bg-[#181b26] p-3 rounded-xl border border-[#232738] space-y-1 text-xs text-zinc-400"},/*#__PURE__*/React.createElement("div",{className:"font-bold text-amber-400 flex justify-between items-center"},/*#__PURE__*/React.createElement("span",null,"C\xE1ch l\u1EA5y API Key mi\u1EC5n ph\xED 10.000 quota/ng\xE0y:"),/*#__PURE__*/React.createElement("a",{href:"https://console.cloud.google.com/apis/credentials",target:"_blank",rel:"noopener noreferrer",className:"text-red-400 underline text-[11px]"},"Google Cloud \u2197")),/*#__PURE__*/React.createElement("p",{className:"text-[11px]"},"T\u1EA1o API Key tr\xEAn Google Cloud \u2794 B\u1EADt YouTube Data API v3 \u2794 D\xE1n m\xE3 v\xE0o \u0111\xE2y.")),/*#__PURE__*/React.createElement("form",{onSubmit:handleSubmit,className:"space-y-3"},/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("label",{className:"text-[11px] font-semibold text-zinc-300 block mb-1"},"M\xE3 API Key (AIzaSy...):"),/*#__PURE__*/React.createElement("input",{type:"text",value:inputKey,onChange:e=>{setInputKey(e.target.value);setTestError('');},placeholder:"D\xE1n m\xE3 API Key c\u1EE7a b\u1EA1n...",className:"w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-red-500"})),testError&&/*#__PURE__*/React.createElement("div",{className:"p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs"},"\u26A0\uFE0F ",testError),/*#__PURE__*/React.createElement("button",{type:"submit",disabled:testing,className:"w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white shadow-lg transition flex items-center justify-center gap-2"},testing?'Đang kiểm tra key...':'Lưu & Bắt Đầu Sử Dụng'))));}// =========================================================================
 // TOP NGÁCH PAYWALL BANNER (KHÓA DÀNH CHO GÓI FREE)
 // =========================================================================
