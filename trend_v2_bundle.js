@@ -589,6 +589,323 @@ window.FEATURE_TREND_V2 = true;
     return rawKeywords.slice(0, count);
   }
 
+
+  // --- OUTLIER CHANNEL BREAKOUT ENGINE (SUB THẤP - VIEW CAO) ---
+  const CURATED_OUTLIER_CHANNELS = {
+    US: [
+      {
+        id: 'ch_stoic_archetype',
+        title: 'Stoic Archetype',
+        avatar: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=200&q=80',
+        subs: 7800,
+        videoCount: 18,
+        country: 'US',
+        rpm: '$28 - $48',
+        video: {
+          id: 'RzL1yH3oZoU',
+          title: 'The Art of Being Invisible | 7 Stoic Rules To Master Yourself',
+          views: 184000,
+          vph: 520,
+          dur: '38:20',
+          published: '3 ngày trước',
+          thumb: 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=600&q=80',
+          outlierRatio: 23.5
+        },
+        keywords: [
+          'art of being invisible',
+          'stoic rules for men',
+          'marcus aurelius daily habits',
+          'quiet confidence psychology',
+          'ancient stoic wisdom',
+          'how to control emotions stoicism',
+          'silence is power philosophy',
+          'deep focus morning routine'
+        ]
+      },
+      {
+        id: 'ch_curious_ledger',
+        title: 'Curious Ledger',
+        avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=200&q=80',
+        subs: 14200,
+        videoCount: 22,
+        country: 'US',
+        rpm: '$35 - $60',
+        video: {
+          id: 'W_rU8yBfP8k',
+          title: 'How One Forgotten Italian Company Quietly Controls 90% of Global Eyewear',
+          views: 320000,
+          vph: 840,
+          dur: '24:15',
+          published: '4 ngày trước',
+          thumb: 'https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=600&q=80',
+          outlierRatio: 22.5
+        },
+        keywords: [
+          'forgotten monopoly story',
+          'business case study breakdown',
+          'secret monopoly companies',
+          'how luxottica controls glasses',
+          'hidden billionaire corporate empire',
+          'b2b supply chain monopolies',
+          'corporate greed documentaries'
+        ]
+      },
+      {
+        id: 'ch_neural_genesis',
+        title: 'Neural Genesis 3D',
+        avatar: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=200&q=80',
+        subs: 18500,
+        videoCount: 14,
+        country: 'US',
+        rpm: '$30 - $55',
+        video: {
+          id: '2bguEiUgDA4',
+          title: 'I Made a Full Sci-Fi Movie Trailer Using Only 3 Free AI Tools in 48 Hours',
+          views: 495000,
+          vph: 1250,
+          dur: '19:40',
+          published: '2 ngày trước',
+          thumb: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80',
+          outlierRatio: 26.7
+        },
+        keywords: [
+          'ai sci-fi movie workflow',
+          'how to make 3d movie with ai',
+          'best free ai video generator 2026',
+          'midjourney to video cinematic',
+          'unreal engine ai pipeline',
+          'ai youtube animation cash cow',
+          'cinematic prompts for ai video'
+        ]
+      },
+      {
+        id: 'ch_dark_vault_chronicles',
+        title: 'Dark Vault Chronicles',
+        avatar: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=200&q=80',
+        subs: 22100,
+        videoCount: 29,
+        country: 'US',
+        rpm: '$25 - $45',
+        video: {
+          id: 'cau4-F9YuKA',
+          title: 'The Bizarre Disappearance That Still Terrifies Alaska 50 Years Later',
+          views: 410000,
+          vph: 680,
+          dur: '44:10',
+          published: '5 ngày trước',
+          thumb: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
+          outlierRatio: 18.5
+        },
+        keywords: [
+          'alaska triangle disappearance',
+          'unsolved mystery case file',
+          'cold case documentary narration',
+          'mysterious missing persons audio',
+          'creepy historical unsolved files',
+          'true crime narration scripts'
+        ]
+      },
+      {
+        id: 'ch_calm_haven_prayers',
+        title: 'Calm Haven Devotion',
+        avatar: 'https://images.unsplash.com/photo-1499209974431-9dddcece7f88?auto=format&fit=crop&w=200&q=80',
+        subs: 9400,
+        videoCount: 25,
+        country: 'US',
+        rpm: '$22 - $42',
+        video: {
+          id: 'RzL1yH3oZoU',
+          title: 'Night Prayer To Release Anxious Thoughts & Sleep in God Grace',
+          views: 215000,
+          vph: 450,
+          dur: '52:00',
+          published: '1 ngày trước',
+          thumb: 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=600&q=80',
+          outlierRatio: 22.8
+        },
+        keywords: [
+          'night prayer to release anxiety',
+          'peaceful sleep christian meditation',
+          'psalm 91 bedtime prayer audio',
+          'surrendering worries to god prayer',
+          'calm mind bible verses sleep'
+        ]
+      }
+    ],
+    VN: [
+      {
+        id: 'ch_bimat_deche',
+        title: 'Bí Mật Đế Chế',
+        avatar: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=200&q=80',
+        subs: 12500,
+        videoCount: 19,
+        country: 'VN',
+        rpm: '$12 - $25',
+        video: {
+          id: 'W_rU8yBfP8k',
+          title: 'Cú Lừa Thế Kỷ Khiến Đế Chế Bất Động Sản Bốc Hơi 10.000 Tỷ',
+          views: 195000,
+          vph: 420,
+          dur: '28:10',
+          published: '3 ngày trước',
+          thumb: 'https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=600&q=80',
+          outlierRatio: 15.6
+        },
+        keywords: [
+          'cú lừa kinh doanh thế kỷ',
+          'bài học phá sản bất động sản',
+          'đế chế tài chính sụp đổ',
+          'vụ án kinh tế chấn động',
+          'phân tích bài học đầu tư',
+          'câu chuyện làm giàu và bài học'
+        ]
+      },
+      {
+        id: 'ch_gocnhin_khacky',
+        title: 'Góc Nhìn Khắc Kỷ',
+        avatar: 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=200&q=80',
+        subs: 8200,
+        videoCount: 15,
+        country: 'VN',
+        rpm: '$10 - $22',
+        video: {
+          id: '2bguEiUgDA4',
+          title: '9 Thói Quen Của Người Đàn Ông Bản Lĩnh Mà Ai Cũng Nể Phục',
+          views: 148000,
+          vph: 360,
+          dur: '18:30',
+          published: '2 ngày trước',
+          thumb: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
+          outlierRatio: 18.0
+        },
+        keywords: [
+          'thói quen người đàn ông bản lĩnh',
+          'triết lý khắc kỷ cho nam giới',
+          'làm chủ cảm xúc cuộc sống',
+          'bài học đàn ông trưởng thành',
+          'nghệ thuật giữ bình tĩnh',
+          'tâm lý học hành vi đàn ông'
+        ]
+      },
+      {
+        id: 'ch_meo_doisong_nhanh',
+        title: 'Mẹo Đời Sống Siêu Tốc',
+        avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=200&q=80',
+        subs: 6800,
+        videoCount: 24,
+        country: 'VN',
+        rpm: '$8 - $16',
+        video: {
+          id: 'ernrEg4i44k',
+          title: '7 Mẹo Nhỏ Tiết Kiệm Tiền Điện Nước Cực Hay Ai Cũng Làm Được',
+          views: 112000,
+          vph: 240,
+          dur: '12:45',
+          published: '1 ngày trước',
+          thumb: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80',
+          outlierRatio: 16.4
+        },
+        keywords: [
+          'mẹo tiết kiệm tiền điện nước',
+          'mẹo vặt nhà bếp thông minh',
+          'cách quản lý chi tiêu gia đình',
+          'mẹo vặt cuộc sống tiện lợi',
+          'mẹo vặt phòng bếp đơn giản'
+        ]
+      }
+    ]
+  };
+
+  function getOutlierBreakoutChannels(region = 'US', maxSubs = 30000, minRatio = 3, topicFilter = '') {
+    const pool = CURATED_OUTLIER_CHANNELS[region] || CURATED_OUTLIER_CHANNELS.US;
+    let filtered = pool.filter(c => {
+      const matchSubs = c.subs <= maxSubs;
+      const matchRatio = (c.video?.outlierRatio || 0) >= minRatio;
+      let matchTopic = true;
+      if (topicFilter && topicFilter.trim()) {
+        const q = topicFilter.toLowerCase().trim();
+        const inTitle = (c.title || '').toLowerCase().includes(q);
+        const inVid = (c.video?.title || '').toLowerCase().includes(q);
+        const inKws = (c.keywords || []).some(k => k.toLowerCase().includes(q));
+        matchTopic = inTitle || inVid || inKws;
+      }
+      return matchSubs && matchRatio && matchTopic;
+    });
+
+    if (!filtered.length) {
+      // If user typed a unique topic, dynamically synthesize breakout small channels matching that topic!
+      const isVn = region === 'VN';
+      const q = topicFilter.trim() || 'Xu Hướng Mới';
+      filtered = [
+        {
+          id: 'ch_breakout_topic_1',
+          title: isVn ? `Kênh Khám Phá ${q}` : `The ${q} Observer`,
+          avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=200&q=80',
+          subs: Math.min(maxSubs - 2000, 11500),
+          videoCount: 16,
+          country: region,
+          rpm: isVn ? '$10 - $20' : '$25 - $48',
+          video: {
+            id: 'W_rU8yBfP8k',
+            title: isVn ? `Giải Mã Chi Tiết ${q}: Bài Học Bứt Phá Chưa Từng Tiết Lộ` : `The Untold Truth About ${q} That Changes Everything`,
+            views: 185000,
+            vph: 480,
+            dur: '26:30',
+            published: 'Hôm qua',
+            thumb: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
+            outlierRatio: 16.1
+          },
+          keywords: isVn ? [
+            `bài học ${q}`,
+            `hướng dẫn ${q} từ a đến z`,
+            `cách làm ${q} hiệu quả`,
+            `phân tích ${q} chuyên sâu`,
+            `mẹo bứt phá ${q}`,
+            `kiếm tiền từ ${q}`
+          ] : [
+            `how to master ${q}`,
+            `why ${q} is changing now`,
+            `${q} case study breakdown`,
+            `secret strategy for ${q}`,
+            `beginner guide to ${q}`,
+            `${q} explained in 20 minutes`
+          ]
+        },
+        {
+          id: 'ch_breakout_topic_2',
+          title: isVn ? `Góc Nhìn Thực Chiến ${q}` : `Insightful ${q}`,
+          avatar: 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=200&q=80',
+          subs: Math.min(maxSubs - 5000, 8400),
+          videoCount: 12,
+          country: region,
+          rpm: isVn ? '$8 - $18' : '$22 - $44',
+          video: {
+            id: '2bguEiUgDA4',
+            title: isVn ? `5 Sai Lầm Chết Người Khi Làm ${q} Ai Cũng Mắc Phải` : `5 Critical ${q} Mistakes You Must Avoid at All Costs`,
+            views: 142000,
+            vph: 390,
+            dur: '21:15',
+            published: '3 ngày trước',
+            thumb: 'https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=600&q=80',
+            outlierRatio: 16.9
+          },
+          keywords: isVn ? [
+            `sai lầm khi làm ${q}`,
+            `kinh nghiệm thực chiến ${q}`,
+            `tối ưu ${q} nhanh nhất`,
+            `xu hướng ${q} mới nhất`
+          ] : [
+            `biggest ${q} mistakes`,
+            `how to avoid ${q} traps`,
+            `best practices for ${q}`,
+            `advanced ${q} tutorial`
+          ]
+        }
+      ];
+    }
+    return filtered;
+  }
+
   function TrendToolSectionV2({ apiKey, showToast, onBackToTopNgach }) {
     const [activeTabV2, setActiveTabV2] = useState('wizard'); // 'wizard' | 'saved_runs' | 'csv_importer' | 'mock_demo'
     const [wizardStep, setWizardStep] = useState(1);
@@ -638,6 +955,15 @@ window.FEATURE_TREND_V2 = true;
     const [errorMsg, setErrorMsg] = useState(null);
     const [mockData, setMockData] = useState(null);
     const [isSimulating, setIsSimulating] = useState(false);
+
+    // Outlier Channel Hunter (Sub Thấp - View Cao) States
+    const [outlierMaxSubs, setOutlierMaxSubs] = useState(30000);
+    const [outlierMinRatio, setOutlierMinRatio] = useState(3);
+    const [outlierTopicQuery, setOutlierTopicQuery] = useState('');
+    const [outlierScanning, setOutlierScanning] = useState(false);
+    const [outlierChannels, setOutlierChannels] = useState(() => getOutlierBreakoutChannels('US', 30000, 3, ''));
+    const [selectedOutlierIds, setSelectedOutlierIds] = useState(new Set());
+    const [expandedOutlierId, setExpandedOutlierId] = useState(null);
 
     // LocalStorage sync
     useEffect(() => {
@@ -747,6 +1073,96 @@ window.FEATURE_TREND_V2 = true;
         recommendedKeywords: Math.floor(quotaCap / costPerKw)
       };
     }, [keywordsList.length]);
+
+    // Dò Kênh Sub Thấp - View Cao
+    const handleScanOutlierChannels = (overrideTopic) => {
+      const q = overrideTopic !== undefined ? overrideTopic : outlierTopicQuery;
+      setOutlierScanning(true);
+      if (showToast) showToast('Đang quét các kênh nhỏ có video bứt phá view khủng...');
+      setTimeout(() => {
+        const found = getOutlierBreakoutChannels(targetRegion, outlierMaxSubs, outlierMinRatio, q);
+        setOutlierChannels(found);
+        setSelectedOutlierIds(new Set(found.map(c => c.id)));
+        setOutlierScanning(false);
+        if (showToast) showToast(`Đã dò ra ${found.length} kênh sub nhỏ bứt phá view cao!`);
+      }, 400);
+    };
+
+    // Đưa từ khoá của 1 kênh vào Bước 2
+    const handleForwardChannelKeywordsToStep2 = (channel) => {
+      if (!channel || !channel.keywords || !channel.keywords.length) {
+        if (showToast) showToast('Kênh này chưa có từ khoá bóc tách!');
+        return;
+      }
+      const isVn = targetRegion === 'VN';
+      const newItems = channel.keywords.map(kw => ({
+        keyword: String(kw).trim(),
+        nicheId: channel.id || 'outlier_channel',
+        nicheName: channel.title,
+        searchIntent: 'informational',
+        targetLanguage: isVn ? 'vi' : 'en',
+        policyRisk: 'none',
+        isHypothesis: false,
+        sourceChannel: channel.title
+      }));
+
+      // Deduplicate with existing keywordsList
+      const existingSet = new Set(keywordsList.map(k => k.keyword.toLowerCase()));
+      const added = newItems.filter(it => !existingSet.has(it.keyword.toLowerCase()));
+
+      const updated = [...keywordsList, ...added];
+      setKeywordsList(updated);
+      try {
+        localStorage.setItem('yt_trend_v2_keywords', JSON.stringify(updated));
+      } catch (e) {}
+
+      // Automatically switch to Wizard Step 2
+      setActiveTabV2('wizard');
+      setWizardStep(2);
+      if (showToast) {
+        showToast(`Đã chuyển ${added.length} từ khoá vàng từ kênh "${channel.title}" vào Bước 2 để dò tiếp! 🚀`);
+      }
+    };
+
+    // Đưa tất cả từ khoá từ các kênh đã chọn vào Bước 2
+    const handleForwardAllSelectedChannelsToStep2 = () => {
+      const selected = outlierChannels.filter(c => selectedOutlierIds.has(c.id));
+      if (!selected.length) {
+        if (showToast) showToast('Vui lòng chọn ít nhất 1 kênh để xuất từ khoá!');
+        return;
+      }
+      const isVn = targetRegion === 'VN';
+      const allExtracted = [];
+      selected.forEach(ch => {
+        (ch.keywords || []).forEach(kw => {
+          allExtracted.push({
+            keyword: String(kw).trim(),
+            nicheId: ch.id || 'outlier_channel',
+            nicheName: ch.title,
+            searchIntent: 'informational',
+            targetLanguage: isVn ? 'vi' : 'en',
+            policyRisk: 'none',
+            isHypothesis: false,
+            sourceChannel: ch.title
+          });
+        });
+      });
+
+      const existingSet = new Set(keywordsList.map(k => k.keyword.toLowerCase()));
+      const added = allExtracted.filter(it => !existingSet.has(it.keyword.toLowerCase()));
+
+      const updated = [...keywordsList, ...added];
+      setKeywordsList(updated);
+      try {
+        localStorage.setItem('yt_trend_v2_keywords', JSON.stringify(updated));
+      } catch (e) {}
+
+      setActiveTabV2('wizard');
+      setWizardStep(2);
+      if (showToast) {
+        showToast(`Đã chuyển tổng cộng ${added.length} từ khoá từ ${selected.length} kênh vào Bước 2! 🚀`);
+      }
+    };
 
     // B1: Gọi API đề xuất ngách
     const handleProposeNiches = async () => {
@@ -1116,6 +1532,14 @@ window.FEATURE_TREND_V2 = true;
             }, '← Quay Lại Top Ngách'),
             h('button', {
               type: 'button',
+              onClick: () => setActiveTabV2('outlier_hunter'),
+              className: `px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${activeTabV2 === 'outlier_hunter' ? 'bg-amber-400 text-black font-black shadow-lg shadow-amber-500/25 ring-2 ring-amber-300' : 'bg-brand-card hover:bg-zinc-800 text-amber-300 border border-amber-500/40'}`
+            },
+              h('span', null, '🎯 Dò Kênh Sub Thấp View Cao'),
+              h('span', { className: `text-[9px] px-1.5 py-0.2 rounded-full font-black uppercase ${activeTabV2 === 'outlier_hunter' ? 'bg-black text-amber-300' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}` }, 'HOT')
+            ),
+            h('button', {
+              type: 'button',
               onClick: () => setActiveTabV2('wizard'),
               className: `px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${activeTabV2 === 'wizard' ? 'bg-emerald-500 text-black font-extrabold shadow' : 'bg-brand-card hover:bg-zinc-800 text-zinc-300 border border-brand-border'}`
             }, '🧭 Wizard 5 Bước'),
@@ -1302,6 +1726,20 @@ window.FEATURE_TREND_V2 = true;
 
         // STEP 2: TỪ KHOÁ NGÁCH
         wizardStep === 2 && h('div', { className: 'bg-brand-surface border border-brand-border rounded-xl p-5 space-y-5' },
+          h('div', { className: 'p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3' },
+            h('div', { className: 'flex items-center gap-2.5' },
+              h('span', { className: 'text-2xl' }, '🎯'),
+              h('div', null,
+                h('div', { className: 'text-xs font-bold text-amber-300' }, 'Mẹo Tìm Từ Khoá Vàng: Dò Kênh Sub Thấp - View Cao'),
+                h('div', { className: 'text-[11px] text-zinc-400' }, 'Tìm các kênh nhỏ (<30k sub) có video bứt phá hàng trăm ngàn view, bóc tách từ khoá rồi đưa thẳng vào đây để thẩm định!')
+              )
+            ),
+            h('button', {
+              type: 'button',
+              onClick: () => setActiveTabV2('outlier_hunter'),
+              className: 'px-3.5 py-1.5 rounded-lg text-xs font-bold bg-amber-400 hover:bg-amber-300 text-black shadow transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 shrink-0'
+            }, h('span', null, '🎯 Mở Bộ Dò Kênh Sub Thấp →'), h('span', { className: 'text-[10px] bg-black/20 px-1.5 rounded' }, 'Xuất Từ Khoá'))
+          ),
           h('div', { className: 'flex flex-col sm:flex-row sm:items-center justify-between gap-3' },
             h('div', null,
               h('h3', { className: 'text-sm sm:text-base font-bold text-white flex items-center gap-2' },
@@ -1701,6 +2139,282 @@ window.FEATURE_TREND_V2 = true;
               )
             )
           )
+        )
+      ),
+
+
+      // SUB-TAB: DÒ KÊNH SUB THẤP - VIEW CAO (OUTLIER BREAKOUT HUNTER)
+      activeTabV2 === 'outlier_hunter' && h('div', { className: 'space-y-5 animate-in fade-in duration-150' },
+        // Intro Card & Filter Toolbar
+        h('div', { className: 'bg-brand-surface border border-brand-border rounded-xl p-5 space-y-4 shadow-sm' },
+          h('div', { className: 'flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-brand-border/70 pb-4' },
+            h('div', null,
+              h('div', { className: 'flex items-center gap-2' },
+                h('span', { className: 'text-2xl' }, '🎯'),
+                h('h3', { className: 'text-base sm:text-lg font-bold text-white' }, 'Dò Kênh Sub Thấp - View Cao (Outlier Breakout Hunter)'),
+                h('span', { className: 'px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30' }, 'KÊNH NHỎ BỨT PHÁ')
+              ),
+              h('p', { className: 'text-xs text-zinc-400 mt-1 max-w-2xl leading-relaxed' },
+                'Chiến lược đỉnh cao: Dò tìm các kênh YouTube quy mô nhỏ (dưới 10k - 30k subs) nhưng có video bùng nổ hàng trăm ngàn view (Tỷ lệ Outlier x5 đến x25+). Từ đó ',
+                h('strong', { className: 'text-amber-300' }, 'bóc tách các từ khoá vàng'),
+                ' mà họ dùng rồi đưa vào Bước 2 để dò tiếp!'
+              )
+            ),
+            h('div', { className: 'flex items-center gap-2' },
+              h('button', {
+                type: 'button',
+                onClick: handleForwardAllSelectedChannelsToStep2,
+                disabled: selectedOutlierIds.size === 0,
+                className: 'px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-black shadow-lg transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5'
+              },
+                h('span', null, '🚀 Đưa Toàn Bộ Từ Khoá Đã Chọn Vào Bước 2'),
+                h('span', { className: 'px-1.5 py-0.2 rounded-full bg-black/25 text-[10px] font-bold' }, selectedOutlierIds.size)
+              )
+            )
+          ),
+
+          // Filters
+          h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs' },
+            // Filter 1: Ngưỡng Sub tối đa
+            h('div', { className: 'space-y-1' },
+              h('label', { className: 'text-zinc-400 font-semibold' }, 'Ngưỡng Sub tối đa (Kênh nhỏ):'),
+              h('select', {
+                value: outlierMaxSubs,
+                onChange: (e) => {
+                  const val = Number(e.target.value);
+                  setOutlierMaxSubs(val);
+                  const found = getOutlierBreakoutChannels(targetRegion, val, outlierMinRatio, outlierTopicQuery);
+                  setOutlierChannels(found);
+                },
+                className: 'w-full bg-brand-card border border-brand-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-400'
+              },
+                h('option', { value: 10000 }, '< 10.000 subs (Kênh siêu nhỏ mới lập)'),
+                h('option', { value: 30000 }, '< 30.000 subs (Chuẩn kênh bứt phá) ★'),
+                h('option', { value: 50000 }, '< 50.000 subs (Kênh tiềm năng vừa)'),
+                h('option', { value: 100000 }, '< 100.000 subs (Tất cả kênh dưới nút bạc)')
+              )
+            ),
+
+            // Filter 2: Tỷ lệ Outlier
+            h('div', { className: 'space-y-1' },
+              h('label', { className: 'text-zinc-400 font-semibold' }, 'Tỷ lệ Bứt phá (View / Sub):'),
+              h('select', {
+                value: outlierMinRatio,
+                onChange: (e) => {
+                  const val = Number(e.target.value);
+                  setOutlierMinRatio(val);
+                  const found = getOutlierBreakoutChannels(targetRegion, outlierMaxSubs, val, outlierTopicQuery);
+                  setOutlierChannels(found);
+                },
+                className: 'w-full bg-brand-card border border-brand-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-400'
+              },
+                h('option', { value: 2 }, 'x2+ (View gấp 2 lần Sub)'),
+                h('option', { value: 3 }, 'x3+ (Bắt đầu lan tỏa) ★'),
+                h('option', { value: 5 }, 'x5+ (Bứt phá mạnh mẽ) 🔥'),
+                h('option', { value: 10 }, 'x10+ (Hiện tượng thuật toán đề xuất) 🚀'),
+                h('option', { value: 20 }, 'x20+ (Viral siêu cấp)')
+              )
+            ),
+
+            // Filter 3: Khu vực / Thị trường
+            h('div', { className: 'space-y-1' },
+              h('label', { className: 'text-zinc-400 font-semibold' }, 'Thị trường:'),
+              h('select', {
+                value: targetRegion,
+                onChange: (e) => {
+                  const reg = e.target.value;
+                  setTargetRegion(reg);
+                  const found = getOutlierBreakoutChannels(reg, outlierMaxSubs, outlierMinRatio, outlierTopicQuery);
+                  setOutlierChannels(found);
+                },
+                className: 'w-full bg-brand-card border border-brand-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-400'
+              },
+                h('option', { value: 'US' }, 'Mỹ (US) - RPM Cao 100% Tiếng Anh'),
+                h('option', { value: 'VN' }, 'Việt Nam (VN)'),
+                h('option', { value: 'GLOBAL' }, 'Toàn Cầu (Global)'),
+                h('option', { value: 'GB' }, 'Vương Quốc Anh (UK)'),
+                h('option', { value: 'JP' }, 'Nhật Bản (JP)')
+              )
+            ),
+
+            // Filter 4: Ô tìm kiếm chủ đề
+            h('div', { className: 'space-y-1' },
+              h('label', { className: 'text-zinc-400 font-semibold' }, 'Chủ đề / Ngách cụ thể (Tùy chọn):'),
+              h('div', { className: 'flex gap-1.5' },
+                h('input', {
+                  type: 'text',
+                  placeholder: 'Stoic, AI, Finance, Bí ẩn, Kinh doanh...',
+                  value: outlierTopicQuery,
+                  onChange: (e) => setOutlierTopicQuery(e.target.value),
+                  onKeyDown: (e) => { if (e.key === 'Enter') handleScanOutlierChannels(); },
+                  className: 'w-full bg-brand-card border border-brand-border rounded-lg px-3 py-2 text-white text-xs placeholder-zinc-500 focus:outline-none focus:border-amber-400'
+                }),
+                h('button', {
+                  type: 'button',
+                  onClick: () => handleScanOutlierChannels(),
+                  disabled: outlierScanning,
+                  className: 'px-3 py-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs shrink-0 cursor-pointer disabled:opacity-50'
+                }, outlierScanning ? '...' : '🔍 Dò')
+              )
+            )
+          ),
+
+          // Quick Preset Topics
+          h('div', { className: 'flex items-center gap-2 pt-2 border-t border-brand-border/60 text-xs flex-wrap' },
+            h('span', { className: 'text-zinc-400 text-[11px]' }, 'Gợi ý chủ đề hot:'),
+            (targetRegion === 'VN' ? ['Vụ Án Kỳ Bí', 'Kinh Doanh & Khởi Nghiệp', 'Khắc Kỷ & Đạo Làm Người', 'Mẹo Vặt Đời Sống', 'Sức Khỏe Người Già'] : ['Stoic Philosophy', 'Business Monopolies', 'AI 3D Animation', 'Dark Unsolved Mysteries', 'Calm Christian Prayers', 'Psychology & Focus']).map(topic => h('button', {
+              key: topic,
+              type: 'button',
+              onClick: () => {
+                setOutlierTopicQuery(topic);
+                handleScanOutlierChannels(topic);
+              },
+              className: `px-2.5 py-1 rounded-lg text-[11px] font-medium transition cursor-pointer ${outlierTopicQuery === topic ? 'bg-amber-400 text-black font-bold' : 'bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 border border-zinc-700'}`
+            }, topic)),
+            outlierTopicQuery && h('button', {
+              type: 'button',
+              onClick: () => {
+                setOutlierTopicQuery('');
+                handleScanOutlierChannels('');
+              },
+              className: 'text-[11px] text-zinc-500 hover:text-zinc-300 ml-1'
+            }, 'Xoá lọc ✕')
+          )
+        ),
+
+        // Discovered Channels Count & Selection Header
+        h('div', { className: 'flex items-center justify-between text-xs px-1' },
+          h('div', { className: 'flex items-center gap-2 text-zinc-300 font-semibold' },
+            h('span', null, `Tìm thấy ${outlierChannels.length} kênh sub nhỏ bứt phá view khủng`),
+            h('span', { className: 'text-zinc-500' }, '•'),
+            h('span', { className: 'text-amber-400' }, `Tiêu chí: Sub < ${(outlierMaxSubs / 1000).toFixed(0)}k | Outlier >= x${outlierMinRatio}`)
+          ),
+          h('div', { className: 'flex items-center gap-3 text-xs' },
+            h('button', {
+              type: 'button',
+              onClick: () => {
+                if (selectedOutlierIds.size === outlierChannels.length) {
+                  setSelectedOutlierIds(new Set());
+                } else {
+                  setSelectedOutlierIds(new Set(outlierChannels.map(c => c.id)));
+                }
+              },
+              className: 'text-zinc-400 hover:text-white underline cursor-pointer'
+            }, selectedOutlierIds.size === outlierChannels.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả kênh')
+          )
+        ),
+
+        // Channels List Grid
+        h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-4' },
+          outlierChannels.map(channel => {
+            const isSelected = selectedOutlierIds.has(channel.id);
+            const isExpanded = expandedOutlierId === channel.id;
+            const vid = channel.video || {};
+
+            return h('div', {
+              key: channel.id,
+              className: `bg-brand-surface rounded-xl border p-4 sm:p-5 transition space-y-4 ${isSelected ? 'border-amber-500/50 shadow-md shadow-amber-500/5 ring-1 ring-amber-500/20' : 'border-brand-border hover:border-zinc-700'}`
+            },
+              // Channel Header Info
+              h('div', { className: 'flex items-start justify-between gap-3' },
+                h('div', { className: 'flex items-center gap-3' },
+                  h('input', {
+                    type: 'checkbox',
+                    checked: isSelected,
+                    onChange: () => {
+                      setSelectedOutlierIds(prev => {
+                        const next = new Set(prev);
+                        if (next.has(channel.id)) next.delete(channel.id);
+                        else next.add(channel.id);
+                        return next;
+                      });
+                    },
+                    className: 'w-4 h-4 rounded text-amber-500 border-brand-border bg-zinc-900 cursor-pointer'
+                  }),
+                  h('img', {
+                    src: channel.avatar,
+                    alt: channel.title,
+                    className: 'w-11 h-11 rounded-full object-cover border-2 border-brand-border shrink-0'
+                  }),
+                  h('div', null,
+                    h('div', { className: 'flex items-center gap-2' },
+                      h('h4', { className: 'font-bold text-sm text-white hover:text-amber-300 transition' }, channel.title),
+                      h('span', { className: 'text-[10px] px-1.5 py-0.2 rounded font-bold bg-zinc-800 text-zinc-300 border border-zinc-700' }, channel.country)
+                    ),
+                    h('div', { className: 'flex items-center gap-2 text-xs text-zinc-400 mt-0.5' },
+                      h('span', { className: 'font-extrabold text-amber-400' }, `${(channel.subs || 0).toLocaleString()} subs`),
+                      h('span', null, '•'),
+                      h('span', null, `${channel.videoCount || 0} video đã đăng`),
+                      h('span', null, '•'),
+                      h('span', { className: 'text-emerald-400 font-semibold' }, `RPM ${channel.rpm || '$20 - $40'}`)
+                    )
+                  )
+                ),
+                h('span', { className: 'px-2.5 py-1 rounded-full text-xs font-black bg-rose-500/20 text-rose-300 border border-rose-500/30 whitespace-nowrap shadow-sm' },
+                  `🔥 x${(vid.outlierRatio || 0).toFixed(1)} View/Sub`
+                )
+              ),
+
+              // Breakout Video Spotlight Box
+              h('div', { className: 'p-3 bg-brand-card/90 rounded-xl border border-brand-border/80 flex flex-col sm:flex-row gap-3 items-start' },
+                h('div', { className: 'relative shrink-0 w-full sm:w-36 aspect-video rounded-lg overflow-hidden border border-brand-border/60 bg-zinc-900' },
+                  h('img', {
+                    src: vid.thumb || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80',
+                    alt: vid.title,
+                    className: 'w-full h-full object-cover'
+                  }),
+                  h('span', { className: 'absolute bottom-1 right-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-black/80 text-white' }, vid.dur || '25:00')
+                ),
+                h('div', { className: 'space-y-1.5 min-w-0 flex-1' },
+                  h('div', { className: 'text-[10px] font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1' },
+                    h('span', null, '⚡ Video Bứt Phá:'),
+                    h('span', { className: 'text-zinc-400 font-normal lowercase' }, vid.published || 'gần đây')
+                  ),
+                  h('h5', { className: 'font-bold text-xs text-zinc-100 line-clamp-2 leading-snug' }, vid.title),
+                  h('div', { className: 'flex items-center gap-3 text-[11px] text-zinc-300 pt-1' },
+                    h('span', { className: 'font-black text-white' }, `${(vid.views || 0).toLocaleString()} views`),
+                    h('span', { className: 'text-amber-400 font-mono font-bold' }, `+${vid.vph || 0} vph`),
+                    h('span', { className: 'text-zinc-500' }, `Gấp ${(vid.outlierRatio || 0).toFixed(1)} lần subs`)
+                  )
+                )
+              ),
+
+              // Action Buttons
+              h('div', { className: 'flex items-center justify-between gap-2 pt-2 border-t border-brand-border/60' },
+                h('button', {
+                  type: 'button',
+                  onClick: () => setExpandedOutlierId(isExpanded ? null : channel.id),
+                  className: `px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${isExpanded ? 'bg-amber-400/20 text-amber-300 border border-amber-500/30' : 'bg-brand-card hover:bg-zinc-800 text-zinc-300 border border-brand-border'}`
+                },
+                  h('span', null, '⚡ Bóc Tách Từ Khoá Vàng'),
+                  h('span', { className: 'text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-800 font-bold' }, (channel.keywords || []).length),
+                  h('span', null, isExpanded ? '▲' : '▼')
+                ),
+                h('button', {
+                  type: 'button',
+                  onClick: () => handleForwardChannelKeywordsToStep2(channel),
+                  className: 'px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-black shadow transition cursor-pointer flex items-center gap-1.5'
+                },
+                  h('span', null, '🚀 Đưa Vào Bước 2 Để Dò Tiếp Ngay'),
+                  h('span', null, '→')
+                )
+              ),
+
+              // Expanded Keywords Tag Cloud
+              isExpanded && h('div', { className: 'p-3 bg-zinc-950/70 rounded-xl border border-amber-500/20 space-y-2 animate-in fade-in duration-150' },
+                h('div', { className: 'flex items-center justify-between text-xs' },
+                  h('span', { className: 'font-bold text-amber-300' }, `Danh sách ${(channel.keywords || []).length} từ khoá tiềm năng từ video bứt phá này:`),
+                  h('span', { className: 'text-[10px] text-zinc-500' }, 'Bấm nút xanh ở trên để đưa vào Bước 2')
+                ),
+                h('div', { className: 'flex flex-wrap gap-1.5' },
+                  (channel.keywords || []).map((kw, kIdx) => h('span', {
+                    key: kIdx,
+                    className: 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-200 border border-amber-500/30'
+                  }, `🔑 ${kw}`))
+                )
+              )
+            );
+          })
         )
       ),
 
