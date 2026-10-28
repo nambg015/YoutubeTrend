@@ -109,7 +109,13 @@ function getVNNumberBounds(str) {
     }
   }
 
-  const step = multiplier / Math.pow(10, decimals);
+  let step = multiplier / Math.pow(10, decimals);
+  // YouTube Studio Vietnamese UI rounds to 0.1 Tr even when displaying integer "1 Tr"
+  if (multiplier === 1000000 && decimals === 0) {
+    step = 100000;
+  } else if (multiplier === 1000000000 && decimals === 0) {
+    step = 100000000;
+  }
   const halfStep = step / 2;
 
   return {
@@ -121,8 +127,27 @@ function getVNNumberBounds(str) {
   };
 }
 
+function parseDeltaVsNormal(str) {
+  if (!str) return null;
+  const s = String(str).trim();
+  // e.g. "cao hơn 2,3 Tr/118,9 N" or "2,3 Tr/118,9 N" or "cao hơn 981,6 N"
+  const m = s.match(/(?:cao\s*hơn\s*)?([0-9.,]+\s*(?:tỷ|tr|triệu|m|k|n|nghìn|ngàn|b)?)(?:\s*\/\s*([0-9.,]+\s*(?:tỷ|tr|triệu|m|k|n|nghìn|ngàn|b|h|giờ)?))?/i);
+  if (!m) return null;
+
+  const viewsDelta = m[1] ? parseVNNumber(m[1]) : null;
+  const watchHoursDelta = m[2] ? parseVNNumber(m[2]) : null;
+
+  return {
+    viewsDelta,
+    watchHoursDelta,
+    raw: s
+  };
+}
+
 module.exports = {
   detectMultiplier,
   parseVNNumber,
-  getVNNumberBounds
+  getVNNumberBounds,
+  parseDeltaVsNormal
 };
+

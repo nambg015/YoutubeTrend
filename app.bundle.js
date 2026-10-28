@@ -508,6 +508,9 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
   onAddCompetitor,
   showToast
 }) {
+  if (typeof window !== 'undefined' && window.SpyToolSectionV3) {
+    return window.SpyToolSectionV3({ apiKey, isUltraPro, onUpgradePrompt, onAddCompetitor, showToast });
+  }
   const [evidenceImages, setEvidenceImages] = React.useState([]);
   const [isDragging, setIsDragging] = React.useState(false);
 

@@ -85,7 +85,18 @@ function parseSingleDateToken(str) {
   return null;
 }
 
-function parseChartTooltipDate(text) {
+function parseTimeToken(str) {
+  if (!str) return null;
+  const m = String(str).match(/\b([01]?[0-9]|2[0-3]):([0-5][0-9])\b/);
+  if (!m) return null;
+  return {
+    hours: parseInt(m[1], 10),
+    minutes: parseInt(m[2], 10),
+    raw: m[0]
+  };
+}
+
+function parseChartTooltipDate(text, defaultYear = 2026) {
   if (!text) return null;
   const s = String(text);
 
@@ -97,27 +108,74 @@ function parseChartTooltipDate(text) {
 
   const daysElapsed = parseInt(elapsedMatch[1], 10);
   const hoursElapsed = elapsedMatch[2] ? parseInt(elapsedMatch[2], 10) : 0;
+  const totalHoursElapsed = daysElapsed * 24 + hoursElapsed;
+  const totalMsElapsed = totalHoursElapsed * 3600 * 1000;
 
   const baseDateIso = parseSingleDateToken(s);
   if (!baseDateIso) return null;
 
-  const baseDate = new Date(baseDateIso + 'T12:00:00Z');
-  const totalMsElapsed = (daysElapsed * 24 + hoursElapsed) * 3600 * 1000;
-  const pubDate = new Date(baseDate.getTime() - totalMsElapsed);
+  const [yStr, mStr, dStr] = baseDateIso.split('-');
+  const y = parseInt(yStr, 10);
+  const m = parseInt(mStr, 10);
+  const d = parseInt(dStr, 10);
 
-  const estimatedPublishIso = pubDate.toISOString().slice(0, 10);
+  const timeParsed = parseTimeToken(s);
+  let localStartIso;
+  let localEndIso;
+  let estimatedPublishLocal;
+
+  if (timeParsed) {
+    const baseMs = Date.UTC(y, m - 1, d, timeParsed.hours, timeParsed.minutes, 0);
+    const pubMs = baseMs - totalMsElapsed;
+    const pubDate = new Date(pubMs);
+    const yP = pubDate.getUTCFullYear();
+    const mP = String(pubDate.getUTCMonth() + 1).padStart(2, '0');
+    const dP = String(pubDate.getUTCDate()).padStart(2, '0');
+    const hP = String(pubDate.getUTCHours()).padStart(2, '0');
+    const minP = String(pubDate.getUTCMinutes()).padStart(2, '0');
+    const secP = String(pubDate.getUTCSeconds()).padStart(2, '0');
+    estimatedPublishLocal = `${yP}-${mP}-${dP}T${hP}:${minP}:${secP}`;
+
+    // Bucket uncertainty +/- 2 hours in YouTube Studio
+    const startMs = pubMs - 2 * 3600 * 1000;
+    const endMs = pubMs + 2 * 3600 * 1000;
+    localStartIso = new Date(startMs).toISOString().slice(0, 19);
+    localEndIso = new Date(endMs).toISOString().slice(0, 19);
+  } else {
+    // Unspecified time during base date: [00:00:00, 23:59:59]
+    const baseStartMs = Date.UTC(y, m - 1, d, 0, 0, 0);
+    const baseEndMs = Date.UTC(y, m - 1, d, 23, 59, 59);
+    const pubStartMs = baseStartMs - totalMsElapsed;
+    const pubEndMs = baseEndMs - totalMsElapsed;
+    localStartIso = new Date(pubStartMs).toISOString().slice(0, 19);
+    localEndIso = new Date(pubEndMs).toISOString().slice(0, 19);
+
+    const midMs = Math.round((pubStartMs + pubEndMs) / 2);
+    estimatedPublishLocal = new Date(midMs).toISOString().slice(0, 19);
+  }
+
+  const estimatedPublishIso = estimatedPublishLocal.slice(0, 10);
 
   return {
     baseDate: baseDateIso,
+    hasTime: Boolean(timeParsed),
+    timeToken: timeParsed ? timeParsed.raw : null,
     daysElapsed,
     hoursElapsed,
+    totalHoursElapsed,
+    estimatedPublishLocal,
     estimatedPublishIso,
+    localWindow: {
+      start: localStartIso,
+      end: localEndIso
+    },
     uncertaintyRange: [
       addDaysToIso(estimatedPublishIso, -1),
       addDaysToIso(estimatedPublishIso, 1)
     ]
   };
 }
+
 
 function parseStudioDate(text, options = {}) {
   if (!text) return null;
@@ -203,6 +261,8 @@ module.exports = {
   formatIso,
   addDaysToIso,
   parseSingleDateToken,
+  parseTimeToken,
   parseChartTooltipDate,
   parseStudioDate
 };
+
