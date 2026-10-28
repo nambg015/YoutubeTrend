@@ -723,6 +723,17 @@ window.FEATURE_TREND_V2 = true;
       });
     };
 
+    // Toggle select all niches
+    const toggleSelectAllNiches = () => {
+      setSelectedNicheIds(prev => {
+        if (prev.size === nichesList.length) {
+          return new Set();
+        } else {
+          return new Set(nichesList.map(n => n.id));
+        }
+      });
+    };
+
     // B2: Gọi API sinh từ khoá
     const handleGenerateKeywords = async () => {
       const selected = nichesList.filter(n => selectedNicheIds.has(n.id));
