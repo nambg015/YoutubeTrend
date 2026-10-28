@@ -6759,8 +6759,14 @@ function SubscriptionModal({ onClose, showToast, initialTier = 'PRO', onUpgraded
     }
   };
 
-  // VietQR SePay URL
-  const qrUrl = 'https://qr.sepay.vn/img?acc=' + SEPAY_CONFIG.accountNumber + 
+  // VietQR URLs: primary via VietQR.io (chuẩn quốc gia Napas, không bị chặn hotlink) & fallback via SePay
+  const primaryQrUrl = 'https://img.vietqr.io/image/' + 
+    encodeURIComponent((SEPAY_CONFIG.bankName || 'vietinbank').toLowerCase()) + '-' + 
+    SEPAY_CONFIG.accountNumber + '-compact2.png?amount=' + amount + 
+    '&addInfo=' + encodeURIComponent(orderCode) + 
+    '&accountName=' + encodeURIComponent(SEPAY_CONFIG.accountHolder || 'SEPAY');
+
+  const sepayQrUrl = 'https://qr.sepay.vn/img?acc=' + SEPAY_CONFIG.accountNumber + 
     '&bank=' + encodeURIComponent(SEPAY_CONFIG.bankName) + 
     '&amount=' + amount + 
     '&des=' + encodeURIComponent(orderCode) +
@@ -6991,13 +6997,28 @@ function SubscriptionModal({ onClose, showToast, initialTier = 'PRO', onUpgraded
                 {/* QR Image Column */}
                 <div className="flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-lg">
                   <img
-                    src={qrUrl}
-                    alt="VietQR SePay Thanh Toán"
+                    src={primaryQrUrl}
+                    referrerPolicy="no-referrer"
+                    loading="eager"
+                    alt="VietQR Chuyển Khoản Thanh Toán"
                     className="w-56 h-56 object-contain"
+                    onError={(e) => {
+                      if (!e.target.dataset.triedFallback) {
+                        e.target.dataset.triedFallback = '1';
+                        e.target.src = sepayQrUrl;
+                      }
+                    }}
                   />
                   <div className="text-[10px] text-zinc-600 font-bold mt-2 flex items-center gap-1">
-                    <span>⚡ VietQR Tự Động Kích Hoạt Qua SePay</span>
+                    <span>⚡ Quét Bằng Bất Kỳ App Ngân Hàng / MoMo</span>
                   </div>
+                  <a
+                    href={primaryQrUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-blue-600 hover:text-blue-700 underline font-medium mt-0.5">
+                    Mở ảnh QR tab mới nếu mạng chặn ↗
+                  </a>
                 </div>
 
                 {/* Transfer Info Column */}
