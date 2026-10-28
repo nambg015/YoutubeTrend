@@ -786,6 +786,20 @@ window.FEATURE_TREND_V2 = true;
       }
     };
 
+    // Lọc từ khoá theo searchIntent và từ khoá tìm kiếm
+    const filteredKeywords = useMemo(() => {
+      return keywordsList.filter(item => {
+        if (kwIntentFilter !== 'all' && item.searchIntent !== kwIntentFilter) return false;
+        if (kwSearchFilter && !item.keyword.toLowerCase().includes(kwSearchFilter.toLowerCase())) return false;
+        return true;
+      });
+    }, [keywordsList, kwIntentFilter, kwSearchFilter]);
+
+    // Xoá từ khoá khỏi danh sách
+    const handleRemoveKeyword = (kwToRemove) => {
+      setKeywordsList(prev => prev.filter(k => k.keyword !== kwToRemove));
+    };
+
     // B3: Chạy Thẩm định YouTube
     const handleRunYouTubeValidation = async () => {
       if (!keywordsList.length) {

@@ -1,4 +1,6 @@
+node_modules/
 test/
 scratch/
 push_to_github.bat
 *.test.js
+eslint.config.js
