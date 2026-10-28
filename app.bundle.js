@@ -943,44 +943,7 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     className: "p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", null, "ℹ️"), /*#__PURE__*/React.createElement("span", null, initialNotice)),
   /*#__PURE__*/React.createElement("div", { id: "firebase-phone-recaptcha" }),
-  /*#__PURE__*/React.createElement("div", { className: "pt-1 text-center" },
-    /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => setShowFirebaseSetup(prev => !prev),
-      className: "text-[11px] font-semibold text-amber-400 hover:text-amber-300 underline flex items-center justify-center gap-1 mx-auto transition"
-    }, /*#__PURE__*/React.createElement("span", null, "⚙️"), ytFirebasePhoneAuth.isConfigured() ? "Đã cấu hình Firebase SMS (Bấm để xem/đổi)" : "Muốn nhận tin nhắn SMS THẬT về điện thoại? (Bấm để cài Firebase miễn phí)"),
-    showFirebaseSetup && /*#__PURE__*/React.createElement("div", {
-      className: "mt-2 p-3 rounded-xl bg-[#181b26] border border-amber-500/40 text-left space-y-2 animate-in fade-in duration-150"
-    },
-      /*#__PURE__*/React.createElement("div", { className: "text-xs font-bold text-amber-300 flex items-center gap-1.5" },
-        /*#__PURE__*/React.createElement("span", null, "🔥"), "Cấu hình Google Firebase (Gửi 10.000 SMS Thật / Tháng Miễn Phí)"
-      ),
-      /*#__PURE__*/React.createElement("p", { className: "text-[11px] text-zinc-300 leading-relaxed" },
-        "1. Vào ", /*#__PURE__*/React.createElement("a", { href: "https://console.firebase.google.com", target: "_blank", rel: "noreferrer", className: "text-amber-400 font-bold underline" }, "console.firebase.google.com"), " -> Tạo dự án miễn phí.", /*#__PURE__*/React.createElement("br", null),
-        "2. Bật ", /*#__PURE__*/React.createElement("b", { className: "text-white" }, "Authentication -> Sign-in method -> Phone (Điện thoại)"), ".", /*#__PURE__*/React.createElement("br", null),
-        "3. Vào ", /*#__PURE__*/React.createElement("b", { className: "text-white" }, "Project Settings -> General -> Web App"), ", sao chép đoạn ", /*#__PURE__*/React.createElement("code", { className: "text-amber-300 font-mono text-[10px] bg-black/40 px-1 py-0.5 rounded" }, "const firebaseConfig = { ... }"), " và dán vào dưới:"
-      ),
-      /*#__PURE__*/React.createElement("textarea", {
-        rows: 4,
-        value: firebaseConfigInput,
-        onChange: e => setFirebaseConfigInput(e.target.value),
-        placeholder: 'Dán firebaseConfig tại đây: { apiKey: "...", projectId: "...", ... }',
-        className: "w-full bg-[#101217] border border-zinc-700 rounded-lg p-2 text-[11px] font-mono text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-500"
-      }),
-      /*#__PURE__*/React.createElement("div", { className: "flex justify-end gap-2" },
-        /*#__PURE__*/React.createElement("button", {
-          type: "button",
-          onClick: () => setShowFirebaseSetup(false),
-          className: "px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-400 hover:text-white transition"
-        }, "Đóng"),
-        /*#__PURE__*/React.createElement("button", {
-          type: "button",
-          onClick: handleSaveFirebaseConfig,
-          className: "px-3.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black transition shadow"
-        }, "Lưu Cấu Hình Firebase")
-      )
-    )
-  ), 
+ 
 
   // MODE: VERIFY PHONE (Bắt buộc xác minh SĐT cho cả Gmail và Tài khoản Web)
   authMode === 'verify_phone' ? /*#__PURE__*/React.createElement("form", {
