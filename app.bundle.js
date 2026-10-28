@@ -365,7 +365,15 @@ const ytFirebasePhoneAuth = {
       if (raw) return JSON.parse(raw);
     } catch (e) {}
     if (typeof window !== 'undefined' && window.FIREBASE_CONFIG) return window.FIREBASE_CONFIG;
-    return null;
+    return {
+      apiKey: "AIzaSyBGmBHW0FA2NeHneybZwps_s-ZBL_t2KUg",
+      authDomain: "sdt2804-84801.firebaseapp.com",
+      projectId: "sdt2804-84801",
+      storageBucket: "sdt2804-84801.firebasestorage.app",
+      messagingSenderId: "65560942545",
+      appId: "1:65560942545:web:0b640f38042dd36a2cb2f0",
+      measurementId: "G-FYY9WYNKX0"
+    };
   },
   saveConfig(cfg) {
     try {
@@ -392,6 +400,11 @@ const ytFirebasePhoneAuth = {
   setupRecaptcha(containerId = 'firebase-recaptcha-verifier') {
     if (typeof firebase === 'undefined' || !this.init()) return null;
     try {
+      if (typeof document !== 'undefined' && !document.getElementById(containerId)) {
+        const d = document.createElement('div');
+        d.id = containerId;
+        document.body.appendChild(d);
+      }
       if (window.phoneRecaptchaVerifier) {
         try { window.phoneRecaptchaVerifier.clear(); } catch (e) {}
       }
