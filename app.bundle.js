@@ -429,7 +429,7 @@ const ytFirebasePhoneAuth = {
       return null;
     }
   },
-  async sendRealSms(rawPhone, containerId = 'firebase-recaptcha-verifier') {
+  async sendRealSms(rawPhone) {
     let clean = (rawPhone || '').replace(/[^0-9]/g, '');
     if (!clean) return { success: false, error: 'Số điện thoại trống!' };
     let intlPhone = clean;
@@ -453,12 +453,35 @@ const ytFirebasePhoneAuth = {
       window.confirmationResult = confirmationResult;
       return { success: true, intlPhone };
     } catch (err) {
-      console.error('Firebase SMS error:', err);
+      console.error('Firebase SMS error details:', err.code, err.message);
+      
+      // Reset verifier in catch block to ensure fresh state for retry
+      try {
+        if (window.phoneRecaptchaVerifier) {
+          window.phoneRecaptchaVerifier.clear();
+          window.phoneRecaptchaVerifier = null;
+        }
+        const existing = document.getElementById('firebase-phone-recaptcha-dynamic');
+        if (existing && existing.parentNode) {
+          existing.parentNode.removeChild(existing);
+        }
+      } catch (cleanErr) {}
+
       let msg = err.message || 'Lỗi gửi tin nhắn SMS từ Google Firebase';
-      if (err.code === 'auth/invalid-phone-number') msg = 'Số điện thoại không hợp lệ theo chuẩn quốc tế (+84)!';
-      if (err.code === 'auth/too-many-requests') msg = 'Đã gửi quá nhiều SMS trong thời gian ngắn! Vui lòng đợi vài phút rồi thử lại.';
-      if (err.code === 'auth/quota-exceeded') msg = 'Hạn mức SMS miễn phí của dự án Firebase đã đạt giới hạn hôm nay!';
-      return { success: false, error: msg };
+      if (err.code === 'auth/too-many-requests') {
+        msg = 'Bạn đã gửi quá nhiều yêu cầu trong thời gian ngắn. Vui lòng đợi 2-5 phút rồi thử lại!';
+      } else if (err.code === 'auth/quota-exceeded') {
+        msg = 'Dự án Firebase đã hết hạn mức gửi SMS hôm nay. Vui lòng thử lại sau!';
+      } else if (err.code === 'auth/invalid-phone-number') {
+        msg = 'Số điện thoại không đúng định dạng quốc tế (+84). Vui lòng kiểm tra lại!';
+      } else if (err.code === 'auth/operation-not-allowed') {
+        msg = 'Chưa bật Phone Auth hoặc chưa cho phép vùng Việt Nam (+84) trong Firebase Console (SMS Region Policy).';
+      } else if (err.code === 'auth/captcha-check-failed' || err.code === 'auth/invalid-app-credential') {
+        msg = 'Xác thực reCAPTCHA không thành công hoặc tên miền youtubetrend-rho.vercel.app chưa được uỷ quyền trong Firebase.';
+      } else if (err.code === 'auth/network-request-failed') {
+        msg = 'Lỗi kết nối mạng đến máy chủ Google. Vui lòng kiểm tra đường truyền!';
+      }
+      return { success: false, error: msg, code: err.code };
     }
   },
   async verifyRealOtp(otpCode) {
@@ -567,11 +590,12 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
   };
 
   const handleSendOtp = async () => {
+    if (isSendingSms || otpCountdown > 0) return; // Prevent double click
     setErrorMsg('');
     setSuccessMsg('');
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     if (cleanPhone.length < 9 || cleanPhone.length > 11) {
-      setErrorMsg('Vui lòng nhập số điện thoại hợp lệ (10 chữ số, ví dụ 0912345678)!');
+      setErrorMsg('Vui lòng nhập số điện thoại hợp lệ (10 chữ số, ví dụ 0886368572)!');
       return;
     }
 
@@ -595,16 +619,17 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     }
 
     setIsSendingSms(true);
-    // Gửi tin nhắn SMS thật 100% qua Google Firebase Blaze
-    const fbRes = await ytFirebasePhoneAuth.sendRealSms(cleanPhone, 'firebase-phone-recaptcha');
+    setOtpCountdown(60); // Lock button immediately for 60 seconds
+
+    const fbRes = await ytFirebasePhoneAuth.sendRealSms(cleanPhone);
     setIsSendingSms(false);
     if (fbRes.success) {
       setOtpSent(true);
-      setOtpCountdown(60);
       setSuccessMsg('📱 ĐÃ GỬI TIN NHẮN SMS THẬT từ Google đến ' + cleanPhone + '! Vui lòng mở tin nhắn trên điện thoại để lấy mã 6 số.');
       if (showToast) showToast('📱 Tin nhắn SMS đang gửi đến máy ' + cleanPhone + '... Vui lòng kiểm tra điện thoại!', 'success');
       return;
     } else {
+      setOtpCountdown(0); // Unlock if immediate failure
       setErrorMsg('Lỗi gửi SMS Firebase: ' + fbRes.error);
       return;
     }
@@ -709,17 +734,7 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     }
 
     if (authMode === 'register') {
-      // 1. Verify reCAPTCHA
-      let currentToken = recaptchaToken;
-      if (!currentToken && window.grecaptcha && widgetIdRef.current !== null) {
-        try {
-          currentToken = window.grecaptcha.getResponse(widgetIdRef.current);
-        } catch (err) {}
-      }
-      if (!currentToken) {
-        setErrorMsg('Vui lòng tích chọn "Tôi không phải là người máy" (Google reCAPTCHA)!');
-        return;
-      }
+// reCAPTCHA verified via Firebase Phone Auth
 
       // 2. Verify Confirm Password
       const cleanConfirm = confirmPassword.trim();
@@ -965,9 +980,9 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
   }), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: handleSendOtp,
-    disabled: otpCountdown > 0,
-    className: "px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap " + (otpCountdown > 0 ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer")
-  }, otpCountdown > 0 ? ("Gửi lại (" + otpCountdown + "s)") : (otpSent ? "Gửi lại OTP" : "Gửi mã OTP")))),
+    disabled: isSendingSms || otpCountdown > 0,
+    className: "px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 " + ((isSendingSms || otpCountdown > 0) ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer")
+  }, isSendingSms ? "Đang gửi SMS..." : (otpCountdown > 0 ? ("Gửi lại (" + otpCountdown + "s)") : (otpSent ? "Gửi lại OTP" : "Gửi mã OTP"))))),
 
   /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
     className: "text-[11px] font-semibold text-zinc-300 block mb-1"
@@ -1116,18 +1131,7 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
         placeholder: "Nhập mã OTP 6 số...",
         className: "w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 font-mono tracking-widest text-center focus:outline-none focus:border-emerald-500"
       }))
-    ), authMode === 'register' && /*#__PURE__*/React.createElement("div", {
-      className: "p-3 bg-[#181b26] rounded-xl border border-[#232738] space-y-2 flex flex-col items-center"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between text-xs w-full"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-zinc-300 font-semibold flex items-center gap-1.5"
-    }, /*#__PURE__*/React.createElement("span", null, "🛡️"), " Xác thực Google reCAPTCHA chống Bot:")), /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-center w-full overflow-hidden"
-    }, /*#__PURE__*/React.createElement("div", {
-      ref: recaptchaContainerRef,
-      className: "my-1 scale-90 sm:scale-100 origin-center"
-    }))), 
+    ),  
     successMsg && /*#__PURE__*/React.createElement("div", {
       className: "p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs"
     }, "✓ ", successMsg),
