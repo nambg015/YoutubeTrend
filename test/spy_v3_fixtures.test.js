@@ -6,8 +6,8 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
 
-const { parseVNNumber, getVNNumberBounds, parseDeltaVsNormal } = require('../api/lib/vn_parser');
-const { parseStudioDate, parseChartTooltipDate } = require('../api/lib/date_parser');
+const { parseVNNumber, getVNNumberBounds, parseDeltaVsNormal } = require('../api/_lib/vn_parser');
+const { parseStudioDate, parseChartTooltipDate } = require('../api/_lib/date_parser');
 const {
   derivePublishWindow,
   deriveCaptureTime,
@@ -18,7 +18,7 @@ const {
   deriveLanguageHint,
   computeSameChannelLikelihood,
   buildCaseFileFromClues
-} = require('../api/lib/case_file');
+} = require('../api/_lib/case_file');
 
 describe('SPY v3 Unit Tests: Parsers & Mathematical Bounds', () => {
   test('parseVNNumber and getVNNumberBounds for Studio numbers', () => {

@@ -1,0 +1,9 @@
+{
+  "name": "youtrend-analytics",
+  "version": "2.0.0",
+  "private": true,
+  "description": "YouTube Trend & Niche Intelligence Web Application",
+  "scripts": {
+    "test": "node --test test/trend_v2_scoring.test.js test/trend_v2_provider.test.js test/trend_v2_ai.test.js"
+  }
+}

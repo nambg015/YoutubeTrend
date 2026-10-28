@@ -15,7 +15,7 @@ const {
   buildKeywordsPrompt,
   generateFallbackNiches,
   generateFallbackKeywords
-} = require('../api/lib/trend_v2/ai_generator');
+} = require('../api/_lib/trend_v2/ai_generator');
 
 const trendAiHandler = require('../api/trend-v2-ai');
 

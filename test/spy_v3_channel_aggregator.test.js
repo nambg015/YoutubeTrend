@@ -13,7 +13,7 @@ const {
   enrichChannelsAndBaselines,
   scoreAndRankChannels,
   getRelaxationSteps
-} = require('../api/lib/channel_aggregator');
+} = require('../api/_lib/channel_aggregator');
 
 describe('SPY v3 Video Filtering & Channel Grouping', () => {
   const caseFiles = [

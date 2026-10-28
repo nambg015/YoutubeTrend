@@ -13,7 +13,7 @@ const {
   normalizeCrossBatches,
   createTrendsBatches,
   extractKeywordFromHeader
-} = require('../api/lib/trend_v2/trends_provider');
+} = require('../api/_lib/trend_v2/trends_provider');
 
 describe('Trend v2 Core Engine: CSV Parser & Header Extraction', () => {
   test('extractKeywordFromHeader strips region suffixes and whitespace', () => {

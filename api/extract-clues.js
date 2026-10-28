@@ -1,7 +1,7 @@
 const https = require('https');
-const { parseVNNumber, getVNNumberBounds } = require('./lib/vn_parser');
-const { validateVisibleTitleChars, createClue } = require('./lib/types_and_clues');
-const { parseStudioDate } = require('./lib/date_parser');
+const { parseVNNumber, getVNNumberBounds } = require('./_lib/vn_parser');
+const { validateVisibleTitleChars, createClue } = require('./_lib/types_and_clues');
+const { parseStudioDate } = require('./_lib/date_parser');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 

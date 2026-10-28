@@ -14,13 +14,13 @@ const {
   calculateSustainabilityScore,
   calculateFeasibilityScore,
   calculatePolicyScore
-} = require('../api/lib/trend_v2/money_score');
+} = require('../api/_lib/trend_v2/money_score');
 
 const {
   estimateQuotaBudget,
   analyzeYouTubeMetrics,
   createMockYouTubeValidation
-} = require('../api/lib/trend_v2/yt_validator');
+} = require('../api/_lib/trend_v2/yt_validator');
 
 describe('Trend v2: Money Score Engine & 6 Pillars', () => {
   test('resolveCpmTier properly categorizes RPM strings', () => {

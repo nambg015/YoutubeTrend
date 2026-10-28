@@ -6,7 +6,7 @@ const {
   buildKeywordsPrompt,
   generateFallbackNiches,
   generateFallbackKeywords
-} = require('./lib/trend_v2/ai_generator');
+} = require('./_lib/trend_v2/ai_generator');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 

@@ -10,7 +10,7 @@ const {
   estimateScanQuota,
   createInitialSlices,
   runCandidateScan
-} = require('../api/lib/candidate_scanner');
+} = require('../api/_lib/candidate_scanner');
 
 describe('SPY v3 Internal DB Search (0 Quota)', () => {
   test('searchInternalDatabase filters videos matching window and view threshold', () => {
