@@ -597,8 +597,8 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
         if (showToast) showToast('📱 Tin nhắn SMS đang gửi đến máy ' + cleanPhone + '... Vui lòng kiểm tra điện thoại!', 'success');
         return;
       } else {
-        setErrorMsg('Lỗi gửi SMS Firebase: ' + fbRes.error);
-        return;
+        console.warn('Firebase SMS provider error:', fbRes.error);
+        window.confirmationResult = null; // reset to allow fallback OTP
       }
     }
 
