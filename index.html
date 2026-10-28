@@ -6773,10 +6773,7 @@ function SubscriptionModal({ onClose, showToast, initialTier = 'PRO', onUpgraded
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#232738] pb-3 shrink-0">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 font-mono text-[10px] font-bold border border-red-500/40">
-              <span>⚠️</span> ĐÂY LÀ TÍNH NĂNG TRẢ PHÍ (GÓI PRO & ULTRA PRO)
-            </div>
-            <h3 className="text-base sm:text-lg font-black text-white mt-1">
+            <h3 className="text-base sm:text-lg font-black text-white">
               Hệ Thống Gói Dịch Vụ YouTrend
             </h3>
           </div>
@@ -8925,7 +8922,9 @@ function TopNgachSection({
   onApproveTrend,
   onDismissTrend,
   onCopyRemakePrompt,
-  onOpenPendingTrendsModal
+  onOpenPendingTrendsModal,
+  isPro = false,
+  onUpgradePrompt
 }) {
   const STORAGE_KEY = 'yt_real_discovered_niches_v6';
   const TIME_KEY = 'yt_real_discovered_niches_time_v6';
@@ -9039,6 +9038,77 @@ function TopNgachSection({
 
   const [videoFormatFilter, setVideoFormatFilter] = React.useState('all');
 
+  // Chủ đề demo cơ bản dành cho tài khoản Free
+  const DEFAULT_DEMO_NICHE = React.useMemo(() => ({
+    id: 'demo_niche_free',
+    name: 'Mẹo Vặt Đời Sống & Tiện Ích Đơn Giản',
+    category: 'Demo Dùng Thử Hôm Nay',
+    rpm: '$12 - $18',
+    avgRpm: 15,
+    maxViews: 38400,
+    maxOutlier: 4.8,
+    channelsCount: 2,
+    isDemo: true,
+    videos: [
+      {
+        id: 'demo_v1',
+        title: '5 Mẹo Dọn Dẹp Bếp Cực Nhanh Tiết Kiệm Nửa Thời Gian Nấu Ăn',
+        channel: 'Mẹo Nhỏ Đời Sống',
+        channelId: 'UC_demo_1',
+        subs: 5800,
+        views: 38400,
+        vph: 85,
+        dur: 450,
+        thumb: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=640&q=80',
+        published: new Date(Date.now() - 864e5).toISOString(),
+        country: 'VN',
+        outlierRatio: 6.6
+      },
+      {
+        id: 'demo_v2',
+        title: 'Cách Gấp Quần Áo Siêu Gọn Cho Tủ Nhỏ Không Bị Nhăn',
+        channel: 'Góc Gọn Gàng',
+        channelId: 'UC_demo_2',
+        subs: 3900,
+        views: 22100,
+        vph: 52,
+        dur: 360,
+        thumb: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=640&q=80',
+        published: new Date(Date.now() - 2 * 864e5).toISOString(),
+        country: 'VN',
+        outlierRatio: 5.6
+      },
+      {
+        id: 'demo_v3',
+        title: 'Tự Làm Dung Dịch Tẩy Kính Sáng Bóng Từ Giấm Và Nước Ấm',
+        channel: 'Tiện Ích Mini',
+        channelId: 'UC_demo_3',
+        subs: 2800,
+        views: 13500,
+        vph: 30,
+        dur: 310,
+        thumb: 'https://images.unsplash.com/photo-1585421514738-01798e348b17?w=640&q=80',
+        published: new Date(Date.now() - 3 * 864e5).toISOString(),
+        country: 'VN',
+        outlierRatio: 4.8
+      }
+    ]
+  }), []);
+
+  // Chủ đề cùi nhất dò ra hôm nay (hoặc ngách cơ bản nếu chưa quét)
+  const demoNiche = React.useMemo(() => {
+    if (realDiscoveredNiches && realDiscoveredNiches.length > 0) {
+      const sorted = [...realDiscoveredNiches].sort((a, b) => {
+        const outA = Number(a.maxOutlier) || 0;
+        const outB = Number(b.maxOutlier) || 0;
+        if (outA !== outB) return outA - outB;
+        return (Number(a.maxViews) || 0) - (Number(b.maxViews) || 0);
+      });
+      return sorted[0];
+    }
+    return DEFAULT_DEMO_NICHE;
+  }, [realDiscoveredNiches, DEFAULT_DEMO_NICHE]);
+
   // Lắng nghe cập nhật khi trend mới được duyệt từ modal
   React.useEffect(() => {
     const handleUpdate = (e) => {
@@ -9131,8 +9201,9 @@ function TopNgachSection({
 
   // Ngách đang chọn
   const activeNiche = React.useMemo(() => {
+    if (!isPro) return demoNiche;
     return visibleNiches.find(n => n.id === activeNicheId) || visibleNiches[0] || null;
-  }, [visibleNiches, activeNicheId]);
+  }, [isPro, demoNiche, visibleNiches, activeNicheId]);
 
   // Phân loại định dạng video: 'short' | 'long' | 'live'
   const getVideoFormat = React.useCallback((v) => {
@@ -9496,8 +9567,13 @@ function TopNgachSection({
         <div className="flex items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                Top Ngách Xu Hướng
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <span>Top Ngách Xu Hướng</span>
+                {!isPro && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Bản Demo (1 Ngách)
+                  </span>
+                )}
               </h2>
               {realDiscoveredNiches.length > 0 && (
                 <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700">
@@ -9515,7 +9591,14 @@ function TopNgachSection({
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <button
             type="button"
-            onClick={() => onOpenPendingTrendsModal ? onOpenPendingTrendsModal() : null}
+            onClick={() => {
+              if (!isPro) {
+                if (typeof showToast === 'function') showToast('Đề xuất trend mới hàng ngày dành riêng cho gói PRO!', 'info');
+                if (onUpgradePrompt) onUpgradePrompt();
+                return;
+              }
+              if (onOpenPendingTrendsModal) onOpenPendingTrendsModal();
+            }}
             className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold border transition cursor-pointer shrink-0 flex items-center gap-2 ${
               autoUpdateData?.pendingTrends?.length > 0
                 ? 'bg-purple-600/20 text-purple-200 border-purple-500/40 hover:bg-purple-600/30 shadow-sm'
@@ -9548,7 +9631,13 @@ function TopNgachSection({
           {realDiscoveredNiches.length > 0 && (
             <button
               type="button"
-              onClick={handleClearCache}
+              onClick={() => {
+                if (!isPro) {
+                  if (onUpgradePrompt) onUpgradePrompt();
+                  return;
+                }
+                handleClearCache();
+              }}
               className="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shrink-0"
               title="Xóa cache để quét lại ngách mới">
               Xóa Cache
@@ -9574,7 +9663,14 @@ function TopNgachSection({
           ) : (
             <button
               type="button"
-              onClick={() => runDeepNicheDiscovery()}
+              onClick={() => {
+                if (!isPro) {
+                  if (typeof showToast === 'function') showToast('Quét ngách tự động dành riêng cho gói PRO!', 'info');
+                  if (onUpgradePrompt) onUpgradePrompt();
+                  return;
+                }
+                runDeepNicheDiscovery();
+              }}
               className="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition cursor-pointer shadow-sm shrink-0 whitespace-nowrap">
               Quét Ngách Mới
             </button>
@@ -9617,7 +9713,71 @@ function TopNgachSection({
           )}
         </div>
 
-        {realDiscoveredNiches.length === 0 ? (
+        {!isPro ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+            {/* 1. Ngách cùi nhất / Demo hôm nay (Mở cho xem) */}
+            <div
+              onClick={() => setActiveNicheId(demoNiche.id)}
+              className="p-3 rounded-xl border border-zinc-300 bg-zinc-900 shadow-md ring-1 ring-zinc-400/40 flex flex-col justify-between min-h-[92px] select-none cursor-pointer">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 leading-none">
+                  Demo Miễn Phí
+                </span>
+                <span className="text-[11px] font-bold text-amber-300">
+                  🔥 x{demoNiche.maxOutlier || 4.8} View/Sub
+                </span>
+              </div>
+              <div className="my-1.5">
+                <h3 className="text-xs sm:text-[13px] font-bold text-white line-clamp-2 leading-snug">
+                  {demoNiche.name}
+                </h3>
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-1.5 border-t border-zinc-800/80">
+                <span className="truncate">
+                  👁️ Max: {typeof fmt === 'function' ? fmt(demoNiche.maxViews) : demoNiche.maxViews}
+                </span>
+                <span className="shrink-0 text-zinc-300 font-medium">
+                  📺 {demoNiche.channelsCount || 2} kênh &lt;30k
+                </span>
+              </div>
+            </div>
+
+            {/* 2. Các ngách PRO bị khóa */}
+            {[
+              { rank: 2, title: 'Tài Chính & Khủng Hoảng Kinh Tế Toàn Cầu', outlier: '28.4', views: '485K', channels: 9 },
+              { rank: 3, title: 'Hồ Sơ Vụ Án & Góc Khuất Tâm Lý Tội Phạm', outlier: '22.1', views: '320K', channels: 6 },
+              { rank: 4, title: 'Điện Ảnh AI & Hoạt Hình Hoá 3D Mini', outlier: '19.8', views: '275K', channels: 8 },
+              { rank: 5, title: 'Lịch Sử Bí Ẩn & Văn Minh Cổ Bị Lãng Quên', outlier: '35.6', views: '610K', channels: 12 }
+            ].map((lockedItem) => (
+              <div
+                key={lockedItem.rank}
+                onClick={() => {
+                  if (typeof showToast === 'function') showToast('🔒 Ngách này dành riêng cho gói PRO. Vui lòng nâng cấp!', 'info');
+                  if (onUpgradePrompt) onUpgradePrompt();
+                }}
+                className="p-3 rounded-xl border border-zinc-800/80 bg-[#101217]/70 hover:border-amber-500/40 hover:bg-[#161922] transition-all duration-150 cursor-pointer flex flex-col justify-between min-h-[92px] select-none relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
+                <div className="flex items-center justify-between text-xs relative z-10">
+                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60 leading-none">
+                    #{lockedItem.rank}
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                    <span>🔒</span> PRO
+                  </span>
+                </div>
+                <div className="my-1.5 relative z-10">
+                  <h3 className="text-xs sm:text-[13px] font-bold text-zinc-400 group-hover:text-amber-300 line-clamp-2 leading-snug transition">
+                    {lockedItem.title}
+                  </h3>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-1.5 border-t border-zinc-800/60 relative z-10">
+                  <span>🔥 x{lockedItem.outlier} View/Sub</span>
+                  <span className="text-amber-400/90 font-medium group-hover:underline">Mở khóa →</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : realDiscoveredNiches.length === 0 ? (
           <div className="p-8 sm:p-10 text-center border border-dashed border-zinc-800 rounded-xl bg-[#121316] space-y-3">
             <span className="text-3xl block">🎯</span>
             <h3 className="text-sm sm:text-base font-bold text-white">
@@ -9686,6 +9846,11 @@ function TopNgachSection({
         <form
           onSubmit={e => {
             e.preventDefault();
+            if (!isPro) {
+              if (typeof showToast === 'function') showToast('Quét ngách theo từ khóa là tính năng của gói PRO!', 'info');
+              if (onUpgradePrompt) onUpgradePrompt();
+              return;
+            }
             if (customKeywordInput.trim()) {
               runDeepNicheDiscovery(customKeywordInput.trim());
             }
@@ -9781,7 +9946,14 @@ function TopNgachSection({
               {onSelectKeywordForSearch && (
                 <button
                   type="button"
-                  onClick={() => onSelectKeywordForSearch(activeNiche.category || activeNiche.name)}
+                  onClick={() => {
+                    if (!isPro) {
+                      if (typeof showToast === 'function') showToast('Tính năng bắt trend ngách dành riêng cho gói PRO!', 'info');
+                      if (onUpgradePrompt) onUpgradePrompt();
+                      return;
+                    }
+                    onSelectKeywordForSearch(activeNiche.category || activeNiche.name);
+                  }}
                   className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition cursor-pointer shrink-0">
                   Bắt Trend ↗
                 </button>
@@ -9945,7 +10117,14 @@ function TopNgachSection({
                         {/* Nút Soi Video & Tags (1 Quota) */}
                         <button
                           type="button"
-                          onClick={() => setInspectingVideo(v)}
+                          onClick={() => {
+                          if (!isPro) {
+                            if (typeof showToast === 'function') showToast('Soi tags ẩn và bản quyền chuyên sâu chỉ dành cho gói PRO!', 'info');
+                            if (onUpgradePrompt) onUpgradePrompt();
+                            return;
+                          }
+                          setInspectingVideo(v);
+                        }}
                           className="w-full py-1 px-2 rounded-lg font-medium text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-500 flex items-center justify-center gap-1.5 transition cursor-pointer"
                           title="Soi tags ẩn, bản quyền, tương tác và lấy 50 video của kênh chỉ tốn 1 quota">
                           <span>🔍</span>
@@ -9962,7 +10141,14 @@ function TopNgachSection({
                           {onToggleSave && (
                             <button
                               type="button"
-                              onClick={() => onToggleSave(v)}
+                              onClick={() => {
+                                if (!isPro) {
+                                  if (typeof showToast === 'function') showToast('Lưu video ngách dành riêng cho gói PRO!', 'info');
+                                  if (onUpgradePrompt) onUpgradePrompt();
+                                  return;
+                                }
+                                onToggleSave(v);
+                              }}
                               className={`flex-1 py-1 px-1.5 rounded-md font-medium transition text-center truncate cursor-pointer ${
                                 saved
                                   ? 'bg-zinc-200 text-zinc-950 font-semibold'
@@ -9974,7 +10160,14 @@ function TopNgachSection({
                           {onAddCompetitor && (
                             <button
                               type="button"
-                              onClick={() => onAddCompetitor(v.channel)}
+                              onClick={() => {
+                                if (!isPro) {
+                                  if (typeof showToast === 'function') showToast('Thêm kênh đối thủ dành riêng cho gói PRO!', 'info');
+                                  if (onUpgradePrompt) onUpgradePrompt();
+                                  return;
+                                }
+                                onAddCompetitor(v.channel);
+                              }}
                               className="py-1 px-1.5 rounded-md font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition truncate cursor-pointer"
                               title="Thêm kênh này vào danh sách theo dõi đối thủ">
                               + Kênh
@@ -9999,6 +10192,30 @@ function TopNgachSection({
         );
       })()}
 
+
+      {!isPro && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-950/40 via-[#181b26] to-[#121316] border border-amber-500/30 p-5 sm:p-6 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4 mt-5 shadow-xl">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
+              <span>👑</span> DÀNH RIÊNG CHO TÀI KHOẢN PRO
+            </div>
+            <h4 className="text-sm sm:text-base font-black text-white">
+              Bạn đang xem 1 chủ đề demo cơ bản hôm nay. Muốn mở khóa toàn bộ các ngách bứt phá triệu view khác?
+            </h4>
+            <p className="text-xs text-zinc-300 max-w-xl leading-relaxed">
+              Hệ thống tự động phát hiện hàng chục ngách bứt phá view khủng x10–x50 mỗi ngày, quét video từ kênh nhỏ ít sub, bóc tách từ khóa và soi tags bí mật.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onUpgradePrompt) onUpgradePrompt();
+            }}
+            className="px-6 py-3 rounded-xl text-xs sm:text-sm font-black bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white shadow-lg shadow-amber-500/25 transition cursor-pointer shrink-0 transform hover:-translate-y-0.5">
+            Nâng Cấp Gói PRO Để Xem Tiếp →
+          </button>
+        </div>
+      )}
 
       {/* Video Inspector Modal (Hidden Tags, 1-Quota 50 Videos, Copyright & Organic Check) */}
       {inspectingVideo && (
@@ -14182,9 +14399,23 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
 
 
         {tab === 'rpm' && (
-          (typeof ytTierManager !== 'undefined' && ytTierManager.isPro()) ? (
           <TopNgachSection
             apiKey={key}
+            isPro={typeof ytTierManager !== 'undefined' && ytTierManager.isPro()}
+            onUpgradePrompt={() => {
+              if (!userProfile || !userProfile.isAuth) {
+                setAuthNotice('Vui lòng đăng nhập tài khoản trước khi nâng cấp.');
+                setShowAuthModal(true);
+                return;
+              }
+              if (!key) {
+                setApiKeyNotice('Vui lòng kết nối YouTube API Key của bạn trước khi kích hoạt gói PRO.');
+                setShowSimpleApiKeyModal(true);
+                return;
+              }
+              setShowSubscriptionModal(true);
+              setSubscriptionModalReason('top_ngach');
+            }}
             onSelectNiche={(niche) => setSelectedNicheModal(niche)}
             onSelectKeywordForSearch={(kwd) => {
               setNicheScannerKeyword(kwd);
@@ -14209,22 +14440,6 @@ Hãy phân tích và viết một kịch bản hoàn chỉnh dài ${durMin} phú
             onCopyRemakePrompt={copyRemakePrompt}
             onOpenPendingTrendsModal={() => setShowPendingTrendsModal(true)}
           />
-          ) : (
-            <TopNgachPaywallBanner onUpgrade={() => {
-              if (!userProfile || !userProfile.isAuth) {
-                setAuthNotice('⚠️ Đây là tính năng trả phí (Gói PRO). Vui lòng đăng nhập tài khoản trước.');
-                setShowAuthModal(true);
-                return;
-              }
-              if (!key) {
-                setApiKeyNotice('Vui lòng kết nối YouTube API Key của bạn trước khi kích hoạt gói PRO.');
-                setShowSimpleApiKeyModal(true);
-                return;
-              }
-              setShowSubscriptionModal(true);
-              setSubscriptionModalReason('top_ngach');
-            }} />
-          )
         )}
 
         {/* TAB 3: SRT VIRAL TREND HUNTER & NICHE CLUSTERING SCANNER */}
