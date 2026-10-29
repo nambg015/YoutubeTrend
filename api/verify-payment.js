@@ -83,11 +83,17 @@ module.exports = async (req, res) => {
       }
     }
 
+    // Lưu gói PRO/ULTRA vào KV theo UID để chống sửa F12 trên trình duyệt
+    const userTierKey = 'user_tier:' + uid;
+    const expiresAt = Date.now() + days * 86400000;
+    await store.set(userTierKey, JSON.stringify({ tier, expiresAt, orderCode }), 60 * 60 * 24 * (days + 30));
+
     return res.status(200).json({
       success: true, verified: true, orderCode, tier, days,
+      expiresAt,
       amountReceived: matched.amount_in,
       transactionDate: matched.transaction_date,
-      message: 'Thanh toán thành công! Giao dịch đã được ghi nhận vào tài khoản ngân hàng.'
+      message: 'Thanh toán thành công! Gói ' + tier + ' đã được kích hoạt trên hệ thống máy chủ.'
     });
   } catch (error) {
     console.error('Lỗi kiểm tra SePay:', error.message);

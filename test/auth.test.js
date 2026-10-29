@@ -7,11 +7,12 @@ const os = require('os');
 const path = require('path');
 const { verifyIdToken, requirePhoneVerified } = require('../api/_lib/auth');
 
-// Tạo cặp khoá + chứng chỉ tự ký để giả lập chứng chỉ của Google (không cần mạng).
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yt-auth-'));
-execSync(`openssl req -x509 -newkey rsa:2048 -nodes -keyout ${dir}/k.pem -out ${dir}/c.pem -days 2 -subj "/CN=test" 2>/dev/null`);
-const privateKey = fs.readFileSync(`${dir}/k.pem`, 'utf8');
-const certPem = fs.readFileSync(`${dir}/c.pem`, 'utf8');
+// Tạo cặp khoá RSA bằng built-in crypto của Node (chạy mượt trên cả Windows, Linux, macOS mà không cần cài openssl ngoài).
+const { publicKey: certPem, privateKey } = crypto.generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+  publicKeyEncoding: { type: 'spki', format: 'pem' },
+  privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+});
 const certProvider = async () => ({ kid1: certPem });
 
 const b64u = b => Buffer.from(b).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

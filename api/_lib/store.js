@@ -54,6 +54,20 @@ async function setOnce(key, value, ttlSec) {
   return true;
 }
 
+async function set(key, value, ttlSec) {
+  if (hasKv()) {
+    if (ttlSec) {
+      const r = await redis(['SET', key, String(value), 'EX', String(ttlSec)]);
+      return r === 'OK';
+    }
+    const r = await redis(['SET', key, String(value)]);
+    return r === 'OK';
+  }
+  const now = Date.now();
+  mem.set(key, { n: value, exp: ttlSec ? now + ttlSec * 1000 : Infinity });
+  return true;
+}
+
 async function get(key) {
   if (hasKv()) return await redis(['GET', key]);
   const cur = mem.get(key);
@@ -68,4 +82,4 @@ async function consumeDaily(uid, bucket, limit) {
   return { allowed: used <= limit, used, limit };
 }
 
-module.exports = { incr, setOnce, get, consumeDaily, hasKv };
+module.exports = { incr, setOnce, set, get, consumeDaily, hasKv };
