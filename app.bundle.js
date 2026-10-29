@@ -1107,11 +1107,400 @@ function SimpleApiKeyModal({onClose,onKeySaved,showToast,notice=''}){const[input
 function TopNgachPaywallBanner({onUpgrade}){return/*#__PURE__*/React.createElement("div",{className:"relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#181b26] to-[#0f1118] border border-amber-500/30 p-6 sm:p-10 text-center shadow-2xl my-6"},/*#__PURE__*/React.createElement("div",{className:"absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"}),/*#__PURE__*/React.createElement("div",{className:"relative z-10 max-w-xl mx-auto space-y-4"},/*#__PURE__*/React.createElement("div",{className:"inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-wider"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDD12")," T\xEDnh N\u0103ng \u0110\u1ED9c Quy\u1EC1n G\xF3i PRO"),/*#__PURE__*/React.createElement("h2",{className:"text-xl sm:text-2xl font-black text-white tracking-tight"},"M\u1EDF Kh\xF3a Kho D\u1EEF Li\u1EC7u ",/*#__PURE__*/React.createElement("span",{className:"text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-red-500"},"Top Ng\xE1ch Ti\u1EC1m N\u0103ng")),/*#__PURE__*/React.createElement("p",{className:"text-xs sm:text-sm text-zinc-300 leading-relaxed"},"T\u1EF1 \u0111\u1ED9ng t\xECm ki\u1EBFm c\xE1c ng\xE1ch YouTube ti\u1EC1m n\u0103ng h\xE0ng \u0111\u1EA7u m\xE0 ",/*#__PURE__*/React.createElement("b",null,"kh\xF4ng c\u1EA7n nh\u1EADp t\u1EEB kh\xF3a"),". Ph\xE1t hi\u1EC7n c\xE1c k\xEAnh c\xF3 l\u01B0\u1EE3ng subscriber th\u1EA5p nh\u01B0ng s\u1EDF h\u1EEFu video view kh\u1EE7ng \u0111\u1EC3 b\u1EA1n khai th\xE1c n\u1ED9i dung tri\u1EC7u view."),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 text-left text-xs text-zinc-300"},/*#__PURE__*/React.createElement("div",{className:"p-3 rounded-xl bg-[#12141c]/80 border border-[#232738]"},/*#__PURE__*/React.createElement("div",{className:"text-amber-400 font-bold mb-1"},"\u2713 Top Ng\xE1ch T\u1EF1 \u0110\u1ED9ng"),/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400"},"Kh\xF4ng c\u1EA7n v\u1EAFt \xF3c t\xECm t\u1EEB kh\xF3a, AI t\u1EF1 qu\xE9t ra ng\xE1ch ngon.")),/*#__PURE__*/React.createElement("div",{className:"p-3 rounded-xl bg-[#12141c]/80 border border-[#232738]"},/*#__PURE__*/React.createElement("div",{className:"text-amber-400 font-bold mb-1"},"\u2713 K\xEAnh Sub Nh\u1ECF View To"),/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400"},"Ph\xE1t hi\u1EC7n c\u01A1 h\u1ED9i l\xE0m n\u1ED9i dung \u0111\u1ED9t ph\xE1 tr\u01B0\u1EDBc \u0111\u1ED1i th\u1EE7.")),/*#__PURE__*/React.createElement("div",{className:"p-3 rounded-xl bg-[#12141c]/80 border border-[#232738]"},/*#__PURE__*/React.createElement("div",{className:"text-amber-400 font-bold mb-1"},"\u2713 50 T\u1EEB Kh\xF3a / Ng\xE0y"),/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400"},"G\u1EA5p 10 l\u1EA7n g\xF3i Free, nghi\xEAn c\u1EE9u tho\u1EA3i m\xE1i c\u1EA3 ng\xE0y."))),/*#__PURE__*/React.createElement("div",{className:"pt-4 flex flex-col sm:flex-row items-center justify-center gap-3"},/*#__PURE__*/React.createElement("button",{onClick:onUpgrade,className:"w-full sm:w-auto px-6 py-3 rounded-xl text-xs sm:text-sm font-extrabold bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white shadow-lg shadow-amber-500/20 transition transform hover:-translate-y-0.5 cursor-pointer"},"Xem B\u1EA3ng Gi\xE1 & N\xE2ng C\u1EA5p G\xF3i PRO Ngay \u2192"))));}// =========================================================================
 // MODAL ĐĂNG KÝ GÓI DỊCH VỤ & THANH TOÁN VIETQR SEPAY
 // =========================================================================
-function SubscriptionModal({onClose,showToast,initialTier='PRO',onUpgraded}){const[selectedTier,setSelectedTier]=useState(initialTier==='ULTRA_PRO'?'ULTRA_PRO':'PRO');const[selectedDuration,setSelectedDuration]=useState('1m');// '1m' | '3m' | '1y'
-const[step,setStep]=useState('plans');// 'plans' | 'checkout'
-const[orderCode,setOrderCode]=useState(()=>'YT'+Math.floor(100000+Math.random()*900000));const[copiedKey,setCopiedKey]=useState(null);const tierInfo=TIERS_DATA[selectedTier]||TIERS_DATA.PRO;const currentOption=tierInfo.options.find(o=>o.id===selectedDuration)||tierInfo.options[0];const amount=currentOption.price;const copyToClipboard=(text,key)=>{try{navigator.clipboard.writeText(String(text));setCopiedKey(key);if(showToast)showToast('Đã sao chép: '+text);setTimeout(()=>setCopiedKey(null),2000);}catch(e){}};const handleStartCheckout=(tierKey,durationKey)=>{setSelectedTier(tierKey);setSelectedDuration(durationKey);setOrderCode('YT'+Math.floor(100000+Math.random()*900000));setStep('checkout');};const[verifying,setVerifying]=useState(false);const[verifyError,setVerifyError]=useState(null);const handleConfirmPaid=async()=>{setVerifying(true);setVerifyError(null);try{const verifyUrl='/api/verify-payment?orderCode='+encodeURIComponent(orderCode)+'&expectedAmount='+amount+'&tier='+selectedTier+'&days='+currentOption.days;const res=await fetch(verifyUrl,{headers:await ytAuth.authHeaders()});const data=await res.json().catch(()=>({}));if(res.ok&&data.success&&data.verified){ytTierManager.setTier(selectedTier,currentOption.days);if(showToast){showToast('Xác nhận thành công! Chúc mừng bạn đã nâng cấp '+tierInfo.name+'! 🎉');}if(onUpgraded)onUpgraded(selectedTier);onClose();}else{setVerifyError(data.message||'Chưa tìm thấy giao dịch "'+orderCode+'". Vui lòng đợi 30-60 giây sau khi chuyển khoản để ngân hàng xử lý.');}}catch(e){// In local dev without serverless, provide feedback
-setVerifyError('Lỗi kiểm tra giao dịch qua máy chủ: '+String(e.message||e));}finally{setVerifying(false);}};// VietQR URLs: primary via VietQR.io (chuẩn quốc gia Napas, không bị chặn hotlink) & fallback via SePay
-const primaryQrUrl='https://img.vietqr.io/image/'+encodeURIComponent((SEPAY_CONFIG.bankName||'vietinbank').toLowerCase())+'-'+SEPAY_CONFIG.accountNumber+'-compact2.png?amount='+amount+'&addInfo='+encodeURIComponent(orderCode)+'&accountName='+encodeURIComponent(SEPAY_CONFIG.accountHolder||'SEPAY');const sepayQrUrl='https://qr.sepay.vn/img?acc='+SEPAY_CONFIG.accountNumber+'&bank='+encodeURIComponent(SEPAY_CONFIG.bankName)+'&amount='+amount+'&des='+encodeURIComponent(orderCode)+'&template=compact';return/*#__PURE__*/React.createElement("div",{className:"fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"},/*#__PURE__*/React.createElement("div",{className:"bg-[#12141c] border border-[#232738] rounded-2xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between border-b border-[#232738] pb-3 shrink-0"},/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h3",{className:"text-base sm:text-lg font-black text-white"},"H\u1EC7 Th\u1ED1ng G\xF3i D\u1ECBch V\u1EE5 YouTrend")),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"text-xs text-zinc-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-[#181b26] hover:bg-[#202433] border border-[#232738] transition"},"\u2715 \u0110\xF3ng")),/*#__PURE__*/React.createElement("div",{className:"overflow-y-auto py-4 space-y-4 pr-1"},step==='plans'&&/*#__PURE__*/React.createElement("div",{className:"space-y-4"},/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-1 md:grid-cols-3 gap-3"},/*#__PURE__*/React.createElement("div",{className:"bg-[#181b26] border border-[#232738] rounded-2xl p-4 flex flex-col justify-between space-y-4"},/*#__PURE__*/React.createElement("div",{className:"space-y-3"},/*#__PURE__*/React.createElement("div",{className:"flex justify-between items-center"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-zinc-400 uppercase tracking-wider"},"C\u01A0 B\u1EA2N"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-bold border border-zinc-700"},"Hi\u1EC7n T\u1EA1i")),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h4",{className:"text-base font-extrabold text-white"},"G\xD3I FREE"),/*#__PURE__*/React.createElement("div",{className:"text-2xl font-black text-zinc-200 mt-1"},"0\u0111 ",/*#__PURE__*/React.createElement("span",{className:"text-xs font-normal text-zinc-500"},"/ tr\u1ECDn \u0111\u1EDDi"))),/*#__PURE__*/React.createElement("ul",{className:"space-y-2 text-xs text-zinc-400 pt-2 border-t border-[#232738]"},/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"T\xECm & ph\xE2n t\xEDch t\u1ED1i \u0111a ",/*#__PURE__*/React.createElement("b",null,"5 t\u1EEB kh\xF3a/ng\xE0y")," (t\xEDnh theo t\u1EEB kh\xF3a kh\xE1c nhau, qu\xE9t l\u1EA1i tho\u1EA3i m\xE1i)")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"L\u1ECDc video \u0111ang th\u1ECBnh h\xE0nh (Trending)")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Ph\xE2n t\xEDch xu h\u01B0\u1EDBng t\u1EEB kh\xF3a \u0111\xE3 t\xECm")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"T\xECm video & k\xEAnh YouTube li\xEAn quan")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5 text-zinc-500"},/*#__PURE__*/React.createElement("span",{className:"text-rose-400 font-bold"},"\u2715"),/*#__PURE__*/React.createElement("span",null,"Kh\xF3a t\xEDnh n\u0103ng Top Ng\xE1ch")))),/*#__PURE__*/React.createElement("button",{disabled:true,className:"w-full py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed"},"G\xF3i \u0110ang S\u1EED D\u1EE5ng")),/*#__PURE__*/React.createElement("div",{className:"bg-gradient-to-b from-[#1c1e2b] to-[#141620] border-2 border-amber-500/60 rounded-2xl p-4 flex flex-col justify-between space-y-4 relative shadow-xl shadow-amber-500/10"},/*#__PURE__*/React.createElement("div",{className:"absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-red-500 text-white text-[10px] font-black uppercase px-3 py-0.5 rounded-full shadow"},"\uD83D\uDD25 KHUY\xCAN D\xD9NG NHI\u1EC0U NH\u1EA4T"),/*#__PURE__*/React.createElement("div",{className:"space-y-3 pt-1"},/*#__PURE__*/React.createElement("div",{className:"flex justify-between items-center"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-amber-400 uppercase tracking-wider"},"CREATOR CHUY\xCAN NGHI\u1EC6P"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40"},"50 Key/Ng\xE0y")),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h4",{className:"text-base font-extrabold text-white"},"G\xD3I PRO \u2013 N\xC2NG CAO"),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-3 gap-1 mt-2.5 bg-[#0f1118] p-1 rounded-xl border border-[#232738]"},TIERS_DATA.PRO.options.map(opt=>/*#__PURE__*/React.createElement("button",{key:opt.id,type:"button",onClick:()=>{setSelectedTier('PRO');setSelectedDuration(opt.id);},className:'py-1.5 px-1 rounded-lg text-center transition '+(selectedTier==='PRO'&&selectedDuration===opt.id?'bg-amber-500 text-black font-extrabold shadow':'text-zinc-400 hover:text-white')},/*#__PURE__*/React.createElement("div",{className:"text-[10px] leading-tight"},opt.label),/*#__PURE__*/React.createElement("div",{className:"text-[11px] font-black mt-0.5"},opt.priceText))))),/*#__PURE__*/React.createElement("ul",{className:"space-y-1.5 text-xs text-zinc-300 pt-2 border-t border-[#232738]"},/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"T\xECm & ph\xE2n t\xEDch t\u1ED1i \u0111a ",/*#__PURE__*/React.createElement("b",null,"50 t\u1EEB kh\xF3a m\u1ED7i ng\xE0y"))),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,/*#__PURE__*/React.createElement("b",null,"M\u1EDF kh\xF3a Top Ng\xE1ch:")," T\u1EF1 \u0111\u1ED9ng ph\xE1t hi\u1EC7n ng\xE1ch ti\u1EC1m n\u0103ng kh\xF4ng c\u1EA7n nh\u1EADp t\u1EEB kh\xF3a")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Ph\xE1t hi\u1EC7n k\xEAnh sub th\u1EA5p nh\u01B0ng view kh\u1EE7ng")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"M\u1EDF kh\xF3a t\xEDnh n\u0103ng ",/*#__PURE__*/React.createElement("b",null,"Keyword Explorer"))),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Kh\xE1m ph\xE1 k\xEAnh YouTube \u0111ang ph\xE1t tri\u1EC3n theo t\u1EEBng t\u1EEB kh\xF3a & ng\xE1ch")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Ph\xE2n t\xEDch d\u1EEF li\u1EC7u video & k\xEAnh h\u1ED7 tr\u1EE3 nghi\xEAn c\u1EE9u \u0111\u1ED1i th\u1EE7")))),/*#__PURE__*/React.createElement("button",{onClick:()=>handleStartCheckout('PRO',selectedTier==='PRO'?selectedDuration:'1m'),className:"w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white shadow-lg transition"},"\u0110\u0103ng K\xFD G\xF3i PRO Ngay")),/*#__PURE__*/React.createElement("div",{className:"bg-[#181b26] border border-purple-500/40 rounded-2xl p-4 flex flex-col justify-between space-y-4 relative"},/*#__PURE__*/React.createElement("div",{className:"space-y-3"},/*#__PURE__*/React.createElement("div",{className:"flex justify-between items-center"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-purple-400 uppercase tracking-wider"},"TEAM & STUDIO"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40"},"V\xF4 H\u1EA1n Key")),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h4",{className:"text-base font-extrabold text-white"},"G\xD3I ULTRA PRO"),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-3 gap-1 mt-2.5 bg-[#0f1118] p-1 rounded-xl border border-[#232738]"},TIERS_DATA.ULTRA_PRO.options.map(opt=>/*#__PURE__*/React.createElement("button",{key:opt.id,type:"button",onClick:()=>{setSelectedTier('ULTRA_PRO');setSelectedDuration(opt.id);},className:'py-1.5 px-1 rounded-lg text-center transition '+(selectedTier==='ULTRA_PRO'&&selectedDuration===opt.id?'bg-purple-600 text-white font-extrabold shadow':'text-zinc-400 hover:text-white')},/*#__PURE__*/React.createElement("div",{className:"text-[10px] leading-tight"},opt.label),/*#__PURE__*/React.createElement("div",{className:"text-[11px] font-black mt-0.5"},opt.priceText))))),/*#__PURE__*/React.createElement("ul",{className:"space-y-1.5 text-xs text-zinc-300 pt-2 border-t border-[#232738]"},/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5 font-bold text-pink-300"},/*#__PURE__*/React.createElement("span",null,"🕵️"),/*#__PURE__*/React.createElement("span",null,/*#__PURE__*/React.createElement("b",null,"Độc quyền: Công Cụ Thám Tử Spy")," (Truy vết kênh ẩn danh từ ảnh Studio / 48h view)")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5 font-bold text-purple-300"},/*#__PURE__*/React.createElement("span",null,"\u26A1"),/*#__PURE__*/React.createElement("span",null,/*#__PURE__*/React.createElement("b",null,"Kh\xF4ng gi\u1EDBi h\u1EA1n s\u1ED1 l\u01B0\u1EE3ng t\u1EEB kh\xF3a t\xECm ki\u1EBFm"))),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-purple-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Bao g\u1ED3m to\xE0n b\u1ED9 quy\u1EC1n l\u1EE3i c\u1EE7a g\xF3i PRO")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-purple-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"M\u1EDF r\u1ED9ng kh\u1EA3 n\u0103ng t\xECm & ph\xE2n t\xEDch nhi\u1EC1u t\u1EEB kh\xF3a li\xEAn t\u1EE5c")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-purple-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Khai th\xE1c t\xEDnh n\u0103ng Top Ng\xE1ch chuy\xEAn s\xE2u")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-purple-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"\u01AFu ti\xEAn tr\u1EA3i nghi\u1EC7m nghi\xEAn c\u1EE9u d\u1EEF li\u1EC7u v\u1EDBi h\u1EA1n m\u1EE9c m\u1EDF r\u1ED9ng")))),/*#__PURE__*/React.createElement("button",{onClick:()=>handleStartCheckout('ULTRA_PRO',selectedTier==='ULTRA_PRO'?selectedDuration:'1m'),className:"w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg transition"},"\u0110\u0103ng K\xFD G\xF3i ULTRA PRO"))),/*#__PURE__*/React.createElement("div",{className:"p-3.5 rounded-xl bg-[#181b26] border border-[#232738] text-[11px] text-zinc-400 leading-relaxed"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"L\u01B0u \xFD v\u1EC1 API:")," C\xE1c t\xEDnh n\u0103ng t\xECm ki\u1EBFm s\u1EED d\u1EE5ng YouTube Data API n\xEAn kh\u1EA3 n\u0103ng truy v\u1EA5n th\u1EF1c t\u1EBF ph\u1EE5 thu\u1ED9c v\xE0o h\u1EA1n m\u1EE9c API c\xF2n l\u1EA1i. Khi h\u1EBFt quota, h\u1EC7 th\u1ED1ng s\u1EBD th\xF4ng b\xE1o v\xE0 h\u1ED7 tr\u1EE3 t\u1EF1 \u0111\u1ED9ng xoay v\xF2ng nhi\u1EC1u key \u0111\u1EC3 b\u1EA1n l\xE0m vi\u1EC7c li\xEAn t\u1EE5c.")),step==='checkout'&&/*#__PURE__*/React.createElement("div",{className:"space-y-4"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between bg-[#181b26] p-3 rounded-xl border border-[#232738]"},/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("div",{className:"text-xs text-zinc-400"},"\u0110ang \u0111\u0103ng k\xFD:"),/*#__PURE__*/React.createElement("div",{className:"text-sm font-extrabold text-white"},tierInfo.name," (",currentOption.label,")")),/*#__PURE__*/React.createElement("div",{className:"text-right"},/*#__PURE__*/React.createElement("div",{className:"text-xs text-zinc-400"},"S\u1ED1 ti\u1EC1n thanh to\xE1n:"),/*#__PURE__*/React.createElement("div",{className:"text-lg font-black text-amber-400"},currentOption.priceText))),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-[#181b26] p-4 rounded-xl border border-[#232738]"},/*#__PURE__*/React.createElement("div",{className:"flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-lg"},/*#__PURE__*/React.createElement("img",{src:primaryQrUrl,referrerPolicy:"no-referrer",loading:"eager",alt:"VietQR Chuy\u1EC3n Kho\u1EA3n Thanh To\xE1n",className:"w-56 h-56 object-contain",onError:e=>{if(!e.target.dataset.triedFallback){e.target.dataset.triedFallback='1';e.target.src=sepayQrUrl;}}}),/*#__PURE__*/React.createElement("div",{className:"text-[10px] text-zinc-600 font-bold mt-2 flex items-center gap-1"},/*#__PURE__*/React.createElement("span",null,"\u26A1 Qu\xE9t B\u1EB1ng B\u1EA5t K\u1EF3 App Ng\xE2n H\xE0ng / MoMo")),/*#__PURE__*/React.createElement("a",{href:primaryQrUrl,target:"_blank",rel:"noopener noreferrer",className:"text-[10px] text-blue-600 hover:text-blue-700 underline font-medium mt-0.5"},"M\u1EDF \u1EA3nh QR tab m\u1EDBi n\u1EBFu m\u1EA1ng ch\u1EB7n \u2197")),/*#__PURE__*/React.createElement("div",{className:"space-y-2.5 text-xs"},/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400"},"Ng\xE2n H\xE0ng Th\u1EE5 H\u01B0\u1EDFng:"),/*#__PURE__*/React.createElement("div",{className:"font-bold text-white flex items-center justify-between bg-[#12141c] p-2 rounded-lg border border-[#232738] mt-0.5"},/*#__PURE__*/React.createElement("span",null,SEPAY_CONFIG.bankName," (VietinBank)"),/*#__PURE__*/React.createElement("button",{onClick:()=>copyToClipboard(SEPAY_CONFIG.bankName,'bank'),className:"text-[10px] text-amber-400 hover:text-amber-300 font-mono"},copiedKey==='bank'?'Đã chép ✓':'Sao chép'))),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400"},"S\u1ED1 T\xE0i Kho\u1EA3n:"),/*#__PURE__*/React.createElement("div",{className:"font-bold text-white font-mono flex items-center justify-between bg-[#12141c] p-2 rounded-lg border border-[#232738] mt-0.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 text-sm font-black"},SEPAY_CONFIG.accountNumber),/*#__PURE__*/React.createElement("button",{onClick:()=>copyToClipboard(SEPAY_CONFIG.accountNumber,'acc'),className:"text-[10px] text-amber-400 hover:text-amber-300 font-mono"},copiedKey==='acc'?'Đã chép ✓':'Sao chép'))),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400"},"S\u1ED1 Ti\u1EC1n Chuy\u1EC3n:"),/*#__PURE__*/React.createElement("div",{className:"font-bold text-white font-mono flex items-center justify-between bg-[#12141c] p-2 rounded-lg border border-[#232738] mt-0.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 text-sm font-black"},currentOption.priceText),/*#__PURE__*/React.createElement("button",{onClick:()=>copyToClipboard(amount,'amount'),className:"text-[10px] text-amber-400 hover:text-amber-300 font-mono"},copiedKey==='amount'?'Đã chép ✓':'Sao chép'))),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400 flex items-center justify-between"},/*#__PURE__*/React.createElement("span",null,"N\u1ED9i Dung Chuy\u1EC3n Kho\u1EA3n (B\u1EAFt Bu\u1ED9c):"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] text-rose-400"},"Gi\u1EEF nguy\xEAn m\xE3")),/*#__PURE__*/React.createElement("div",{className:"font-bold text-white font-mono flex items-center justify-between bg-amber-500/10 p-2 rounded-lg border border-amber-500/40 mt-0.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-300 text-sm font-black"},orderCode),/*#__PURE__*/React.createElement("button",{onClick:()=>copyToClipboard(orderCode,'des'),className:"text-[10px] text-amber-400 hover:text-amber-300 font-mono"},copiedKey==='des'?'Đã chép ✓':'Sao chép'))),/*#__PURE__*/React.createElement("p",{className:"text-[10px] text-zinc-400 leading-tight pt-1"},"\uD83D\uDCA1 M\u1EDF App ng\xE2n h\xE0ng c\u1EE7a b\u1EA1n qu\xE9t m\xE3 QR \u0111\u1EC3 \u0111i\u1EC1n t\u1EF1 \u0111\u1ED9ng ch\xEDnh x\xE1c S\u1ED1 ti\u1EC1n v\xE0 N\u1ED9i dung."))),/*#__PURE__*/React.createElement("div",{className:"flex flex-col sm:flex-row gap-2 pt-2"},/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setStep('plans'),className:"sm:w-1/3 py-2.5 rounded-xl text-xs font-semibold bg-[#181b26] hover:bg-[#202433] text-zinc-300 border border-[#232738] transition"},"\u2190 Ch\u1ECDn G\xF3i Kh\xE1c"),/*#__PURE__*/React.createElement("div",{className:"sm:w-2/3 flex flex-col gap-1.5"},/*#__PURE__*/React.createElement("button",{type:"button",disabled:verifying,onClick:handleConfirmPaid,className:"w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2 cursor-pointer"},verifying?/*#__PURE__*/React.createElement(React.Fragment,null,/*#__PURE__*/React.createElement("span",{className:"w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"}),/*#__PURE__*/React.createElement("span",null,"\u0110ang Ki\u1EC3m Tra V\u1EDBi Ng\xE2n H\xE0ng...")):/*#__PURE__*/React.createElement(React.Fragment,null,/*#__PURE__*/React.createElement("span",null,"\u26A1"),/*#__PURE__*/React.createElement("span",null,"T\xF4i \u0110\xE3 Chuy\u1EC3n Kho\u1EA3n \u2013 Ki\u1EC3m Tra & K\xEDch Ho\u1EA1t"))),verifyError&&/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-amber-300 bg-amber-500/10 p-2 rounded-lg border border-amber-500/30 leading-snug"},"\u26A0\uFE0F ",verifyError)))))));}// =========================================================================
+function SubscriptionModal({
+  onClose,
+  showToast,
+  initialTier = 'PRO',
+  onUpgraded
+}) {
+  const [selectedTier, setSelectedTier] = useState(initialTier === 'ULTRA_PRO' ? 'ULTRA_PRO' : 'PRO');
+  const [selectedDuration, setSelectedDuration] = useState('1m');
+  const [proDuration, setProDuration] = useState('1m');
+  const [ultraDuration, setUltraDuration] = useState('1m');
+  const [step, setStep] = useState('plans'); // 'plans' | 'checkout' | 'success'
+  const [orderCode, setOrderCode] = useState(() => 'YT' + Math.floor(100000 + Math.random() * 900000));
+  const [copiedKey, setCopiedKey] = useState(null);
+  const [verifying, setVerifying] = useState(false);
+  const [pollCountdown, setPollCountdown] = useState(5);
+  const [pollCount, setPollCount] = useState(0);
+  const tierInfo = typeof TIERS_DATA !== 'undefined' && TIERS_DATA[selectedTier] ? TIERS_DATA[selectedTier] : {
+    name: selectedTier === 'ULTRA_PRO' ? 'GÓI ULTRA PRO – KHÔNG GIỚI HẠN' : 'GÓI PRO – NÂNG CAO',
+    options: [{
+      id: '1m',
+      label: '1 Tháng',
+      price: 399000,
+      priceText: '399.000đ',
+      days: 30
+    }]
+  };
+  const currentOption = tierInfo.options && tierInfo.options.find(o => o.id === selectedDuration) || tierInfo.options && tierInfo.options[0] || {
+    price: 399000,
+    priceText: '399.000đ',
+    days: 30,
+    label: '1 Tháng'
+  };
+  const amount = currentOption.price;
+  const copyToClipboard = (text, key) => {
+    try {
+      navigator.clipboard.writeText(String(text));
+      setCopiedKey(key);
+      if (showToast) showToast('Đã sao chép: ' + text);
+      setTimeout(() => setCopiedKey(null), 2000);
+    } catch (e) {}
+  };
+  const handleStartCheckout = (tierKey, durationKey) => {
+    setSelectedTier(tierKey);
+    setSelectedDuration(durationKey || '1m');
+    setOrderCode('YT' + Math.floor(100000 + Math.random() * 900000));
+    setStep('checkout');
+  };
+  const handleConfirmPaid = async () => {
+    if (verifying) return false;
+    setVerifying(true);
+    try {
+      const verifyUrl = '/api/verify-payment?orderCode=' + encodeURIComponent(orderCode) + '&expectedAmount=' + amount + '&tier=' + selectedTier + '&days=' + currentOption.days;
+      const headers = typeof ytAuth !== 'undefined' && typeof ytAuth.authHeaders === 'function' ? await ytAuth.authHeaders() : {};
+      const res = await fetch(verifyUrl, {
+        headers
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && data.verified) {
+        if (typeof ytTierManager !== 'undefined') {
+          ytTierManager.setTier(selectedTier, currentOption.days);
+        }
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('yt-tier-changed', {
+            detail: {
+              tier: selectedTier,
+              days: currentOption.days
+            }
+          }));
+        }
+        setStep('success');
+        if (showToast) showToast('Xác nhận thành công! Chúc mừng bạn đã nâng cấp ' + tierInfo.name + '! 🎉');
+        if (onUpgraded) onUpgraded(selectedTier);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    } finally {
+      setVerifying(false);
+    }
+  };
+  useEffect(() => {
+    if (step !== 'checkout') return;
+    let cancelled = false;
+    // Auto-poll every 5 seconds
+    const pollInterval = setInterval(async () => {
+      if (cancelled) return;
+      setPollCount(c => c + 1);
+      const ok = await handleConfirmPaid();
+      if (ok) clearInterval(pollInterval);
+    }, 5000);
+    const countdownInterval = setInterval(() => {
+      if (cancelled) return;
+      setPollCountdown(c => c <= 1 ? 5 : c - 1);
+    }, 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(pollInterval);
+      clearInterval(countdownInterval);
+    };
+  }, [step, orderCode, selectedTier, selectedDuration]);
+  const bankName = typeof SEPAY_CONFIG !== 'undefined' && SEPAY_CONFIG.bankName || 'VietinBank';
+  const accountNumber = typeof SEPAY_CONFIG !== 'undefined' && SEPAY_CONFIG.accountNumber || '100882100939';
+  const accountHolder = typeof SEPAY_CONFIG !== 'undefined' && SEPAY_CONFIG.accountHolder || 'SEPAY - VIETINBANK';
+  const primaryQrUrl = 'https://img.vietqr.io/image/' + encodeURIComponent(bankName.toLowerCase()) + '-' + accountNumber + '-compact2.png?amount=' + amount + '&addInfo=' + encodeURIComponent(orderCode) + '&accountName=' + encodeURIComponent(accountHolder);
+  const sepayQrUrl = 'https://qr.sepay.vn/img?acc=' + accountNumber + '&bank=' + encodeURIComponent(bankName) + '&amount=' + amount + '&des=' + encodeURIComponent(orderCode) + '&template=compact';
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200",
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#0e1118] border border-white/10 rounded-2xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden",
+    onClick: e => e.stopPropagation()
+  }, step === 'plans' && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between border-b border-white/10 pb-3.5 shrink-0"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold"
+  }, /*#__PURE__*/React.createElement("span", null, "\u2728"), " N\xC2NG C\u1EA4P G\xD3I D\u1ECACH V\u1EE4"), /*#__PURE__*/React.createElement("h3", {
+    className: "text-base sm:text-lg font-black text-white mt-1"
+  }, "B\u1EA3ng Gi\xE1 G\xF3i D\u1ECBch V\u1EE5 YouTrend")), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition border border-white/10 text-sm"
+  }, "\u2715")), step === 'checkout' && /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between border-b border-white/10 pb-3.5 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setStep('plans'),
+    className: "inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition"
+  }, /*#__PURE__*/React.createElement("span", null, "\u2190"), " \u0110\u1ED5i g\xF3i kh\xE1c"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-bold text-zinc-200 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
+  }), /*#__PURE__*/React.createElement("span", null, "Thanh To\xE1n VietQR T\u1EF1 \u0110\u1ED9ng K\xEDch Ho\u1EA1t")), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition border border-white/10 text-sm"
+  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-y-auto py-4 space-y-4 pr-1"
+  }, step === 'plans' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-3 gap-3.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-[#141824]/80 border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-zinc-400 uppercase tracking-wider"
+  }, "C\u01A0 B\u1EA2N"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-semibold border border-zinc-700"
+  }, "M\u1EB7c \u0111\u1ECBnh")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+    className: "text-base font-bold text-white"
+  }, "G\xD3I FREE"), /*#__PURE__*/React.createElement("div", {
+    className: "text-2xl font-black text-white mt-1"
+  }, "0\u0111 ", /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-normal text-zinc-500"
+  }, "/ tr\u1ECDn \u0111\u1EDDi")), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-zinc-400 mt-1"
+  }, "Tr\u1EA3i nghi\u1EC7m t\xECm ki\u1EBFm & ph\xE2n t\xEDch c\u01A1 b\u1EA3n")), /*#__PURE__*/React.createElement("div", {
+    className: "pt-3 border-t border-white/5 space-y-2 text-xs text-zinc-300"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-emerald-400 font-bold"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "5 t\u1EEB kh\xF3a"), " ph\xE2n t\xEDch m\u1ED7i ng\xE0y")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-emerald-400 font-bold"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "L\u1ECDc video th\u1ECBnh h\xE0nh (Trending)")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-emerald-400 font-bold"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Ph\xE2n t\xEDch xu h\u01B0\u1EDBng t\u1EEB kh\xF3a")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 text-zinc-500"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-zinc-600"
+  }, "\u2715"), /*#__PURE__*/React.createElement("span", null, "Kh\xF3a t\xEDnh n\u0103ng Top Ng\xE1ch")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 text-zinc-500"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-zinc-600"
+  }, "\u2715"), /*#__PURE__*/React.createElement("span", null, "Kh\xF3a c\xF4ng c\u1EE5 Th\xE1m T\u1EED Spy")))), /*#__PURE__*/React.createElement("button", {
+    disabled: true,
+    className: "w-full py-2.5 rounded-xl text-xs font-semibold bg-white/5 text-zinc-500 border border-white/5 cursor-default"
+  }, "\u0110ang S\u1EED D\u1EE5ng")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-b from-amber-500/[0.08] via-[#161a26] to-[#121520] border-2 border-amber-500/50 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 relative shadow-xl shadow-amber-500/10"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-[10px] font-black uppercase px-3 py-0.5 rounded-full shadow"
+  }, "\uD83D\uDD25 KHUY\xCAN D\xD9NG NHI\u1EC0U NH\u1EA4T"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3 pt-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-amber-400 uppercase tracking-wider"
+  }, "CREATOR CHUY\xCAN NGHI\u1EC6P"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30"
+  }, "50 Key/Ng\xE0y")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+    className: "text-base font-extrabold text-white"
+  }, "G\xD3I PRO \u2013 N\xC2NG CAO"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-1 mt-2.5 bg-black/40 p-1 rounded-xl border border-white/10"
+  }, typeof TIERS_DATA !== 'undefined' && TIERS_DATA.PRO && TIERS_DATA.PRO.options.map(opt => /*#__PURE__*/React.createElement("button", {
+    key: opt.id,
+    type: "button",
+    onClick: () => {
+      setProDuration(opt.id);
+      setSelectedDuration(opt.id);
+      setSelectedTier('PRO');
+    },
+    className: 'py-1.5 px-1 rounded-lg text-center transition ' + (proDuration === opt.id ? 'bg-amber-500 text-black font-extrabold shadow' : 'text-zinc-400 hover:text-white')
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px]"
+  }, opt.label), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-black mt-0.5"
+  }, opt.priceText))))), /*#__PURE__*/React.createElement("div", {
+    className: "pt-3 border-t border-amber-500/20 space-y-2 text-xs text-zinc-200"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-400 font-bold"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "50 t\u1EEB kh\xF3a"), " ph\xE2n t\xEDch m\u1ED7i ng\xE0y")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-400 font-bold"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "M\u1EDF kh\xF3a Top Ng\xE1ch:"), " T\u1EF1 \u0111\u1ED9ng qu\xE9t ng\xE1ch ngon")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-400 font-bold"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Ph\xE1t hi\u1EC7n k\xEAnh sub th\u1EA5p \u2013 view kh\u1EE7ng")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-400 font-bold"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "M\u1EDF kh\xF3a ", /*#__PURE__*/React.createElement("b", null, "Keyword Explorer"), " & \u0110\u1ED1i th\u1EE7")))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => handleStartCheckout('PRO', proDuration),
+    className: "w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black shadow-lg shadow-amber-500/20 transition cursor-pointer"
+  }, "\u0110\u0103ng K\xFD G\xF3i PRO Ngay \u2192")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-b from-purple-500/[0.08] via-[#161a26] to-[#121520] border border-purple-500/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 relative shadow-xl shadow-purple-500/10"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold text-purple-400 uppercase tracking-wider"
+  }, "TEAM & STUDIO"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30"
+  }, "V\xF4 H\u1EA1n Key")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
+    className: "text-base font-extrabold text-white"
+  }, "G\xD3I ULTRA PRO"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-1 mt-2.5 bg-black/40 p-1 rounded-xl border border-white/10"
+  }, typeof TIERS_DATA !== 'undefined' && TIERS_DATA.ULTRA_PRO && TIERS_DATA.ULTRA_PRO.options.map(opt => /*#__PURE__*/React.createElement("button", {
+    key: opt.id,
+    type: "button",
+    onClick: () => {
+      setUltraDuration(opt.id);
+      setSelectedDuration(opt.id);
+      setSelectedTier('ULTRA_PRO');
+    },
+    className: 'py-1.5 px-1 rounded-lg text-center transition ' + (ultraDuration === opt.id ? 'bg-purple-600 text-white font-extrabold shadow' : 'text-zinc-400 hover:text-white')
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px]"
+  }, opt.label), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-black mt-0.5"
+  }, opt.priceText))))), /*#__PURE__*/React.createElement("div", {
+    className: "pt-3 border-t border-purple-500/20 space-y-2 text-xs text-zinc-200"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 text-purple-300 font-bold"
+  }, /*#__PURE__*/React.createElement("span", null, "\u26A1"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "Kh\xF4ng gi\u1EDBi h\u1EA1n"), " s\u1ED1 l\u01B0\u1EE3ng t\u1EEB kh\xF3a")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-purple-400 font-bold"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "\u0110\u1ED9c quy\u1EC1n:"), " C\xF4ng c\u1EE5 Th\xE1m T\u1EED Spy YouTube")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-purple-400 font-bold"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Truy v\u1EBFt k\xEAnh \u1EA9n danh t\u1EEB \u1EA3nh Studio / 48h view")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-purple-400 font-bold"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Full quy\u1EC1n truy c\u1EADp m\u1ECDi t\xEDnh n\u0103ng")))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => handleStartCheckout('ULTRA_PRO', ultraDuration),
+    className: "w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/20 transition cursor-pointer"
+  }, "\u0110\u0103ng K\xFD ULTRA PRO \u2192"))), /*#__PURE__*/React.createElement("div", {
+    className: "p-3 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] text-zinc-400 leading-relaxed text-center"
+  }, "\uD83D\uDCA1 C\xE1c t\xEDnh n\u0103ng s\u1EED d\u1EE5ng YouTube Data API. Khi h\u1EBFt quota c\xE1 nh\xE2n, h\u1EC7 th\u1ED1ng h\u1ED7 tr\u1EE3 kho \u0111a key t\u1EF1 \u0111\u1ED9ng xoay v\xF2ng th\xF4ng minh.")), step === 'checkout' && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between bg-gradient-to-r from-[#161a26] to-[#121520] p-3.5 rounded-xl border border-white/10"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-zinc-400"
+  }, "\u0110ang n\xE2ng c\u1EA5p:"), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-extrabold text-white flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", null, tierInfo.name), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30"
+  }, currentOption.label))), /*#__PURE__*/React.createElement("div", {
+    className: "text-right"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-zinc-400"
+  }, "S\u1ED1 ti\u1EC1n c\u1EA7n chuy\u1EC3n:"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xl font-black text-amber-400"
+  }, currentOption.priceText))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-[#141822]/80 p-4 rounded-2xl border border-white/10"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col items-center justify-center p-3 bg-white rounded-2xl shadow-xl"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: primaryQrUrl,
+    referrerPolicy: "no-referrer",
+    loading: "eager",
+    alt: "VietQR Chuy\u1EC3n Kho\u1EA3n",
+    className: "w-52 h-52 object-contain",
+    onError: e => {
+      if (!e.target.dataset.triedFallback) {
+        e.target.dataset.triedFallback = '1';
+        e.target.src = sepayQrUrl;
+      }
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-zinc-700 font-extrabold mt-1.5 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", null, "\u26A1 Qu\xE9t B\u1EB1ng B\u1EA5t K\u1EF3 App Ng\xE2n H\xE0ng / MoMo")), /*#__PURE__*/React.createElement("a", {
+    href: primaryQrUrl,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    className: "text-[10px] text-blue-600 hover:text-blue-700 underline font-medium mt-0.5"
+  }, "M\u1EDF \u1EA3nh QR tab m\u1EDBi n\u1EBFu m\u1EA1ng ch\u1EB7n \u2197")), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2 text-xs"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-zinc-400"
+  }, "Ng\xE2n h\xE0ng th\u1EE5 h\u01B0\u1EDFng:"), /*#__PURE__*/React.createElement("div", {
+    className: "font-bold text-white flex items-center justify-between bg-black/40 p-2.5 rounded-xl border border-white/10 mt-0.5"
+  }, /*#__PURE__*/React.createElement("span", null, bankName, " (VietinBank)"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => copyToClipboard(bankName, 'bank'),
+    className: "text-[11px] font-bold text-amber-400 hover:text-amber-300"
+  }, copiedKey === 'bank' ? '✓ Đã chép' : 'Sao chép'))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-zinc-400"
+  }, "S\u1ED1 t\xE0i kho\u1EA3n:"), /*#__PURE__*/React.createElement("div", {
+    className: "font-bold text-white font-mono flex items-center justify-between bg-black/40 p-2.5 rounded-xl border border-white/10 mt-0.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-400 text-sm font-black tracking-wider"
+  }, accountNumber), /*#__PURE__*/React.createElement("button", {
+    onClick: () => copyToClipboard(accountNumber, 'acc'),
+    className: "text-[11px] font-bold text-amber-400 hover:text-amber-300"
+  }, copiedKey === 'acc' ? '✓ Đã chép' : 'Sao chép'))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-zinc-400"
+  }, "S\u1ED1 ti\u1EC1n chuy\u1EC3n:"), /*#__PURE__*/React.createElement("div", {
+    className: "font-bold text-white font-mono flex items-center justify-between bg-black/40 p-2.5 rounded-xl border border-white/10 mt-0.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-emerald-400 text-sm font-black"
+  }, currentOption.priceText), /*#__PURE__*/React.createElement("button", {
+    onClick: () => copyToClipboard(amount, 'amount'),
+    className: "text-[11px] font-bold text-amber-400 hover:text-amber-300"
+  }, copiedKey === 'amount' ? '✓ Đã chép' : 'Sao chép'))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-zinc-400 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", null, "N\u1ED9i dung chuy\u1EC3n kho\u1EA3n (B\u1EAFt bu\u1ED9c):"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-rose-400 font-semibold"
+  }, "Gi\u1EEF nguy\xEAn m\xE3")), /*#__PURE__*/React.createElement("div", {
+    className: "font-bold text-white font-mono flex items-center justify-between bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/40 mt-0.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-300 text-sm font-black tracking-wider"
+  }, orderCode), /*#__PURE__*/React.createElement("button", {
+    onClick: () => copyToClipboard(orderCode, 'des'),
+    className: "text-[11px] font-bold text-amber-400 hover:text-amber-300"
+  }, copiedKey === 'des' ? '✓ Đã chép' : 'Sao chép'))))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent p-3.5 rounded-2xl border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 shrink-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping absolute"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "w-2.5 h-2.5 rounded-full bg-emerald-400"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-bold text-white flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", null, "\u0110ang ch\u1EDD nh\u1EADn chuy\u1EC3n kho\u1EA3n..."), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-emerald-400 font-mono"
+  }, "(T\u1EF1 qu\xE9t sau ", pollCountdown, "s)")), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-zinc-400 mt-0.5"
+  }, "\u26A1 H\u1EC7 th\u1ED1ng t\u1EF1 \u0111\u1ED9ng k\xEDch ho\u1EA1t t\xE0i kho\u1EA3n ngay khi nh\u1EADn \u0111\u01B0\u1EE3c ti\u1EC1n t\u1EEB ng\xE2n h\xE0ng (kh\xF4ng c\u1EA7n b\u1EA5m x\xE1c nh\u1EADn)."))), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setStep('plans'),
+    className: "px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 transition"
+  }, "\u0110\u1ED5i G\xF3i")))), step === 'success' && /*#__PURE__*/React.createElement("div", {
+    className: "py-8 px-4 text-center space-y-4 max-w-md mx-auto"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400/50 flex items-center justify-center text-3xl mx-auto shadow-lg shadow-emerald-500/20"
+  }, "\u2713"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+    className: "text-lg font-black text-white"
+  }, "Thanh To\xE1n Th\xE0nh C\xF4ng!"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-zinc-300 mt-1"
+  }, "Ch\xFAc m\u1EEBng b\u1EA1n \u0111\xE3 n\xE2ng c\u1EA5p th\xE0nh c\xF4ng ", /*#__PURE__*/React.createElement("b", {
+    className: "text-amber-400"
+  }, tierInfo.name), " (", currentOption.label, ").")), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "w-full py-3 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black shadow-lg shadow-emerald-500/20 transition cursor-pointer"
+  }, "B\u1EAFt \u0110\u1EA7u Tr\u1EA3i Nghi\u1EC7m Ngay \u2192")))));
+}// =========================================================================
 // SCORE FORMULA MODAL (GIẢI THÍCH THUẬT TOÁN CHẤM ĐIỂM TIỀM NĂNG)
 // =========================================================================
 function ScoreFormulaModal({onClose}){return/*#__PURE__*/React.createElement("div",{className:"fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto",onClick:onClose},/*#__PURE__*/React.createElement("div",{className:"bg-brand-surface border border-brand-border rounded-2xl w-full max-w-2xl my-8 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150",onClick:e=>e.stopPropagation()},/*#__PURE__*/React.createElement("div",{className:"p-4 sm:p-5 border-b border-brand-border flex items-center justify-between bg-brand-card/70"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2"},/*#__PURE__*/React.createElement("span",{className:"text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30"},"Thu\u1EADt To\xE1n AI"),/*#__PURE__*/React.createElement("h2",{className:"font-extrabold text-base sm:text-lg text-white"},"C\xF4ng Th\u1EE9c Ch\u1EA5m \u0110i\u1EC3m Ti\u1EC1m N\u0103ng (Potential Score)")),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"w-8 h-8 rounded-lg bg-brand-surface hover:bg-brand-border text-zinc-400 hover:text-white flex items-center justify-center transition"},"\u2715")),/*#__PURE__*/React.createElement("div",{className:"p-4 sm:p-6 space-y-5 max-h-[80vh] overflow-y-auto text-xs leading-relaxed"},/*#__PURE__*/React.createElement("div",{className:"bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 rounded-xl border border-amber-500/30"},/*#__PURE__*/React.createElement("div",{className:"text-amber-300 font-bold text-sm mb-1"},"C\u01A1 Ch\u1EBF B\u1EA3ng X\u1EBFp H\u1EA1ng Top 20 K\xEAnh Sub Th\u1EA5p - View Cao & R\u1EDBt Top:"),/*#__PURE__*/React.createElement("p",{className:"text-zinc-300 leading-relaxed"},"H\u1EC7 th\u1ED1ng t\u1EF1 \u0111\u1ED9ng ch\u1EA5m \u0111i\u1EC3m cho to\xE0n b\u1ED9 c\xE1c k\xEAnh v\xE0 ng\xE1ch m\u1ECF v\xE0ng YouTube qu\u1ED1c t\u1EBF theo thang \u0111i\u1EC3m 100, t\u1EADp trung v\xE0o ",/*#__PURE__*/React.createElement("b",null,"k\xEAnh quy m\xF4 nh\u1ECF (<50k sub) nh\u01B0ng b\u1EE9t ph\xE1 view kh\u1EE7ng (g\u1EA5p 5x - 20x l\u1EA7n sub) tr\xEAn m\u1ECDi ch\u1EE7 \u0111\u1EC1"),". 20 k\xEAnh/ng\xE1ch c\xF3 t\u1EF7 l\u1EC7 b\u1EE9t ph\xE1 cao nh\u1EA5t s\u1EBD \u0111\u01B0\u1EE3c \u0111\u01B0a v\xE0o ",/*#__PURE__*/React.createElement("b",null,"Top 20 Outlier Ti\u1EC1m N\u0103ng B\xF9ng N\u1ED5"),". Khi m\u1ED9t ng\xE1ch b\u1ECB b\xE3o h\xF2a ho\u1EB7c gi\u1EA3m view, \u0111i\u1EC3m s\u1ED1 t\u1EE5t xu\u1ED1ng v\xE0 s\u1EBD ",/*#__PURE__*/React.createElement("b",null,"t\u1EF1 \u0111\u1ED9ng r\u1EDBt kh\u1ECFi Top 20")," \u0111\u1EC3 nh\u01B0\u1EDDng ch\u1ED7 cho c\xE1c k\xEAnh m\u1EDBi \u0111ang l\xEAn!")),/*#__PURE__*/React.createElement("div",{className:"grid sm:grid-cols-2 gap-3"},/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"font-bold text-rose-400 text-xs"},"1. T\u1EF7 L\u1EC7 Outlier (View / Sub)"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-extrabold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300"},"Tr\u1ECDng s\u1ED1 35%")),/*#__PURE__*/React.createElement("p",{className:"text-zinc-400 mt-2 text-[11px] leading-relaxed"},"K\xEAnh c\xF3 subscriber th\u1EA5p nh\u01B0ng video \u0111\u1EA1t l\u01B0\u1EE3t xem \u0111\u1ED9t bi\u1EBFn (View g\u1EA5p 5x - 20x l\u1EA7n Sub). \u0110\xE2y l\xE0 d\u1EA5u hi\u1EC7u ch\u1EAFc ch\u1EAFn thu\u1EADt to\xE1n YouTube \u0111ang \u0111\xF3i n\u1ED9i dung ng\xE1ch n\xE0y!")),/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"font-bold text-emerald-400 text-xs"},"2. T\u1ED1c \u0110\u1ED9 T\u0103ng Tr\u01B0\u1EDFng (VPH)"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300"},"Tr\u1ECDng s\u1ED1 30%")),/*#__PURE__*/React.createElement("p",{className:"text-zinc-400 mt-2 text-[11px] leading-relaxed"},"\u0110o l\u01B0\u1EDDng s\u1ED1 l\u01B0\u1EE3t xem t\u0103ng th\xEAm m\u1ED7i gi\u1EDD (View Per Hour) c\u1EE7a c\xE1c video m\u1EDBi xu\u1EA5t b\u1EA3n trong 24h - 48h qua. T\u1ED1c \u0111\u1ED9 c\xE0ng d\u1ED1c $\\rightarrow$ \u0110i\u1EC3m c\xE0ng cao.")),/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"font-bold text-amber-400 text-xs"},"3. Ti\u1EC1m N\u0103ng RPM Doanh Thu"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300"},"Tr\u1ECDng s\u1ED1 20%")),/*#__PURE__*/React.createElement("p",{className:"text-zinc-400 mt-2 text-[11px] leading-relaxed"},"\u01AFu ti\xEAn th\u1ECB tr\u01B0\u1EDDng Tier 1 (M\u1EF9, Canada, Anh, \xDAc) v\u1EDBi RPM t\u1EEB $20 - $65/1k view. Video d\xE0i ch\xE8n \u0111\u01B0\u1EE3c 6 - 12 mid-roll ads mang l\u1EA1i gi\xE1 tr\u1ECB cao g\u1EA5p 8 l\u1EA7n video ng\u1EAFn.")),/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"font-bold text-sky-400 text-xs"},"4. Kh\xE1ng C\u1EA1nh Tranh & Gi\u1EEF Ch\xE2n"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-extrabold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300"},"Tr\u1ECDng s\u1ED1 15%")),/*#__PURE__*/React.createElement("p",{className:"text-zinc-400 mt-2 text-[11px] leading-relaxed"},"T\u1EF7 l\u1EC7 k\xEAnh m\u1EDBi v\xE0 k\xEAnh nh\u1ECF (<30k subs) v\u1EABn c\u1EAFn \u0111\u1EC1 xu\u1EA5t view cao m\xE0 kh\xF4ng b\u1ECB c\xE1c k\xEAnh tri\u1EC7u sub \u0111\xE8 b\u1EB9p, k\xE8m t\u1EF7 l\u1EC7 xem h\u1EBFt video (Watch time)."))),/*#__PURE__*/React.createElement("div",{className:"bg-brand-card/50 p-3.5 rounded-xl border border-brand-border/60 text-[11px] text-zinc-400 space-y-2"},/*#__PURE__*/React.createElement("span",{className:"font-bold text-zinc-200"},"K\xFD hi\u1EC7u bi\u1EBFn \u0111\u1ED9ng th\u1EE9 h\u1EA1ng qua c\xE1c m\u1ED1c th\u1EDDi gian:"),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-2 sm:grid-cols-4 gap-2"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 font-bold"},"\u25B2 +2")," ",/*#__PURE__*/React.createElement("span",null,"T\u0103ng 2 b\u1EADc th\u1EE9 h\u1EA1ng")),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-rose-400 font-bold"},"\u25BC -1")," ",/*#__PURE__*/React.createElement("span",null,"T\u1EE5t 1 b\u1EADc do gi\u1EA3m nhi\u1EC7t")),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 font-bold"},"\u2500\u2500")," ",/*#__PURE__*/React.createElement("span",null,"Gi\u1EEF h\u1EA1ng \u1ED5n \u0111\u1ECBnh")),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-300 font-bold"},"\u2B50 M\u1EDAI")," ",/*#__PURE__*/React.createElement("span",null,"M\u1EDBi b\u1EE9t ph\xE1 v\xE0o Top 20"))))),/*#__PURE__*/React.createElement("div",{className:"p-4 bg-brand-card/60 border-t border-brand-border flex justify-end"},/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/20 transition"},"\u0110\xE3 Hi\u1EC3u"))));}// =========================================================================
