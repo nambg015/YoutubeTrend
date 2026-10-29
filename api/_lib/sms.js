@@ -50,7 +50,8 @@ async function sendSpeedSms(local, content, post) {
   if (env('SPEEDSMS_SENDER')) body.sender = env('SPEEDSMS_SENDER');
   const { json } = await post(url, { Authorization: auth }, body);
   if (json && json.status === 'success') return { id: json.data && json.data.tranId };
-  const e = new Error('SpeedSMS lỗi: ' + (json && (json.message || json.code) || 'không rõ'));
+  const e = new Error('SpeedSMS lỗi: ' + (json && (json.message || json.code) || 'không rõ')
+    + ' | code=' + (json && json.code) + ' sms_type=' + body.sms_type + ' sender=' + (body.sender || '(trống)'));
   e.providerCode = json && json.code;
   throw e;
 }
