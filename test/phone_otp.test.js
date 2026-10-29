@@ -175,3 +175,41 @@ describe('REQUIRE_PHONE + requirePhoneVerified đọc SĐT từ server', () => {
     assert.strictEqual(res.statusCode, 503);
   });
 });
+
+describe('phone_otp: Telegram Bot verification', () => {
+  test('create_telegram_session tạo session token hợp lệ', async () => {
+    const u = uid();
+    const r = await handle({ claims: { sub: u, email: 'user@test.com' }, body: { action: 'create_telegram_session' } });
+    assert.strictEqual(r.status, 200);
+    assert.ok(r.json.sessionToken.startsWith('auth_'));
+    assert.ok(r.json.botUrl.includes('https://t.me/'));
+    assert.strictEqual(r.json.expiresIn, 600);
+
+    // Kiểm tra trạng thái ban đầu là chưa verify
+    const check = await handle({ claims: { sub: u }, body: { action: 'check_telegram_session', sessionToken: r.json.sessionToken } });
+    assert.strictEqual(check.status, 200);
+    assert.strictEqual(check.json.verified, false);
+  });
+
+  test('check_telegram_session phát hiện khi session đã được verify', async () => {
+    const u = uid();
+    const init = await handle({ claims: { sub: u }, body: { action: 'create_telegram_session' } });
+    const tok = init.json.sessionToken;
+
+    // Giả lập Telegram webhook xác nhận SĐT cho session này
+    await store.set('tg_session:' + tok, JSON.stringify({
+      uid: u,
+      phone: '+84987654321',
+      local: '0987654321',
+      code: '654321',
+      verified: true
+    }));
+
+    const check = await handle({ claims: { sub: u }, body: { action: 'check_telegram_session', sessionToken: tok } });
+    assert.strictEqual(check.status, 200);
+    assert.strictEqual(check.json.verified, true);
+    assert.strictEqual(check.json.phone, '0987654321');
+    assert.strictEqual(check.json.code, '654321');
+  });
+});
+

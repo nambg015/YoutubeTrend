@@ -30,7 +30,7 @@ test('login / register / verify_phone đều dựng được', () => {
   assert.match(reg, /Nhập lại mật khẩu/);
   assert.match(reg, /xác minh số điện thoại/);
   const ver = text(render('verify_phone'));
-  assert.match(ver, /Gửi mã OTP/);
+  assert.match(ver, /Telegram|Mã OTP/);
   assert.match(ver, /Mỗi số điện thoại chỉ/);
 });
 

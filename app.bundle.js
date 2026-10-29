@@ -502,7 +502,33 @@ const ytAuth = {
   },
 
   // Hỏi server SĐT của tài khoản hiện tại đã xác minh chưa; cập nhật hồ sơ trong máy + báo cho App.
-  async refreshPhoneStatus() {
+    // Phiên xác thực qua Telegram Bot (Khuyên dùng, miễn phí 100%, tức thì)
+  async createTelegramSession() {
+    return this.callPhoneApi({ action: 'create_telegram_session' });
+  },
+
+  // Polling kiểm tra xem Telegram Bot đã xác minh phiên này chưa
+  async checkTelegramSession(sessionToken) {
+    if (!sessionToken) return { success: false, verified: false };
+    const r = await this.callPhoneApi({ action: 'check_telegram_session', sessionToken });
+    if (r && r.success && r.verified) {
+      const user = this.currentUser();
+      if (user) {
+        this._phone = { uid: user.uid, verified: true, phone: r.phone || '', required: true };
+        const profile = this.profileFromUser(user);
+        profile.phoneVerified = true;
+        profile.phone = r.phone || profile.phone;
+        try {
+          st.set('yt_user_profile', JSON.stringify(profile));
+          window.dispatchEvent(new CustomEvent('yt-profile-changed', { detail: profile }));
+        } catch (e) {}
+        return { success: true, verified: true, user, profile, phone: r.phone };
+      }
+    }
+    return r;
+  },
+
+async refreshPhoneStatus() {
     const user = this.currentUser();
     if (!user) return null;
     const r = await this.callPhoneApi({ action: 'status' });
@@ -537,20 +563,23 @@ const ytAuth = {
     return { success: false, code: r.code, retryAfter: r.retryAfter, error: r.message || 'Không gửi được mã OTP.' };
   },
 
-  async confirmOtp(code) {
+  async confirmOtp(code, optionalPhone) {
+    const targetPhone = optionalPhone || this._pendingPhone || '';
+    if (!targetPhone) return { success: false, error: 'Chưa có phiên gửi mã. Hãy bấm "Gửi mã OTP" trước.' };
     const c = String(code || '').replace(/\D/g, '');
-    if (!this._pendingPhone) return { success: false, error: 'Chưa có phiên gửi mã. Hãy bấm "Gửi mã OTP" trước.' };
-    if (c.length < 4 || c.length > 8) return { success: false, error: 'Vui lòng nhập đủ mã OTP trong tin nhắn.' };
+    if (c.length < 4 || c.length > 8) return { success: false, error: 'Vui lòng nhập đủ mã OTP 6 số.' };
     const user = this.currentUser();
     if (!user) return { success: false, error: 'Bạn cần đăng nhập trước khi xác minh số điện thoại.' };
-    const r = await this.callPhoneApi({ action: 'verify', phone: this._pendingPhone, code: c });
+    const r = await this.callPhoneApi({ action: 'verify', phone: targetPhone, code: c });
     if (!r.success) {
       if (r.code === 'OTP_EXPIRED' || r.code === 'TOO_MANY_TRIES' || r.code === 'PHONE_TAKEN') this._pendingPhone = null;
       return { success: false, code: r.code, error: r.message || 'Xác minh không thành công.' };
     }
-    this._phone = { uid: user.uid, verified: true, phone: r.phone || this._pendingPhone, required: true };
+    this._phone = { uid: user.uid, verified: true, phone: r.phone || targetPhone, required: true };
     this._pendingPhone = null;
     const profile = this.profileFromUser(user);
+    profile.phoneVerified = true;
+    profile.phone = r.phone || targetPhone;
     try { st.set('yt_user_profile', JSON.stringify(profile)); window.dispatchEvent(new CustomEvent('yt-profile-changed', { detail: profile })); } catch (e) {}
     return { success: true, user, profile };
   },
@@ -631,6 +660,48 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice='',initialMod
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  // Telegram session states
+  const [tgSession, setTgSession] = useState(null);
+  const [verifyMethod, setVerifyMethod] = useState('telegram'); // 'telegram' | 'sms'
+  const [tgWaiting, setTgWaiting] = useState(false);
+
+  // Tạo phiên xác thực Telegram khi vào màn hình xác minh
+  React.useEffect(() => {
+    if (authMode !== 'verify_phone') return;
+    let alive = true;
+    ytAuth.createTelegramSession().then(res => {
+      if (alive && res && res.success) {
+        setTgSession(res);
+      }
+    });
+    return () => { alive = false; };
+  }, [authMode]);
+
+  // Polling tự động lắng nghe xác nhận từ Telegram
+  React.useEffect(() => {
+    if (authMode !== 'verify_phone' || !tgSession || !tgSession.sessionToken) return;
+    let timer = null;
+    let alive = true;
+    const poll = async () => {
+      try {
+        const r = await ytAuth.checkTelegramSession(tgSession.sessionToken);
+        if (alive && r && r.verified) {
+          if (showToast) showToast('Xác thực số điện thoại ' + (r.phone || '') + ' thành công! 🎉');
+          finishIfVerified(r.user || ytAuth.currentUser());
+          return;
+        }
+      } catch (e) {}
+      if (alive) {
+        timer = setTimeout(poll, 2000);
+      }
+    };
+    timer = setTimeout(poll, 2500);
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [authMode, tgSession]);
+
   // Đồng bộ nền với server nếu đã đăng nhập (không làm đổi tab đột ngột)
   React.useEffect(() => {
     let alive = true;
@@ -658,7 +729,7 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice='',initialMod
     }
   }, [otpCountdown]);
 
-  // Sau khi đăng nhập: hỏi server SĐT đã xác minh chưa (không tin dữ liệu trong máy)
+  // Sau khi đăng nhập: hỏi server SĐT đã xác minh chưa
   const finishIfVerified = async user => {
     setBusy(true);
     let res = null;
@@ -743,6 +814,17 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice='',initialMod
     await finishIfVerified(r.user);
   };
 
+  const handleOpenTelegram = () => {
+    setTgWaiting(true);
+    setErrorMsg('');
+    setSuccessMsg('Đang mở Telegram... Hãy bấm "BẮT ĐẦU" (START) và bấm "Gửi Số Điện Thoại" trên Telegram.');
+    const botUser = (tgSession && tgSession.botUsername) || 'YouTrendVerifyBot';
+    const url = (tgSession && tgSession.botUrl) || ('https://t.me/' + botUser);
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   const handleSendOtp = async () => {
     if (busy || otpCountdown > 0) return;
     setErrorMsg(''); setSuccessMsg('');
@@ -765,12 +847,14 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice='',initialMod
   const handleVerifyOtp = async e => {
     if (e) e.preventDefault();
     setErrorMsg(''); setSuccessMsg('');
-    if (!otpSent) { setErrorMsg('Hãy bấm "Gửi mã OTP" trước.'); return; }
+    const code = otpInput.trim();
+    if (!code) { setErrorMsg('Vui lòng nhập mã OTP 6 chữ số.'); return; }
     setBusy(true);
-    const r = await ytAuth.confirmOtp(otpInput);
+    const r = await ytAuth.confirmOtp(code, phone);
     setBusy(false);
     if (!r.success) { setErrorMsg(r.error); return; }
-    await finishIfVerified(r.user);
+    if (showToast) showToast('Xác thực số điện thoại thành công! 🎉');
+    await finishIfVerified(r.user || ytAuth.currentUser());
   };
 
   const handleSwitchAccount = async () => {
@@ -797,33 +881,134 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice='',initialMod
     className: 'py-1.5 px-2 rounded-lg text-xs font-bold transition text-center whitespace-nowrap ' + (authMode === mode ? 'bg-red-600 text-white shadow' : 'text-zinc-400 hover:text-white') }, label);
 
   const verifyView = h("div", { className: "space-y-3.5 pt-1" },
-    h("div", { className: "p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-1" },
-      h("div", { className: "font-bold text-amber-300" }, "📱 Cần xác minh số điện thoại"),
-      h("p", { className: "text-[11px] text-zinc-300 leading-relaxed" }, "Áp dụng cho cả tài khoản Google và tài khoản thường, để chống tạo nhiều tài khoản spam. Mỗi số điện thoại chỉ gắn được với 1 tài khoản.")
-    ),
-    acctName && h("div", { className: "text-xs text-zinc-400 bg-[#181b26] p-2.5 rounded-xl border border-[#232738]" },
-      h("span", { className: "text-zinc-500" }, "Tài khoản: "), h("b", { className: "text-white" }, acctName)),
-    h("div", null,
-      h("label", { className: labelCls }, "Số điện thoại chính chủ:"),
-      h("div", { className: "flex gap-2" },
-        h("input", { type: "tel", inputMode: "tel", autoComplete: "tel", value: phone, onChange: e => setPhone(e.target.value), placeholder: "Ví dụ: 0912345678", className: "flex-1 " + inputCls }),
-        h("button", { type: "button", onClick: handleSendOtp, disabled: busy || otpCountdown > 0,
-          className: "px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap " + ((busy || otpCountdown > 0) ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer") },
-          busy && !otpSent ? "Đang gửi..." : (otpCountdown > 0 ? ("Gửi lại (" + otpCountdown + "s)") : (otpSent ? "Gửi lại mã" : "Gửi mã OTP"))))
-    ),
-    h("form", { onSubmit: handleVerifyOtp, className: "space-y-3.5" },
-      h("div", null,
-        h("label", { className: labelCls }, "Mã OTP trong tin nhắn:"),
-        h("input", { type: "text", inputMode: "numeric", autoComplete: "one-time-code", maxLength: 8, value: otpInput,
-          onChange: e => setOtpInput(e.target.value.replace(/[^0-9]/g, '')), placeholder: "Nhập mã OTP",
-          className: inputCls + " tracking-widest font-mono text-center text-sm focus:border-emerald-500" })
+    h("div", { className: "p-3 rounded-xl bg-zinc-900 border border-zinc-700/80 text-xs text-zinc-300 space-y-1.5" },
+      h("div", { className: "font-bold text-white flex items-center justify-between" },
+        h("span", null, "📱 Xác Minh Số Điện Thoại Chính Chủ"),
+        h("span", { className: "text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold" }, "Miễn Phí 100%")
       ),
-      msgBoxes,
-      h("button", { type: "submit", disabled: busy || !otpSent,
-        className: "w-full py-2.5 rounded-xl text-xs font-bold text-white shadow-lg transition " + ((busy || !otpSent) ? "bg-zinc-700 cursor-not-allowed" : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 cursor-pointer") },
-        busy && otpSent ? "Đang xác minh..." : "Xác Nhận & Kích Hoạt Tài Khoản")
+      h("p", { className: "text-[11px] text-zinc-400 leading-relaxed" },
+        "Để chống tạo nhiều tài khoản ảo/spam và bảo đảm hạn mức công bằng. Mỗi số điện thoại chỉ gắn với 1 tài khoản YouTrend duy nhất."
+      )
     ),
-    h("button", { type: "button", onClick: handleSwitchAccount, className: "w-full text-[11px] text-zinc-400 hover:text-white underline underline-offset-2 cursor-pointer" }, "Đăng xuất / dùng tài khoản khác")
+
+    acctName && h("div", { className: "text-xs text-zinc-400 bg-[#181b26] p-2.5 rounded-xl border border-[#232738] flex items-center justify-between" },
+      h("span", null, h("span", { className: "text-zinc-500" }, "Tài khoản: "), h("b", { className: "text-white" }, acctName)),
+      h("button", { type: "button", onClick: handleSwitchAccount, className: "text-[11px] text-zinc-400 hover:text-white underline cursor-pointer" }, "Đổi tài khoản")
+    ),
+
+    h("div", { className: "grid grid-cols-2 gap-1.5 p-1 bg-[#181b26] rounded-xl border border-[#232738]" },
+      h("button", {
+        type: "button",
+        onClick: () => { setVerifyMethod('telegram'); setErrorMsg(''); setSuccessMsg(''); },
+        className: "py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer " +
+          (verifyMethod === 'telegram' ? "bg-sky-600 text-white shadow" : "text-zinc-400 hover:text-white")
+      }, h("span", null, "✈️"), "Telegram Bot (1s)"),
+      h("button", {
+        type: "button",
+        onClick: () => { setVerifyMethod('sms'); setErrorMsg(''); setSuccessMsg(''); },
+        className: "py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer " +
+          (verifyMethod === 'sms' ? "bg-zinc-700 text-white shadow" : "text-zinc-400 hover:text-white")
+      }, h("span", null, "💬"), "SMS Nhà Mạng")
+    ),
+
+    verifyMethod === 'telegram' ? h("div", { className: "space-y-3.5 bg-sky-950/20 border border-sky-500/30 p-4 rounded-2xl" },
+      h("div", { className: "text-xs text-zinc-300 space-y-1" },
+        h("div", { className: "font-bold text-sky-300 flex items-center gap-1.5" },
+          h("span", null, "🚀"), "Nhận mã OTP tức thì qua Telegram (0 đồng)"
+        ),
+        h("p", { className: "text-[11px] text-zinc-400 leading-relaxed" },
+          "Bấm nút bên dưới để mở Telegram Bot, bấm BẮT ĐẦU và chia sẻ SĐT. Web sẽ tự động kích hoạt ngay sau 1 giây!"
+        )
+      ),
+
+      h("button", {
+        type: "button",
+        onClick: handleOpenTelegram,
+        className: "w-full py-3 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 shadow-lg shadow-sky-600/20 transition flex items-center justify-center gap-2 cursor-pointer"
+      },
+        h("span", { className: "text-base" }, "✈️"),
+        tgWaiting ? "Mở Lại Telegram Bot" : "Mở Telegram Nhận Mã Ngay (1s)"
+      ),
+
+      tgWaiting && h("div", { className: "p-2.5 rounded-xl bg-sky-900/30 border border-sky-500/40 text-sky-200 text-xs flex items-center gap-2" },
+        h("span", { className: "inline-block w-2 h-2 rounded-full bg-sky-400 animate-ping" }),
+        h("span", { className: "text-[11px]" }, "Đang lắng nghe Telegram... Sau khi bạn gửi SĐT, trang web sẽ tự động mở.")
+      ),
+
+      h("form", { onSubmit: handleVerifyOtp, className: "pt-2 border-t border-sky-500/20 space-y-2.5" },
+        h("div", { className: "flex items-center justify-between" },
+          h("label", { className: "text-[11px] font-semibold text-zinc-300" }, "Hoặc nhập mã OTP 6 số từ Telegram:"),
+          h("span", { className: "text-[10px] text-zinc-500" }, "Nếu dùng 2 máy")
+        ),
+        h("div", { className: "flex gap-2" },
+          h("input", {
+            type: "text",
+            inputMode: "numeric",
+            maxLength: 6,
+            value: otpInput,
+            onChange: e => setOtpInput(e.target.value.replace(/[^0-9]/g, '')),
+            placeholder: "Mã 6 số",
+            className: inputCls + " text-center font-mono tracking-widest text-sm focus:border-sky-500 flex-1"
+          }),
+          h("button", {
+            type: "submit",
+            disabled: busy || otpInput.trim().length < 6,
+            className: "px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap " +
+              ((busy || otpInput.trim().length < 6) ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer")
+          }, busy ? "Đang xử lý..." : "Kích Hoạt")
+        )
+      )
+    ) :
+    h("div", { className: "space-y-3.5 bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl" },
+      h("div", null,
+        h("label", { className: labelCls }, "Số điện thoại di động:"),
+        h("div", { className: "flex gap-2" },
+          h("input", {
+            type: "tel",
+            inputMode: "tel",
+            autoComplete: "tel",
+            value: phone,
+            onChange: e => setPhone(e.target.value),
+            placeholder: "Ví dụ: 0912345678",
+            className: "flex-1 " + inputCls
+          }),
+          h("button", {
+            type: "button",
+            onClick: handleSendOtp,
+            disabled: busy || otpCountdown > 0,
+            className: "px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap " +
+              ((busy || otpCountdown > 0) ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer")
+          },
+            busy && !otpSent ? "Đang gửi..." : (otpCountdown > 0 ? ("Gửi lại (" + otpCountdown + "s)") : (otpSent ? "Gửi lại mã" : "Gửi mã SMS"))
+          )
+        )
+      ),
+      h("form", { onSubmit: handleVerifyOtp, className: "space-y-3" },
+        h("div", null,
+          h("label", { className: labelCls }, "Mã OTP trong tin nhắn SMS:"),
+          h("input", {
+            type: "text",
+            inputMode: "numeric",
+            autoComplete: "one-time-code",
+            maxLength: 8,
+            value: otpInput,
+            onChange: e => setOtpInput(e.target.value.replace(/[^0-9]/g, '')),
+            placeholder: "Nhập mã OTP",
+            className: inputCls + " tracking-widest font-mono text-center text-sm focus:border-emerald-500"
+          })
+        ),
+        h("button", {
+          type: "submit",
+          disabled: busy || !otpSent,
+          className: "w-full py-2.5 rounded-xl text-xs font-bold text-white shadow-lg transition " +
+            ((busy || !otpSent) ? "bg-zinc-700 cursor-not-allowed" : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 cursor-pointer")
+        },
+          busy && otpSent ? "Đang xác minh..." : "Xác Nhận & Kích Hoạt Tài Khoản"
+        )
+      )
+    ),
+
+    msgBoxes
   );
 
   const credentialView = h(React.Fragment, null,
@@ -847,7 +1032,7 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice='',initialMod
       authMode === 'register' && h("div", null, h("label", { className: labelCls }, "Nhập lại mật khẩu:"),
         h("input", { type: "password", autoComplete: "new-password", value: confirmPassword, onChange: e => setConfirmPassword(e.target.value), placeholder: "Nhập lại mật khẩu", className: inputCls })),
 
-      authMode === 'register' && h("p", { className: "text-[10px] text-zinc-500" }, "Sau bước này bạn sẽ được yêu cầu xác minh số điện thoại bằng mã OTP."),
+      authMode === 'register' && h("p", { className: "text-[10px] text-zinc-500" }, "Sau bước này bạn sẽ được yêu cầu xác minh số điện thoại bằng Telegram Bot hoặc SMS."),
       msgBoxes,
       h("button", { type: "submit", disabled: busy,
         className: "w-full py-2.5 rounded-xl text-xs font-bold text-white shadow-lg transition " + (busy ? "bg-zinc-700 cursor-not-allowed" : "bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 cursor-pointer") },
@@ -869,6 +1054,7 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice='',initialMod
       authMode === 'verify_phone' ? verifyView : credentialView
     ));
 }
+
 
 // Simple API Key Prompt Modal (When user is logged in but hasn't entered key)
 function SimpleApiKeyModal({onClose,onKeySaved,showToast,notice=''}){const[inputKey,setInputKey]=useState('');const[testing,setTesting]=useState(false);const[testError,setTestError]=useState('');const handleSubmit=async e=>{if(e)e.preventDefault();const trimmed=(inputKey||'').trim();if(!trimmed){setTestError('Vui lòng dán mã API Key bắt đầu bằng AIzaSy...!');return;}setTesting(true);setTestError('');try{const u=new URL('https://www.googleapis.com/youtube/v3/videos');u.searchParams.set('part','snippet');u.searchParams.set('chart','mostPopular');u.searchParams.set('maxResults','1');u.searchParams.set('regionCode','VN');u.searchParams.set('key',trimmed);const res=await fetch(u.toString());const data=await res.json().catch(()=>({}));if(res.ok){if(showToast)showToast('Kết nối YouTube API thành công!');onKeySaved(trimmed);onClose();}else{const errObj=data.error&&data.error.errors&&data.error.errors[0]||{};const reason=errObj.reason||'HTTP '+res.status;if(reason==='keyInvalid'||reason==='badRequest'){setTestError('Mã API Key không hợp lệ. Vui lòng kiểm tra lại.');}else if(reason==='accessNotConfigured'){setTestError('API "YouTube Data API v3" chưa được Bật trong Google Cloud.');}else{setTestError('Lỗi kết nối YouTube API: '+(data.error?.message||reason));}}}catch(err){setTestError('Lỗi kết nối mạng: '+String(err));}finally{setTesting(false);}};return/*#__PURE__*/React.createElement("div",{className:"fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"},/*#__PURE__*/React.createElement("div",{className:"bg-[#12141c] border border-[#232738] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between border-b border-[#232738] pb-3"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2"},/*#__PURE__*/React.createElement("span",{className:"text-xl"},"\uD83D\uDD11"),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h3",{className:"text-base font-extrabold text-white"},"K\u1EBFt N\u1ED1i YouTube API Key"),/*#__PURE__*/React.createElement("p",{className:"text-[11px] text-zinc-400"},notice||'Cần có API Key để quét dữ liệu thật từ YouTube'))),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-[#181b26]"},"\u2715")),/*#__PURE__*/React.createElement("div",{className:"bg-[#181b26] p-3 rounded-xl border border-[#232738] space-y-1 text-xs text-zinc-400"},/*#__PURE__*/React.createElement("div",{className:"font-bold text-amber-400 flex justify-between items-center"},/*#__PURE__*/React.createElement("span",null,"C\xE1ch l\u1EA5y API Key mi\u1EC5n ph\xED 10.000 quota/ng\xE0y:"),/*#__PURE__*/React.createElement("a",{href:"https://console.cloud.google.com/apis/credentials",target:"_blank",rel:"noopener noreferrer",className:"text-red-400 underline text-[11px]"},"Google Cloud \u2197")),/*#__PURE__*/React.createElement("p",{className:"text-[11px]"},"T\u1EA1o API Key tr\xEAn Google Cloud \u2794 B\u1EADt YouTube Data API v3 \u2794 D\xE1n m\xE3 v\xE0o \u0111\xE2y.")),/*#__PURE__*/React.createElement("form",{onSubmit:handleSubmit,className:"space-y-3"},/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("label",{className:"text-[11px] font-semibold text-zinc-300 block mb-1"},"M\xE3 API Key (AIzaSy...):"),/*#__PURE__*/React.createElement("input",{type:"text",value:inputKey,onChange:e=>{setInputKey(e.target.value);setTestError('');},placeholder:"D\xE1n m\xE3 API Key c\u1EE7a b\u1EA1n...",className:"w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-red-500"})),testError&&/*#__PURE__*/React.createElement("div",{className:"p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs"},"\u26A0\uFE0F ",testError),/*#__PURE__*/React.createElement("button",{type:"submit",disabled:testing,className:"w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white shadow-lg transition flex items-center justify-center gap-2"},testing?'Đang kiểm tra key...':'Lưu & Bắt Đầu Sử Dụng'))));}// =========================================================================
