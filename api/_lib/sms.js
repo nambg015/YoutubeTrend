@@ -1,5 +1,6 @@
 // Gửi SMS OTP qua nhà cung cấp Việt Nam. Chọn bằng biến môi trường SMS_PROVIDER:
-//   speedsms  -> SpeedSMS.vn  (SPEEDSMS_TOKEN; mặc định sms_type=2 không cần đăng ký brandname)
+//   speedsms2fa -> SpeedSMS.vn API 2FA (SPEEDSMS_TOKEN + SPEEDSMS_APP_ID) — KHÔNG cần brandname, khuyên dùng
+//   speedsms  -> SpeedSMS.vn  API sms/send (cần sender/brandname hợp lệ)
 //   esms      -> eSMS.vn      (ESMS_API_KEY, ESMS_SECRET_KEY, ESMS_BRANDNAME; cần brandname + mẫu tin đã duyệt)
 //   mock      -> chỉ in mã ra log Vercel (CHỈ để thử, tự bị chặn ở production)
 const https = require('https');
@@ -16,6 +17,7 @@ const buildContent = code => (env('SMS_TEMPLATE') || DEFAULT_TEMPLATE).replace(/
 function isConfigured() {
   switch (providerName()) {
     case 'speedsms': return !!env('SPEEDSMS_TOKEN');
+    case 'speedsms2fa': return !!(env('SPEEDSMS_TOKEN') && env('SPEEDSMS_APP_ID'));
     case 'esms': return !!(env('ESMS_API_KEY') && env('ESMS_SECRET_KEY') && env('ESMS_BRANDNAME'));
     case 'mock': return !isProd();
     default: return false;
@@ -56,6 +58,22 @@ async function sendSpeedSms(local, content, post) {
   throw e;
 }
 
+// SpeedSMS 2FA: SpeedSMS tự sinh PIN và gửi; ta nhận PIN trong phản hồi để tự kiểm tra (không cần gọi pin/verify).
+async function sendSpeedSms2fa(local, post) {
+  const url = env('SPEEDSMS_2FA_URL') || 'https://api.speedsms.vn/index.php/pin/create';
+  const auth = 'Basic ' + Buffer.from(env('SPEEDSMS_TOKEN') + ':x').toString('base64');
+  const tpl = env('SMS_TEMPLATE') || 'Ma xac thuc YouTrend cua ban la {code}. Tuyet doi khong chia se ma nay.';
+  const content = tpl.replace(/\{code\}/g, '{pin_code}');
+  const body = { to: local, content, app_id: env('SPEEDSMS_APP_ID') };
+  const { json } = await post(url, { Authorization: auth }, body);
+  if (json && json.status === 'success' && json.data && json.data.pin_code) {
+    return { id: json.data.tranId, code: String(json.data.pin_code).replace(/\D/g, '') };
+  }
+  const e = new Error('SpeedSMS 2FA lỗi: ' + (json && (json.message || json.code) || 'không rõ') + ' | code=' + (json && json.code) + ' app_id=' + body.app_id);
+  e.providerCode = json && json.code;
+  throw e;
+}
+
 async function sendEsms(local, content, post) {
   const url = env('ESMS_URL') || 'https://rest.esms.vn/MainService.svc/json/SendMultipleMessage_V4_post_json/';
   const { json } = await post(url, {}, {
@@ -76,6 +94,7 @@ async function sendOtpSms(local, code, deps = {}) {
   const post = deps.post || postJson;
   const content = buildContent(code);
   switch (providerName()) {
+    case 'speedsms2fa': return sendSpeedSms2fa(local, post);
     case 'speedsms': return sendSpeedSms(local, content, post);
     case 'esms': return sendEsms(local, content, post);
     case 'mock':

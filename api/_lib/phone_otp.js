@@ -73,22 +73,22 @@ async function handle({ claims, body, ip }, deps = {}) {
       || (ip && (await store.incr('otp_ip:' + ip, 3600)) > LIMIT_IP_HOUR);
     if (tooMany) return fail(429, 'RATE_LIMITED', 'Bạn đã yêu cầu quá nhiều mã. Vui lòng thử lại sau ít phút.', { retryAfter: 600 });
 
-    const code = String(crypto.randomInt(100000, 1000000));
-    await store.set('otp:' + uid, JSON.stringify({ h: hashCode(uid, p.intl, code), phone: p.intl }), OTP_TTL);
-    await store.del('otp_tries:' + uid);
+    let code = String(crypto.randomInt(100000, 1000000));
     try {
-      await sms.sendOtpSms(p.local, code, deps.smsDeps);
+      const sent = await sms.sendOtpSms(p.local, code, deps.smsDeps);
+      if (sent && sent.code) code = String(sent.code); // nhà SMS tự sinh mã (SpeedSMS 2FA)
     } catch (e) {
       console.error('[sms] gửi thất bại:', e.message);
-      await store.del('otp:' + uid);
       return fail(502, 'SMS_FAILED', 'Không gửi được tin nhắn OTP. Vui lòng thử lại sau hoặc liên hệ quản trị viên.');
     }
+    await store.set('otp:' + uid, JSON.stringify({ h: hashCode(uid, p.intl, code), phone: p.intl }), OTP_TTL);
+    await store.del('otp_tries:' + uid);
     return out(200, { success: true, local: p.local, intl: p.intl, cooldown: COOLDOWN, ttl: OTP_TTL });
   }
 
   if (action === 'verify') {
     const code = String((body && body.code) || '').replace(/\D/g, '');
-    if (code.length !== 6) return fail(400, 'INVALID_CODE', 'Mã OTP gồm 6 chữ số.');
+    if (code.length < 4 || code.length > 8) return fail(400, 'INVALID_CODE', 'Vui lòng nhập đủ mã OTP trong tin nhắn.');
     let rec = null;
     try { rec = JSON.parse((await store.get('otp:' + uid)) || 'null'); } catch (e) {}
     if (!rec) return fail(400, 'OTP_EXPIRED', 'Mã OTP đã hết hạn hoặc chưa được gửi. Hãy bấm "Gửi lại mã".');

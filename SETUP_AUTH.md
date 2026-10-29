@@ -14,7 +14,12 @@
 
 ## 2. Chọn nhà SMS (chọn 1 trong 2)
 
-### A. SpeedSMS.vn — nhanh nhất, không cần đăng ký brandname
+### A0. SpeedSMS 2FA — KHUYÊN DÙNG, không cần brandname
+1. connect.speedsms.vn → menu **Verification** (2-Factor Authentication) → **Add new** → tạo 1 ứng dụng, lấy **App ID**.
+2. Biến môi trường: `SMS_PROVIDER=speedsms2fa`, `SPEEDSMS_TOKEN=<token>`, `SPEEDSMS_APP_ID=<App ID>`.
+3. SpeedSMS tự sinh mã (độ dài theo cấu hình app, thường 4–6 số) và gửi đi.
+
+### A. SpeedSMS.vn sms/send — cần sender/brandname hợp lệ (lỗi `sender not found` nếu thiếu)
 1. Đăng ký speedsms.vn, nạp tiền, vào **Cài đặt → Profile** lấy **Access Token**.
 2. Biến môi trường: `SMS_PROVIDER=speedsms`, `SPEEDSMS_TOKEN=<token>`.
 3. Mặc định dùng `sms_type=2` (tin chăm sóc khách hàng, đầu số ngẫu nhiên). Có brandname thì đặt thêm `SPEEDSMS_SMS_TYPE=3` và `SPEEDSMS_SENDER=<brandname>`.

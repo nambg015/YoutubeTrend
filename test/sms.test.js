@@ -2,7 +2,7 @@ const { test, describe, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 const sms = require('../api/_lib/sms');
 
-const KEYS = ['SMS_PROVIDER', 'SPEEDSMS_TOKEN', 'SPEEDSMS_SMS_TYPE', 'SPEEDSMS_SENDER', 'ESMS_API_KEY', 'ESMS_SECRET_KEY', 'ESMS_BRANDNAME', 'ESMS_SANDBOX', 'SMS_TEMPLATE', 'VERCEL_ENV', 'NODE_ENV'];
+const KEYS = ['SMS_PROVIDER', 'SPEEDSMS_TOKEN', 'SPEEDSMS_SMS_TYPE', 'SPEEDSMS_SENDER', 'SPEEDSMS_APP_ID', 'ESMS_API_KEY', 'ESMS_SECRET_KEY', 'ESMS_BRANDNAME', 'ESMS_SANDBOX', 'SMS_TEMPLATE', 'VERCEL_ENV', 'NODE_ENV'];
 let saved;
 beforeEach(() => { saved = {}; KEYS.forEach(k => { saved[k] = process.env[k]; delete process.env[k]; }); });
 afterEach(() => { KEYS.forEach(k => { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; }); });
@@ -24,6 +24,24 @@ describe('sms provider', () => {
   test('speedsms: lỗi (hết tiền) -> ném lỗi', async () => {
     process.env.SMS_PROVIDER = 'speedsms'; process.env.SPEEDSMS_TOKEN = 'TOK';
     await assert.rejects(sms.sendOtpSms('0912345678', '1', { post: async () => ({ json: { status: 'error', code: '300', message: 'insufficient' } }) }), /insufficient/);
+  });
+  test('speedsms2fa: cần token + app_id; gọi pin/create với {pin_code}, nhận PIN từ nhà SMS', async () => {
+    process.env.SMS_PROVIDER = 'speedsms2fa'; process.env.SPEEDSMS_TOKEN = 'TOK';
+    assert.strictEqual(sms.isConfigured(), false);
+    process.env.SPEEDSMS_APP_ID = '999';
+    assert.strictEqual(sms.isConfigured(), true);
+    let seen;
+    const r = await sms.sendOtpSms('0912345678', '000000', { post: async (url, headers, body) => { seen = { url, headers, body }; return { json: { status: 'success', code: '00', data: { pin_code: '4821', tranId: 5 } } }; } });
+    assert.match(seen.url, /pin\/create$/);
+    assert.strictEqual(seen.body.app_id, '999');
+    assert.strictEqual(seen.body.to, '0912345678');
+    assert.match(seen.body.content, /\{pin_code\}/);
+    assert.ok(!/\{code\}/.test(seen.body.content));
+    assert.strictEqual(r.code, '4821');
+  });
+  test('speedsms2fa: lỗi từ nhà SMS -> ném lỗi kèm code', async () => {
+    process.env.SMS_PROVIDER = 'speedsms2fa'; process.env.SPEEDSMS_TOKEN = 'TOK'; process.env.SPEEDSMS_APP_ID = '999';
+    await assert.rejects(sms.sendOtpSms('0912345678', '1', { post: async () => ({ json: { status: 'error', code: '300', message: 'insufficient' } }) }), /300/);
   });
   test('esms: cần đủ key + brandname; CodeResult 100 = thành công', async () => {
     process.env.SMS_PROVIDER = 'esms'; process.env.ESMS_API_KEY = 'K'; process.env.ESMS_SECRET_KEY = 'S';

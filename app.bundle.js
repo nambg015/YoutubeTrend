@@ -540,7 +540,7 @@ const ytAuth = {
   async confirmOtp(code) {
     const c = String(code || '').replace(/\D/g, '');
     if (!this._pendingPhone) return { success: false, error: 'Chưa có phiên gửi mã. Hãy bấm "Gửi mã OTP" trước.' };
-    if (c.length !== 6) return { success: false, error: 'Mã OTP gồm 6 chữ số.' };
+    if (c.length < 4 || c.length > 8) return { success: false, error: 'Vui lòng nhập đủ mã OTP trong tin nhắn.' };
     const user = this.currentUser();
     if (!user) return { success: false, error: 'Bạn cần đăng nhập trước khi xác minh số điện thoại.' };
     const r = await this.callPhoneApi({ action: 'verify', phone: this._pendingPhone, code: c });
@@ -718,7 +718,7 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     if (r.success) {
       setOtpSent(true);
       setOtpCountdown(r.cooldown || 60);
-      setSuccessMsg('Đã gửi mã OTP đến ' + r.local + '. Mở tin nhắn SMS để lấy mã 6 số (mã có hiệu lực 5 phút).');
+      setSuccessMsg('Đã gửi mã OTP đến ' + r.local + '. Mở tin nhắn SMS để lấy mã (có hiệu lực 5 phút).');
     } else if (r.alreadyVerified) {
       const u = ytAuth.currentUser();
       if (u) await finishIfVerified(u);
@@ -779,9 +779,9 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     ),
     h("form", { onSubmit: handleVerifyOtp, className: "space-y-3.5" },
       h("div", null,
-        h("label", { className: labelCls }, "Mã OTP (6 chữ số):"),
-        h("input", { type: "text", inputMode: "numeric", autoComplete: "one-time-code", maxLength: 6, value: otpInput,
-          onChange: e => setOtpInput(e.target.value.replace(/[^0-9]/g, '')), placeholder: "Nhập mã 6 số",
+        h("label", { className: labelCls }, "Mã OTP trong tin nhắn:"),
+        h("input", { type: "text", inputMode: "numeric", autoComplete: "one-time-code", maxLength: 8, value: otpInput,
+          onChange: e => setOtpInput(e.target.value.replace(/[^0-9]/g, '')), placeholder: "Nhập mã OTP",
           className: inputCls + " tracking-widest font-mono text-center text-sm focus:border-emerald-500" })
       ),
       msgBoxes,

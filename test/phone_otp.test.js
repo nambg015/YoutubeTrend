@@ -64,6 +64,17 @@ describe('phone_otp: gửi mã', () => {
   });
 });
 
+describe('phone_otp: nhà SMS tự sinh mã (SpeedSMS 2FA)', () => {
+  test('dùng đúng mã nhà SMS trả về (4 số) để xác minh', async () => {
+    const s = fakeSms(); s.sendOtpSms = async () => ({ code: '4821' });
+    const u = uid();
+    await send(u, '0912340030', s);
+    assert.strictEqual((await verify(u, '0912340030', '1111', s)).json.code, 'OTP_WRONG');
+    const r = await verify(u, '0912340030', '4821', s);
+    assert.strictEqual(r.status, 200);
+  });
+});
+
 describe('phone_otp: xác minh', () => {
   test('nhập đúng mã -> gắn SĐT vào tài khoản; status báo đã xác minh', async () => {
     const s = fakeSms(), u = uid();
