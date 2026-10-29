@@ -1,87 +1,96 @@
-// Vercel Serverless Function: Secure SePay Payment Verification
-// Protects your API key on the server side - hackers CANNOT see this key!
+// Xác nhận thanh toán SePay. Khác bản cũ:
+//  - KHÔNG còn key viết cứng trong code (chỉ đọc từ biến môi trường SEPAY_API_KEY)
+//  - Bắt buộc đăng nhập + đã xác minh SĐT
+//  - Giá/số ngày do SERVER quyết định (bảng giá bên dưới), không tin expectedAmount/tier/days từ trình duyệt
+//  - Mã đơn phải đúng dạng YT + 6 số, số tiền phải đủ, và 1 giao dịch ngân hàng chỉ dùng được cho 1 tài khoản
 const https = require('https');
+const { requirePhoneVerified, applyCors } = require('./_lib/auth');
+const store = require('./_lib/store');
 
-const SEPAY_API_KEY = process.env.SEPAY_API_KEY || 'J1CBHWNBTR9O5136HKVEGHOQIXLGBIHZ0GEORPVYPCWRUDNXSF2LVUQTTWY4MOYV';
+const SEPAY_API_KEY = process.env.SEPAY_API_KEY;
+
+// Phải khớp TIERS_DATA trong app.bundle.js
+const PRICE_TABLE = {
+  PRO:       { 30: 399000, 90: 699000,  365: 999000 },
+  ULTRA_PRO: { 30: 599000, 90: 999000,  365: 1500000 }
+};
+
+function fetchTransactions() {
+  return new Promise((resolve, reject) => {
+    const request = https.request({
+      hostname: 'my.sepay.vn',
+      path: '/userapi/transactions/list?limit=50',
+      method: 'GET',
+      headers: { Authorization: `Bearer ${SEPAY_API_KEY}`, 'Content-Type': 'application/json' }
+    }, response => {
+      let body = '';
+      response.on('data', c => { body += c; });
+      response.on('end', () => {
+        try { resolve(JSON.parse(body).transactions || []); } catch (e) { reject(e); }
+      });
+    });
+    request.on('error', reject);
+    request.end();
+  });
+}
 
 module.exports = async (req, res) => {
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  applyCors(req, res);
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).json({ success: false, message: 'Method Not Allowed' });
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+  if (!SEPAY_API_KEY) {
+    return res.status(500).json({ success: false, message: 'Máy chủ chưa cấu hình SEPAY_API_KEY.' });
   }
 
-  const { orderCode, expectedAmount, tier, days } = req.query;
+  const claims = await requirePhoneVerified(req, res);
+  if (!claims) return;
+  const uid = claims.sub;
 
-  if (!orderCode) {
-    return res.status(400).json({ success: false, message: 'Thiếu mã đơn hàng (orderCode)' });
+  const orderCode = String(req.query.orderCode || '').toUpperCase();
+  const tier = String(req.query.tier || '');
+  const days = Number(req.query.days);
+
+  if (!/^YT\d{6}$/.test(orderCode)) {
+    return res.status(400).json({ success: false, message: 'Mã đơn hàng không hợp lệ.' });
   }
-
-  const reqAmount = Number(expectedAmount) || 0;
+  const price = PRICE_TABLE[tier] && PRICE_TABLE[tier][days];
+  if (!price) {
+    return res.status(400).json({ success: false, message: 'Gói hoặc thời hạn không hợp lệ.' });
+  }
 
   try {
-    const transactions = await new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'my.sepay.vn',
-        path: '/userapi/transactions/list?limit=20',
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${SEPAY_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      };
-
-      const request = https.request(options, (response) => {
-        let body = '';
-        response.on('data', (chunk) => { body += chunk; });
-        response.on('end', () => {
-          try {
-            const parsed = JSON.parse(body);
-            resolve(parsed.transactions || []);
-          } catch(e) {
-            reject(e);
-          }
-        });
-      });
-
-      request.on('error', (err) => reject(err));
-      request.end();
+    const transactions = await fetchTransactions();
+    const matched = transactions.find(tx => {
+      const content = String(tx.transaction_content || '').toUpperCase();
+      return content.includes(orderCode) && Number(tx.amount_in) >= price;
     });
 
-    // Check if any transaction matches orderCode in transaction_content
-    const matchedTx = transactions.find(tx => {
-      const content = (tx.transaction_content || '').toUpperCase();
-      const code = orderCode.toUpperCase();
-      const amountIn = Number(tx.amount_in) || 0;
-      return content.includes(code) && (reqAmount === 0 || amountIn >= reqAmount * 0.95);
-    });
-
-    if (matchedTx) {
+    if (!matched) {
       return res.status(200).json({
-        success: true,
-        verified: true,
-        orderCode,
-        tier: tier || 'PRO',
-        days: Number(days) || 30,
-        amountReceived: matchedTx.amount_in,
-        transactionDate: matchedTx.transaction_date,
-        message: 'Thanh toán thành công! Giao dịch đã được ghi nhận vào tài khoản ngân hàng.'
-      });
-    } else {
-      return res.status(200).json({
-        success: false,
-        verified: false,
-        orderCode,
-        message: 'Chưa tìm thấy giao dịch chuyển khoản với nội dung "' + orderCode + '". Vui lòng đợi 30-60 giây để ngân hàng xử lý hoặc kiểm tra lại nội dung chuyển khoản.'
+        success: false, verified: false, orderCode,
+        message: 'Chưa thấy giao dịch đủ số tiền ' + price.toLocaleString('vi-VN') + 'đ với nội dung "' + orderCode + '". Đợi 30–60 giây rồi bấm lại.'
       });
     }
+
+    // 1 giao dịch ngân hàng chỉ gắn với 1 tài khoản (cùng tài khoản bấm lại thì vẫn được).
+    const txKey = 'paytx:' + (matched.id || matched.reference_number || orderCode);
+    const first = await store.setOnce(txKey, uid, 60 * 60 * 24 * 400);
+    if (!first) {
+      const owner = await store.get(txKey);
+      if (owner !== uid) {
+        return res.status(409).json({ success: false, verified: false, message: 'Giao dịch này đã được dùng cho tài khoản khác.' });
+      }
+    }
+
+    return res.status(200).json({
+      success: true, verified: true, orderCode, tier, days,
+      amountReceived: matched.amount_in,
+      transactionDate: matched.transaction_date,
+      message: 'Thanh toán thành công! Giao dịch đã được ghi nhận vào tài khoản ngân hàng.'
+    });
   } catch (error) {
-    console.error('Lỗi kiểm tra SePay:', error);
-    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi kiểm tra giao dịch', error: error.message });
+    console.error('Lỗi kiểm tra SePay:', error.message);
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ khi kiểm tra giao dịch' });
   }
 };

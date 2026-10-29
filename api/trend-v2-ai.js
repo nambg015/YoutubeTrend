@@ -1,4 +1,8 @@
 const https = require('https');
+const auth = require('./_lib/auth');
+const { applyCors } = auth;
+const { consumeDaily } = require('./_lib/store');
+
 const {
   validateNichesSchema,
   validateKeywordsSchema,
@@ -11,11 +15,7 @@ const {
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
 module.exports = async (req, res) => {
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, X-Gemini-Key');
+  applyCors(req, res, 'X-Gemini-Key');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -24,6 +24,20 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
+  }
+
+  // Bắt buộc đăng nhập + đã xác minh SĐT, và giới hạn số lần gọi mỗi ngày theo tài khoản.
+  const claims = await auth.requirePhoneVerified(req, res);
+  if (!claims) return;
+  const DAILY_LIMIT = Number(process.env.AI_DAILY_LIMIT) || 30;
+  try {
+    const q = await consumeDaily(claims.uid || claims.sub, 'ai', DAILY_LIMIT);
+    if (!q.allowed) {
+      return res.status(429).json({ success: false, code: 'QUOTA_EXCEEDED', message: 'Bạn đã dùng hết ' + q.limit + ' lượt hôm nay. Quay lại vào ngày mai nhé!' });
+    }
+  } catch (e) {
+    console.error('[quota] store error:', e.message);
+    return res.status(503).json({ success: false, code: 'QUOTA_UNAVAILABLE', message: 'Hệ thống đếm hạn mức đang lỗi, thử lại sau.' });
   }
 
   let body = req.body;
@@ -59,14 +73,15 @@ module.exports = async (req, res) => {
     });
 
     return new Promise((resolve, reject) => {
-      const model = 'gemini-2.5-flash';
-      const reqPath = `/v1beta/models/${model}:generateContent?key=${customApiKey}`;
+      const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      const reqPath = `/v1beta/models/${model}:generateContent`;
       const options = {
         hostname: 'generativelanguage.googleapis.com',
         path: reqPath,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-goog-api-key': customApiKey,
           'Content-Length': Buffer.byteLength(payload)
         }
       };
@@ -102,7 +117,7 @@ module.exports = async (req, res) => {
   try {
     if (action === 'propose_niches') {
       let rawResult = null;
-      let usedProvider = 'gemini-2.5-flash';
+      let usedProvider = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
       try {
         const prompt = buildNichesPrompt({ targetRegion, timeframe, count, topicHint, groundingContext });
@@ -137,7 +152,7 @@ module.exports = async (req, res) => {
 
     if (action === 'generate_keywords') {
       let rawResult = null;
-      let usedProvider = 'gemini-2.5-flash';
+      let usedProvider = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
       try {
         const prompt = buildKeywordsPrompt({ selectedNiches, count, targetRegion });

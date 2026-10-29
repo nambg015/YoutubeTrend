@@ -1,4 +1,8 @@
 const https = require('https');
+const auth = require('./_lib/auth');
+const { applyCors } = auth;
+const { consumeDaily } = require('./_lib/store');
+
 const { parseVNNumber, getVNNumberBounds } = require('./_lib/vn_parser');
 const { validateVisibleTitleChars, createClue } = require('./_lib/types_and_clues');
 const { parseStudioDate } = require('./_lib/date_parser');
@@ -6,11 +10,7 @@ const { parseStudioDate } = require('./_lib/date_parser');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
 module.exports = async (req, res) => {
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, X-Gemini-Key');
+  applyCors(req, res, 'X-Gemini-Key');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -19,6 +19,20 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
+  }
+
+  // Bắt buộc đăng nhập + đã xác minh SĐT, và giới hạn số lần gọi mỗi ngày theo tài khoản.
+  const claims = await auth.requirePhoneVerified(req, res);
+  if (!claims) return;
+  const DAILY_LIMIT = Number(process.env.CLUES_DAILY_LIMIT) || 15;
+  try {
+    const q = await consumeDaily(claims.uid || claims.sub, 'clues', DAILY_LIMIT);
+    if (!q.allowed) {
+      return res.status(429).json({ success: false, code: 'QUOTA_EXCEEDED', message: 'Bạn đã dùng hết ' + q.limit + ' lượt hôm nay. Quay lại vào ngày mai nhé!' });
+    }
+  } catch (e) {
+    console.error('[quota] store error:', e.message);
+    return res.status(503).json({ success: false, code: 'QUOTA_UNAVAILABLE', message: 'Hệ thống đếm hạn mức đang lỗi, thử lại sau.' });
   }
 
   let body = req.body;
@@ -156,14 +170,15 @@ Output strictly valid JSON:
     });
 
     const geminiRes = await new Promise((resolve, reject) => {
-      const model = 'gemini-2.5-flash';
-      const reqPath = `/v1beta/models/${model}:generateContent?key=${customApiKey}`;
+      const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      const reqPath = `/v1beta/models/${model}:generateContent`;
       const options = {
         hostname: 'generativelanguage.googleapis.com',
         path: reqPath,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-goog-api-key': customApiKey,
           'Content-Length': Buffer.byteLength(geminiPayload)
         }
       };
@@ -385,7 +400,7 @@ Output strictly valid JSON:
   } catch(err) {
     return res.status(500).json({
       success: false,
-      message: 'Lỗi trích xuất Gemini Vision: ' + err.message
+      message: 'Lỗi trích xuất Gemini Vision: ' + String(err.message || '').slice(0, 160)
     });
   }
 };

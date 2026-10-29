@@ -17,7 +17,10 @@ const {
   generateFallbackKeywords
 } = require('../api/_lib/trend_v2/ai_generator');
 
+const authLib = require('../api/_lib/auth');
 const trendAiHandler = require('../api/trend-v2-ai');
+const realRequire = authLib.requirePhoneVerified;
+const asVerifiedUser = (uid = 'u_test') => { authLib.requirePhoneVerified = async () => ({ sub: uid, phone_number: '+84912345678' }); };
 
 describe('Trend v2 AI: Schema Validation & Rules Enforcement', () => {
   test('validateNichesSchema validates valid niches and enforces isHypothesis: true', () => {
@@ -125,6 +128,7 @@ describe('Trend v2 AI: Serverless Endpoint Mock Test', () => {
   }
 
   test('api/trend-v2-ai handles propose_niches with grounded fallback when offline', async () => {
+    asVerifiedUser('u_niches');
     const req = {
       method: 'POST',
       headers: {},
@@ -146,6 +150,7 @@ describe('Trend v2 AI: Serverless Endpoint Mock Test', () => {
   });
 
   test('api/trend-v2-ai handles generate_keywords for selected niches', async () => {
+    asVerifiedUser('u_kw');
     const req = {
       method: 'POST',
       headers: {},
@@ -164,5 +169,27 @@ describe('Trend v2 AI: Serverless Endpoint Mock Test', () => {
     assert.strictEqual(res.body.success, true);
     assert.strictEqual(res.body.action, 'generate_keywords');
     assert.strictEqual(res.body.keywords.length, 8);
+  });
+
+  test('api/trend-v2-ai rejects callers without a verified phone (401/403)', async () => {
+    authLib.requirePhoneVerified = realRequire;
+    const res = createMockRes();
+    await trendAiHandler({ method: 'POST', headers: {}, body: { action: 'propose_niches' } }, res);
+    assert.strictEqual(res.statusCode, 401);
+    assert.strictEqual(res.body.success, false);
+  });
+
+  test('api/trend-v2-ai enforces the per-account daily quota (429)', async () => {
+    process.env.AI_DAILY_LIMIT = '2';
+    // handler đọc env mỗi lần gọi -> đặt limit thấp rồi gọi 3 lần cùng 1 uid
+    asVerifiedUser('u_spammer');
+    const codes = [];
+    for (let i = 0; i < 3; i++) {
+      const res = createMockRes();
+      await trendAiHandler({ method: 'POST', headers: {}, body: { action: 'propose_niches', count: 3 } }, res);
+      codes.push(res.statusCode);
+    }
+    delete process.env.AI_DAILY_LIMIT;
+    assert.deepStrictEqual(codes, [200, 200, 429]);
   });
 });

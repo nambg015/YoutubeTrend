@@ -241,7 +241,7 @@ function AccountPasswordChangeCard({ profile, showToast }) {
   const [msg, setMsg] = React.useState('');
   const [isSuccess, setIsSuccess] = React.useState(false);
 
-  const handleChangePassword = (e) => {
+  const handleChangePassword = async (e) => {
     e.preventDefault();
     setMsg('');
     setIsSuccess(false);
@@ -275,21 +275,12 @@ function AccountPasswordChangeCard({ profile, showToast }) {
       return;
     }
 
-    // Nếu là tài khoản thường
-    let accounts = [];
-    try { accounts = JSON.parse(st.get('yt_registered_accounts') || '[]'); } catch(err) { accounts = []; }
-    const accIdx = accounts.findIndex(a => a.email === profile.email);
-    if (accIdx === -1) {
-      setMsg('Không tìm thấy tài khoản để đổi mật khẩu.');
+    // Nếu là tài khoản thường (Firebase)
+    const fbRes = await ytAuth.changePassword(oldPass, newPass);
+    if (!fbRes.success) {
+      setMsg(fbRes.error || 'Không đổi được mật khẩu.');
       return;
     }
-    const acc = accounts[accIdx];
-    if (acc.passHash !== btoa(oldPass) && acc.passHash !== sha256Hex(oldPass)) {
-      setMsg('Mật khẩu hiện tại không chính xác!');
-      return;
-    }
-    accounts[accIdx].passHash = sha256Hex(newPass);
-    st.set('yt_registered_accounts', JSON.stringify(accounts));
     setIsSuccess(true);
     setMsg('Đã cập nhật mật khẩu tài khoản thành công!');
     setOldPass(''); setNewPass(''); setConfirmPass('');
@@ -356,793 +347,460 @@ const u=new URL('https://www.googleapis.com/youtube/v3/videos');u.searchParams.s
 function sha256Hex(ascii){function rightRotate(v,a){return(v>>>a)|(v<<(32-a));}var mathPow=Math.pow;var maxWord=mathPow(2,32);var lp='length';var i,j;var result='';var words=[];var asciiBitLength=ascii[lp]*8;var hash=[];var k=[];var primeCounter=0;var isComposite={};for(var candidate=2;primeCounter<64;candidate++){if(!isComposite[candidate]){for(i=0;i<313;i+=candidate){isComposite[i]=candidate;}hash[primeCounter]=(mathPow(candidate,0.5)*maxWord)|0;k[primeCounter++]=(mathPow(candidate,1/3)*maxWord)|0;}}ascii+='\x80';while(ascii[lp]%64-56)ascii+='\x00';for(i=0;i<ascii[lp];i++){j=ascii.charCodeAt(i);if(j>>8)return'';words[i>>2]|=j<<((3-i)%4)*8;}words[words[lp]]=((asciiBitLength/maxWord)|0);words[words[lp]]=(asciiBitLength|0);for(j=0;j<words[lp];){var w=words.slice(j,j+=16);var oldHash=hash;hash=hash.slice(0,8);for(i=0;i<64;i++){var i2=i+j;var w15=w[i-15],w2=w[i-2];var a=hash[0],e=hash[4];var temp1=hash[7]+(rightRotate(e,6)^rightRotate(e,11)^rightRotate(e,25))+((e&hash[5])^((~e)&hash[6]))+k[i]+(w[i]=(i<16)?w[i]:(w[i-16]+(rightRotate(w15,7)^rightRotate(w15,18)^(w15>>>3))+w[i-7]+(rightRotate(w2,17)^rightRotate(w2,19)^(w2>>>10)))|0);var temp2=(rightRotate(a,2)^rightRotate(a,13)^rightRotate(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));hash=[(temp1+temp2)|0].concat(hash);hash[4]=(hash[4]+temp1)|0;}for(i=0;i<8;i++){hash[i]=(hash[i]+oldHash[i])|0;}}for(i=0;i<8;i++){for(var i2=3;i2>=0;i2--){var b=(hash[i]>>(8*i2))&255;result+=((b<16)?0:'')+b.toString(16);}}return result;}
 
 // =========================================================================
-// GOOGLE FIREBASE PHONE AUTHENTICATION SERVICE (GỬI SMS THẬT 10.000 TIN/THÁNG)
+// ĐĂNG NHẬP & XÁC MINH SĐT BẰNG FIREBASE AUTH (v2)
+// - Danh tính do Firebase giữ (Google / Email-Mật khẩu), SĐT được GẮN (link) vào đúng tài khoản đó.
+// - Firebase tự bảo đảm 1 SĐT chỉ gắn được với 1 tài khoản (không còn kiểm tra bằng localStorage).
+// - Server (/api/*) đọc ID token và chỉ cho qua khi token có phone_number.
 // =========================================================================
-const ytFirebasePhoneAuth = {
-  getConfig() {
-    if (typeof window !== 'undefined' && window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) {
-      return window.FIREBASE_CONFIG;
-    }
-    try {
-      const raw = localStorage.getItem('yt_firebase_config');
-      if (raw) return JSON.parse(raw);
-    } catch (e) {}
-    return {
-      apiKey: "AIzaSyBGmBHWOFA2NeHneybZwps_s-ZBL_t2KUg",
-      authDomain: "sdt2804-84801.firebaseapp.com",
-      projectId: "sdt2804-84801",
-      storageBucket: "sdt2804-84801.firebasestorage.app",
-      messagingSenderId: "65560942545",
-      appId: "1:65560942545:web:0b640f38042dd36a2cb2f0",
-      measurementId: "G-FYY9WYNKX0"
-    };
-  },
-  saveConfig(cfg) {
-    try {
-      localStorage.setItem('yt_firebase_config', JSON.stringify(cfg));
-    } catch (e) {}
-  },
-  isConfigured() {
-    const cfg = this.getConfig();
-    return !!(cfg && cfg.apiKey && cfg.projectId);
-  },
+const ytAuth = {
+  _booted: false,
+  _confirmation: null,
+  _verifier: null,
+  _slot: null,
+
   init() {
     if (typeof firebase === 'undefined') return false;
     if (firebase.apps && firebase.apps.length > 0) return true;
-    const cfg = this.getConfig();
+    const cfg = typeof window !== 'undefined' ? window.FIREBASE_CONFIG : null;
     if (!cfg || !cfg.apiKey) return false;
-    try {
-      firebase.initializeApp(cfg);
-      return true;
-    } catch (e) {
-      console.warn('Firebase init error:', e);
-      return false;
-    }
+    try { firebase.initializeApp(cfg); return true; } catch (e) { console.warn('Firebase init error:', e); return false; }
   },
-  setupRecaptcha() {
-    if (typeof firebase === 'undefined' || !this.init()) return null;
-    try {
-      if (window.phoneRecaptchaVerifier) {
-        try { window.phoneRecaptchaVerifier.clear(); } catch (e) {}
-        window.phoneRecaptchaVerifier = null;
-      }
-      
-      const targetId = 'firebase-phone-recaptcha-dynamic';
-      if (typeof document !== 'undefined') {
-        const existing = document.getElementById(targetId);
-        if (existing && existing.parentNode) {
-          existing.parentNode.removeChild(existing);
-        }
-        const newDiv = document.createElement('div');
-        newDiv.id = targetId;
-        document.body.appendChild(newDiv);
+  currentUser() { return this.init() ? firebase.auth().currentUser : null; },
 
-        window.phoneRecaptchaVerifier = new firebase.auth.RecaptchaVerifier(targetId, {
-          size: 'invisible',
-          callback: () => {}
-        });
-        return window.phoneRecaptchaVerifier;
-      }
-      return null;
-    } catch (e) {
-      console.warn('RecaptchaVerifier setup error:', e);
-      return null;
-    }
+  isInAppBrowser() {
+    try { return /(FBAN|FBAV|FB_IAB|Instagram|Zalo|Messenger|Line\/|TikTok|; wv\))/i.test(navigator.userAgent || ''); } catch (e) { return false; }
   },
-  async sendRealSms(rawPhone) {
-    let clean = (rawPhone || '').replace(/[^0-9]/g, '');
-    if (!clean) return { success: false, error: 'Số điện thoại trống!' };
-    let intlPhone = clean;
-    if (intlPhone.startsWith('0')) {
-      intlPhone = '+84' + intlPhone.slice(1);
-    } else if (!intlPhone.startsWith('+')) {
-      intlPhone = '+' + intlPhone;
-    }
 
-    if (!this.isConfigured() || !this.init()) {
-      return { success: false, needConfig: true };
-    }
+  // Chấp nhận 0912345678 / 84912345678 / +84912345678 -> { ok, intl:'+84912345678', local:'0912345678' }
+  normalizePhone(raw) {
+    let d = String(raw || '').replace(/[\s.\-()]/g, '');
+    if (d.startsWith('+84')) d = '0' + d.slice(3);
+    else if (d.startsWith('84') && d.length === 11) d = '0' + d.slice(2);
+    if (!/^0[35789]\d{8}$/.test(d)) return { ok: false };
+    return { ok: true, local: d, intl: '+84' + d.slice(1) };
+  },
+  phoneLocal(intl) { return intl && intl.startsWith('+84') ? '0' + intl.slice(3) : (intl || ''); },
 
-    const appVerifier = this.setupRecaptcha();
-    if (!appVerifier) {
-      return { success: false, error: 'Không thể khởi tạo bộ xác thực Google reCAPTCHA cho SĐT.' };
-    }
+  profileFromUser(user) {
+    const g = (user.providerData || []).find(p => p.providerId === 'google.com');
+    const email = user.email || '';
+    return {
+      name: user.displayName || (email ? email.split('@')[0] : 'Người dùng'),
+      email,
+      avatar: user.photoURL || '',
+      phone: this.phoneLocal(user.phoneNumber),
+      phoneVerified: !!user.phoneNumber,
+      googleId: g ? g.uid : user.uid,
+      firebaseUid: user.uid,
+      isAuth: true,
+      authType: g ? 'google' : 'username'
+    };
+  },
 
+  async getIdToken(force) {
+    const u = this.currentUser();
+    return u ? await u.getIdToken(!!force) : '';
+  },
+  // Dùng khi gọi /api/*: { Authorization: 'Bearer <idToken>' }
+  async authHeaders() {
+    try { const t = await this.getIdToken(false); return t ? { Authorization: 'Bearer ' + t } : {}; } catch (e) { return {}; }
+  },
+
+  mapError(err) {
+    const code = (err && err.code) || '';
+    const map = {
+      'auth/invalid-phone-number': 'Số điện thoại không đúng định dạng. Nhập số di động VN, ví dụ 0912345678.',
+      'auth/missing-phone-number': 'Bạn chưa nhập số điện thoại.',
+      'auth/too-many-requests': 'Bạn đã thử quá nhiều lần. Vui lòng đợi vài phút rồi thử lại.',
+      'auth/quota-exceeded': 'Hệ thống đã hết hạn mức gửi SMS hôm nay. Vui lòng thử lại sau.',
+      'auth/operation-not-allowed': 'Phương thức đăng nhập này chưa được bật (hoặc SMS vùng Việt Nam chưa được cho phép) trong Firebase Console.',
+      'auth/captcha-check-failed': 'Xác thực reCAPTCHA không thành công. Hãy tải lại trang rồi thử lại.',
+      'auth/invalid-app-credential': 'Xác thực reCAPTCHA không hợp lệ. Hãy tải lại trang rồi thử lại.',
+      'auth/app-not-authorized': 'Tên miền hoặc API key chưa được cấp quyền dùng Firebase Auth (kiểm tra Authorized domains và hạn chế API key).',
+      'auth/unauthorized-domain': 'Tên miền này chưa được thêm vào Authorized domains trong Firebase Authentication.',
+      'auth/invalid-api-key': 'API key Firebase không hợp lệ.',
+      'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'API key Firebase không hợp lệ hoặc bị chặn theo domain.',
+      'auth/network-request-failed': 'Lỗi mạng khi kết nối Google. Kiểm tra đường truyền rồi thử lại.',
+      'auth/invalid-verification-code': 'Mã OTP không đúng.',
+      'auth/code-expired': 'Mã OTP đã hết hạn. Hãy bấm Gửi lại mã.',
+      'auth/session-expired': 'Phiên OTP đã hết hạn. Hãy bấm Gửi lại mã.',
+      'auth/credential-already-in-use': 'Số điện thoại này đã gắn với một tài khoản khác. Mỗi SĐT chỉ dùng cho 1 tài khoản.',
+      'auth/account-exists-with-different-credential': 'Số điện thoại này đã gắn với một tài khoản khác. Mỗi SĐT chỉ dùng cho 1 tài khoản.',
+      'auth/provider-already-linked': 'Tài khoản này đã xác minh số điện thoại rồi.',
+      'auth/requires-recent-login': 'Vì lý do bảo mật, hãy đăng xuất rồi đăng nhập lại trước khi thực hiện.',
+      'auth/email-already-in-use': 'Tên đăng nhập / email này đã có người dùng. Hãy chọn tên khác hoặc chuyển sang Đăng nhập.',
+      'auth/weak-password': 'Mật khẩu quá yếu (tối thiểu 6 ký tự, nên từ 8 ký tự).',
+      'auth/invalid-email': 'Tên đăng nhập / email không hợp lệ.',
+      'auth/invalid-credential': 'Tên đăng nhập hoặc mật khẩu không chính xác.',
+      'auth/wrong-password': 'Tên đăng nhập hoặc mật khẩu không chính xác.',
+      'auth/user-not-found': 'Tên đăng nhập hoặc mật khẩu không chính xác.',
+      'auth/user-disabled': 'Tài khoản này đã bị khoá.',
+      'auth/popup-blocked': 'Trình duyệt đang chặn cửa sổ đăng nhập Google. Hãy cho phép popup rồi thử lại.',
+      'auth/popup-closed-by-user': 'Bạn đã đóng cửa sổ đăng nhập Google.',
+      'auth/cancelled-popup-request': 'Bạn đã đóng cửa sổ đăng nhập Google.',
+      'auth/operation-not-supported-in-this-environment': 'Trình duyệt này không hỗ trợ đăng nhập Google. Hãy mở bằng Chrome hoặc Safari.'
+    };
+    return map[code] || ((err && err.message) ? err.message : 'Đã có lỗi xảy ra, vui lòng thử lại.');
+  },
+
+  // ---- reCAPTCHA vô hình của Firebase: tạo mới 1 ô chứa cho mỗi lần gửi, luôn dọn sạch lần trước
+  disposeVerifier() {
+    try { if (this._verifier) this._verifier.clear(); } catch (e) {}
+    this._verifier = null;
+    if (this._slot && this._slot.parentNode) this._slot.parentNode.removeChild(this._slot);
+    this._slot = null;
+  },
+  makeVerifier() {
+    this.disposeVerifier();
+    const slot = document.createElement('div');
+    slot.id = 'yt-recaptcha-slot-' + Date.now();
+    document.body.appendChild(slot);
+    this._slot = slot;
+    this._verifier = new firebase.auth.RecaptchaVerifier(slot, { size: 'invisible' });
+    return this._verifier;
+  },
+
+  // ---- Đăng nhập
+  async signInGoogle() {
+    if (!this.init()) return { success: false, error: 'Không tải được Firebase. Hãy tải lại trang.' };
     try {
-      const confirmationResult = await firebase.auth().signInWithPhoneNumber(intlPhone, appVerifier);
-      window.confirmationResult = confirmationResult;
-      return { success: true, intlPhone };
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const cred = await firebase.auth().signInWithPopup(provider);
+      return { success: true, user: cred.user };
     } catch (err) {
-      console.error('Firebase SMS error details:', err.code, err.message);
-      
-      // Reset verifier in catch block to ensure fresh state for retry
+      console.warn('Google sign-in error:', err.code, err.message);
+      return { success: false, code: err.code, error: this.mapError(err) };
+    }
+  },
+  toEmail(identity) { return identity.includes('@') ? identity : identity + '@youtrend.user'; },
+  async signIn(identity, pass) {
+    if (!this.init()) return { success: false, error: 'Không tải được Firebase. Hãy tải lại trang.' };
+    try {
+      const cred = await firebase.auth().signInWithEmailAndPassword(this.toEmail(identity), pass);
+      return { success: true, user: cred.user };
+    } catch (err) { return { success: false, code: err.code, error: this.mapError(err) }; }
+  },
+  async signUp(identity, pass) {
+    if (!this.init()) return { success: false, error: 'Không tải được Firebase. Hãy tải lại trang.' };
+    try {
+      const cred = await firebase.auth().createUserWithEmailAndPassword(this.toEmail(identity), pass);
+      try { await cred.user.updateProfile({ displayName: identity.includes('@') ? identity.split('@')[0] : identity }); } catch (e) {}
+      return { success: true, user: cred.user };
+    } catch (err) { return { success: false, code: err.code, error: this.mapError(err) }; }
+  },
+  async changePassword(oldPass, newPass) {
+    const u = this.currentUser();
+    if (!u || !u.email) return { success: false, error: 'Bạn cần đăng nhập để đổi mật khẩu.' };
+    if ((u.providerData || []).some(p => p.providerId === 'google.com') && !(u.providerData || []).some(p => p.providerId === 'password')) {
+      return { success: false, error: 'Tài khoản Google không có mật khẩu riêng. Hãy đổi mật khẩu trong tài khoản Google.' };
+    }
+    try {
+      await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, oldPass));
+      await u.updatePassword(newPass);
+      return { success: true };
+    } catch (err) { return { success: false, code: err.code, error: this.mapError(err) }; }
+  },
+  async signOut() {
+    this.disposeVerifier();
+    this._confirmation = null;
+    try { if (this.init()) await firebase.auth().signOut(); } catch (e) {}
+  },
+
+  // ---- SĐT: gắn vào tài khoản đang đăng nhập
+  async sendOtp(rawPhone) {
+    const p = this.normalizePhone(rawPhone);
+    if (!p.ok) return { success: false, error: 'Vui lòng nhập số di động Việt Nam hợp lệ (ví dụ 0912345678).' };
+    if (!this.init()) return { success: false, error: 'Không tải được Firebase. Hãy tải lại trang.' };
+    const user = firebase.auth().currentUser;
+    if (!user) return { success: false, error: 'Bạn cần đăng nhập trước khi xác minh số điện thoại.' };
+    if (user.phoneNumber) return { success: false, alreadyVerified: true, error: 'Tài khoản này đã xác minh số điện thoại rồi.' };
+    try {
+      this._confirmation = await user.linkWithPhoneNumber(p.intl, this.makeVerifier());
+      return { success: true, intl: p.intl, local: p.local };
+    } catch (err) {
+      console.warn('Send OTP error:', err.code, err.message);
+      this.disposeVerifier();
+      this._confirmation = null;
+      return { success: false, code: err.code, error: this.mapError(err) };
+    }
+  },
+  async confirmOtp(code) {
+    const c = String(code || '').replace(/\D/g, '');
+    if (!this._confirmation) return { success: false, error: 'Chưa có phiên gửi mã. Hãy bấm "Gửi mã OTP" trước.' };
+    if (c.length !== 6) return { success: false, error: 'Mã OTP gồm 6 chữ số.' };
+    try {
+      await this._confirmation.confirm(c);
+      this._confirmation = null;
+      this.disposeVerifier();
+      const user = firebase.auth().currentUser;
+      try { await user.reload(); } catch (e) {}
+      await user.getIdToken(true); // làm mới token để chứa phone_number
+      return { success: true, user: firebase.auth().currentUser };
+    } catch (err) {
+      if (err.code === 'auth/code-expired' || err.code === 'auth/session-expired') this._confirmation = null;
+      return { success: false, code: err.code, error: this.mapError(err) };
+    }
+  },
+
+  // Đồng bộ hồ sơ trong máy theo trạng thái Firebase thật (chạy 1 lần khi tải trang)
+  bootstrap() {
+    if (this._booted || !this.init()) return;
+    this._booted = true;
+    firebase.auth().onAuthStateChanged(user => {
       try {
-        if (window.phoneRecaptchaVerifier) {
-          window.phoneRecaptchaVerifier.clear();
-          window.phoneRecaptchaVerifier = null;
+        if (user) {
+          const next = this.profileFromUser(user);
+          st.set('yt_user_profile', JSON.stringify(next));
+          window.dispatchEvent(new CustomEvent('yt-profile-changed', { detail: next }));
+        } else {
+          let prof = null;
+          try { prof = JSON.parse(st.get('yt_user_profile') || 'null'); } catch (e) {}
+          // Hồ sơ "đã đăng nhập" kiểu cũ (chỉ nằm trong localStorage, không có Firebase) -> huỷ, buộc đăng nhập lại
+          if (prof && prof.isAuth && prof.authType !== 'admin') {
+            st.del('yt_user_profile');
+            window.dispatchEvent(new CustomEvent('yt-profile-changed', { detail: null }));
+            window.dispatchEvent(new CustomEvent('yt_user_profile_updated', { detail: null }));
+          }
         }
-        const existing = document.getElementById('firebase-phone-recaptcha-dynamic');
-        if (existing && existing.parentNode) {
-          existing.parentNode.removeChild(existing);
-        }
-      } catch (cleanErr) {}
-
-      let msg = err.message || 'Lỗi gửi tin nhắn SMS từ Google Firebase';
-      if (err.code === 'auth/too-many-requests') {
-        msg = 'Bạn đã gửi quá nhiều yêu cầu trong thời gian ngắn. Vui lòng đợi 2-5 phút rồi thử lại!';
-      } else if (err.code === 'auth/quota-exceeded') {
-        msg = 'Dự án Firebase đã hết hạn mức gửi SMS hôm nay. Vui lòng thử lại sau!';
-      } else if (err.code === 'auth/invalid-phone-number') {
-        msg = 'Số điện thoại không đúng định dạng quốc tế (+84). Vui lòng kiểm tra lại!';
-      } else if (err.code === 'auth/operation-not-allowed') {
-        msg = 'Chưa bật Phone Auth hoặc chưa cho phép vùng Việt Nam (+84) trong Firebase Console (SMS Region Policy).';
-      } else if (err.code === 'auth/captcha-check-failed' || err.code === 'auth/invalid-app-credential') {
-        msg = 'Xác thực reCAPTCHA không thành công hoặc tên miền youtubetrend-rho.vercel.app chưa được uỷ quyền trong Firebase.';
-      } else if (err.code === 'auth/network-request-failed') {
-        msg = 'Lỗi kết nối mạng đến máy chủ Google. Vui lòng kiểm tra đường truyền!';
-      }
-      return { success: false, error: msg, code: err.code };
-    }
-  },
-  async verifyRealOtp(otpCode) {
-    if (!window.confirmationResult) {
-      return { success: false, error: 'Chưa có phiên gửi mã OTP Firebase! Vui lòng bấm Gửi mã OTP trước.' };
-    }
-    try {
-      const result = await window.confirmationResult.confirm(otpCode);
-      return { success: true, user: result.user };
-    } catch (err) {
-      return { success: false, error: 'Mã OTP từ tin nhắn SMS không chính xác hoặc đã hết hạn!' };
-    }
+      } catch (e) { console.warn('ytAuth sync error:', e); }
+    });
   }
 };
+if (typeof window !== 'undefined') {
+  window.ytAuth = ytAuth;
+  ytAuth.bootstrap();
+}
 
 function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
+  const h = React.createElement;
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register' | 'verify_phone'
-  const [username, setUsername] = useState('');
+  const [identity, setIdentity] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [otpInput, setOtpInput] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpCountdown, setOtpCountdown] = useState(0);
-  const [pendingUser, setPendingUser] = useState(null); // stores user waiting for phone verification
-  const [recaptchaToken, setRecaptchaToken] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [acctName, setAcctName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const recaptchaContainerRef = React.useRef(null);
-  const widgetIdRef = React.useRef(null);
 
-  // Countdown timer for resending OTP
+  // Mở lại modal khi đã đăng nhập nhưng chưa có SĐT -> vào thẳng bước xác minh
+  React.useEffect(() => {
+    const u = ytAuth.currentUser();
+    if (u && !u.phoneNumber) {
+      setAcctName(u.displayName || u.email || '');
+      setAuthMode('verify_phone');
+    }
+    return () => { ytAuth.disposeVerifier(); };
+  }, []);
+
   React.useEffect(() => {
     if (otpCountdown > 0) {
-      const timer = setTimeout(() => setOtpCountdown(prev => prev - 1), 1000);
-      return () => clearTimeout(timer);
+      const t = setTimeout(() => setOtpCountdown(v => v - 1), 1000);
+      return () => clearTimeout(t);
     }
   }, [otpCountdown]);
 
-  React.useEffect(() => {
-    const renderRecaptcha = () => {
-      if (window.grecaptcha && window.grecaptcha.render && recaptchaContainerRef.current) {
-        try {
-          if (widgetIdRef.current === null) {
-            widgetIdRef.current = window.grecaptcha.render(recaptchaContainerRef.current, {
-              sitekey: '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI',
-              theme: 'dark',
-              callback: token => {
-                setRecaptchaToken(token);
-                setErrorMsg('');
-              },
-              'expired-callback': () => {
-                setRecaptchaToken('');
-              }
-            });
-          }
-        } catch (e) {}
-      }
-    };
-
-    if (authMode !== 'verify_phone') {
-      if (window.grecaptcha && window.grecaptcha.render) {
-        renderRecaptcha();
-      } else {
-        const interval = setInterval(() => {
-          if (window.grecaptcha && window.grecaptcha.render) {
-            clearInterval(interval);
-            renderRecaptcha();
-          }
-        }, 300);
-        return () => clearInterval(interval);
-      }
-    }
-  }, [authMode]);
-
-  // Handle sending OTP to phone number
-  const [showFirebaseSetup, setShowFirebaseSetup] = useState(false);
-  const [firebaseConfigInput, setFirebaseConfigInput] = useState('');
-  const [isSendingSms, setIsSendingSms] = useState(false);
-
-  const handleSaveFirebaseConfig = () => {
-    try {
-      let parsed = null;
-      let text = firebaseConfigInput.trim();
-      // Auto-extract json or object literal
-      if (text.includes('{') && text.includes('}')) {
-        let jsonStr = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
-        jsonStr = jsonStr.replace(/([a-zA-Z0-9_]+):/g, '"$1":').replace(/'/g, '"');
-        try { parsed = JSON.parse(jsonStr); } catch (e) {
-          // Fallback eval in safe context
-          parsed = Function('"use strict";return (' + text + ')')();
-        }
-      }
-      if (!parsed || !parsed.apiKey) {
-        setErrorMsg('Mã cấu hình Firebase không hợp lệ! Cần chứa ít nhất apiKey và projectId.');
-        return;
-      }
-      ytFirebasePhoneAuth.saveConfig(parsed);
-      setShowFirebaseSetup(false);
+  const finishIfVerified = user => {
+    const profile = ytAuth.profileFromUser(user);
+    st.set('yt_user_profile', JSON.stringify(profile));
+    if (profile.phoneVerified) {
+      if (showToast) showToast('Xin chào ' + profile.name + '!');
+      if (onLoginSuccess) onLoginSuccess(profile);
+      onClose();
+    } else {
+      setAcctName(profile.name || profile.email);
+      setAuthMode('verify_phone');
       setErrorMsg('');
-      if (showToast) showToast('✅ Đã lưu cấu hình Firebase! Bây giờ bạn có thể nhận tin nhắn SMS thật về máy.');
-    } catch (e) {
-      setErrorMsg('Lỗi định dạng cấu hình Firebase: ' + e.message);
+      setSuccessMsg('Đăng nhập thành công. Hãy xác minh số điện thoại để bắt đầu sử dụng.');
     }
+  };
+
+  const handleGoogle = async () => {
+    setErrorMsg(''); setSuccessMsg('');
+    if (ytAuth.isInAppBrowser()) {
+      setErrorMsg('Bạn đang mở trong trình duyệt của ứng dụng (Zalo/Facebook/...). Google không cho đăng nhập ở đây — hãy mở link bằng Chrome hoặc Safari.');
+      return;
+    }
+    setBusy(true);
+    const r = await ytAuth.signInGoogle();
+    setBusy(false);
+    if (!r.success) { setErrorMsg(r.error); return; }
+    finishIfVerified(r.user);
+  };
+
+  const handleCredentialSubmit = async e => {
+    if (e) e.preventDefault();
+    setErrorMsg(''); setSuccessMsg('');
+    const id = identity.trim().toLowerCase();
+    const pass = password;
+
+    // --- Đường admin cũ (GIỮ NGUYÊN hành vi; chỉ nằm trong trình duyệt, cần thay bằng quyền admin phía server) ---
+    if (authMode === 'login' && (id === 'adminh' || id === 'adminh@youtrend.pro')) {
+      const adminStoredHash = st.get('yt_admin_pass_hash') || '7126e71f8b490bf451df28169a3a5e533a04249da5853aeeea2c08607ff81dd8';
+      if (typeof sha256Hex === 'function' && sha256Hex(pass.trim()) === adminStoredHash) {
+        const adminProfile = { name: 'adminh', email: 'adminh@youtrend.pro', avatar: '👑', phone: '0999999999', phoneVerified: true, isAdmin: true, isAuth: true, authType: 'admin' };
+        st.set('yt_user_profile', JSON.stringify(adminProfile));
+        if (typeof ytTierManager !== 'undefined') ytTierManager.setTier('ULTRA_PRO');
+        window.dispatchEvent(new CustomEvent('yt-profile-changed', { detail: adminProfile }));
+        window.dispatchEvent(new CustomEvent('yt-tier-changed', { detail: { tier: 'ULTRA_PRO' } }));
+        if (showToast) showToast('👑 Chào mừng Admin adminh! Đã kích hoạt gói ULTRA PRO.');
+        if (onLoginSuccess) onLoginSuccess(adminProfile);
+        onClose();
+      } else {
+        setErrorMsg('Mật khẩu Admin không chính xác!');
+      }
+      return;
+    }
+
+    if (!id || !pass) { setErrorMsg('Vui lòng điền đầy đủ tên đăng nhập và mật khẩu.'); return; }
+    if (!id.includes('@') && !/^[a-z0-9_.]{3,30}$/.test(id)) {
+      setErrorMsg('Tên đăng nhập chỉ gồm chữ thường, số, dấu _ hoặc . (3–30 ký tự), hoặc dùng email.');
+      return;
+    }
+    if (authMode === 'register') {
+      if (pass.length < 8) { setErrorMsg('Mật khẩu phải có ít nhất 8 ký tự.'); return; }
+      if (pass !== confirmPassword) { setErrorMsg('Mật khẩu nhập lại không khớp!'); return; }
+    } else if (pass.length < 6) {
+      setErrorMsg('Tên đăng nhập hoặc mật khẩu không chính xác.');
+      return;
+    }
+
+    setBusy(true);
+    const r = authMode === 'register' ? await ytAuth.signUp(id, pass) : await ytAuth.signIn(id, pass);
+    setBusy(false);
+    if (!r.success) { setErrorMsg(r.error); return; }
+    finishIfVerified(r.user);
   };
 
   const handleSendOtp = async () => {
-    if (isSendingSms || otpCountdown > 0) return; // Prevent double click
-    setErrorMsg('');
-    setSuccessMsg('');
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    if (cleanPhone.length < 9 || cleanPhone.length > 11) {
-      setErrorMsg('Vui lòng nhập số điện thoại hợp lệ (10 chữ số, ví dụ 0886368572)!');
-      return;
-    }
-
-    // Check if phone number is already registered by another account
-    let accounts = [];
-    try {
-      accounts = JSON.parse(st.get('yt_registered_accounts') || '[]');
-    } catch (err) {
-      accounts = [];
-    }
-
-    const currentId = pendingUser?.googleId || pendingUser?.id;
-    const isTaken = accounts.some(acc => {
-      if (currentId && (acc.id === currentId || acc.googleId === currentId)) return false;
-      return acc.phone === cleanPhone;
-    });
-
-    if (isTaken) {
-      setErrorMsg('Số điện thoại này (' + cleanPhone + ') đã được sử dụng cho một tài khoản khác!');
-      return;
-    }
-
-    setIsSendingSms(true);
-    setOtpCountdown(60); // Lock button immediately for 60 seconds
-
-    const fbRes = await ytFirebasePhoneAuth.sendRealSms(cleanPhone);
-    setIsSendingSms(false);
-    if (fbRes.success) {
+    if (busy || otpCountdown > 0) return;
+    setErrorMsg(''); setSuccessMsg('');
+    setBusy(true);
+    const r = await ytAuth.sendOtp(phone);
+    setBusy(false);
+    if (r.success) {
       setOtpSent(true);
-      setSuccessMsg('📱 ĐÃ GỬI TIN NHẮN SMS THẬT từ Google đến ' + cleanPhone + '! Vui lòng mở tin nhắn trên điện thoại để lấy mã 6 số.');
-      if (showToast) showToast('📱 Tin nhắn SMS đang gửi đến máy ' + cleanPhone + '... Vui lòng kiểm tra điện thoại!', 'success');
-      return;
+      setOtpCountdown(60);
+      setSuccessMsg('Đã gửi mã OTP đến ' + r.local + '. Mở tin nhắn để lấy mã 6 số.');
+    } else if (r.alreadyVerified) {
+      const u = ytAuth.currentUser();
+      if (u) finishIfVerified(u);
     } else {
-      setOtpCountdown(0); // Unlock if immediate failure
-      setErrorMsg('Lỗi gửi SMS Firebase: ' + fbRes.error);
-      return;
+      setErrorMsg(r.error);
+      if (r.code === 'auth/too-many-requests') setOtpCountdown(120);
     }
   };
 
-  const handleVerifyPhoneOnly = async e => {
+  const handleVerifyOtp = async e => {
     if (e) e.preventDefault();
-    setErrorMsg('');
-
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    if (!cleanPhone || cleanPhone.length < 9) {
-      setErrorMsg('Vui lòng nhập số điện thoại hợp lệ!');
-      return;
-    }
-    if (!otpSent) {
-      setErrorMsg('Vui lòng bấm "Gửi Mã OTP" trước!');
-      return;
-    }
-    if (window.confirmationResult) {
-      const realVerify = await ytFirebasePhoneAuth.verifyRealOtp(otpInput.trim());
-      if (!realVerify.success) {
-        setErrorMsg(realVerify.error || 'Mã OTP từ tin nhắn SMS không chính xác!');
-        return;
-      }
-    } else if (otpInput.trim() !== generatedOtp) {
-      setErrorMsg('Mã OTP không chính xác! Vui lòng nhập đúng 6 chữ số đã gửi về SĐT.');
-      return;
-    }
-
-    // Save phone into registered accounts database
-    let accounts = [];
-    try {
-      accounts = JSON.parse(st.get('yt_registered_accounts') || '[]');
-    } catch (err) {
-      accounts = [];
-    }
-
-    const updatedUser = {
-      ...(pendingUser || {}),
-      phone: cleanPhone,
-      phoneVerified: true,
-      isAuth: true
-    };
-
-    // Update in accounts array
-    const existIdx = accounts.findIndex(acc => (acc.id && acc.id === updatedUser.googleId) || (acc.email && acc.email === updatedUser.email));
-    if (existIdx !== -1) {
-      accounts[existIdx] = { ...accounts[existIdx], phone: cleanPhone, phoneVerified: true };
-    } else {
-      accounts.push({
-        id: updatedUser.googleId || ('acc_' + Date.now()),
-        username: updatedUser.name || cleanPhone,
-        email: updatedUser.email || (cleanPhone + '@youtrend.user'),
-        name: updatedUser.name || cleanPhone,
-        phone: cleanPhone,
-        phoneVerified: true,
-        createdAt: Date.now()
-      });
-    }
-    st.set('yt_registered_accounts', JSON.stringify(accounts));
-    st.set('yt_user_profile', JSON.stringify(updatedUser));
-
-    if (showToast) showToast('🎉 Xác minh số điện thoại thành công! Xin chào ' + updatedUser.name);
-    if (onLoginSuccess) onLoginSuccess(updatedUser);
-    onClose();
+    setErrorMsg(''); setSuccessMsg('');
+    if (!otpSent) { setErrorMsg('Hãy bấm "Gửi mã OTP" trước.'); return; }
+    setBusy(true);
+    const r = await ytAuth.confirmOtp(otpInput);
+    setBusy(false);
+    if (!r.success) { setErrorMsg(r.error); return; }
+    finishIfVerified(r.user);
   };
 
-  const handleEmailAuth = async e => {
-    if (e) e.preventDefault();
-    setErrorMsg('');
-
-    const cleanUser = username.trim().toLowerCase();
-    const cleanPass = password.trim();
-
-    if (typeof navigator !== 'undefined' && !navigator.cookieEnabled) {
-      setErrorMsg('Trình duyệt của bạn đang tắt Cookie! Vui lòng bật Cookie để đăng nhập hoặc tạo tài khoản web.');
-      return;
-    }
-    ytDeviceTracker.getDeviceId();
-
-    if (!cleanUser || !cleanPass) {
-      setErrorMsg('Vui lòng điền đầy đủ Tên đăng nhập và Mật khẩu.');
-      return;
-    }
-
-    if (cleanUser.length < 3) {
-      setErrorMsg('Tên đăng nhập phải có ít nhất 3 ký tự.');
-      return;
-    }
-
-    if (cleanPass.length < 6) {
-      setErrorMsg('Mật khẩu phải có ít nhất 6 ký tự.');
-      return;
-    }
-
-    // Get accounts database from storage
-    let accounts = [];
-    try {
-      accounts = JSON.parse(st.get('yt_registered_accounts') || '[]');
-    } catch (err) {
-      accounts = [];
-    }
-
-    if (authMode === 'register') {
-// reCAPTCHA verified via Firebase Phone Auth
-
-      // 2. Verify Confirm Password
-      const cleanConfirm = confirmPassword.trim();
-      if (!cleanConfirm) {
-        setErrorMsg('Vui lòng nhập lại mật khẩu xác nhận.');
-        return;
-      }
-      if (cleanPass !== cleanConfirm) {
-        setErrorMsg('Mật khẩu nhập lại không khớp! Vui lòng kiểm tra lại.');
-        return;
-      }
-
-      // 3. Verify Phone and OTP
-      const cleanPhone = phone.replace(/[^0-9]/g, '');
-      if (!cleanPhone || cleanPhone.length < 9 || cleanPhone.length > 11) {
-        setErrorMsg('Vui lòng nhập số điện thoại đăng ký hợp lệ (10 số)!');
-        return;
-      }
-      if (!otpSent) {
-        setErrorMsg('Vui lòng bấm "Gửi Mã OTP" về số điện thoại trước!');
-        return;
-      }
-      if (window.confirmationResult) {
-        const realVerify = await ytFirebasePhoneAuth.verifyRealOtp(otpInput.trim());
-        if (!realVerify.success) {
-          setErrorMsg(realVerify.error || 'Mã OTP từ tin nhắn SMS không chính xác!');
-          return;
-        }
-      } else if (otpInput.trim() !== generatedOtp) {
-        setErrorMsg('Mã OTP không chính xác! Vui lòng nhập đúng 6 số đã gửi về SĐT.');
-        return;
-      }
-
-      // Check duplicate username or email or phone
-      const isDuplicateUser = accounts.some(acc => {
-        const accUser = (acc.username || acc.email || acc.name || '').toLowerCase();
-        return accUser === cleanUser || (acc.email && acc.email.toLowerCase() === cleanUser);
-      });
-      if (isDuplicateUser) {
-        setErrorMsg('Tên đăng nhập này đã được sử dụng! Vui lòng chọn tên khác hoặc chuyển sang Đăng Nhập.');
-        return;
-      }
-
-      const isDuplicatePhone = accounts.some(acc => acc.phone === cleanPhone);
-      if (isDuplicatePhone) {
-        setErrorMsg('Số điện thoại này (' + cleanPhone + ') đã được đăng ký bởi tài khoản khác!');
-        return;
-      }
-
-      const newAcc = {
-        id: 'acc_' + Date.now(),
-        username: cleanUser,
-        email: cleanUser.includes('@') ? cleanUser : cleanUser + '@youtrend.user',
-        name: cleanUser,
-        phone: cleanPhone,
-        phoneVerified: true,
-        passHash: btoa(cleanPass),
-        createdAt: Date.now()
-      };
-
-      accounts.push(newAcc);
-      st.set('yt_registered_accounts', JSON.stringify(accounts));
-
-      const userProfile = {
-        name: newAcc.name,
-        email: newAcc.email,
-        phone: newAcc.phone,
-        phoneVerified: true,
-        avatar: '',
-        googleId: newAcc.id,
-        isAuth: true,
-        authType: 'username'
-      };
-
-      st.set('yt_user_profile', JSON.stringify(userProfile));
-      if (showToast) showToast('🎉 Đăng ký tài khoản thành công! Xin chào ' + newAcc.name);
-      if (onLoginSuccess) onLoginSuccess(userProfile);
-      onClose();
-    } else {
-      // Login mode
-      const isAdminLogin = (cleanUser === 'adminh' || cleanUser === 'adminh@youtrend.pro');
-      const adminStoredHash = st.get('yt_admin_pass_hash') || '7126e71f8b490bf451df28169a3a5e533a04249da5853aeeea2c08607ff81dd8';
-
-      if (isAdminLogin) {
-        if (typeof sha256Hex === 'function' && sha256Hex(cleanPass) === adminStoredHash) {
-          const adminProfile = {
-            name: 'adminh',
-            email: 'adminh@youtrend.pro',
-            avatar: '👑',
-            phone: '0999999999',
-            phoneVerified: true,
-            isAdmin: true,
-            isAuth: true,
-            authType: 'admin'
-          };
-          st.set('yt_user_profile', JSON.stringify(adminProfile));
-          if (typeof ytTierManager !== 'undefined') {
-            ytTierManager.setTier('ULTRA_PRO');
-          }
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('yt-profile-changed', { detail: adminProfile }));
-            window.dispatchEvent(new CustomEvent('yt-tier-changed', { detail: { tier: 'ULTRA_PRO' } }));
-          }
-          if (showToast) showToast('👑 Chào mừng Admin Tối Cao adminh! Đã kích hoạt Gói ULTRA PRO vĩnh viễn.');
-          if (onLoginSuccess) onLoginSuccess(adminProfile);
-          onClose();
-          return;
-        } else {
-          setErrorMsg('Mật khẩu Admin không chính xác!');
-          return;
-        }
-      }
-
-      const found = accounts.find(acc => {
-        const accUser = (acc.username || acc.email || acc.name || '').toLowerCase();
-        const matchesIdentity = accUser === cleanUser || (acc.email && acc.email.toLowerCase() === cleanUser);
-        const matchesPass = acc.passHash === btoa(cleanPass) || (typeof sha256Hex === 'function' && acc.passHash === sha256Hex(cleanPass));
-        return matchesIdentity && matchesPass;
-      });
-
-      if (!found) {
-        setErrorMsg('Tên đăng nhập hoặc Mật khẩu không chính xác!');
-        return;
-      }
-
-      // Check if this existing account has verified phone
-      if (!found.phoneVerified || !found.phone) {
-        setPendingUser({
-          name: found.name || found.username,
-          email: found.email || '',
-          avatar: '',
-          googleId: found.id,
-          authType: 'username'
-        });
-        setAuthMode('verify_phone');
-        setErrorMsg('Tài khoản của bạn cần xác minh Số Điện Thoại trước khi bắt đầu sử dụng!');
-        return;
-      }
-
-      const userProfile = {
-        name: found.name || found.username,
-        email: found.email || '',
-        phone: found.phone,
-        phoneVerified: true,
-        avatar: '',
-        googleId: found.id,
-        isAuth: true,
-        authType: 'username'
-      };
-
-      st.set('yt_user_profile', JSON.stringify(userProfile));
-      if (showToast) showToast('Đăng nhập thành công! Xin chào ' + (found.name || found.username));
-      if (onLoginSuccess) onLoginSuccess(userProfile);
-      onClose();
-    }
+  const handleSwitchAccount = async () => {
+    await ytAuth.signOut();
+    st.del('yt_user_profile');
+    setOtpSent(false); setOtpInput(''); setPhone(''); setPassword(''); setConfirmPassword('');
+    setErrorMsg(''); setSuccessMsg('');
+    setAuthMode('login');
+    window.dispatchEvent(new CustomEvent('yt_user_profile_updated', { detail: null }));
   };
 
-  const handleGoogleSuccess = userData => {
-    // Check if this Google account already has a verified phone in database
-    let accounts = [];
-    try {
-      accounts = JSON.parse(st.get('yt_registered_accounts') || '[]');
-    } catch (err) {
-      accounts = [];
-    }
+  const inputCls = "w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500";
+  const labelCls = "text-[11px] font-semibold text-zinc-300 block mb-1";
+  const msgBoxes = [
+    successMsg && h("div", { key: 's', className: "p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs" }, "✓ ", successMsg),
+    errorMsg && h("div", { key: 'e', className: "p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs" }, "⚠️ ", errorMsg)
+  ];
 
-    const matched = accounts.find(acc => (acc.id === userData.sub) || (acc.email && acc.email === userData.email));
-    if (matched && matched.phoneVerified && matched.phone) {
-      const updated = {
-        name: userData.name || 'Người dùng Google',
-        email: userData.email || '',
-        phone: matched.phone,
-        phoneVerified: true,
-        avatar: userData.picture || '',
-        googleId: userData.sub,
-        isAuth: true,
-        authType: 'google'
-      };
-      st.set('yt_user_profile', JSON.stringify(updated));
-      if (showToast) showToast('Đăng nhập Google thành công! Xin chào ' + userData.name);
-      if (onLoginSuccess) onLoginSuccess(updated);
-      onClose();
-    } else {
-      // Require phone verification before Google user can use the app
-      setPendingUser({
-        name: userData.name || 'Người dùng Google',
-        email: userData.email || '',
-        avatar: userData.picture || '',
-        googleId: userData.sub,
-        authType: 'google'
-      });
-      setAuthMode('verify_phone');
-      setErrorMsg('Chào ' + (userData.name || 'bạn') + '! Vui lòng xác minh Số Điện Thoại để kích hoạt tài khoản.');
-    }
-  };
+  const headerTitle = authMode === 'login' ? 'Đăng Nhập YouTrend' : authMode === 'register' ? 'Tạo Tài Khoản Mới' : 'Xác Minh Số Điện Thoại';
+  const headerSub = authMode === 'verify_phone' ? 'Mỗi số điện thoại chỉ dùng cho 1 tài khoản' : (initialNotice || 'Đăng nhập để phân tích từ khóa và quản lý hạn mức');
 
-  return /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-[#12141c] border border-[#232738] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[95vh] overflow-y-auto"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between border-b border-[#232738] pb-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2.5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center text-white font-black text-sm shadow"
-  }, "▶"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
-    className: "text-base font-extrabold text-white"
-  }, authMode === 'login' ? 'Đăng Nhập YouTrend' : authMode === 'register' ? 'Tạo Tài Khoản Mới' : 'Xác Minh Số Điện Thoại'), /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-zinc-400"
-  }, authMode === 'verify_phone' ? 'Bắt buộc xác thực SĐT chính chủ để kích hoạt' : (initialNotice || 'Đăng nhập để phân tích từ khóa và quản lý hạn mức')))), /*#__PURE__*/React.createElement("button", {
-    onClick: onClose,
-    className: "text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-[#181b26] transition"
-  }, "✕")), initialNotice && /*#__PURE__*/React.createElement("div", {
-    className: "p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", null, "ℹ️"), /*#__PURE__*/React.createElement("span", null, initialNotice)),
-  /*#__PURE__*/React.createElement("div", { id: "firebase-phone-recaptcha" }),
- 
+  const verifyView = h("div", { className: "space-y-3.5 pt-1" },
+    h("div", { className: "p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-1" },
+      h("div", { className: "font-bold text-amber-300" }, "📱 Cần xác minh số điện thoại"),
+      h("p", { className: "text-[11px] text-zinc-300 leading-relaxed" }, "Áp dụng cho cả tài khoản Google và tài khoản thường, để chống tạo nhiều tài khoản spam. Mỗi số điện thoại chỉ gắn được với 1 tài khoản.")
+    ),
+    acctName && h("div", { className: "text-xs text-zinc-400 bg-[#181b26] p-2.5 rounded-xl border border-[#232738]" },
+      h("span", { className: "text-zinc-500" }, "Tài khoản: "), h("b", { className: "text-white" }, acctName)),
+    h("div", null,
+      h("label", { className: labelCls }, "Số điện thoại chính chủ:"),
+      h("div", { className: "flex gap-2" },
+        h("input", { type: "tel", inputMode: "tel", autoComplete: "tel", value: phone, onChange: e => setPhone(e.target.value), placeholder: "Ví dụ: 0912345678", className: "flex-1 " + inputCls }),
+        h("button", { type: "button", onClick: handleSendOtp, disabled: busy || otpCountdown > 0,
+          className: "px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap " + ((busy || otpCountdown > 0) ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer") },
+          busy && !otpSent ? "Đang gửi..." : (otpCountdown > 0 ? ("Gửi lại (" + otpCountdown + "s)") : (otpSent ? "Gửi lại mã" : "Gửi mã OTP"))))
+    ),
+    h("form", { onSubmit: handleVerifyOtp, className: "space-y-3.5" },
+      h("div", null,
+        h("label", { className: labelCls }, "Mã OTP (6 chữ số):"),
+        h("input", { type: "text", inputMode: "numeric", autoComplete: "one-time-code", maxLength: 6, value: otpInput,
+          onChange: e => setOtpInput(e.target.value.replace(/[^0-9]/g, '')), placeholder: "Nhập mã 6 số",
+          className: inputCls + " tracking-widest font-mono text-center text-sm focus:border-emerald-500" })
+      ),
+      msgBoxes,
+      h("button", { type: "submit", disabled: busy || !otpSent,
+        className: "w-full py-2.5 rounded-xl text-xs font-bold text-white shadow-lg transition " + ((busy || !otpSent) ? "bg-zinc-700 cursor-not-allowed" : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 cursor-pointer") },
+        busy && otpSent ? "Đang xác minh..." : "Xác Nhận & Kích Hoạt Tài Khoản")
+    ),
+    h("button", { type: "button", onClick: handleSwitchAccount, className: "w-full text-[11px] text-zinc-400 hover:text-white underline underline-offset-2 cursor-pointer" }, "Đăng xuất / dùng tài khoản khác")
+  );
 
-  // MODE: VERIFY PHONE (Bắt buộc xác minh SĐT cho cả Gmail và Tài khoản Web)
-  authMode === 'verify_phone' ? /*#__PURE__*/React.createElement("form", {
-    onSubmit: handleVerifyPhoneOnly,
-    className: "space-y-3.5 pt-1"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-1"
-  }, /*#__PURE__*/React.createElement("div", { className: "font-bold text-amber-300 flex items-center gap-1.5" },
-    /*#__PURE__*/React.createElement("span", null, "📱"), "Yêu cầu xác minh Số Điện Thoại"
-  ), /*#__PURE__*/React.createElement("p", { className: "text-[11px] text-zinc-300 leading-relaxed" },
-    "Hệ thống yêu cầu xác thực 1 SĐT cho 1 tài khoản (áp dụng cả Gmail & Web) để chống spam. Vui lòng nhập SĐT và mã OTP."
-  )), pendingUser && /*#__PURE__*/React.createElement("div", {
-    className: "text-xs text-zinc-400 bg-[#181b26] p-2.5 rounded-xl border border-[#232738]"
-  }, /*#__PURE__*/React.createElement("span", { className: "text-zinc-500" }, "Tài khoản: "), /*#__PURE__*/React.createElement("b", { className: "text-white" }, pendingUser.name || pendingUser.email)),
-  /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "text-[11px] font-semibold text-zinc-300 block mb-1"
-  }, "Số điện thoại chính chủ:"), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2"
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "tel",
-    value: phone,
-    onChange: e => setPhone(e.target.value),
-    placeholder: "Ví dụ: 0912345678...",
-    className: "flex-1 bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
-  }), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: handleSendOtp,
-    disabled: isSendingSms || otpCountdown > 0,
-    className: "px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 " + ((isSendingSms || otpCountdown > 0) ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer")
-  }, isSendingSms ? "Đang gửi SMS..." : (otpCountdown > 0 ? ("Gửi lại (" + otpCountdown + "s)") : (otpSent ? "Gửi lại OTP" : "Gửi mã OTP"))))),
+  const tabBtn = (mode, label) => h("button", { type: "button",
+    onClick: () => { setAuthMode(mode); setErrorMsg(''); setSuccessMsg(''); },
+    className: 'py-1.5 rounded-lg text-xs font-bold transition ' + (authMode === mode ? 'bg-red-600 text-white shadow' : 'text-zinc-400 hover:text-white') }, label);
 
-  /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    className: "text-[11px] font-semibold text-zinc-300 block mb-1"
-  }, "Mã xác thực OTP (6 chữ số):"), /*#__PURE__*/React.createElement("input", {
-    type: "text",
-    maxLength: 6,
-    value: otpInput,
-    onChange: e => setOtpInput(e.target.value.replace(/[^0-9]/g, '')),
-    placeholder: "Nhập mã 6 số...",
-    className: "w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 tracking-widest font-mono text-center text-sm focus:outline-none focus:border-emerald-500"
-  })),
-  successMsg && /*#__PURE__*/React.createElement("div", {
-    className: "p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs"
-  }, "✓ ", successMsg),
-  errorMsg && /*#__PURE__*/React.createElement("div", {
-    className: "p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs"
-  }, "⚠️ ", errorMsg),
-  /*#__PURE__*/React.createElement("button", {
-    type: "submit",
-    className: "w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg transition cursor-pointer"
-  }, "Xác Nhận & Kích Hoạt Tài Khoản")) : 
+  const credentialView = h(React.Fragment, null,
+    h("div", { className: "space-y-2 pt-1 text-center" },
+      h("button", { type: "button", onClick: handleGoogle, disabled: busy,
+        className: "w-full py-2.5 rounded-xl text-xs font-bold bg-white hover:bg-zinc-100 text-zinc-900 transition cursor-pointer flex items-center justify-center gap-2 " + (busy ? "opacity-60 cursor-not-allowed" : "") },
+        h("span", { className: "font-black text-[#4285F4]" }, "G"), "Tiếp tục với Google")
+    ),
+    h("div", { className: "flex items-center gap-3 my-2" },
+      h("div", { className: "h-[1px] bg-[#232738] flex-1" }),
+      h("span", { className: "text-[10px] text-zinc-500 font-bold uppercase tracking-wider" }, "HOẶC DÙNG TÀI KHOẢN / MẬT KHẨU"),
+      h("div", { className: "h-[1px] bg-[#232738] flex-1" })),
+    h("div", { className: "grid grid-cols-2 gap-1 bg-[#181b26] p-1 rounded-xl border border-[#232738]" },
+      tabBtn('login', 'Đăng Nhập'), tabBtn('register', 'Đăng Ký (Bắt Buộc SĐT)')),
+    h("form", { onSubmit: handleCredentialSubmit, className: "space-y-3" },
+      h("div", null, h("label", { className: labelCls }, authMode === 'register' ? 'Tên đăng nhập hoặc Email:' : 'Tên đăng nhập hoặc Email:'),
+        h("input", { type: "text", autoComplete: "username", value: identity, onChange: e => setIdentity(e.target.value), placeholder: "Ví dụ: hungnguyen99 hoặc ban@gmail.com", className: inputCls })),
+      h("div", null, h("label", { className: labelCls }, "Mật khẩu:"),
+        h("input", { type: "password", autoComplete: authMode === 'register' ? "new-password" : "current-password", value: password, onChange: e => setPassword(e.target.value), placeholder: authMode === 'register' ? "Tối thiểu 8 ký tự" : "Mật khẩu", className: inputCls })),
+      authMode === 'register' && h("div", null, h("label", { className: labelCls }, "Nhập lại mật khẩu:"),
+        h("input", { type: "password", autoComplete: "new-password", value: confirmPassword, onChange: e => setConfirmPassword(e.target.value), placeholder: "Nhập lại mật khẩu", className: inputCls })),
+      authMode === 'register' && h("p", { className: "text-[10px] text-zinc-500" }, "Sau bước này bạn sẽ được yêu cầu xác minh số điện thoại bằng mã OTP."),
+      msgBoxes,
+      h("button", { type: "submit", disabled: busy,
+        className: "w-full py-2.5 rounded-xl text-xs font-bold text-white shadow-lg transition " + (busy ? "bg-zinc-700 cursor-not-allowed" : "bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 cursor-pointer") },
+        busy ? "Đang xử lý..." : (authMode === 'register' ? "Tạo Tài Khoản & Tiếp Tục" : "Đăng Nhập"))
+    )
+  );
 
-  // MODE: LOGIN & REGISTER
-  /*#__PURE__*/React.createElement(React.Fragment, null,
-    /*#__PURE__*/React.createElement("div", {
-      className: "space-y-2 pt-1 text-center"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-xs font-semibold text-zinc-300 flex items-center justify-center gap-1.5"
-    }, /*#__PURE__*/React.createElement("span", null, "⚡"), "Đăng nhập nhanh (Gmail nhận 5 từ/ngày):"), /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-center"
-    }, /*#__PURE__*/React.createElement(GoogleLoginButton, {
-      onLoginSuccess: handleGoogleSuccess
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-3 my-2"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-[1px] bg-[#232738] flex-1"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] text-zinc-500 font-bold uppercase tracking-wider"
-    }, "HOẶC DÙNG TÀI KHOẢN / MẬT KHẨU"), /*#__PURE__*/React.createElement("div", {
-      className: "h-[1px] bg-[#232738] flex-1"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-1 bg-[#181b26] p-1 rounded-xl border border-[#232738]"
-    }, /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => {
-        setAuthMode('login');
-        setErrorMsg('');
-        setSuccessMsg('');
-      },
-      className: 'py-1.5 rounded-lg text-xs font-bold transition ' + (authMode === 'login' ? 'bg-red-600 text-white shadow' : 'text-zinc-400 hover:text-white')
-    }, "Đăng Nhập"), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => {
-        setAuthMode('register');
-        setErrorMsg('');
-        setSuccessMsg('');
-      },
-      className: 'py-1.5 rounded-lg text-xs font-bold transition ' + (authMode === 'register' ? 'bg-red-600 text-white shadow' : 'text-zinc-400 hover:text-white')
-    }, "Đăng Ký (Bắt Buộc SĐT)")), /*#__PURE__*/React.createElement("form", {
-      onSubmit: handleEmailAuth,
-      className: "space-y-3"
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-      className: "text-[11px] font-semibold text-zinc-300 block mb-1"
-    }, authMode === 'register' ? 'Tên đăng nhập (Username):' : 'Tên đăng nhập hoặc Email:'), /*#__PURE__*/React.createElement("input", {
-      type: "text",
-      value: username,
-      onChange: e => setUsername(e.target.value),
-      placeholder: authMode === 'register' ? "Ví dụ: hungnguyen99, myuser..." : "Nhập username hoặc email...",
-      className: "w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
-    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-      className: "text-[11px] font-semibold text-zinc-300 block mb-1"
-    }, "Mật khẩu:"), /*#__PURE__*/React.createElement("input", {
-      type: "password",
-      value: password,
-      onChange: e => setPassword(e.target.value),
-      placeholder: "Tối thiểu 6 ký tự",
-      className: "w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
-    })), authMode === 'register' && /*#__PURE__*/React.createElement(React.Fragment, null,
-      /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-        className: "text-[11px] font-semibold text-zinc-300 block mb-1"
-      }, "Nhập lại mật khẩu:"), /*#__PURE__*/React.createElement("input", {
-        type: "password",
-        value: confirmPassword,
-        onChange: e => setConfirmPassword(e.target.value),
-        placeholder: "Nhập lại chính xác mật khẩu trên",
-        className: "w-full bg-[#181b26] border rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none " + (confirmPassword && confirmPassword !== password ? 'border-rose-500' : 'border-[#232738] focus:border-red-500')
-      }), confirmPassword && confirmPassword !== password && /*#__PURE__*/React.createElement("p", {
-        className: "text-[10px] text-rose-400 mt-1"
-      }, "✕ Mật khẩu nhập lại chưa khớp")),
-      // TRƯỜNG SỐ ĐIỆN THOẠI & NÚT GỬI MÃ OTP KHI ĐĂNG KÝ
-      /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-        className: "text-[11px] font-semibold text-zinc-300 block mb-1"
-      }, "Số điện thoại chính chủ (Bắt buộc xác thực):"), /*#__PURE__*/React.createElement("div", {
-        className: "flex gap-2"
-      }, /*#__PURE__*/React.createElement("input", {
-        type: "tel",
-        value: phone,
-        onChange: e => setPhone(e.target.value),
-        placeholder: "Ví dụ: 0912345678...",
-        className: "flex-1 bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
-      }), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        onClick: handleSendOtp,
-        disabled: otpCountdown > 0,
-        className: "px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap " + (otpCountdown > 0 ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer")
-      }, otpCountdown > 0 ? ("Gửi lại (" + otpCountdown + "s)") : (otpSent ? "Gửi lại OTP" : "Gửi mã OTP")))),
-      otpSent && generatedOtp && /*#__PURE__*/React.createElement("div", {
-      className: "p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/80 to-teal-950/80 border-2 border-emerald-500/80 shadow-lg space-y-2 animate-in fade-in zoom-in-95 duration-200"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-xs font-bold text-emerald-300 flex items-center gap-1.5"
-    }, /*#__PURE__*/React.createElement("span", { className: "text-base" }, "📩"), "Tin nhắn SMS gửi đến SĐT: ", /*#__PURE__*/React.createElement("b", { className: "text-white" }, phone)), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => {
-        setOtpInput(generatedOtp);
-        setErrorMsg('');
-        if (typeof showToast === 'function') showToast('⚡ Đã tự động điền mã OTP: ' + generatedOtp);
-      },
-      className: "px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs cursor-pointer shadow transition"
-    }, "⚡ Tự động điền")), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between bg-black/60 p-2.5 rounded-xl border border-emerald-500/40"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-baseline gap-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] text-zinc-400 uppercase tracking-wider font-semibold"
-    }, "Mã OTP:"), /*#__PURE__*/React.createElement("span", {
-      className: "font-mono font-black text-2xl text-amber-300 tracking-[0.25em]"
-    }, generatedOtp)), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => {
-        try { navigator.clipboard.writeText(generatedOtp); } catch (e) {}
-        if (typeof showToast === 'function') showToast('Đã sao chép mã OTP: ' + generatedOtp);
-      },
-      className: "text-xs text-zinc-300 hover:text-white px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition"
-    }, "Sao chép")), /*#__PURE__*/React.createElement("p", {
-      className: "text-[11px] text-zinc-300 flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement("span", null, "👉"), "Nhập mã 6 số trên vào ô bên dưới rồi bấm Xác Nhận.")),
-      /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-        className: "text-[11px] font-semibold text-zinc-300 block mb-1"
-      }, "Mã xác thực OTP (6 số):"), /*#__PURE__*/React.createElement("input", {
-        type: "text",
-        maxLength: 6,
-        value: otpInput,
-        onChange: e => setOtpInput(e.target.value.replace(/[^0-9]/g, '')),
-        placeholder: "Nhập mã OTP 6 số...",
-        className: "w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 font-mono tracking-widest text-center focus:outline-none focus:border-emerald-500"
-      }))
-    ),  
-    successMsg && /*#__PURE__*/React.createElement("div", {
-      className: "p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs"
-    }, "✓ ", successMsg),
-    errorMsg && /*#__PURE__*/React.createElement("div", {
-      className: "p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs"
-    }, "⚠️ ", errorMsg), /*#__PURE__*/React.createElement("button", {
-      type: "submit",
-      className: "w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white shadow-lg transition cursor-pointer"
-    }, authMode === 'login' ? 'Đăng Nhập Ngay' : 'Hoàn Tất Đăng Ký (Xác Minh SĐT)'))
-  )));
+  return h("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md" },
+    h("div", { className: "bg-[#12141c] border border-[#232738] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[95vh] overflow-y-auto" },
+      h("div", { className: "flex items-center justify-between border-b border-[#232738] pb-3" },
+        h("div", { className: "flex items-center gap-2.5" },
+          h("div", { className: "w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center text-white font-black text-sm shadow" }, "▶"),
+          h("div", null,
+            h("h3", { className: "text-base font-extrabold text-white" }, headerTitle),
+            h("p", { className: "text-[11px] text-zinc-400" }, headerSub))),
+        h("button", { onClick: onClose, className: "text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-[#181b26] transition" }, "✕")),
+      initialNotice && h("div", { className: "p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2" },
+        h("span", null, "ℹ️"), h("span", null, initialNotice)),
+      authMode === 'verify_phone' ? verifyView : credentialView
+    ));
 }
+
 // Simple API Key Prompt Modal (When user is logged in but hasn't entered key)
 function SimpleApiKeyModal({onClose,onKeySaved,showToast,notice=''}){const[inputKey,setInputKey]=useState('');const[testing,setTesting]=useState(false);const[testError,setTestError]=useState('');const handleSubmit=async e=>{if(e)e.preventDefault();const trimmed=(inputKey||'').trim();if(!trimmed){setTestError('Vui lòng dán mã API Key bắt đầu bằng AIzaSy...!');return;}setTesting(true);setTestError('');try{const u=new URL('https://www.googleapis.com/youtube/v3/videos');u.searchParams.set('part','snippet');u.searchParams.set('chart','mostPopular');u.searchParams.set('maxResults','1');u.searchParams.set('regionCode','VN');u.searchParams.set('key',trimmed);const res=await fetch(u.toString());const data=await res.json().catch(()=>({}));if(res.ok){if(showToast)showToast('Kết nối YouTube API thành công!');onKeySaved(trimmed);onClose();}else{const errObj=data.error&&data.error.errors&&data.error.errors[0]||{};const reason=errObj.reason||'HTTP '+res.status;if(reason==='keyInvalid'||reason==='badRequest'){setTestError('Mã API Key không hợp lệ. Vui lòng kiểm tra lại.');}else if(reason==='accessNotConfigured'){setTestError('API "YouTube Data API v3" chưa được Bật trong Google Cloud.');}else{setTestError('Lỗi kết nối YouTube API: '+(data.error?.message||reason));}}}catch(err){setTestError('Lỗi kết nối mạng: '+String(err));}finally{setTesting(false);}};return/*#__PURE__*/React.createElement("div",{className:"fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"},/*#__PURE__*/React.createElement("div",{className:"bg-[#12141c] border border-[#232738] rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between border-b border-[#232738] pb-3"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2"},/*#__PURE__*/React.createElement("span",{className:"text-xl"},"\uD83D\uDD11"),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h3",{className:"text-base font-extrabold text-white"},"K\u1EBFt N\u1ED1i YouTube API Key"),/*#__PURE__*/React.createElement("p",{className:"text-[11px] text-zinc-400"},notice||'Cần có API Key để quét dữ liệu thật từ YouTube'))),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-[#181b26]"},"\u2715")),/*#__PURE__*/React.createElement("div",{className:"bg-[#181b26] p-3 rounded-xl border border-[#232738] space-y-1 text-xs text-zinc-400"},/*#__PURE__*/React.createElement("div",{className:"font-bold text-amber-400 flex justify-between items-center"},/*#__PURE__*/React.createElement("span",null,"C\xE1ch l\u1EA5y API Key mi\u1EC5n ph\xED 10.000 quota/ng\xE0y:"),/*#__PURE__*/React.createElement("a",{href:"https://console.cloud.google.com/apis/credentials",target:"_blank",rel:"noopener noreferrer",className:"text-red-400 underline text-[11px]"},"Google Cloud \u2197")),/*#__PURE__*/React.createElement("p",{className:"text-[11px]"},"T\u1EA1o API Key tr\xEAn Google Cloud \u2794 B\u1EADt YouTube Data API v3 \u2794 D\xE1n m\xE3 v\xE0o \u0111\xE2y.")),/*#__PURE__*/React.createElement("form",{onSubmit:handleSubmit,className:"space-y-3"},/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("label",{className:"text-[11px] font-semibold text-zinc-300 block mb-1"},"M\xE3 API Key (AIzaSy...):"),/*#__PURE__*/React.createElement("input",{type:"text",value:inputKey,onChange:e=>{setInputKey(e.target.value);setTestError('');},placeholder:"D\xE1n m\xE3 API Key c\u1EE7a b\u1EA1n...",className:"w-full bg-[#181b26] border border-[#232738] rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-red-500"})),testError&&/*#__PURE__*/React.createElement("div",{className:"p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs"},"\u26A0\uFE0F ",testError),/*#__PURE__*/React.createElement("button",{type:"submit",disabled:testing,className:"w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white shadow-lg transition flex items-center justify-center gap-2"},testing?'Đang kiểm tra key...':'Lưu & Bắt Đầu Sử Dụng'))));}// =========================================================================
 // TOP NGÁCH PAYWALL BANNER (KHÓA DÀNH CHO GÓI FREE)
@@ -1152,7 +810,7 @@ function TopNgachPaywallBanner({onUpgrade}){return/*#__PURE__*/React.createEleme
 // =========================================================================
 function SubscriptionModal({onClose,showToast,initialTier='PRO',onUpgraded}){const[selectedTier,setSelectedTier]=useState(initialTier==='ULTRA_PRO'?'ULTRA_PRO':'PRO');const[selectedDuration,setSelectedDuration]=useState('1m');// '1m' | '3m' | '1y'
 const[step,setStep]=useState('plans');// 'plans' | 'checkout'
-const[orderCode,setOrderCode]=useState(()=>'YT'+Math.floor(100000+Math.random()*900000));const[copiedKey,setCopiedKey]=useState(null);const tierInfo=TIERS_DATA[selectedTier]||TIERS_DATA.PRO;const currentOption=tierInfo.options.find(o=>o.id===selectedDuration)||tierInfo.options[0];const amount=currentOption.price;const copyToClipboard=(text,key)=>{try{navigator.clipboard.writeText(String(text));setCopiedKey(key);if(showToast)showToast('Đã sao chép: '+text);setTimeout(()=>setCopiedKey(null),2000);}catch(e){}};const handleStartCheckout=(tierKey,durationKey)=>{setSelectedTier(tierKey);setSelectedDuration(durationKey);setOrderCode('YT'+Math.floor(100000+Math.random()*900000));setStep('checkout');};const[verifying,setVerifying]=useState(false);const[verifyError,setVerifyError]=useState(null);const handleConfirmPaid=async()=>{setVerifying(true);setVerifyError(null);try{const verifyUrl='/api/verify-payment?orderCode='+encodeURIComponent(orderCode)+'&expectedAmount='+amount+'&tier='+selectedTier+'&days='+currentOption.days;const res=await fetch(verifyUrl);const data=await res.json().catch(()=>({}));if(res.ok&&data.success&&data.verified){ytTierManager.setTier(selectedTier,currentOption.days);if(showToast){showToast('Xác nhận thành công! Chúc mừng bạn đã nâng cấp '+tierInfo.name+'! 🎉');}if(onUpgraded)onUpgraded(selectedTier);onClose();}else{setVerifyError(data.message||'Chưa tìm thấy giao dịch "'+orderCode+'". Vui lòng đợi 30-60 giây sau khi chuyển khoản để ngân hàng xử lý.');}}catch(e){// In local dev without serverless, provide feedback
+const[orderCode,setOrderCode]=useState(()=>'YT'+Math.floor(100000+Math.random()*900000));const[copiedKey,setCopiedKey]=useState(null);const tierInfo=TIERS_DATA[selectedTier]||TIERS_DATA.PRO;const currentOption=tierInfo.options.find(o=>o.id===selectedDuration)||tierInfo.options[0];const amount=currentOption.price;const copyToClipboard=(text,key)=>{try{navigator.clipboard.writeText(String(text));setCopiedKey(key);if(showToast)showToast('Đã sao chép: '+text);setTimeout(()=>setCopiedKey(null),2000);}catch(e){}};const handleStartCheckout=(tierKey,durationKey)=>{setSelectedTier(tierKey);setSelectedDuration(durationKey);setOrderCode('YT'+Math.floor(100000+Math.random()*900000));setStep('checkout');};const[verifying,setVerifying]=useState(false);const[verifyError,setVerifyError]=useState(null);const handleConfirmPaid=async()=>{setVerifying(true);setVerifyError(null);try{const verifyUrl='/api/verify-payment?orderCode='+encodeURIComponent(orderCode)+'&expectedAmount='+amount+'&tier='+selectedTier+'&days='+currentOption.days;const res=await fetch(verifyUrl,{headers:await ytAuth.authHeaders()});const data=await res.json().catch(()=>({}));if(res.ok&&data.success&&data.verified){ytTierManager.setTier(selectedTier,currentOption.days);if(showToast){showToast('Xác nhận thành công! Chúc mừng bạn đã nâng cấp '+tierInfo.name+'! 🎉');}if(onUpgraded)onUpgraded(selectedTier);onClose();}else{setVerifyError(data.message||'Chưa tìm thấy giao dịch "'+orderCode+'". Vui lòng đợi 30-60 giây sau khi chuyển khoản để ngân hàng xử lý.');}}catch(e){// In local dev without serverless, provide feedback
 setVerifyError('Lỗi kiểm tra giao dịch qua máy chủ: '+String(e.message||e));}finally{setVerifying(false);}};// VietQR URLs: primary via VietQR.io (chuẩn quốc gia Napas, không bị chặn hotlink) & fallback via SePay
 const primaryQrUrl='https://img.vietqr.io/image/'+encodeURIComponent((SEPAY_CONFIG.bankName||'vietinbank').toLowerCase())+'-'+SEPAY_CONFIG.accountNumber+'-compact2.png?amount='+amount+'&addInfo='+encodeURIComponent(orderCode)+'&accountName='+encodeURIComponent(SEPAY_CONFIG.accountHolder||'SEPAY');const sepayQrUrl='https://qr.sepay.vn/img?acc='+SEPAY_CONFIG.accountNumber+'&bank='+encodeURIComponent(SEPAY_CONFIG.bankName)+'&amount='+amount+'&des='+encodeURIComponent(orderCode)+'&template=compact';return/*#__PURE__*/React.createElement("div",{className:"fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"},/*#__PURE__*/React.createElement("div",{className:"bg-[#12141c] border border-[#232738] rounded-2xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between border-b border-[#232738] pb-3 shrink-0"},/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h3",{className:"text-base sm:text-lg font-black text-white"},"H\u1EC7 Th\u1ED1ng G\xF3i D\u1ECBch V\u1EE5 YouTrend")),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"text-xs text-zinc-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-[#181b26] hover:bg-[#202433] border border-[#232738] transition"},"\u2715 \u0110\xF3ng")),/*#__PURE__*/React.createElement("div",{className:"overflow-y-auto py-4 space-y-4 pr-1"},step==='plans'&&/*#__PURE__*/React.createElement("div",{className:"space-y-4"},/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-1 md:grid-cols-3 gap-3"},/*#__PURE__*/React.createElement("div",{className:"bg-[#181b26] border border-[#232738] rounded-2xl p-4 flex flex-col justify-between space-y-4"},/*#__PURE__*/React.createElement("div",{className:"space-y-3"},/*#__PURE__*/React.createElement("div",{className:"flex justify-between items-center"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-zinc-400 uppercase tracking-wider"},"C\u01A0 B\u1EA2N"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-bold border border-zinc-700"},"Hi\u1EC7n T\u1EA1i")),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h4",{className:"text-base font-extrabold text-white"},"G\xD3I FREE"),/*#__PURE__*/React.createElement("div",{className:"text-2xl font-black text-zinc-200 mt-1"},"0\u0111 ",/*#__PURE__*/React.createElement("span",{className:"text-xs font-normal text-zinc-500"},"/ tr\u1ECDn \u0111\u1EDDi"))),/*#__PURE__*/React.createElement("ul",{className:"space-y-2 text-xs text-zinc-400 pt-2 border-t border-[#232738]"},/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"T\xECm & ph\xE2n t\xEDch t\u1ED1i \u0111a ",/*#__PURE__*/React.createElement("b",null,"5 t\u1EEB kh\xF3a/ng\xE0y")," (t\xEDnh theo t\u1EEB kh\xF3a kh\xE1c nhau, qu\xE9t l\u1EA1i tho\u1EA3i m\xE1i)")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"L\u1ECDc video \u0111ang th\u1ECBnh h\xE0nh (Trending)")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Ph\xE2n t\xEDch xu h\u01B0\u1EDBng t\u1EEB kh\xF3a \u0111\xE3 t\xECm")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"T\xECm video & k\xEAnh YouTube li\xEAn quan")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5 text-zinc-500"},/*#__PURE__*/React.createElement("span",{className:"text-rose-400 font-bold"},"\u2715"),/*#__PURE__*/React.createElement("span",null,"Kh\xF3a t\xEDnh n\u0103ng Top Ng\xE1ch")))),/*#__PURE__*/React.createElement("button",{disabled:true,className:"w-full py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed"},"G\xF3i \u0110ang S\u1EED D\u1EE5ng")),/*#__PURE__*/React.createElement("div",{className:"bg-gradient-to-b from-[#1c1e2b] to-[#141620] border-2 border-amber-500/60 rounded-2xl p-4 flex flex-col justify-between space-y-4 relative shadow-xl shadow-amber-500/10"},/*#__PURE__*/React.createElement("div",{className:"absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-red-500 text-white text-[10px] font-black uppercase px-3 py-0.5 rounded-full shadow"},"\uD83D\uDD25 KHUY\xCAN D\xD9NG NHI\u1EC0U NH\u1EA4T"),/*#__PURE__*/React.createElement("div",{className:"space-y-3 pt-1"},/*#__PURE__*/React.createElement("div",{className:"flex justify-between items-center"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-amber-400 uppercase tracking-wider"},"CREATOR CHUY\xCAN NGHI\u1EC6P"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40"},"50 Key/Ng\xE0y")),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h4",{className:"text-base font-extrabold text-white"},"G\xD3I PRO \u2013 N\xC2NG CAO"),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-3 gap-1 mt-2.5 bg-[#0f1118] p-1 rounded-xl border border-[#232738]"},TIERS_DATA.PRO.options.map(opt=>/*#__PURE__*/React.createElement("button",{key:opt.id,type:"button",onClick:()=>{setSelectedTier('PRO');setSelectedDuration(opt.id);},className:'py-1.5 px-1 rounded-lg text-center transition '+(selectedTier==='PRO'&&selectedDuration===opt.id?'bg-amber-500 text-black font-extrabold shadow':'text-zinc-400 hover:text-white')},/*#__PURE__*/React.createElement("div",{className:"text-[10px] leading-tight"},opt.label),/*#__PURE__*/React.createElement("div",{className:"text-[11px] font-black mt-0.5"},opt.priceText))))),/*#__PURE__*/React.createElement("ul",{className:"space-y-1.5 text-xs text-zinc-300 pt-2 border-t border-[#232738]"},/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"T\xECm & ph\xE2n t\xEDch t\u1ED1i \u0111a ",/*#__PURE__*/React.createElement("b",null,"50 t\u1EEB kh\xF3a m\u1ED7i ng\xE0y"))),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,/*#__PURE__*/React.createElement("b",null,"M\u1EDF kh\xF3a Top Ng\xE1ch:")," T\u1EF1 \u0111\u1ED9ng ph\xE1t hi\u1EC7n ng\xE1ch ti\u1EC1m n\u0103ng kh\xF4ng c\u1EA7n nh\u1EADp t\u1EEB kh\xF3a")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Ph\xE1t hi\u1EC7n k\xEAnh sub th\u1EA5p nh\u01B0ng view kh\u1EE7ng")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"M\u1EDF kh\xF3a t\xEDnh n\u0103ng ",/*#__PURE__*/React.createElement("b",null,"Keyword Explorer"))),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Kh\xE1m ph\xE1 k\xEAnh YouTube \u0111ang ph\xE1t tri\u1EC3n theo t\u1EEBng t\u1EEB kh\xF3a & ng\xE1ch")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Ph\xE2n t\xEDch d\u1EEF li\u1EC7u video & k\xEAnh h\u1ED7 tr\u1EE3 nghi\xEAn c\u1EE9u \u0111\u1ED1i th\u1EE7")))),/*#__PURE__*/React.createElement("button",{onClick:()=>handleStartCheckout('PRO',selectedTier==='PRO'?selectedDuration:'1m'),className:"w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white shadow-lg transition"},"\u0110\u0103ng K\xFD G\xF3i PRO Ngay")),/*#__PURE__*/React.createElement("div",{className:"bg-[#181b26] border border-purple-500/40 rounded-2xl p-4 flex flex-col justify-between space-y-4 relative"},/*#__PURE__*/React.createElement("div",{className:"space-y-3"},/*#__PURE__*/React.createElement("div",{className:"flex justify-between items-center"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-purple-400 uppercase tracking-wider"},"TEAM & STUDIO"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40"},"V\xF4 H\u1EA1n Key")),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("h4",{className:"text-base font-extrabold text-white"},"G\xD3I ULTRA PRO"),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-3 gap-1 mt-2.5 bg-[#0f1118] p-1 rounded-xl border border-[#232738]"},TIERS_DATA.ULTRA_PRO.options.map(opt=>/*#__PURE__*/React.createElement("button",{key:opt.id,type:"button",onClick:()=>{setSelectedTier('ULTRA_PRO');setSelectedDuration(opt.id);},className:'py-1.5 px-1 rounded-lg text-center transition '+(selectedTier==='ULTRA_PRO'&&selectedDuration===opt.id?'bg-purple-600 text-white font-extrabold shadow':'text-zinc-400 hover:text-white')},/*#__PURE__*/React.createElement("div",{className:"text-[10px] leading-tight"},opt.label),/*#__PURE__*/React.createElement("div",{className:"text-[11px] font-black mt-0.5"},opt.priceText))))),/*#__PURE__*/React.createElement("ul",{className:"space-y-1.5 text-xs text-zinc-300 pt-2 border-t border-[#232738]"},/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5 font-bold text-pink-300"},/*#__PURE__*/React.createElement("span",null,"🕵️"),/*#__PURE__*/React.createElement("span",null,/*#__PURE__*/React.createElement("b",null,"Độc quyền: Công Cụ Thám Tử Spy")," (Truy vết kênh ẩn danh từ ảnh Studio / 48h view)")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5 font-bold text-purple-300"},/*#__PURE__*/React.createElement("span",null,"\u26A1"),/*#__PURE__*/React.createElement("span",null,/*#__PURE__*/React.createElement("b",null,"Kh\xF4ng gi\u1EDBi h\u1EA1n s\u1ED1 l\u01B0\u1EE3ng t\u1EEB kh\xF3a t\xECm ki\u1EBFm"))),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-purple-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Bao g\u1ED3m to\xE0n b\u1ED9 quy\u1EC1n l\u1EE3i c\u1EE7a g\xF3i PRO")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-purple-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"M\u1EDF r\u1ED9ng kh\u1EA3 n\u0103ng t\xECm & ph\xE2n t\xEDch nhi\u1EC1u t\u1EEB kh\xF3a li\xEAn t\u1EE5c")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-purple-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"Khai th\xE1c t\xEDnh n\u0103ng Top Ng\xE1ch chuy\xEAn s\xE2u")),/*#__PURE__*/React.createElement("li",{className:"flex items-start gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-purple-400 font-bold"},"\u2713"),/*#__PURE__*/React.createElement("span",null,"\u01AFu ti\xEAn tr\u1EA3i nghi\u1EC7m nghi\xEAn c\u1EE9u d\u1EEF li\u1EC7u v\u1EDBi h\u1EA1n m\u1EE9c m\u1EDF r\u1ED9ng")))),/*#__PURE__*/React.createElement("button",{onClick:()=>handleStartCheckout('ULTRA_PRO',selectedTier==='ULTRA_PRO'?selectedDuration:'1m'),className:"w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg transition"},"\u0110\u0103ng K\xFD G\xF3i ULTRA PRO"))),/*#__PURE__*/React.createElement("div",{className:"p-3.5 rounded-xl bg-[#181b26] border border-[#232738] text-[11px] text-zinc-400 leading-relaxed"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 font-bold"},"L\u01B0u \xFD v\u1EC1 API:")," C\xE1c t\xEDnh n\u0103ng t\xECm ki\u1EBFm s\u1EED d\u1EE5ng YouTube Data API n\xEAn kh\u1EA3 n\u0103ng truy v\u1EA5n th\u1EF1c t\u1EBF ph\u1EE5 thu\u1ED9c v\xE0o h\u1EA1n m\u1EE9c API c\xF2n l\u1EA1i. Khi h\u1EBFt quota, h\u1EC7 th\u1ED1ng s\u1EBD th\xF4ng b\xE1o v\xE0 h\u1ED7 tr\u1EE3 t\u1EF1 \u0111\u1ED9ng xoay v\xF2ng nhi\u1EC1u key \u0111\u1EC3 b\u1EA1n l\xE0m vi\u1EC7c li\xEAn t\u1EE5c.")),step==='checkout'&&/*#__PURE__*/React.createElement("div",{className:"space-y-4"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between bg-[#181b26] p-3 rounded-xl border border-[#232738]"},/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("div",{className:"text-xs text-zinc-400"},"\u0110ang \u0111\u0103ng k\xFD:"),/*#__PURE__*/React.createElement("div",{className:"text-sm font-extrabold text-white"},tierInfo.name," (",currentOption.label,")")),/*#__PURE__*/React.createElement("div",{className:"text-right"},/*#__PURE__*/React.createElement("div",{className:"text-xs text-zinc-400"},"S\u1ED1 ti\u1EC1n thanh to\xE1n:"),/*#__PURE__*/React.createElement("div",{className:"text-lg font-black text-amber-400"},currentOption.priceText))),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-[#181b26] p-4 rounded-xl border border-[#232738]"},/*#__PURE__*/React.createElement("div",{className:"flex flex-col items-center justify-center p-3 bg-white rounded-xl shadow-lg"},/*#__PURE__*/React.createElement("img",{src:primaryQrUrl,referrerPolicy:"no-referrer",loading:"eager",alt:"VietQR Chuy\u1EC3n Kho\u1EA3n Thanh To\xE1n",className:"w-56 h-56 object-contain",onError:e=>{if(!e.target.dataset.triedFallback){e.target.dataset.triedFallback='1';e.target.src=sepayQrUrl;}}}),/*#__PURE__*/React.createElement("div",{className:"text-[10px] text-zinc-600 font-bold mt-2 flex items-center gap-1"},/*#__PURE__*/React.createElement("span",null,"\u26A1 Qu\xE9t B\u1EB1ng B\u1EA5t K\u1EF3 App Ng\xE2n H\xE0ng / MoMo")),/*#__PURE__*/React.createElement("a",{href:primaryQrUrl,target:"_blank",rel:"noopener noreferrer",className:"text-[10px] text-blue-600 hover:text-blue-700 underline font-medium mt-0.5"},"M\u1EDF \u1EA3nh QR tab m\u1EDBi n\u1EBFu m\u1EA1ng ch\u1EB7n \u2197")),/*#__PURE__*/React.createElement("div",{className:"space-y-2.5 text-xs"},/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400"},"Ng\xE2n H\xE0ng Th\u1EE5 H\u01B0\u1EDFng:"),/*#__PURE__*/React.createElement("div",{className:"font-bold text-white flex items-center justify-between bg-[#12141c] p-2 rounded-lg border border-[#232738] mt-0.5"},/*#__PURE__*/React.createElement("span",null,SEPAY_CONFIG.bankName," (VietinBank)"),/*#__PURE__*/React.createElement("button",{onClick:()=>copyToClipboard(SEPAY_CONFIG.bankName,'bank'),className:"text-[10px] text-amber-400 hover:text-amber-300 font-mono"},copiedKey==='bank'?'Đã chép ✓':'Sao chép'))),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400"},"S\u1ED1 T\xE0i Kho\u1EA3n:"),/*#__PURE__*/React.createElement("div",{className:"font-bold text-white font-mono flex items-center justify-between bg-[#12141c] p-2 rounded-lg border border-[#232738] mt-0.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-400 text-sm font-black"},SEPAY_CONFIG.accountNumber),/*#__PURE__*/React.createElement("button",{onClick:()=>copyToClipboard(SEPAY_CONFIG.accountNumber,'acc'),className:"text-[10px] text-amber-400 hover:text-amber-300 font-mono"},copiedKey==='acc'?'Đã chép ✓':'Sao chép'))),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400"},"S\u1ED1 Ti\u1EC1n Chuy\u1EC3n:"),/*#__PURE__*/React.createElement("div",{className:"font-bold text-white font-mono flex items-center justify-between bg-[#12141c] p-2 rounded-lg border border-[#232738] mt-0.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 text-sm font-black"},currentOption.priceText),/*#__PURE__*/React.createElement("button",{onClick:()=>copyToClipboard(amount,'amount'),className:"text-[10px] text-amber-400 hover:text-amber-300 font-mono"},copiedKey==='amount'?'Đã chép ✓':'Sao chép'))),/*#__PURE__*/React.createElement("div",null,/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400 flex items-center justify-between"},/*#__PURE__*/React.createElement("span",null,"N\u1ED9i Dung Chuy\u1EC3n Kho\u1EA3n (B\u1EAFt Bu\u1ED9c):"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] text-rose-400"},"Gi\u1EEF nguy\xEAn m\xE3")),/*#__PURE__*/React.createElement("div",{className:"font-bold text-white font-mono flex items-center justify-between bg-amber-500/10 p-2 rounded-lg border border-amber-500/40 mt-0.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-300 text-sm font-black"},orderCode),/*#__PURE__*/React.createElement("button",{onClick:()=>copyToClipboard(orderCode,'des'),className:"text-[10px] text-amber-400 hover:text-amber-300 font-mono"},copiedKey==='des'?'Đã chép ✓':'Sao chép'))),/*#__PURE__*/React.createElement("p",{className:"text-[10px] text-zinc-400 leading-tight pt-1"},"\uD83D\uDCA1 M\u1EDF App ng\xE2n h\xE0ng c\u1EE7a b\u1EA1n qu\xE9t m\xE3 QR \u0111\u1EC3 \u0111i\u1EC1n t\u1EF1 \u0111\u1ED9ng ch\xEDnh x\xE1c S\u1ED1 ti\u1EC1n v\xE0 N\u1ED9i dung."))),/*#__PURE__*/React.createElement("div",{className:"flex flex-col sm:flex-row gap-2 pt-2"},/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setStep('plans'),className:"sm:w-1/3 py-2.5 rounded-xl text-xs font-semibold bg-[#181b26] hover:bg-[#202433] text-zinc-300 border border-[#232738] transition"},"\u2190 Ch\u1ECDn G\xF3i Kh\xE1c"),/*#__PURE__*/React.createElement("div",{className:"sm:w-2/3 flex flex-col gap-1.5"},/*#__PURE__*/React.createElement("button",{type:"button",disabled:verifying,onClick:handleConfirmPaid,className:"w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2 cursor-pointer"},verifying?/*#__PURE__*/React.createElement(React.Fragment,null,/*#__PURE__*/React.createElement("span",{className:"w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"}),/*#__PURE__*/React.createElement("span",null,"\u0110ang Ki\u1EC3m Tra V\u1EDBi Ng\xE2n H\xE0ng...")):/*#__PURE__*/React.createElement(React.Fragment,null,/*#__PURE__*/React.createElement("span",null,"\u26A1"),/*#__PURE__*/React.createElement("span",null,"T\xF4i \u0110\xE3 Chuy\u1EC3n Kho\u1EA3n \u2013 Ki\u1EC3m Tra & K\xEDch Ho\u1EA1t"))),verifyError&&/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-amber-300 bg-amber-500/10 p-2 rounded-lg border border-amber-500/30 leading-snug"},"\u26A0\uFE0F ",verifyError)))))));}// =========================================================================
 // SCORE FORMULA MODAL (GIẢI THÍCH THUẬT TOÁN CHẤM ĐIỂM TIỀM NĂNG)
@@ -1682,7 +1340,8 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
         const resp = await fetch('/api/extract-clues', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...(await ytAuth.authHeaders())
           },
           body: JSON.stringify({
             dataUrl: processedDataUrl,
@@ -3157,6 +2816,7 @@ function PendingTrendsModal({isOpen,onClose,autoUpdateData,autoScanning,onRunDai
 
 function App(){const[key,setKey]=useState(()=>typeof ytKeyManager!=='undefined'?ytKeyManager.getActiveKey():st.get('yt_key')||'');const[showSubscriptionModal,setShowSubscriptionModal]=useState(false);const[subscriptionModalReason,setSubscriptionModalReason]=useState('manual');const[showAuthModal,setShowAuthModal]=useState(false);
   const handleFullLogout = () => {
+    try { if (typeof ytAuth !== 'undefined') ytAuth.signOut(); } catch(e) {}
     try {
       st.del('yt_user_profile');
       localStorage.removeItem('yt_user_profile');

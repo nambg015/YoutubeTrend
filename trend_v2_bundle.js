@@ -1254,7 +1254,7 @@ window.FEATURE_TREND_V2 = true;
         try {
           const res = await fetch('/api/trend-v2-ai', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(window.ytAuth ? await window.ytAuth.authHeaders() : {}) },
             body: JSON.stringify({
               action: 'propose_niches',
               targetRegion,
@@ -1330,7 +1330,7 @@ window.FEATURE_TREND_V2 = true;
         try {
           const res = await fetch('/api/trend-v2-ai', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(window.ytAuth ? await window.ytAuth.authHeaders() : {}) },
             body: JSON.stringify({
               action: 'generate_keywords',
               selectedNiches: selected,
