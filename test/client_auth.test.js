@@ -171,4 +171,15 @@ describe('ytAuth.refreshPhoneStatus / profileFromUser / bootstrap', () => {
     env.fire(null);
     assert.ok(env.store.yt_user_profile);
   });
+  test('admin mới (name: admin) không bị xoá hồ sơ khi bootstrap', () => {
+    const env = makeEnv({ user: null });
+    env.store.yt_user_profile = JSON.stringify({ isAuth: true, authType: 'admin', name: 'admin', isAdmin: true });
+    env.ytAuth.bootstrap();
+    env.fire(null);
+    assert.ok(env.store.yt_user_profile);
+    const p = JSON.parse(env.store.yt_user_profile);
+    assert.strictEqual(p.isAdmin, true);
+    assert.strictEqual(p.authType, 'admin');
+  });
 });
+

@@ -60,9 +60,24 @@
 
 ---
 
-## 5. Chạy kiểm thử tự động
+## 5. Tài khoản Quản Trị Viên (Admin Tối Cao - Không Giới Hạn)
+- **Tài khoản (Tk)**: `admin` (hoặc `adminh`, `admin@youtrend.pro`)
+- **Mật khẩu (Mk)**: `admin2026` (hoặc `Admin@2026`)
+- **Quyền hạn tối cao (Không giới hạn mọi thứ)**:
+  - Tự động kích hoạt gói **ULTRA PRO** vĩnh viễn (Lifetime).
+  - Không giới hạn từ khóa xu hướng (Bypass hoàn toàn giới hạn 5 từ/ngày).
+  - Không giới hạn phân tích ngách chuyên sâu & Outlier Radar.
+  - Toàn quyền truy cập công cụ **Thám Tử Spy v3** (Bóc tách kênh ngầm, giải mã doanh thu).
+  - Toàn quyền truy cập **Top Ngách US High-RPM**, Explorer, Wiki 24 bài.
+  - Không bao giờ bị chặn hay yêu cầu xác minh OTP SĐT.
+  - Có thể tự đổi mật khẩu Admin trong menu "Đổi Mật Khẩu" của tài khoản bất kỳ lúc nào.
+
+---
+
+## 6. Chạy kiểm thử tự động
 Chạy lệnh trong terminal:
 ```bash
 npm test
 ```
-Toàn bộ **86/86 test** đều pass 100%.
+Toàn bộ **87/87 test** đều pass 100%.
+
