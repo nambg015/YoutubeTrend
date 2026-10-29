@@ -33,3 +33,36 @@ test('login / register / verify_phone đều dựng được', () => {
   assert.match(ver, /Gửi mã OTP/);
   assert.match(ver, /Mỗi số điện thoại chỉ/);
 });
+
+test('AuthModal mở thẳng verify_phone ngay render đầu tiên khi tài khoản chưa xác minh SĐT', () => {
+  let initialModeComputed = null;
+  const React = {
+    Fragment: 'Fragment',
+    createElement: (type, props, ...children) => ({ type, props, children }),
+    useEffect: () => {},
+  };
+  const useState = init => {
+    if (initialModeComputed === null) {
+      initialModeComputed = init;
+    }
+    return [init, () => {}];
+  };
+  const ctx = {
+    React,
+    useState,
+    ytAuth: { currentUser: () => ({ displayName: 'Nam Tran', email: 'nam@gmail.com', phoneNumber: null }), disposeVerifier() {} },
+    st: { get: () => JSON.stringify({ isAuth: true, phoneVerified: false, name: 'Nam Tran' }) },
+    window: {}
+  };
+  vm.createContext(ctx);
+  vm.runInContext(block + '\nthis.__M = AuthModal;', ctx);
+  ctx.__M({
+    onClose() {},
+    onLoginSuccess() {},
+    showToast() {},
+    initialNotice: '',
+    userProfile: { isAuth: true, phoneVerified: false }
+  });
+  assert.strictEqual(initialModeComputed, 'verify_phone');
+});
+
