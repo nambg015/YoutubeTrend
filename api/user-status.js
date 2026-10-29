@@ -21,7 +21,8 @@ module.exports = async (req, res) => {
   }
 
   const uid = claims.sub;
-  const phone = claims.phone_number || '';
+  let phone = claims.phone_number || '';
+  if (!phone) { try { phone = (await store.get('user_phone:' + claims.sub)) || ''; } catch (e) {} }
   const email = claims.email || '';
   const isAdmin = ADMIN_UIDS.includes(uid) || (email && email.toLowerCase() === 'tranminh1135@gmail.com');
 
@@ -117,6 +118,7 @@ module.exports = async (req, res) => {
     isAuth: true,
     uid,
     phone,
+    phoneVerified: !!phone,
     email,
     tier: effectiveTier,
     isPro: effectiveIsPro,

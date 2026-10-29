@@ -2,6 +2,7 @@
 // Mục đích: chỉ cho gọi API tốn tiền (Gemini...) khi tài khoản ĐÃ xác minh SĐT, và đếm hạn mức theo uid.
 const https = require('https');
 const crypto = require('crypto');
+const store = require('./store');
 
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'sdt2804-84801';
 const CERT_URL = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
@@ -84,6 +85,19 @@ async function requirePhoneVerified(req, res, opts = {}) {
   } catch (e) {
     res.status(401).json({ success: false, code: e.code || 'UNAUTHORIZED', message: e.message || 'Chưa đăng nhập' });
     return null;
+  }
+  // Tắt yêu cầu SĐT (REQUIRE_PHONE=false) -> cho qua, chỉ cần đã đăng nhập.
+  if ((process.env.REQUIRE_PHONE || '').trim().toLowerCase() === 'false') return claims;
+  // SĐT được xác minh bởi server (api/phone-otp) và lưu ở KV; token Firebase cũ có phone_number vẫn được chấp nhận.
+  if (!claims.phone_number) {
+    try {
+      const lookup = opts.phoneLookup || (uid => store.get('user_phone:' + uid));
+      const phone = await lookup(claims.sub);
+      if (phone) claims.phone_number = phone;
+    } catch (e) {
+      res.status(503).json({ success: false, code: 'STORE_UNAVAILABLE', message: 'Hệ thống đang bận, vui lòng thử lại sau.' });
+      return null;
+    }
   }
   if (!claims.phone_number) {
     res.status(403).json({ success: false, code: 'PHONE_REQUIRED', message: 'Tài khoản chưa xác minh số điện thoại' });

@@ -74,6 +74,11 @@ async function get(key) {
   return cur && cur.exp > Date.now() ? String(cur.n) : null;
 }
 
+async function del(key) {
+  if (hasKv()) { await redis(['DEL', key]); return; }
+  mem.delete(key);
+}
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 // Kiểm tra + trừ hạn mức ngày theo uid. Trả { allowed, used, limit }.
@@ -82,4 +87,4 @@ async function consumeDaily(uid, bucket, limit) {
   return { allowed: used <= limit, used, limit };
 }
 
-module.exports = { incr, setOnce, set, get, consumeDaily, hasKv };
+module.exports = { incr, setOnce, set, get, del, consumeDaily, hasKv };
