@@ -413,7 +413,7 @@ const ytAuth = {
       'auth/missing-phone-number': 'Bạn chưa nhập số điện thoại.',
       'auth/too-many-requests': 'Bạn đã thử quá nhiều lần. Vui lòng đợi vài phút rồi thử lại.',
       'auth/quota-exceeded': 'Hệ thống đã hết hạn mức gửi SMS hôm nay. Vui lòng thử lại sau.',
-      'auth/operation-not-allowed': 'Phương thức đăng nhập này chưa được bật (hoặc SMS vùng Việt Nam chưa được cho phép) trong Firebase Console.',
+      'auth/operation-not-allowed': 'Phương thức đăng nhập này chưa được bật trong Firebase. Bạn có thể đăng nhập ngay bằng tab "📱 SĐT & OTP" hoặc Google.',
       'auth/captcha-check-failed': 'Xác thực reCAPTCHA không thành công. Hãy tải lại trang rồi thử lại.',
       'auth/invalid-app-credential': 'Xác thực reCAPTCHA không hợp lệ. Hãy tải lại trang rồi thử lại.',
       'auth/app-not-authorized': 'Tên miền hoặc API key chưa được cấp quyền dùng Firebase Auth (kiểm tra Authorized domains và hạn chế API key).',
@@ -461,6 +461,17 @@ const ytAuth = {
   },
 
   // ---- Đăng nhập
+  async signInGoogleCredential(googleJwt) {
+    if (!this.init()) return { success: false, error: 'Không tải được Firebase. Hãy tải lại trang.' };
+    try {
+      const credential = firebase.auth.GoogleAuthProvider.credential(googleJwt);
+      const res = await firebase.auth().signInWithCredential(credential);
+      return { success: true, user: res.user };
+    } catch (err) {
+      console.warn('Google Credential sign-in error:', err.code, err.message);
+      return { success: false, code: err.code, error: this.mapError(err) };
+    }
+  },
   async signInGoogle() {
     if (!this.init()) return { success: false, error: 'Không tải được Firebase. Hãy tải lại trang.' };
     try {
@@ -508,6 +519,20 @@ const ytAuth = {
   },
 
   // ---- SĐT: gắn vào tài khoản đang đăng nhập
+  async sendPhoneSignInOtp(rawPhone) {
+    const p = this.normalizePhone(rawPhone);
+    if (!p.ok) return { success: false, error: 'Vui lòng nhập số di động Việt Nam hợp lệ (ví dụ 0912345678).' };
+    if (!this.init()) return { success: false, error: 'Không tải được Firebase. Hãy tải lại trang.' };
+    try {
+      this._confirmation = await firebase.auth().signInWithPhoneNumber(p.intl, this.makeVerifier());
+      return { success: true, intl: p.intl, local: p.local };
+    } catch (err) {
+      console.warn('Send Phone OTP error:', err.code, err.message);
+      this.disposeVerifier();
+      this._confirmation = null;
+      return { success: false, code: err.code, error: this.mapError(err) };
+    }
+  },
   async sendOtp(rawPhone) {
     const p = this.normalizePhone(rawPhone);
     if (!p.ok) return { success: false, error: 'Vui lòng nhập số di động Việt Nam hợp lệ (ví dụ 0912345678).' };
@@ -574,7 +599,7 @@ if (typeof window !== 'undefined') {
 
 function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
   const h = React.createElement;
-  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register' | 'verify_phone'
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register' | 'verify_phone' | 'phone'
   const [identity, setIdentity] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -586,6 +611,7 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
   const [acctName, setAcctName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const gsiRef = typeof React.useRef === 'function' ? React.useRef(null) : { current: null };
 
   // Mở lại modal khi đã đăng nhập nhưng chưa có SĐT -> vào thẳng bước xác minh
   React.useEffect(() => {
@@ -619,6 +645,44 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     }
   };
 
+  // Google Identity Services (GSI) One-Tap / Button render
+  React.useEffect(() => {
+    if (authMode === 'verify_phone') return;
+    if (typeof window !== 'undefined' && window.google && window.google.accounts && window.google.accounts.id) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: typeof GOOGLE_CLIENT_ID !== 'undefined' ? GOOGLE_CLIENT_ID : '416173479086-54vjra2mradjlut3dbf1ve4e65cgvohp.apps.googleusercontent.com',
+          callback: async res => {
+            if (res && res.credential) {
+              setBusy(true);
+              setErrorMsg('');
+              const r = await ytAuth.signInGoogleCredential(res.credential);
+              setBusy(false);
+              if (r.success) {
+                finishIfVerified(r.user);
+              } else {
+                setErrorMsg(r.error || 'Lỗi đăng nhập Google Credential');
+              }
+            }
+          }
+        });
+        if (gsiRef.current) {
+          gsiRef.current.innerHTML = '';
+          window.google.accounts.id.renderButton(gsiRef.current, {
+            theme: 'filled_black',
+            size: 'large',
+            shape: 'pill',
+            text: 'continue_with',
+            locale: 'vi',
+            width: 280
+          });
+        }
+      } catch (e) {
+        console.warn('GSI init error:', e);
+      }
+    }
+  }, [authMode]);
+
   const handleGoogle = async () => {
     setErrorMsg(''); setSuccessMsg('');
     if (ytAuth.isInAppBrowser()) {
@@ -638,7 +702,7 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     const id = identity.trim().toLowerCase();
     const pass = password;
 
-    // --- Đường admin cũ (GIỮ NGUYÊN hành vi; chỉ nằm trong trình duyệt, cần thay bằng quyền admin phía server) ---
+    // --- Đường admin cũ (GIỮ NGUYÊN hành vi) ---
     if (authMode === 'login' && (id === 'adminh' || id === 'adminh@youtrend.pro')) {
       const adminStoredHash = st.get('yt_admin_pass_hash') || '7126e71f8b490bf451df28169a3a5e533a04249da5853aeeea2c08607ff81dd8';
       if (typeof sha256Hex === 'function' && sha256Hex(pass.trim()) === adminStoredHash) {
@@ -672,7 +736,27 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     setBusy(true);
     const r = authMode === 'register' ? await ytAuth.signUp(id, pass) : await ytAuth.signIn(id, pass);
     setBusy(false);
-    if (!r.success) { setErrorMsg(r.error); return; }
+    if (!r.success) {
+      if (r.code === 'auth/operation-not-allowed') {
+        setErrorMsg('Phương thức đăng nhập này chưa được bật trong Firebase. Vui lòng chuyển sang tab "📱 SĐT & OTP" hoặc Google để đăng nhập ngay!');
+      } else {
+        setErrorMsg(r.error);
+      }
+      return;
+    }
+
+    // Nếu lúc đăng ký người dùng đã nhập SĐT & mã OTP
+    if (authMode === 'register' && phone && otpSent && otpInput) {
+      const vRes = await ytAuth.confirmOtp(otpInput);
+      if (!vRes.success) {
+        setErrorMsg('Đăng ký thành công nhưng lỗi xác minh OTP: ' + vRes.error);
+        setAuthMode('verify_phone');
+        return;
+      }
+      finishIfVerified(vRes.user || r.user);
+      return;
+    }
+
     finishIfVerified(r.user);
   };
 
@@ -689,6 +773,22 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     } else if (r.alreadyVerified) {
       const u = ytAuth.currentUser();
       if (u) finishIfVerified(u);
+    } else {
+      setErrorMsg(r.error);
+      if (r.code === 'auth/too-many-requests') setOtpCountdown(120);
+    }
+  };
+
+  const handleSendPhoneSignInOtp = async () => {
+    if (busy || otpCountdown > 0) return;
+    setErrorMsg(''); setSuccessMsg('');
+    setBusy(true);
+    const r = await ytAuth.sendPhoneSignInOtp(phone);
+    setBusy(false);
+    if (r.success) {
+      setOtpSent(true);
+      setOtpCountdown(60);
+      setSuccessMsg('Đã gửi mã OTP đến ' + r.local + '. Vui lòng nhập mã 6 số bên dưới.');
     } else {
       setErrorMsg(r.error);
       if (r.code === 'auth/too-many-requests') setOtpCountdown(120);
@@ -722,8 +822,12 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     errorMsg && h("div", { key: 'e', className: "p-2.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs" }, "⚠️ ", errorMsg)
   ];
 
-  const headerTitle = authMode === 'login' ? 'Đăng Nhập YouTrend' : authMode === 'register' ? 'Tạo Tài Khoản Mới' : 'Xác Minh Số Điện Thoại';
+  const headerTitle = authMode === 'login' ? 'Đăng Nhập YouTrend' : authMode === 'register' ? 'Tạo Tài Khoản Mới' : authMode === 'phone' ? 'Đăng Nhập Bằng SĐT' : 'Xác Minh Số Điện Thoại';
   const headerSub = authMode === 'verify_phone' ? 'Mỗi số điện thoại chỉ dùng cho 1 tài khoản' : (initialNotice || 'Đăng nhập để phân tích từ khóa và quản lý hạn mức');
+
+  const tabBtn = (mode, label) => h("button", { type: "button",
+    onClick: () => { setAuthMode(mode); setErrorMsg(''); setSuccessMsg(''); },
+    className: 'py-1.5 px-2 rounded-lg text-xs font-bold transition text-center whitespace-nowrap ' + (authMode === mode ? 'bg-red-600 text-white shadow' : 'text-zinc-400 hover:text-white') }, label);
 
   const verifyView = h("div", { className: "space-y-3.5 pt-1" },
     h("div", { className: "p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-1" },
@@ -755,29 +859,66 @@ function AuthModal({onClose,onLoginSuccess,showToast,initialNotice=''}){
     h("button", { type: "button", onClick: handleSwitchAccount, className: "w-full text-[11px] text-zinc-400 hover:text-white underline underline-offset-2 cursor-pointer" }, "Đăng xuất / dùng tài khoản khác")
   );
 
-  const tabBtn = (mode, label) => h("button", { type: "button",
-    onClick: () => { setAuthMode(mode); setErrorMsg(''); setSuccessMsg(''); },
-    className: 'py-1.5 rounded-lg text-xs font-bold transition ' + (authMode === mode ? 'bg-red-600 text-white shadow' : 'text-zinc-400 hover:text-white') }, label);
+  const phoneSignInView = h("div", { className: "space-y-3.5 pt-1" },
+    h("p", { className: "text-xs text-zinc-400 leading-relaxed" }, "Đăng nhập nhanh 1-click không cần mật khẩu. Google Firebase gửi mã xác nhận SMS về điện thoại của bạn:"),
+    h("div", null,
+      h("label", { className: labelCls }, "Số điện thoại di động:"),
+      h("div", { className: "flex gap-2" },
+        h("input", { type: "tel", inputMode: "tel", autoComplete: "tel", value: phone, onChange: e => setPhone(e.target.value), placeholder: "Ví dụ: 0912345678", className: "flex-1 " + inputCls }),
+        h("button", { type: "button", onClick: handleSendPhoneSignInOtp, disabled: busy || otpCountdown > 0,
+          className: "px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap " + ((busy || otpCountdown > 0) ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer") },
+          busy && !otpSent ? "Đang gửi..." : (otpCountdown > 0 ? ("Gửi lại (" + otpCountdown + "s)") : (otpSent ? "Gửi lại mã" : "Gửi mã OTP"))))
+    ),
+    h("form", { onSubmit: handleVerifyOtp, className: "space-y-3.5" },
+      h("div", null,
+        h("label", { className: labelCls }, "Mã OTP (6 chữ số):"),
+        h("input", { type: "text", inputMode: "numeric", autoComplete: "one-time-code", maxLength: 6, value: otpInput,
+          onChange: e => setOtpInput(e.target.value.replace(/[^0-9]/g, '')), placeholder: "Nhập mã 6 số",
+          className: inputCls + " tracking-widest font-mono text-center text-sm focus:border-emerald-500" })
+      ),
+      msgBoxes,
+      h("button", { type: "submit", disabled: busy || !otpSent,
+        className: "w-full py-2.5 rounded-xl text-xs font-bold text-white shadow-lg transition " + ((busy || !otpSent) ? "bg-zinc-700 cursor-not-allowed" : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 cursor-pointer") },
+        busy && otpSent ? "Đang xác minh..." : "Đăng Nhập Ngay Bằng SĐT")
+    )
+  );
 
   const credentialView = h(React.Fragment, null,
     h("div", { className: "space-y-2 pt-1 text-center" },
+      h("div", { ref: gsiRef, className: "flex justify-center min-h-[42px]" }),
       h("button", { type: "button", onClick: handleGoogle, disabled: busy,
         className: "w-full py-2.5 rounded-xl text-xs font-bold bg-white hover:bg-zinc-100 text-zinc-900 transition cursor-pointer flex items-center justify-center gap-2 " + (busy ? "opacity-60 cursor-not-allowed" : "") },
         h("span", { className: "font-black text-[#4285F4]" }, "G"), "Tiếp tục với Google")
     ),
     h("div", { className: "flex items-center gap-3 my-2" },
       h("div", { className: "h-[1px] bg-[#232738] flex-1" }),
-      h("span", { className: "text-[10px] text-zinc-500 font-bold uppercase tracking-wider" }, "HOẶC DÙNG TÀI KHOẢN / MẬT KHẨU"),
+      h("span", { className: "text-[10px] text-zinc-500 font-bold uppercase tracking-wider" }, "HOẶC CHỌN CÁCH ĐĂNG NHẬP"),
       h("div", { className: "h-[1px] bg-[#232738] flex-1" })),
-    h("div", { className: "grid grid-cols-2 gap-1 bg-[#181b26] p-1 rounded-xl border border-[#232738]" },
-      tabBtn('login', 'Đăng Nhập'), tabBtn('register', 'Đăng Ký (Bắt Buộc SĐT)')),
+    h("div", { className: "grid grid-cols-3 gap-1 bg-[#181b26] p-1 rounded-xl border border-[#232738]" },
+      tabBtn('phone', '📱 SĐT & OTP'), tabBtn('login', 'Đăng Nhập'), tabBtn('register', 'Đăng Ký')),
+
+    authMode === 'phone' ? phoneSignInView :
     h("form", { onSubmit: handleCredentialSubmit, className: "space-y-3" },
-      h("div", null, h("label", { className: labelCls }, authMode === 'register' ? 'Tên đăng nhập hoặc Email:' : 'Tên đăng nhập hoặc Email:'),
+      h("div", null, h("label", { className: labelCls }, 'Tên đăng nhập hoặc Email:'),
         h("input", { type: "text", autoComplete: "username", value: identity, onChange: e => setIdentity(e.target.value), placeholder: "Ví dụ: hungnguyen99 hoặc ban@gmail.com", className: inputCls })),
       h("div", null, h("label", { className: labelCls }, "Mật khẩu:"),
         h("input", { type: "password", autoComplete: authMode === 'register' ? "new-password" : "current-password", value: password, onChange: e => setPassword(e.target.value), placeholder: authMode === 'register' ? "Tối thiểu 8 ký tự" : "Mật khẩu", className: inputCls })),
       authMode === 'register' && h("div", null, h("label", { className: labelCls }, "Nhập lại mật khẩu:"),
         h("input", { type: "password", autoComplete: "new-password", value: confirmPassword, onChange: e => setConfirmPassword(e.target.value), placeholder: "Nhập lại mật khẩu", className: inputCls })),
+
+      authMode === 'register' && h("div", { className: "p-3 bg-[#181b26] rounded-xl border border-[#232738] space-y-2.5" },
+        h("div", { className: "flex items-center justify-between" },
+          h("label", { className: "text-[11px] font-bold text-amber-300" }, "📱 Xác minh số điện thoại chính chủ:"),
+          h("span", { className: "text-[10px] text-zinc-400" }, "Bắt buộc")),
+        h("div", { className: "flex gap-2" },
+          h("input", { type: "tel", inputMode: "tel", autoComplete: "tel", value: phone, onChange: e => setPhone(e.target.value), placeholder: "Số điện thoại VN (ví dụ 0912345678)", className: "flex-1 " + inputCls }),
+          h("button", { type: "button", onClick: handleSendPhoneSignInOtp, disabled: busy || otpCountdown > 0,
+            className: "px-3 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap " + ((busy || otpCountdown > 0) ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer") },
+            busy && !otpSent ? "Đang gửi..." : (otpCountdown > 0 ? ("Gửi lại (" + otpCountdown + "s)") : (otpSent ? "Gửi lại mã" : "Gửi mã OTP")))),
+        otpSent && h("div", { className: "space-y-1" },
+          h("label", { className: "text-[10px] text-zinc-400" }, "Nhập mã OTP 6 số từ tin nhắn SMS:"),
+          h("input", { type: "text", inputMode: "numeric", maxLength: 6, value: otpInput, onChange: e => setOtpInput(e.target.value.replace(/[^0-9]/g, '')), placeholder: "Mã OTP 6 số", className: inputCls + " text-center font-mono tracking-widest text-emerald-400 border-emerald-500/50" }))
+      ),
       authMode === 'register' && h("p", { className: "text-[10px] text-zinc-500" }, "Sau bước này bạn sẽ được yêu cầu xác minh số điện thoại bằng mã OTP."),
       msgBoxes,
       h("button", { type: "submit", disabled: busy,
