@@ -1217,22 +1217,22 @@ function SubscriptionModal({
     className: "fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200",
     onClick: onClose
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-[#0e1118] border border-white/10 rounded-2xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden",
+    className: "bg-[#0e1118] border border-white/10 rounded-3xl max-w-5xl w-full p-5 sm:p-7 shadow-2xl flex flex-col max-h-[94vh] overflow-hidden",
     onClick: e => e.stopPropagation()
   }, step === 'plans' && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between border-b border-white/10 pb-3.5 shrink-0"
+    className: "flex items-center justify-between border-b border-white/10 pb-4 shrink-0"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold"
+    className: "inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold"
   }, /*#__PURE__*/React.createElement("span", null, "\u2728"), " N\xC2NG C\u1EA4P G\xD3I D\u1ECACH V\u1EE4"), /*#__PURE__*/React.createElement("h3", {
-    className: "text-base sm:text-lg font-black text-white mt-1"
+    className: "text-lg sm:text-xl font-black text-white mt-1"
   }, "B\u1EA3ng Gi\xE1 G\xF3i D\u1ECBch V\u1EE5 YouTrend")), /*#__PURE__*/React.createElement("button", {
     onClick: onClose,
     className: "w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition border border-white/10 text-sm"
   }, "\u2715")), step === 'checkout' && /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between border-b border-white/10 pb-3.5 shrink-0"
+    className: "flex items-center justify-between border-b border-white/10 pb-4 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setStep('plans'),
-    className: "inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition"
+    className: "inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition"
   }, /*#__PURE__*/React.createElement("span", null, "\u2190"), " \u0110\u1ED5i g\xF3i kh\xE1c"), /*#__PURE__*/React.createElement("div", {
     className: "text-xs font-bold text-zinc-200 flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
@@ -1241,70 +1241,70 @@ function SubscriptionModal({
     onClick: onClose,
     className: "w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition border border-white/10 text-sm"
   }, "\u2715")), /*#__PURE__*/React.createElement("div", {
-    className: "overflow-y-auto py-4 space-y-4 pr-1"
+    className: "overflow-y-auto py-4 space-y-5 pr-1"
   }, step === 'plans' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 md:grid-cols-3 gap-3.5"
+    className: "grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-[#141824]/80 border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4"
+    className: "bg-[#141824]/90 border border-white/10 rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-5 transition-all duration-300 ease-out hover:-translate-y-2 hover:shadow-2xl hover:border-white/20 group"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3"
+    className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold text-zinc-400 uppercase tracking-wider"
+    className: "text-xs font-bold text-zinc-400 uppercase tracking-wider whitespace-nowrap"
   }, "C\u01A0 B\u1EA2N"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-semibold border border-zinc-700"
+    className: "text-[10px] px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-semibold border border-zinc-700 whitespace-nowrap"
   }, "M\u1EB7c \u0111\u1ECBnh")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
-    className: "text-base font-bold text-white"
+    className: "text-lg font-black text-white"
   }, "G\xD3I FREE"), /*#__PURE__*/React.createElement("div", {
-    className: "text-2xl font-black text-white mt-1"
+    className: "text-3xl font-black text-white mt-1"
   }, "0\u0111 ", /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-normal text-zinc-500"
   }, "/ tr\u1ECDn \u0111\u1EDDi")), /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-zinc-400 mt-1"
-  }, "Tr\u1EA3i nghi\u1EC7m t\xECm ki\u1EBFm & ph\xE2n t\xEDch c\u01A1 b\u1EA3n")), /*#__PURE__*/React.createElement("div", {
-    className: "pt-3 border-t border-white/5 space-y-2 text-xs text-zinc-300"
+    className: "text-xs text-zinc-400 mt-1 whitespace-nowrap"
+  }, "D\xE0nh cho ng\u01B0\u1EDDi m\u1EDBi b\u1EAFt \u0111\u1EA7u")), /*#__PURE__*/React.createElement("div", {
+    className: "pt-4 border-t border-white/5 space-y-2.5 text-xs text-zinc-300"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "flex items-center gap-2 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-emerald-400 font-bold"
+    className: "text-emerald-400 font-bold shrink-0"
   }, "\u2713"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "5 t\u1EEB kh\xF3a"), " ph\xE2n t\xEDch m\u1ED7i ng\xE0y")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "flex items-center gap-2 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-emerald-400 font-bold"
+    className: "text-emerald-400 font-bold shrink-0"
   }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "L\u1ECDc video th\u1ECBnh h\xE0nh (Trending)")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "flex items-center gap-2 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-emerald-400 font-bold"
+    className: "text-emerald-400 font-bold shrink-0"
   }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Ph\xE2n t\xEDch xu h\u01B0\u1EDBng t\u1EEB kh\xF3a")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 text-zinc-500"
+    className: "flex items-center gap-2 text-zinc-500 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-zinc-600"
+    className: "text-zinc-600 shrink-0"
   }, "\u2715"), /*#__PURE__*/React.createElement("span", null, "Kh\xF3a t\xEDnh n\u0103ng Top Ng\xE1ch")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 text-zinc-500"
+    className: "flex items-center gap-2 text-zinc-500 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-zinc-600"
+    className: "text-zinc-600 shrink-0"
   }, "\u2715"), /*#__PURE__*/React.createElement("span", null, "Kh\xF3a c\xF4ng c\u1EE5 Th\xE1m T\u1EED Spy")))), /*#__PURE__*/React.createElement("button", {
     disabled: true,
-    className: "w-full py-2.5 rounded-xl text-xs font-semibold bg-white/5 text-zinc-500 border border-white/5 cursor-default"
+    className: "w-full py-3 rounded-2xl text-xs font-bold bg-white/5 text-zinc-500 border border-white/5 cursor-default mt-2 whitespace-nowrap"
   }, "\u0110ang S\u1EED D\u1EE5ng")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-gradient-to-b from-amber-500/[0.08] via-[#161a26] to-[#121520] border-2 border-amber-500/50 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 relative shadow-xl shadow-amber-500/10"
+    className: "bg-gradient-to-b from-amber-500/[0.09] via-[#161a26] to-[#121520] border-2 border-amber-500/60 rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-5 relative shadow-xl shadow-amber-500/10 transition-all duration-300 ease-out hover:-translate-y-2.5 hover:shadow-2xl hover:shadow-amber-500/20 hover:border-amber-400 group"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-[10px] font-black uppercase px-3 py-0.5 rounded-full shadow"
+    className: "absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-[10px] font-black uppercase px-3.5 py-1 rounded-full shadow-md whitespace-nowrap tracking-wide"
   }, "\uD83D\uDD25 KHUY\xCAN D\xD9NG NHI\u1EC0U NH\u1EA4T"), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3 pt-1"
+    className: "space-y-4 pt-1"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold text-amber-400 uppercase tracking-wider"
-  }, "CREATOR CHUY\xCAN NGHI\u1EC6P"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30"
+    className: "text-xs font-bold text-amber-400 uppercase tracking-wider whitespace-nowrap"
+  }, "CREATOR PRO"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 whitespace-nowrap"
   }, "50 Key/Ng\xE0y")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
-    className: "text-base font-extrabold text-white"
+    className: "text-lg font-black text-white"
   }, "G\xD3I PRO \u2013 N\xC2NG CAO"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-3 gap-1 mt-2.5 bg-black/40 p-1 rounded-xl border border-white/10"
+    className: "grid grid-cols-3 gap-1.5 mt-2.5 bg-black/40 p-1.5 rounded-2xl border border-white/10"
   }, typeof TIERS_DATA !== 'undefined' && TIERS_DATA.PRO && TIERS_DATA.PRO.options.map(opt => /*#__PURE__*/React.createElement("button", {
     key: opt.id,
     type: "button",
@@ -1313,46 +1313,46 @@ function SubscriptionModal({
       setSelectedDuration(opt.id);
       setSelectedTier('PRO');
     },
-    className: 'py-1.5 px-1 rounded-lg text-center transition ' + (proDuration === opt.id ? 'bg-amber-500 text-black font-extrabold shadow' : 'text-zinc-400 hover:text-white')
+    className: 'py-2 px-1 rounded-xl text-center transition-all ' + (proDuration === opt.id ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-black font-extrabold shadow-md scale-[1.02]' : 'text-zinc-400 hover:text-white hover:bg-white/5')
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px]"
+    className: "text-[10px] whitespace-nowrap leading-tight"
   }, opt.label), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black mt-0.5"
+    className: "text-[11px] font-black mt-0.5 whitespace-nowrap"
   }, opt.priceText))))), /*#__PURE__*/React.createElement("div", {
-    className: "pt-3 border-t border-amber-500/20 space-y-2 text-xs text-zinc-200"
+    className: "pt-4 border-t border-amber-500/20 space-y-2.5 text-xs text-zinc-200"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "flex items-center gap-2 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-amber-400 font-bold"
+    className: "text-amber-400 font-bold shrink-0"
   }, "\u2713"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "50 t\u1EEB kh\xF3a"), " ph\xE2n t\xEDch m\u1ED7i ng\xE0y")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "flex items-center gap-2 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-amber-400 font-bold"
-  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "M\u1EDF kh\xF3a Top Ng\xE1ch:"), " T\u1EF1 \u0111\u1ED9ng qu\xE9t ng\xE1ch ngon")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "text-amber-400 font-bold shrink-0"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "M\u1EDF kh\xF3a Top Ng\xE1ch:"), " Qu\xE9t t\u1EF1 \u0111\u1ED9ng")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-amber-400 font-bold"
-  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Ph\xE1t hi\u1EC7n k\xEAnh sub th\u1EA5p \u2013 view kh\u1EE7ng")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "text-amber-400 font-bold shrink-0"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Ph\xE1t hi\u1EC7n k\xEAnh sub th\u1EA5p view kh\u1EE7ng")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-amber-400 font-bold"
+    className: "text-amber-400 font-bold shrink-0"
   }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "M\u1EDF kh\xF3a ", /*#__PURE__*/React.createElement("b", null, "Keyword Explorer"), " & \u0110\u1ED1i th\u1EE7")))), /*#__PURE__*/React.createElement("button", {
     onClick: () => handleStartCheckout('PRO', proDuration),
-    className: "w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black shadow-lg shadow-amber-500/20 transition cursor-pointer"
+    className: "w-full py-3 rounded-2xl text-xs font-black bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black shadow-lg shadow-amber-500/25 transition-all transform active:scale-95 cursor-pointer mt-2 whitespace-nowrap"
   }, "\u0110\u0103ng K\xFD G\xF3i PRO Ngay \u2192")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-gradient-to-b from-purple-500/[0.08] via-[#161a26] to-[#121520] border border-purple-500/40 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 relative shadow-xl shadow-purple-500/10"
+    className: "bg-gradient-to-b from-purple-500/[0.09] via-[#161a26] to-[#121520] border-2 border-purple-500/50 rounded-3xl p-5 sm:p-6 flex flex-col justify-between space-y-5 relative shadow-xl shadow-purple-500/10 transition-all duration-300 ease-out hover:-translate-y-2.5 hover:shadow-2xl hover:shadow-purple-500/25 hover:border-purple-400 group"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3"
+    className: "space-y-4 pt-1"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold text-purple-400 uppercase tracking-wider"
+    className: "text-xs font-bold text-purple-400 uppercase tracking-wider whitespace-nowrap"
   }, "TEAM & STUDIO"), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30"
+    className: "text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40 whitespace-nowrap"
   }, "V\xF4 H\u1EA1n Key")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h4", {
-    className: "text-base font-extrabold text-white"
+    className: "text-lg font-black text-white"
   }, "G\xD3I ULTRA PRO"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-3 gap-1 mt-2.5 bg-black/40 p-1 rounded-xl border border-white/10"
+    className: "grid grid-cols-3 gap-1.5 mt-2.5 bg-black/40 p-1.5 rounded-2xl border border-white/10"
   }, typeof TIERS_DATA !== 'undefined' && TIERS_DATA.ULTRA_PRO && TIERS_DATA.ULTRA_PRO.options.map(opt => /*#__PURE__*/React.createElement("button", {
     key: opt.id,
     type: "button",
@@ -1361,58 +1361,60 @@ function SubscriptionModal({
       setSelectedDuration(opt.id);
       setSelectedTier('ULTRA_PRO');
     },
-    className: 'py-1.5 px-1 rounded-lg text-center transition ' + (ultraDuration === opt.id ? 'bg-purple-600 text-white font-extrabold shadow' : 'text-zinc-400 hover:text-white')
+    className: 'py-2 px-1 rounded-xl text-center transition-all ' + (ultraDuration === opt.id ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold shadow-md scale-[1.02]' : 'text-zinc-400 hover:text-white hover:bg-white/5')
   }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px]"
+    className: "text-[10px] whitespace-nowrap leading-tight"
   }, opt.label), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black mt-0.5"
+    className: "text-[11px] font-black mt-0.5 whitespace-nowrap"
   }, opt.priceText))))), /*#__PURE__*/React.createElement("div", {
-    className: "pt-3 border-t border-purple-500/20 space-y-2 text-xs text-zinc-200"
+    className: "pt-4 border-t border-purple-500/20 space-y-2.5 text-xs text-zinc-200"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2 text-purple-300 font-bold"
-  }, /*#__PURE__*/React.createElement("span", null, "\u26A1"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "Kh\xF4ng gi\u1EDBi h\u1EA1n"), " s\u1ED1 l\u01B0\u1EE3ng t\u1EEB kh\xF3a")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "flex items-center gap-2 text-purple-300 font-bold whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-purple-400 font-bold"
-  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "\u0110\u1ED9c quy\u1EC1n:"), " C\xF4ng c\u1EE5 Th\xE1m T\u1EED Spy YouTube")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "shrink-0"
+  }, "\u26A1"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "Kh\xF4ng gi\u1EDBi h\u1EA1n"), " t\u1EEB kh\xF3a t\xECm ki\u1EBFm")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-purple-400 font-bold"
-  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Truy v\u1EBFt k\xEAnh \u1EA9n danh t\u1EEB \u1EA3nh Studio / 48h view")), /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
+    className: "text-purple-400 font-bold shrink-0"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, "\u0110\u1ED9c quy\u1EC1n:"), " C\xF4ng c\u1EE5 Th\xE1m T\u1EED Spy v3")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-purple-400 font-bold"
-  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Full quy\u1EC1n truy c\u1EADp m\u1ECDi t\xEDnh n\u0103ng")))), /*#__PURE__*/React.createElement("button", {
+    className: "text-purple-400 font-bold shrink-0"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "Truy v\u1EBFt k\xEAnh \u1EA9n danh t\u1EEB \u1EA3nh Studio")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 whitespace-nowrap"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-purple-400 font-bold shrink-0"
+  }, "\u2713"), /*#__PURE__*/React.createElement("span", null, "To\xE0n quy\u1EC1n m\u1EDF kh\xF3a m\u1ECDi t\xEDnh n\u0103ng")))), /*#__PURE__*/React.createElement("button", {
     onClick: () => handleStartCheckout('ULTRA_PRO', ultraDuration),
-    className: "w-full py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/20 transition cursor-pointer"
+    className: "w-full py-3 rounded-2xl text-xs font-black bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/25 transition-all transform active:scale-95 cursor-pointer mt-2 whitespace-nowrap"
   }, "\u0110\u0103ng K\xFD ULTRA PRO \u2192"))), /*#__PURE__*/React.createElement("div", {
-    className: "p-3 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] text-zinc-400 leading-relaxed text-center"
+    className: "p-3 rounded-2xl bg-white/[0.03] border border-white/5 text-[11px] text-zinc-400 leading-relaxed text-center"
   }, "\uD83D\uDCA1 C\xE1c t\xEDnh n\u0103ng s\u1EED d\u1EE5ng YouTube Data API. Khi h\u1EBFt quota c\xE1 nh\xE2n, h\u1EC7 th\u1ED1ng h\u1ED7 tr\u1EE3 kho \u0111a key t\u1EF1 \u0111\u1ED9ng xoay v\xF2ng th\xF4ng minh.")), step === 'checkout' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between bg-gradient-to-r from-[#161a26] to-[#121520] p-3.5 rounded-xl border border-white/10"
+    className: "flex items-center justify-between bg-gradient-to-r from-[#161a26] to-[#121520] p-4 rounded-2xl border border-white/10"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-zinc-400"
   }, "\u0110ang n\xE2ng c\u1EA5p:"), /*#__PURE__*/React.createElement("div", {
     className: "text-sm font-extrabold text-white flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", null, tierInfo.name), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30"
+    className: "text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30"
   }, currentOption.label))), /*#__PURE__*/React.createElement("div", {
     className: "text-right"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-zinc-400"
   }, "S\u1ED1 ti\u1EC1n c\u1EA7n chuy\u1EC3n:"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xl font-black text-amber-400"
+    className: "text-2xl font-black text-amber-400"
   }, currentOption.priceText))), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-[#141822]/80 p-4 rounded-2xl border border-white/10"
+    className: "grid grid-cols-1 sm:grid-cols-2 gap-5 items-center bg-[#141822]/80 p-5 rounded-3xl border border-white/10"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex flex-col items-center justify-center p-3 bg-white rounded-2xl shadow-xl"
+    className: "flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-xl"
   }, /*#__PURE__*/React.createElement("img", {
     src: primaryQrUrl,
     referrerPolicy: "no-referrer",
     loading: "eager",
     alt: "VietQR Chuy\u1EC3n Kho\u1EA3n",
-    className: "w-52 h-52 object-contain",
+    className: "w-56 h-56 object-contain",
     onError: e => {
       if (!e.target.dataset.triedFallback) {
         e.target.dataset.triedFallback = '1';
@@ -1420,14 +1422,14 @@ function SubscriptionModal({
       }
     }
   }), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-zinc-700 font-extrabold mt-1.5 flex items-center gap-1"
+    className: "text-[11px] text-zinc-700 font-extrabold mt-2 flex items-center gap-1"
   }, /*#__PURE__*/React.createElement("span", null, "\u26A1 Qu\xE9t B\u1EB1ng B\u1EA5t K\u1EF3 App Ng\xE2n H\xE0ng / MoMo")), /*#__PURE__*/React.createElement("a", {
     href: primaryQrUrl,
     target: "_blank",
     rel: "noopener noreferrer",
     className: "text-[10px] text-blue-600 hover:text-blue-700 underline font-medium mt-0.5"
   }, "M\u1EDF \u1EA3nh QR tab m\u1EDBi n\u1EBFu m\u1EA1ng ch\u1EB7n \u2197")), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-2 text-xs"
+    className: "space-y-2.5 text-xs"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-zinc-400"
   }, "Ng\xE2n h\xE0ng th\u1EE5 h\u01B0\u1EDFng:"), /*#__PURE__*/React.createElement("div", {
@@ -1465,7 +1467,7 @@ function SubscriptionModal({
     onClick: () => copyToClipboard(orderCode, 'des'),
     className: "text-[11px] font-bold text-amber-400 hover:text-amber-300"
   }, copiedKey === 'des' ? '✓ Đã chép' : 'Sao chép'))))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent p-3.5 rounded-2xl border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-3"
+    className: "bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent p-4 rounded-2xl border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1473,7 +1475,7 @@ function SubscriptionModal({
   }, /*#__PURE__*/React.createElement("span", {
     className: "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping absolute"
   }), /*#__PURE__*/React.createElement("span", {
-    className: "w-2.5 h-2.5 rounded-full bg-emerald-400"
+    className: "w-2 h-2 rounded-full bg-emerald-400"
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "text-xs font-bold text-white flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", null, "\u0110ang ch\u1EDD nh\u1EADn chuy\u1EC3n kho\u1EA3n..."), /*#__PURE__*/React.createElement("span", {
