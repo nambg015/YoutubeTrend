@@ -1587,52 +1587,36 @@ window.FEATURE_TREND_V2 = true;
       // Header Banner
       h('div', { className: 'bg-gradient-to-r from-emerald-950/40 via-brand-surface to-brand-card border-2 border-emerald-500/40 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden' },
         h('div', { className: 'absolute -right-12 -top-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none' }),
-        h('div', { className: 'flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10' },
-          h('div', { className: 'space-y-1.5' },
-            h('div', { className: 'flex items-center gap-2 flex-wrap' },
-              h('span', { className: 'px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider' }, 'CÔNG CỤ V2'),
-              h('span', { className: 'text-[11px] text-zinc-400' }, 'Mục con riêng độc lập trong Tab Từ Khoá'),
-              h('span', { className: 'text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40' }, 'Phase 1 - 4 Hoàn Tất ✓')
-            ),
-            h('h2', { className: 'text-lg sm:text-xl font-black text-white flex items-center gap-2' },
-              h('span', null, 'Tìm Trend Đón Đầu Để KIẾM TIỀN'),
-              h('span', { className: 'text-xs text-amber-400 font-normal px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20' }, 'Money Score Engine 0-100')
-            ),
-            h('p', { className: 'text-xs text-zinc-300 max-w-2xl leading-relaxed' },
-              'Khác với câu hỏi "từ khoá nào đang được tìm nhiều", Công cụ v2 giải quyết: ',
-              h('b', { className: 'text-emerald-300' }, '"Từ khoá nào LÀM ĐƯỢC và KIẾM ĐƯỢC TIỀN"'),
-              '. Chấm điểm đa chiều 6 trụ cột, thẩm định cung-cầu YouTube, cơ hội kênh nhỏ bứt phá và xuất báo cáo ảnh sắc nét.'
-            )
+        h('div', { className: 'flex flex-col md:flex-row md:items-center justify-between gap-3 relative z-10' },
+          h('div', null,
+            h('h2', { className: 'text-base sm:text-lg font-bold text-white tracking-tight' }, 'Tìm Trend Đón Đầu')
           ),
-          h('div', { className: 'flex flex-wrap items-center gap-2 shrink-0' },
+          h('div', { className: 'flex flex-wrap items-center gap-1.5 shrink-0' },
             onBackToTopNgach && h('button', {
               type: 'button',
               onClick: onBackToTopNgach,
-              className: 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black shadow transition cursor-pointer flex items-center gap-1.5'
-            }, '← Quay Lại Top Ngách'),
+              className: 'px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 transition cursor-pointer'
+            }, 'Quay Lại Top Ngách'),
             h('button', {
               type: 'button',
               onClick: () => setActiveTabV2('outlier_hunter'),
-              className: `px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${activeTabV2 === 'outlier_hunter' ? 'bg-amber-400 text-black font-black shadow-lg shadow-amber-500/25 ring-2 ring-amber-300' : 'bg-brand-card hover:bg-zinc-800 text-amber-300 border border-amber-500/40'}`
-            },
-              h('span', null, '🎯 Dò Kênh Sub Thấp View Cao'),
-              h('span', { className: `text-[9px] px-1.5 py-0.2 rounded-full font-black uppercase ${activeTabV2 === 'outlier_hunter' ? 'bg-black text-amber-300' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}` }, 'HOT')
-            ),
+              className: `px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer border ${activeTabV2 === 'outlier_hunter' ? 'bg-zinc-200 text-zinc-950 border-zinc-200 font-semibold' : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'}`
+            }, 'Dò Kênh Sub Thấp'),
             h('button', {
               type: 'button',
               onClick: () => setActiveTabV2('wizard'),
-              className: `px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${activeTabV2 === 'wizard' ? 'bg-emerald-500 text-black font-extrabold shadow' : 'bg-brand-card hover:bg-zinc-800 text-zinc-300 border border-brand-border'}`
-            }, '🧭 Wizard 5 Bước'),
+              className: `px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer border ${activeTabV2 === 'wizard' ? 'bg-zinc-200 text-zinc-950 border-zinc-200 font-semibold' : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'}`
+            }, 'Wizard 5 Bước'),
             h('button', {
               type: 'button',
               onClick: () => setActiveTabV2('saved_runs'),
-              className: `px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${activeTabV2 === 'saved_runs' ? 'bg-emerald-500 text-black font-extrabold shadow' : 'bg-brand-card hover:bg-zinc-800 text-zinc-300 border border-brand-border'}`
-            }, `💾 Lịch Sử Đợt Quét (${savedRuns.length})`),
+              className: `px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer border ${activeTabV2 === 'saved_runs' ? 'bg-zinc-200 text-zinc-950 border-zinc-200 font-semibold' : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'}`
+            }, `Lịch Sử (${savedRuns.length})`),
             h('button', {
               type: 'button',
               onClick: () => setActiveTabV2('csv_importer'),
-              className: `px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${activeTabV2 === 'csv_importer' ? 'bg-emerald-500 text-black font-extrabold shadow' : 'bg-brand-card hover:bg-zinc-800 text-zinc-300 border border-brand-border'}`
-            }, '📁 Thử Nghiệm CSV Trends')
+              className: `px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer border ${activeTabV2 === 'csv_importer' ? 'bg-zinc-200 text-zinc-950 border-zinc-200 font-semibold' : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'}`
+            }, 'CSV Trends')
           )
         )
       ),
@@ -1647,14 +1631,14 @@ window.FEATURE_TREND_V2 = true;
               { step: 2, title: '2. Từ Khoá Ngách', desc: `${keywordsList.length} từ khoá` },
               { step: 3, title: '3. Thẩm Định YouTube', desc: `${Object.keys(ytValidationMap).length}/${keywordsList.length} xong` },
               { step: 4, title: '4. Google Trends', desc: trendsOption === 'youtube_only' ? 'YouTube-Only' : 'CSV Upload' },
-              { step: 5, title: '5. Money Score 💎', desc: `${rankingItems.length} xếp hạng` }
+              { step: 5, title: '5. Money Score', desc: `${rankingItems.length} xếp hạng` }
             ].map(s => h('button', {
               key: s.step,
               type: 'button',
               onClick: () => setWizardStep(s.step),
-              className: `p-2.5 rounded-xl text-left transition cursor-pointer border ${wizardStep === s.step ? 'bg-emerald-500/15 border-emerald-500 text-white shadow' : 'bg-brand-card/50 border-brand-border text-zinc-400 hover:text-zinc-200'}`
+              className: `p-2 rounded-lg text-left transition cursor-pointer border ${wizardStep === s.step ? 'bg-zinc-800 border-zinc-500 text-white' : 'bg-zinc-900/60 border-zinc-800/80 text-zinc-400 hover:text-zinc-200'}`
             },
-              h('div', { className: `font-bold text-xs ${wizardStep === s.step ? 'text-emerald-400' : 'text-zinc-300'}` }, s.title),
+              h('div', { className: `font-semibold text-xs ${wizardStep === s.step ? 'text-white' : 'text-zinc-300'}` }, s.title),
               h('div', { className: 'text-[10px] text-zinc-400 truncate mt-0.5' }, s.desc)
             ))
           )
@@ -1663,13 +1647,7 @@ window.FEATURE_TREND_V2 = true;
         // STEP 1: ĐỀ XUẤT NGÁCH
         wizardStep === 1 && h('div', { className: 'bg-brand-surface border border-brand-border rounded-xl p-5 space-y-5' },
           h('div', { className: 'flex flex-col sm:flex-row sm:items-center justify-between gap-3' },
-            h('div', null,
-              h('h3', { className: 'text-sm sm:text-base font-bold text-white flex items-center gap-2' },
-                h('span', null, 'Bước 1: Khám Phá & Đề Xuất Ngách Tiềm Năng'),
-                h('span', { className: 'text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-normal' }, 'AI Hypothesis Engine')
-              ),
-              h('p', { className: 'text-xs text-zinc-400' }, 'AI phân tích dữ liệu thị trường thực tế để đề xuất các ngách có RPM cao, cơ hội cho người mới và an toàn bản quyền.')
-            ),
+            h('h3', { className: 'text-sm font-bold text-white' }, '1. Đề Xuất Ngách Tiềm Năng'),
             h('div', { className: 'flex flex-wrap items-center gap-2' },
               h('button', {
                 type: 'button',
@@ -1678,16 +1656,16 @@ window.FEATURE_TREND_V2 = true;
                   const fresh = generateClientNiches(targetRegion, Number(nicheCount) || 12, topicHint, timeframe);
                   setNichesList(fresh);
                   setSelectedNicheIds(new Set(fresh.map(n => n.id)));
-                  if (showToast) showToast('Đã xóa cache & làm mới 100% ngách mới nhất!');
+                  if (showToast) showToast('Đã làm mới danh sách ngách!');
                 },
-                className: 'px-3 py-2 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 transition cursor-pointer flex items-center gap-1.5'
-              }, '🔄 Xóa Cache & Đổi Mới'),
+                className: 'px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 transition cursor-pointer'
+              }, 'Đổi Mới'),
               h('button', {
                 type: 'button',
                 onClick: handleProposeNiches,
                 disabled: loadingNiches,
-                className: 'px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition cursor-pointer flex items-center gap-2 disabled:opacity-50'
-              }, loadingNiches ? 'Đang phân tích...' : '✨ Đề Xuất Ngách Bằng AI')
+                className: 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-zinc-950 hover:bg-zinc-200 transition cursor-pointer disabled:opacity-50'
+              }, loadingNiches ? 'Đang phân tích...' : 'Đề Xuất Bằng AI')
             )
           ),
 
@@ -1772,7 +1750,7 @@ window.FEATURE_TREND_V2 = true;
                 return h('div', {
                   key: niche.id,
                   onClick: () => toggleNicheSelection(niche.id),
-                  className: `p-3.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${isSelected ? 'bg-emerald-950/20 border-emerald-500/50 shadow-md' : 'bg-brand-card border-brand-border opacity-70 hover:opacity-100'}`
+                  className: `p-3.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${isSelected ? 'bg-zinc-900 border-zinc-400 text-white' : 'bg-[#12141c] border-zinc-800 text-zinc-300 opacity-70 hover:opacity-100'}`
                 },
                   h('div', { className: 'space-y-1.5' },
                     h('div', { className: 'flex items-center justify-between' },
@@ -1789,7 +1767,7 @@ window.FEATURE_TREND_V2 = true;
                   ),
                   h('div', { className: 'pt-2.5 mt-2 border-t border-brand-border/60 flex items-center justify-between text-[10px]' },
                     h('span', { className: 'px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 font-mono' }, niche.cpmGroup),
-                    h('span', { className: 'px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400' }, niche.contentType || 'faceless')
+                    h('span', { className: 'px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 uppercase text-[9px]' }, niche.contentType || 'faceless')
                   )
                 );
               })
@@ -1834,7 +1812,7 @@ window.FEATURE_TREND_V2 = true;
                 onClick: handleGenerateKeywords,
                 disabled: loadingKeywords,
                 className: 'px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition cursor-pointer flex items-center gap-2 disabled:opacity-50'
-              }, loadingKeywords ? 'Đang sinh từ khoá...' : '⚡ Sinh Từ Khoá Bằng AI')
+              }, loadingKeywords ? 'Đang sinh từ khoá...' : 'Sinh Từ Khoá Bằng AI')
             )
           ),
 
@@ -1866,7 +1844,7 @@ window.FEATURE_TREND_V2 = true;
                   if (showToast) showToast('Đã sinh thêm 20 từ khoá mới!');
                 },
                 className: 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-950/60 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900/60 transition cursor-pointer'
-              }, '➕ Sinh thêm 20 từ khoá'),
+              }, 'Sinh thêm 20 từ khoá'),
               h('button', {
                 type: 'button',
                 onClick: () => {
@@ -1875,7 +1853,7 @@ window.FEATURE_TREND_V2 = true;
                   if (showToast) showToast('Đã xoá danh sách từ khoá.');
                 },
                 className: 'px-2 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-400 hover:text-rose-400 hover:bg-zinc-700 transition cursor-pointer'
-              }, '🗑️ Xoá hết')
+              }, 'Xoá hết')
             )
           ),
 
@@ -1931,7 +1909,7 @@ window.FEATURE_TREND_V2 = true;
                 onClick: handleRunYouTubeValidation,
                 disabled: isValidatingYt,
                 className: 'px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition cursor-pointer flex items-center gap-2 disabled:opacity-50'
-              }, isValidatingYt ? `Đang thẩm định ${validationProgress}%...` : '🚀 Chạy Thẩm Định YouTube')
+              }, isValidatingYt ? `Đang thẩm định ${validationProgress}%...` : 'Chạy Thẩm Định')
             )
           ),
 
@@ -2024,8 +2002,8 @@ window.FEATURE_TREND_V2 = true;
             },
               h('div', { className: 'flex items-center justify-between' },
                 h('div', { className: 'flex items-center gap-2' },
-                  h('span', { className: 'text-lg' }, '⚡'),
-                  h('h4', { className: 'font-bold text-sm text-white' }, 'Chế Độ YouTube-Only (Khuyên Dùng)')
+                  
+                  h('h4', { className: 'font-bold text-sm text-white' }, 'Chế Độ YouTube-Only')
                 ),
                 h('input', { type: 'radio', checked: trendsOption === 'youtube_only', onChange: () => {}, className: 'accent-emerald-500' })
               ),
@@ -2042,8 +2020,8 @@ window.FEATURE_TREND_V2 = true;
             },
               h('div', { className: 'flex items-center justify-between' },
                 h('div', { className: 'flex items-center gap-2' },
-                  h('span', { className: 'text-lg' }, '📊'),
-                  h('h4', { className: 'font-bold text-sm text-white' }, 'Nhập File CSV Google Trends (Đầy Đủ)')
+                  
+                  h('h4', { className: 'font-bold text-sm text-white' }, 'Nhập File CSV Google Trends')
                 ),
                 h('input', { type: 'radio', checked: trendsOption === 'csv_upload', onChange: () => {}, className: 'accent-emerald-500' })
               ),
@@ -2112,7 +2090,7 @@ window.FEATURE_TREND_V2 = true;
                 type: 'button',
                 onClick: handleSaveRun,
                 className: 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition cursor-pointer flex items-center gap-1.5'
-              }, '💾 Lưu Đợt Quét Này'),
+              }, 'Lưu Đợt Quét'),
               h('button', {
                 type: 'button',
                 onClick: () => setWizardStep(1),
@@ -2139,9 +2117,9 @@ window.FEATURE_TREND_V2 = true;
                 onChange: (e) => setRankingSort(e.target.value),
                 className: 'bg-zinc-900 border border-brand-border rounded-lg px-2.5 py-1 text-xs text-white'
               },
-                h('option', { value: 'score_desc' }, 'Điểm Money Score cao nhất 💎'),
-                h('option', { value: 'opportunity_desc' }, 'Kênh nhỏ dễ bứt phá nhất 🚀'),
-                h('option', { value: 'vph_desc' }, 'VPH xem nhanh nhất 🔥')
+                h('option', { value: 'score_desc' }, 'Điểm Money Score cao nhất'),
+                h('option', { value: 'opportunity_desc' }, 'Kênh nhỏ dễ bứt phá nhất'),
+                h('option', { value: 'vph_desc' }, 'VPH xem nhanh nhất')
               )
             )
           ),
@@ -2194,7 +2172,7 @@ window.FEATURE_TREND_V2 = true;
                           setDetailItem(item);
                         },
                         className: 'px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px]'
-                      }, '🔍 Xem'),
+                      }, 'Xem'),
                       h('button', {
                         type: 'button',
                         onClick: (e) => {
