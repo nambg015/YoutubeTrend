@@ -51,9 +51,18 @@
 
 ---
 
-## 4. Chạy kiểm thử tự động
+## 4. Trạng thái hiện tại & Hạn mức
+- **Tạm thời tắt bắt buộc xác minh SĐT**: Khách truy cập có thể tạo clone tài khoản (cả tài khoản mật khẩu và Gmail) một cách thuận tiện để kéo tương tác và điểm SEO cho website.
+- **Hạn mức tài khoản miễn phí**: Tất cả tài khoản đã đăng nhập (cả mật khẩu và Gmail) đều được **5 từ khoá xu hướng & phân tích mỗi ngày**.
+- **Gói trả phí (PRO & ULTRA PRO)**: Giữ nguyên như cũ (PRO: 50 từ/ngày, ULTRA PRO: không giới hạn, kèm tính năng Spy kênh ngầm).
+- **Hình nền 4K Blue**: Đã đổi sang hình nền xanh công nghệ 4K sắc nét (`bg_blue_4k.jpg`), không bị vỡ/bể hay mờ.
+- **Lưu giữ toàn bộ code OTP & Telegram**: Toàn bộ hệ thống xác thực OTP qua Telegram Bot & SMS vẫn được lưu trữ nguyên vẹn trong mã nguồn. Khi cần kích hoạt lại xác minh SĐT bắt buộc, chỉ cần bật cờ cấu hình (`window.__REQUIRE_PHONE = true` trên client hoặc `REQUIRE_PHONE=true` trên server).
+
+---
+
+## 5. Chạy kiểm thử tự động
 Chạy lệnh trong terminal:
 ```bash
 npm test
 ```
-Toàn bộ 85/85 test suite đều pass 100%.
+Toàn bộ **86/86 test** đều pass 100%.
