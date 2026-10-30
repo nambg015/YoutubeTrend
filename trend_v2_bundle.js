@@ -1145,6 +1145,7 @@ window.FEATURE_TREND_V2 = true;
     const [loadingNiches, setLoadingNiches] = useState(false);
     const [nichesList, setNichesList] = useState([]);
     const [selectedNicheIds, setSelectedNicheIds] = useState(new Set());
+    const [nichePage, setNichePage] = useState(1);
     const [customNicheInput, setCustomNicheInput] = useState('');
     const [nicheProviderNote, setNicheProviderNote] = useState('');
 
@@ -1226,6 +1227,10 @@ window.FEATURE_TREND_V2 = true;
         if (nichesList.length) localStorage.setItem('yt_trend_v2_niches', JSON.stringify(nichesList));
       } catch (e) {}
     }, [nichesList]);
+
+    useEffect(() => {
+      setNichePage(1);
+    }, [targetRegion, topicHint, nicheCount]);
 
     useEffect(() => {
       try {
@@ -1998,52 +2003,98 @@ window.FEATURE_TREND_V2 = true;
             )
           ),
 
-          // Niches Grid
-          nichesList.length > 0 && h('div', { className: 'space-y-3' },
-            h('div', { className: 'flex items-center justify-between text-xs text-zinc-400' },
-              h('span', null, `Đã chọn: `, h('b', { className: 'text-emerald-400' }, `${selectedNicheIds.size}/${nichesList.length}`), ' ngách'),
-              h('button', {
-                type: 'button',
-                onClick: toggleSelectAllNiches,
-                className: 'text-xs text-emerald-400 hover:underline cursor-pointer'
-              }, selectedNicheIds.size === nichesList.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả ngách')
-            ),
-            h('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3' },
-              nichesList.map(niche => {
-                const isSelected = selectedNicheIds.has(niche.id);
-                return h('div', {
-                  key: niche.id,
-                  onClick: () => toggleNicheSelection(niche.id),
-                  className: `p-3.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${isSelected ? 'bg-zinc-900 border-zinc-400 text-white' : 'bg-[#12141c] border-zinc-800 text-zinc-300 opacity-70 hover:opacity-100'}`
-                },
-                  h('div', { className: 'space-y-1.5' },
-                    h('div', { className: 'flex items-center justify-between' },
-                      h('h4', { className: 'font-bold text-xs sm:text-sm text-white' }, niche.name),
-                      h('input', {
-                        type: 'checkbox',
-                        checked: isSelected,
-                        onChange: () => {},
-                        className: 'accent-emerald-500 rounded cursor-pointer'
-                      })
-                    ),
-                    h('p', { className: 'text-[11px] text-zinc-300 leading-relaxed' }, niche.description),
-                    h('div', { className: 'text-[10px] text-zinc-400 italic' }, `Lý do: ${niche.whyTrending}`)
+          // Niches Grid (Contained Frame + Paginated 6 per page)
+          nichesList.length > 0 && (() => {
+            const NICHES_PER_PAGE = 6;
+            const totalNichePages = Math.max(1, Math.ceil(nichesList.length / NICHES_PER_PAGE));
+            const safeNichePage = Math.min(nichePage, totalNichePages);
+            const startIdx = (safeNichePage - 1) * NICHES_PER_PAGE;
+            const currentNiches = nichesList.slice(startIdx, startIdx + NICHES_PER_PAGE);
+
+            return h('div', { className: 'space-y-3 pt-2' },
+              // Header of frame: Selection info + Quick select + Page status
+              h('div', { className: 'flex flex-wrap items-center justify-between text-xs text-zinc-400 gap-2 border-b border-brand-border/60 pb-2' },
+                h('div', { className: 'flex items-center gap-2' },
+                  h('span', { className: 'font-semibold text-zinc-300' }, 'Danh Sách Ngách Tiềm Năng:'),
+                  h('span', { className: 'px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold text-[11px]' },
+                    `Đã chọn: ${selectedNicheIds.size}/${nichesList.length}`
                   ),
-                  h('div', { className: 'pt-2.5 mt-2 border-t border-brand-border/60 flex items-center justify-between text-[10px]' },
-                    h('span', { className: 'px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 font-mono' }, niche.cpmGroup),
-                    h('span', { className: 'px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 uppercase text-[9px]' }, niche.contentType || 'faceless')
-                  )
-                );
-              })
-            ),
-            h('div', { className: 'pt-2 flex justify-end' },
-              h('button', {
-                type: 'button',
-                onClick: () => setWizardStep(2),
-                className: 'px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition cursor-pointer'
-              }, 'Tiếp Tục: Sinh Từ Khoá Từ Ngách Đã Chọn →')
-            )
-          )
+                  h('button', {
+                    type: 'button',
+                    onClick: toggleSelectAllNiches,
+                    className: 'text-[11px] text-zinc-400 hover:text-white underline cursor-pointer ml-1'
+                  }, selectedNicheIds.size === nichesList.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả ngách')
+                ),
+                totalNichePages > 1 && h('div', { className: 'flex items-center gap-1.5 text-[11px] text-zinc-400' },
+                  h('span', null, `Trang ${safeNichePage} / ${totalNichePages}`),
+                  h('button', {
+                    type: 'button',
+                    disabled: safeNichePage <= 1,
+                    onClick: () => setNichePage(p => Math.max(1, p - 1)),
+                    className: 'px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-200 border border-zinc-700 font-bold cursor-pointer'
+                  }, '‹ Trước'),
+                  h('button', {
+                    type: 'button',
+                    disabled: safeNichePage >= totalNichePages,
+                    onClick: () => setNichePage(p => Math.min(totalNichePages, p + 1)),
+                    className: 'px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-200 border border-zinc-700 font-bold cursor-pointer'
+                  }, 'Sau ›')
+                )
+              ),
+
+              // Contained Grid of 6 compact cards (2 rows of 3 cols)
+              h('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 min-h-[220px]' },
+                currentNiches.map(niche => {
+                  const isSelected = selectedNicheIds.has(niche.id);
+                  return h('div', {
+                    key: niche.id,
+                    onClick: () => toggleNicheSelection(niche.id),
+                    className: `p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${isSelected ? 'bg-zinc-900/90 border-emerald-500/70 shadow-sm text-white ring-1 ring-emerald-500/30' : 'bg-[#12141c] border-zinc-800 text-zinc-300 hover:border-zinc-700'}`
+                  },
+                    h('div', { className: 'space-y-1' },
+                      h('div', { className: 'flex items-start justify-between gap-1.5' },
+                        h('h4', { className: 'font-bold text-xs text-white leading-snug line-clamp-1', title: niche.name }, niche.name),
+                        h('input', {
+                          type: 'checkbox',
+                          checked: isSelected,
+                          onChange: () => {},
+                          className: 'accent-emerald-500 rounded cursor-pointer shrink-0 mt-0.5'
+                        })
+                      ),
+                      h('p', { className: 'text-[11px] text-zinc-400 leading-snug line-clamp-2' }, niche.description),
+                      niche.whyTrending && h('div', { className: 'text-[10px] text-zinc-500 italic line-clamp-1' }, `Lý do: ${niche.whyTrending}`)
+                    ),
+                    h('div', { className: 'pt-2 mt-1.5 border-t border-zinc-800/80 flex items-center justify-between text-[10px]' },
+                      h('span', { className: 'px-1.5 py-0.2 rounded bg-zinc-800/90 text-zinc-300 font-mono font-medium' }, niche.cpmGroup),
+                      h('span', { className: 'px-1.5 py-0.2 rounded bg-zinc-800/60 text-zinc-400 uppercase text-[9px]' }, niche.contentType || 'faceless')
+                    )
+                  );
+                })
+              ),
+
+              // Unified Bottom Toolbar: Pagination Pills + Action Button (Always visible in 1 frame)
+              h('div', { className: 'pt-3 border-t border-brand-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5' },
+                totalNichePages > 1 ? h('div', { className: 'flex items-center gap-1' },
+                  Array.from({ length: totalNichePages }, (_, idx) => idx + 1).map(pNum => h('button', {
+                    key: pNum,
+                    type: 'button',
+                    onClick: () => setNichePage(pNum),
+                    className: `w-7 h-7 rounded-lg text-xs font-bold transition cursor-pointer ${safeNichePage === pNum ? 'bg-zinc-200 text-zinc-950 shadow-sm' : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'}`
+                  }, pNum)),
+                  h('span', { className: 'text-[11px] text-zinc-500 ml-2' }, `(Hiển thị ${startIdx + 1}-${Math.min(nichesList.length, startIdx + NICHES_PER_PAGE)} / ${nichesList.length} ngách)`)
+                ) : h('div', { className: 'text-[11px] text-zinc-500' }, `Hiển thị toàn bộ ${nichesList.length} ngách`),
+                h('button', {
+                  type: 'button',
+                  onClick: handleProceedToStep2,
+                  disabled: selectedNicheIds.size === 0,
+                  className: 'px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 self-end sm:self-auto'
+                },
+                  h('span', null, `Tiếp tục: Sinh từ khoá từ ${selectedNicheIds.size} ngách`),
+                  h('span', null, '→')
+                )
+              )
+            );
+          })()
         ),
 
         // STEP 2: TỪ KHOÁ NGÁCH
