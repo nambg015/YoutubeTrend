@@ -4,7 +4,7 @@
   "private": true,
   "description": "YouTube Trend & Niche Intelligence Web Application",
   "scripts": {
-    "test": "node --test test/trend_v2_scoring.test.js test/trend_v2_provider.test.js test/trend_v2_ai.test.js test/auth.test.js test/client_auth.test.js test/auth_modal_render.test.js test/phone_otp.test.js test/sms.test.js"
+    "test": "node --test test/trend_v2_scoring.test.js test/trend_v2_provider.test.js test/trend_v2_ai.test.js test/auth.test.js test/client_auth.test.js test/auth_modal_render.test.js test/phone_otp.test.js test/sms.test.js test/studio_chart.test.js"
   },
   "devDependencies": {
     "acorn": "^8.19.0",
