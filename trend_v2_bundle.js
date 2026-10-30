@@ -427,6 +427,128 @@ window.FEATURE_TREND_V2 = true;
   // --- MAIN COMPONENT ---
   
       // CLIENT-SIDE GROUNDING GENERATOR (WORKS 100% OFFLINE & ON STATIC GITHUB PAGES)
+  // Helper shuffle array
+  function shuffleArray(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  // Lấy các từ khoá theo trend hàng ngày từ dữ liệu "Top Ngách Mỗi Ngày" (Dynamic & Real-time)
+  function getDailyTrendKeywords(targetRegion = 'US') {
+    const isVn = targetRegion === 'VN';
+    const keywordSet = new Set();
+
+    // 1. Quét dữ liệu ngách thật đã phát hiện hôm nay lưu trong localStorage từ Tab Top Ngách
+    try {
+      const keysToInspect = [
+        'yt_real_discovered_niches_v6',
+        `yt_real_discovered_niches_v6_${targetRegion}`,
+        'yt_real_discovered_niches_v6_GLOBAL',
+        'yt_real_discovered_niches_v6_US',
+        'yt_real_discovered_niches_v6_VN'
+      ];
+      for (const k of keysToInspect) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach(n => {
+            if (n && n.name) {
+              const cleanName = n.name
+                .replace(/^\[[^\]]+\]\s*/, '')
+                .replace(/\([^\)]+\)/g, '')
+                .trim();
+              if (cleanName.length >= 3 && cleanName.length <= 50) {
+                keywordSet.add(cleanName);
+              }
+            }
+            if (n && Array.isArray(n.videos)) {
+              n.videos.slice(0, 3).forEach(v => {
+                if (v && v.title) {
+                  const shortTitle = v.title
+                    .replace(/[\(\[\{][^\)\]\}]+[\)\]\}]/g, '')
+                    .replace(/[#|•\-_].*$/, '')
+                    .trim();
+                  if (shortTitle.length >= 8 && shortTitle.length <= 40) {
+                    keywordSet.add(shortTitle);
+                  }
+                }
+              });
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Cannot read localStorage niches for trend keywords', e);
+    }
+
+    // 2. Thư viện từ khoá Trend thịnh hành cập nhật theo ngày từ Top Ngách (US / GLOBAL / VN)
+    const curatedTrendsUs = [
+      'AI Automation & Solopreneur',
+      'Silent Wealth Habits',
+      'Unsolved Cold Cases',
+      'Dark Psychology & Manipulation',
+      'Elder Stoic Wisdom',
+      '432Hz Sleep & Brainwave Therapy',
+      'Lost Civilizations & Ancient Anomalies',
+      'Off-Grid Tiny Homes & Architecture',
+      '10-Minute Executive Book Summaries',
+      'Minimalist Desk Setup Gear',
+      'Deep Sea Mysteries & Oceanic Iceberg',
+      'Rise and Fall of Business Empires',
+      'Medieval Warfare & Siege Tactics',
+      'Space Anomalies & James Webb Secrets',
+      'Micro-SaaS & Low-Code Cash Flow',
+      'Longevity Science & Anti-Aging Protocols',
+      'Police Interrogation Body Language',
+      'Solo Camper Van Stealth Living',
+      'Sumerian & Anunnaki Ancient Secrets',
+      'Military Aircraft Stealth Projects',
+      'AI Filmmaking & Cinematic Shorts',
+      'Dopamine Reset & Habit Mastery',
+      'Frugal Living & Early Retirement FIRE',
+      'Extreme Disaster Survival Stories',
+      'Smart Home Automation Ideas',
+      'Aviation Disasters & Black Box Truth',
+      'Philosophy of Solitude & Inner Peace',
+      'Cybersecurity & Dark Web Documentaries',
+      'True Crime Psychology & Criminal Profiling',
+      'Homesteading Permaculture & Water Systems'
+    ];
+
+    const curatedTrendsVn = [
+      'Bí Mật Hồ Sơ Vụ Án & Kỳ Án',
+      'Triết Lý Khắc Kỷ & Đạo Làm Người',
+      'Tự Động Hoá Công Việc Bằng Trợ Lý AI',
+      'Quản Lý Tài Chính & Tiết Kiệm Chi Tiêu',
+      'Nhân Quả Cuộc Đời & Lời Răn Trí Tuệ',
+      'Mẹo Vặt Đời Sống & Gia Đình Thông Minh',
+      'Sức Khỏe Người Già & Dinh Dưỡng Trường Thọ',
+      'Khởi Nghiệp Tinh Gọn & Bài Học Kinh Doanh',
+      'Lịch Sử Bí Ẩn & Văn Minh Cổ Đại',
+      'Bỏ Phố Về Rừng & Làm Vườn Tự Cấp',
+      'Nhạc Thiền Sóng Não 432Hz Chữa Lành',
+      'Nấu Ăn Cơm Nhà Tiết Kiệm & Dinh Dưỡng',
+      'Tâm Lý Học Hành Vi & Nhận Diện Thao Túng',
+      'Sự Sụp Đổ Của Các Thương Hiệu Từng Đình Đám',
+      'Lối Sống Tối Giản Nhẹ Nhõm Tâm Hồn',
+      'Tóm Tắt Sách Tinh Hoa 15 Phút',
+      'Chiến Thuật Quân Sự & Những Trận Đánh Lớn',
+      'Bí Ẩn Vũ Trụ & Khoa Học Đột Phá',
+      'Kinh Tế Vĩ Mô & Chu Kỳ Tiền Tệ Dễ Hiểu',
+      'Chăm Sóc Sức Khỏe Tuổi 50+ Phòng Ngừa Bệnh'
+    ];
+
+    const pool = isVn ? curatedTrendsVn : curatedTrendsUs;
+    pool.forEach(item => keywordSet.add(item));
+
+    return Array.from(keywordSet);
+  }
+
   function generateClientNiches(targetRegion = 'US', count = 12, topicHint = '', timeframe = 'now 7-d') {
     const isVn = targetRegion === 'VN';
     const tfName = timeframe === 'now 7-d' ? (isVn ? '7 ngày qua' : '7-Day Breakout') :
@@ -453,7 +575,10 @@ window.FEATURE_TREND_V2 = true;
           { name: `Hành Trình 30 Ngày Thử Thách ${hint}`, why: `Định dạng video trải nghiệm thực tế dễ viral và tạo sự đồng cảm.`, contentType: 'hybrid', cpm: '$12 - $26', audience: 'Giới trẻ, người thích trải nghiệm' },
           { name: `So Sánh Các Giải Pháp ${hint} Phổ Biến Nhất`, why: `Người xem có ý định chi tiền, tỷ lệ chuyển đổi đơn hàng cao.`, contentType: 'hybrid', cpm: '$16 - $35', audience: 'Người mua sắm thông minh' },
           { name: `Thói Quen Của Người Giỏi Nhất Về ${hint}`, why: `Evergreen dài hạn, người xem thích chia sẻ và lưu vào danh sách phát.`, contentType: 'faceless', cpm: '$14 - $30', audience: 'Khán giả tự hoàn thiện bản thân' },
-          { name: `Dự Đoán Tương Lai Của ${hint} (2026 - 2030)`, why: `Kích thích tranh luận trong phần bình luận, tăng tín hiệu tương tác cho thuật toán.`, contentType: 'faceless', cpm: '$18 - $40', audience: 'Nhà đầu tư, người quan tâm tương lai' }
+          { name: `Dự Đoán Tương Lai Của ${hint} (2026 - 2030)`, why: `Kích thích tranh luận trong phần bình luận, tăng tín hiệu tương tác cho thuật toán.`, contentType: 'faceless', cpm: '$18 - $40', audience: 'Nhà đầu tư, người quan tâm tương lai' },
+          { name: `Góc Nhìn Phản Biện & Tranh Luận Về ${hint}`, why: `Chủ đề gây tò mò, đẩy tỷ lệ bình luận và thời lượng xem trung bình lên cao.`, contentType: 'faceless', cpm: '$15 - $32', audience: 'Người thích tư duy phản biện' },
+          { name: `Cẩm Nang Thực Chiến ${hint} Cho Người Bận Rộn`, why: `Giải pháp cô đọng, người xem có xu hướng lưu lại playlist để xem đi xem lại.`, contentType: 'screen_recording', cpm: '$16 - $34', audience: 'Người đi làm, sinh viên' },
+          { name: `Tài Liệu & Nguồn Học Miễn Phí Về ${hint}`, why: `Giá trị chia sẻ cao, người xem dễ tương tác like và chia sẻ mạng xã hội.`, contentType: 'hybrid', cpm: '$13 - $28', audience: 'Cộng đồng tự học' }
         ];
       } else {
         master = [
@@ -468,7 +593,10 @@ window.FEATURE_TREND_V2 = true;
           { name: `I Tested ${hint} For 30 Days: Shocking Results`, why: `Relatable transformation story with viral algorithmic pull across Long-form and Shorts.`, contentType: 'hybrid', cpm: '$26 - $52', audience: 'General curious audience, self-improvers' },
           { name: `Top 5 ${hint} Alternatives Compared (Honest Review)`, why: `Viewers ready with credit cards searching for real comparisons before purchasing.`, contentType: 'hybrid', cpm: '$38 - $78', audience: 'Discerning buyers, tech evaluators' },
           { name: `Daily Habits & Mental Models of 1% ${hint} Masters`, why: `Evergreen philosophical content that viewers save to playlists and rewatch annually.`, contentType: 'faceless', cpm: '$30 - $62', audience: 'High achievers, personal growth community' },
-          { name: `The Future of ${hint}: Critical Forecasts (2026-2030)`, why: `Drives intense debate in comments, signaling hyper-engagement to YouTube algorithm.`, contentType: 'faceless', cpm: '$35 - $75', audience: 'Forward thinkers, forward-looking investors' }
+          { name: `The Future of ${hint}: Critical Forecasts (2026-2030)`, why: `Drives intense debate in comments, signaling hyper-engagement to YouTube algorithm.`, contentType: 'faceless', cpm: '$35 - $75', audience: 'Forward thinkers, forward-looking investors' },
+          { name: `How To Build Wealth Using ${hint} (Zero Capital)`, why: `High CPM finance-adjacent angle, attracts affluent US viewers wanting practical ROI.`, contentType: 'faceless', cpm: '$42 - $88', audience: 'Young professionals, side hustlers' },
+          { name: `Cinematic Documentary: The Rise & Fall of ${hint}`, why: `Deep-retention documentary structure, ideal for faceless archive & Midjourney visualizers.`, contentType: 'faceless', cpm: '$30 - $65', audience: 'History & doc enthusiasts' },
+          { name: `The Extreme Science Behind ${hint} Explained`, why: `Fascinating educational deep-dive that hooks intellectuals and high-watchtime viewers.`, contentType: 'faceless', cpm: '$34 - $72', audience: 'Science buffs, curious adults' }
         ];
       }
     } else {
@@ -485,7 +613,13 @@ window.FEATURE_TREND_V2 = true;
           { name: 'Lịch Sử Những Nền Văn Minh Đã Mất', why: 'Thu hút sự tò mò mạnh mẽ, tạo kịch bản hấp dẫn bằng tư liệu cổ và đồ họa phục dựng 3D AI.', contentType: 'faceless', cpm: '$7 - $16', audience: 'Người yêu tri thức và khám phá' },
           { name: 'Bài Học Cuộc Đời Từ Những Nhân Vật Vĩ Đại', why: 'Chủ đề trường tồn (evergreen), người xem thích lưu vào playlist và chia sẻ lên mạng xã hội.', contentType: 'faceless', cpm: '$8 - $16', audience: 'Khán giả thích phát triển bản thân' },
           { name: 'Nấu Ăn Cơm Nhà Tiết Kiệm & Dinh Dưỡng', why: 'Xu hướng thắt chặt chi tiêu gia đình. Tỉ lệ click cao nhờ hình ảnh thumbnail hấp dẫn gần gũi.', contentType: 'hybrid', cpm: '$5 - $10', audience: 'Nội trợ, người sống một mình' },
-          { name: 'Khám Phá Nhà Độc Lạ & Kiến Trúc Tí Hon', why: 'Cảm giác thỏa mãn thị giác (visual satisfaction), dễ viral trên cả YouTube Shorts lẫn Long-form.', contentType: 'faceless', cpm: '$6 - $14', audience: 'Người trẻ quan tâm không gian sống' }
+          { name: 'Khám Phá Nhà Độc Lạ & Kiến Trúc Tí Hon', why: 'Cảm giác thỏa mãn thị giác (visual satisfaction), dễ viral trên cả YouTube Shorts lẫn Long-form.', contentType: 'faceless', cpm: '$6 - $14', audience: 'Người trẻ quan tâm không gian sống' },
+          { name: 'Sự Sụp Đổ Của Các Thương Hiệu Từng Đình Đám', why: 'Nội dung phân tích kinh doanh kịch tính, khán giả tò mò xem lý do thất bại.', contentType: 'faceless', cpm: '$11 - $24', audience: 'Người làm kinh doanh, dân văn phòng' },
+          { name: 'Sức Khỏe Tuổi 50+ & Cách Phòng Bệnh Tự Nhiên', why: 'Nhu cầu chăm sóc sức khỏe gia đình cực cao, khán giả lớn tuổi chia sẻ mạnh mẽ.', contentType: 'faceless', cpm: '$9 - $20', audience: 'Người trung niên và con cái chăm sóc cha mẹ' },
+          { name: 'Nhân Quả & Triết Lý Sống An Yên Giữa Đời Thường', why: 'Lời khuyên đạo lý chạm cảm xúc, tỷ lệ giữ chân xem hết video rất cao.', contentType: 'faceless', cpm: '$7 - $16', audience: 'Khán giả tìm kiếm sự tĩnh tâm' },
+          { name: 'Bỏ Phố Về Rừng & Tự Làm Nhà Vườn Sinh Thái', why: 'Đánh trúng xu hướng chữa lành và lối sống xanh, hình ảnh mộc mạc thu hút cả triệu view.', contentType: 'hybrid', cpm: '$7 - $15', audience: 'Người trẻ mệt mỏi với áp lực thành phố' },
+          { name: 'Tâm Lý Học Hành Vi & Bẫy Thao Túng Tâm Lý', why: 'Khai thác khoảng trống tò mò tâm lý, người xem gắn bó lâu và tranh luận sôi nổi.', contentType: 'faceless', cpm: '$8 - $17', audience: 'Giới trẻ 20-35 tuổi' },
+          { name: 'Tóm Tắt Sách Tinh Hoa & Mô Hình Tư Duy Trong 15 Phút', why: 'Khán giả tri thức có thói quen nghe trên xe, tỉ lệ hoàn thành video cao.', contentType: 'hybrid', cpm: '$10 - $22', audience: 'Dân văn phòng, người thích đọc sách' }
         ];
       } else {
         master = [
@@ -500,12 +634,22 @@ window.FEATURE_TREND_V2 = true;
           { name: '10-Minute Executive Book Summaries & Mental Models', why: 'High-income knowledge seekers with massive willingness to purchase recommended books, Audible trials, and productivity software.', contentType: 'hybrid', cpm: '$22 - $46', audience: 'Entrepreneurs, ambitious professionals, college grads' },
           { name: 'Minimalist Desk Setup & Aesthetic Workspace Gear', why: 'Viewers directly click Amazon affiliate links to purchase mechanical keyboards, monitor lights, and ergonomic workspace gadgets.', contentType: 'talking_head', cpm: '$25 - $55', audience: 'Tech lovers, remote developers, setup aesthetic enthusiasts' },
           { name: 'Survival Homesteading & Emergency Prepping Tactics', why: 'High viewer urgency and passionate niche community with lucrative sponsorship deals from solar, water-filtration, and freeze-dried food brands.', contentType: 'hybrid', cpm: '$20 - $45', audience: 'Rural homeowners, preppers, outdoor enthusiasts' },
-          { name: 'Psychology of Human Behavior & Dark Mindset Secrets', why: 'Irresistible curiosity gap, high viewer engagement in comments, highly viral among ambitious younger male demographics.', contentType: 'faceless', cpm: '$24 - $48', audience: 'Self-improvement seekers, psychology buffs (18-35)' }
+          { name: 'Psychology of Human Behavior & Dark Mindset Secrets', why: 'Irresistible curiosity gap, high viewer engagement in comments, highly viral among ambitious younger male demographics.', contentType: 'faceless', cpm: '$24 - $48', audience: 'Self-improvement seekers, psychology buffs (18-35)' },
+          { name: 'Deep Sea Anomalies & Oceanic Iceberg Mysteries', why: 'Abyssal terror and ocean secrets have massive organic curiosity gap and viral viewer retention.', contentType: 'faceless', cpm: '$22 - $44', audience: 'Nature & mystery explorers worldwide' },
+          { name: 'Rise and Fall of Business Empires (Corporate Case Studies)', why: 'Premium business audience, strong corporate CPM, compelling storytelling on bankruptcy and scandal.', contentType: 'faceless', cpm: '$38 - $80', audience: 'Entrepreneurs, executives, finance buffs' },
+          { name: 'Medieval Warfare Tactics & Forgotten Siege Engineering', why: 'High male demographic loyalty, fascinating visuals with 3D terrain animations and historical diagrams.', contentType: 'faceless', cpm: '$22 - $46', audience: 'History buffs, strategy gamers, doc fans' },
+          { name: 'Space Anomalies & James Webb Cosmic Discoveries', why: 'Unmatched awe and curiosity, high ad completion rate on stunning cosmic NASA/ESA visual archives.', contentType: 'faceless', cpm: '$25 - $50', audience: 'Astronomy lovers, science enthusiasts' },
+          { name: 'Police Interrogation Psychology & Body Language Breakdown', why: 'Addictive true crime niche, high watch time as viewers analyze behavioral deception cues.', contentType: 'faceless', cpm: '$26 - $52', audience: 'Psychology & crime enthusiasts' },
+          { name: 'Longevity Protocols, Biohacking & Anti-Aging Secrets', why: 'Ultra-high CPM health and supplement advertising, high-net-worth viewers seeking peak vitality.', contentType: 'talking_head', cpm: '$45 - $90', audience: 'Affluent adults 35-65, biohackers' },
+          { name: 'Solo Camper Van Stealth Living & Custom Build', why: 'Enormous visual aesthetic pull, high CTR on freedom/escapism lifestyle hooks.', contentType: 'faceless', cpm: '$24 - $48', audience: 'Van lifers, travel dreamers, DIY builders' },
+          { name: 'Ancient Sumerian Mysteries & Declassified Tablets', why: 'Extreme viewer fascination with lost human origins, maps, and ancient astronomy.', contentType: 'faceless', cpm: '$22 - $45', audience: 'Mythology, ancient history lovers' }
         ];
       }
     }
 
-    const selected = master.slice(0, Math.min(count, master.length));
+    // Dynamic shuffle to ensure varied, non-static recommendations every click
+    const shuffled = shuffleArray(master);
+    const selected = shuffled.slice(0, Math.min(count, shuffled.length));
     return selected.map((m, idx) => ({
       id: `client_niche_${idx + 1}`,
       name: m.name,
@@ -1244,6 +1388,40 @@ window.FEATURE_TREND_V2 = true;
       }
     };
 
+    // Bốc ngẫu nhiên từ khoá theo trend hot từ Top Ngách mỗi ngày (Dynamic & Non-static)
+    const handleRandomTrendTopic = () => {
+      const trendKeywords = getDailyTrendKeywords(targetRegion);
+      if (!trendKeywords || !trendKeywords.length) return;
+
+      const current = (topicHint || '').trim().toLowerCase();
+      const candidates = trendKeywords.filter(k => k.toLowerCase() !== current);
+      const pool = candidates.length ? candidates : trendKeywords;
+      const picked = pool[Math.floor(Math.random() * pool.length)];
+
+      setTopicHint(picked);
+
+      try { localStorage.removeItem('yt_trend_v2_niches'); } catch (e) {}
+      const fresh = generateClientNiches(targetRegion, Number(nicheCount) || 12, picked, timeframe);
+      setNichesList(fresh);
+      setSelectedNicheIds(new Set(fresh.map(n => n.id)));
+
+      if (showToast) {
+        showToast('🎲 Đã chọn ngẫu nhiên trend: "' + picked + '"');
+      }
+    };
+
+    // Áp dụng trực tiếp 1 từ khoá trend từ chip gợi ý
+    const handleApplyTrendTopic = (topic) => {
+      setTopicHint(topic);
+      try { localStorage.removeItem('yt_trend_v2_niches'); } catch (e) {}
+      const fresh = generateClientNiches(targetRegion, Number(nicheCount) || 12, topic, timeframe);
+      setNichesList(fresh);
+      setSelectedNicheIds(new Set(fresh.map(n => n.id)));
+      if (showToast) {
+        showToast('⚡ Đã áp dụng trend: "' + topic + '"');
+      }
+    };
+
     // B1: Gọi API đề xuất ngách
     const handleProposeNiches = async () => {
       setLoadingNiches(true);
@@ -1651,6 +1829,15 @@ window.FEATURE_TREND_V2 = true;
             h('div', { className: 'flex flex-wrap items-center gap-2' },
               h('button', {
                 type: 'button',
+                onClick: handleRandomTrendTopic,
+                title: 'Bốc ngẫu nhiên từ khoá hot từ Top Ngách mỗi ngày',
+                className: 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 hover:border-emerald-400 transition cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95'
+              },
+                h('span', null, '🎲'),
+                h('span', null, 'Random Từ Khoá Trend')
+              ),
+              h('button', {
+                type: 'button',
                 onClick: () => {
                   try { localStorage.removeItem('yt_trend_v2_niches'); } catch (e) {}
                   const fresh = generateClientNiches(targetRegion, Number(nicheCount) || 12, topicHint, timeframe);
@@ -1723,14 +1910,56 @@ window.FEATURE_TREND_V2 = true;
               )
             ),
             h('div', { className: 'space-y-1' },
-              h('label', { className: 'text-[11px] font-semibold text-zinc-400' }, 'Chủ đề mong muốn (tuỳ chọn):'),
-              h('input', {
-                type: 'text',
-                value: topicHint,
-                onChange: (e) => setTopicHint(e.target.value),
-                placeholder: 'VD: tài chính, bí ẩn, AI, sách...',
-                className: 'w-full bg-zinc-900 border border-brand-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500'
-              })
+              h('div', { className: 'flex items-center justify-between' },
+                h('label', { className: 'text-[11px] font-semibold text-zinc-400' }, 'Chủ đề mong muốn (tuỳ chọn):'),
+                h('button', {
+                  type: 'button',
+                  onClick: handleRandomTrendTopic,
+                  title: 'Bốc ngẫu nhiên từ khoá hot từ Top Ngách hôm nay',
+                  className: 'text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer transition'
+                },
+                  h('span', null, '🎲'),
+                  h('span', null, 'Random Trend')
+                )
+              ),
+              h('div', { className: 'relative' },
+                h('input', {
+                  type: 'text',
+                  value: topicHint,
+                  onChange: (e) => setTopicHint(e.target.value),
+                  placeholder: 'VD: tài chính, bí ẩn, AI, sách...',
+                  className: 'w-full bg-zinc-900 border border-brand-border rounded-lg pl-2.5 pr-8 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition'
+                }),
+                h('button', {
+                  type: 'button',
+                  onClick: handleRandomTrendTopic,
+                  title: 'Bốc ngẫu nhiên từ khoá trend khác',
+                  className: 'absolute right-1 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-emerald-400 transition cursor-pointer'
+                }, '🎲')
+              )
+            )
+          ),
+
+          // Dãy gợi ý từ khoá Trend hot từ Top Ngách mỗi ngày
+          h('div', { className: 'flex items-center gap-1.5 overflow-x-auto py-1 text-xs text-zinc-400 no-scrollbar' },
+            h('span', { className: 'text-[11px] font-semibold text-zinc-400 shrink-0 flex items-center gap-1' },
+              h('span', null, '🔥'),
+              h('span', null, 'Trend hôm nay:')
+            ),
+            getDailyTrendKeywords(targetRegion).slice(0, 6).map((trend, tIdx) => h('button', {
+              key: tIdx,
+              type: 'button',
+              onClick: () => handleApplyTrendTopic(trend),
+              className: 'px-2 py-0.5 rounded-md text-[11px] font-medium transition cursor-pointer shrink-0 border ' + (topicHint.toLowerCase() === trend.toLowerCase() ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 font-semibold' : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 border-zinc-800 hover:border-zinc-700')
+            }, trend)),
+            h('button', {
+              type: 'button',
+              onClick: handleRandomTrendTopic,
+              title: 'Bốc từ khoá trend ngẫu nhiên khác',
+              className: 'px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 transition cursor-pointer shrink-0 flex items-center gap-1'
+            },
+              h('span', null, '🎲'),
+              h('span', null, 'Bốc trend khác')
             )
           ),
 

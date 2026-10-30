@@ -337,6 +337,16 @@ function generateFallbackNiches({ targetRegion = 'US', count = 12, topicHint = '
 
   let master = [];
 
+  // Helper shuffle array
+  function shuffleArr(arr) {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
   if (topicHint && topicHint.trim()) {
     const rawHint = topicHint.trim();
     const hint = rawHint.charAt(0).toUpperCase() + rawHint.slice(1);
@@ -354,7 +364,9 @@ function generateFallbackNiches({ targetRegion = 'US', count = 12, topicHint = '
         { name: `Hành Trình 30 Ngày Thử Thách ${hint}`, why: `Định dạng video trải nghiệm thực tế dễ viral và tạo sự đồng cảm.`, contentType: 'hybrid', cpm: '$12 - $26', audience: 'Giới trẻ, người thích trải nghiệm' },
         { name: `So Sánh Các Giải Pháp ${hint} Phổ Biến Nhất`, why: `Người xem có ý định chi tiền, tỷ lệ chuyển đổi đơn hàng cao.`, contentType: 'hybrid', cpm: '$16 - $35', audience: 'Người mua sắm thông minh' },
         { name: `Thói Quen Của Người Giỏi Nhất Về ${hint}`, why: `Evergreen dài hạn, người xem thích chia sẻ và lưu vào danh sách phát.`, contentType: 'faceless', cpm: '$14 - $30', audience: 'Khán giả tự hoàn thiện bản thân' },
-        { name: `Dự Đoán Tương Lai Của ${hint} (2026 - 2030)`, why: `Kích thích tranh luận trong phần bình luận, tăng tín hiệu tương tác cho thuật toán.`, contentType: 'faceless', cpm: '$18 - $40', audience: 'Nhà đầu tư, người quan tâm tương lai' }
+        { name: `Dự Đoán Tương Lai Của ${hint} (2026 - 2030)`, why: `Kích thích tranh luận trong phần bình luận, tăng tín hiệu tương tác cho thuật toán.`, contentType: 'faceless', cpm: '$18 - $40', audience: 'Nhà đầu tư, người quan tâm tương lai' },
+        { name: `Khám Phá Góc Nhìn Trái Chiều Về ${hint}`, why: `Tạo độ tranh luận cao, kích thích thời lượng xem (watch time) và tương tác comment.`, contentType: 'faceless', cpm: '$15 - $32', audience: 'Khán giả yêu tranh luận phản biện' },
+        { name: `Kỹ Thuật Thực Chiến ${hint} Cho Người Bận Rộn`, why: `Giải quyết nỗi đau thời gian, người xem có xu hướng lưu lại playlist để học dần.`, contentType: 'screen_recording', cpm: '$16 - $35', audience: 'Người đi làm, sinh viên' }
       ];
     } else {
       master = [
@@ -369,7 +381,9 @@ function generateFallbackNiches({ targetRegion = 'US', count = 12, topicHint = '
         { name: `I Tested ${hint} For 30 Days: Shocking Results`, why: `Relatable transformation story with viral algorithmic pull across Long-form and Shorts.`, contentType: 'hybrid', cpm: '$26 - $52', audience: 'General curious audience, self-improvers' },
         { name: `Top 5 ${hint} Alternatives Compared (Honest Review)`, why: `Viewers ready with credit cards searching for real comparisons before purchasing.`, contentType: 'hybrid', cpm: '$38 - $78', audience: 'Discerning buyers, tech evaluators' },
         { name: `Daily Habits & Mental Models of 1% ${hint} Masters`, why: `Evergreen philosophical content that viewers save to playlists and rewatch annually.`, contentType: 'faceless', cpm: '$30 - $62', audience: 'High achievers, personal growth community' },
-        { name: `The Future of ${hint}: Critical Forecasts (2026-2030)`, why: `Drives intense debate in comments, signaling hyper-engagement to YouTube algorithm.`, contentType: 'faceless', cpm: '$35 - $75', audience: 'Forward thinkers, forward-looking investors' }
+        { name: `The Future of ${hint}: Critical Forecasts (2026-2030)`, why: `Drives intense debate in comments, signaling hyper-engagement to YouTube algorithm.`, contentType: 'faceless', cpm: '$35 - $75', audience: 'Forward thinkers, forward-looking investors' },
+        { name: `How To Build Wealth Using ${hint} (Zero Capital)`, why: `High CPM finance-adjacent angle, attracts affluent US viewers wanting practical ROI.`, contentType: 'faceless', cpm: '$42 - $88', audience: 'Young professionals, side hustlers' },
+        { name: `Cinematic Documentary: The Rise & Fall of ${hint}`, why: `Deep-retention documentary structure, ideal for faceless archive & Midjourney visualizers.`, contentType: 'faceless', cpm: '$30 - $65', audience: 'History & doc enthusiasts' }
       ];
     }
   } else {
@@ -387,7 +401,11 @@ function generateFallbackNiches({ targetRegion = 'US', count = 12, topicHint = '
         { name: 'Lịch Sử Những Nền Văn Minh Đã Mất', why: 'Thu hút sự tò mò mạnh mẽ, tạo kịch bản hấp dẫn bằng tư liệu cổ và đồ họa phục dựng 3D AI.', contentType: 'faceless', cpm: '$7 - $16', audience: 'Người yêu tri thức và khám phá' },
         { name: 'Bài Học Cuộc Đời Từ Những Nhân Vật Vĩ Đại', why: 'Chủ đề trường tồn (evergreen), người xem thích lưu vào playlist và chia sẻ lên mạng xã hội.', contentType: 'faceless', cpm: '$8 - $16', audience: 'Khán giả thích phát triển bản thân' },
         { name: 'Nấu Ăn Cơm Nhà Tiết Kiệm & Dinh Dưỡng', why: 'Xu hướng thắt chặt chi tiêu gia đình. Tỉ lệ click cao nhờ hình ảnh thumbnail hấp dẫn gần gũi.', contentType: 'hybrid', cpm: '$5 - $10', audience: 'Nội trợ, người sống một mình' },
-        { name: 'Khám Phá Nhà Độc Lạ & Kiến Trúc Tí Hon', why: 'Cảm giác thỏa mãn thị giác (visual satisfaction), dễ viral trên cả YouTube Shorts lẫn Long-form.', contentType: 'faceless', cpm: '$6 - $14', audience: 'Người trẻ quan tâm không gian sống' }
+        { name: 'Khám Phá Nhà Độc Lạ & Kiến Trúc Tí Hon', why: 'Cảm giác thỏa mãn thị giác (visual satisfaction), dễ viral trên cả YouTube Shorts lẫn Long-form.', contentType: 'faceless', cpm: '$6 - $14', audience: 'Người trẻ quan tâm không gian sống' },
+        { name: 'Sự Sụp Đổ Của Các Thương Hiệu Từng Đình Đám', why: 'Nội dung phân tích kinh doanh kịch tính, khán giả tò mò xem lý do thất bại.', contentType: 'faceless', cpm: '$11 - $24', audience: 'Người làm kinh doanh, dân văn phòng' },
+        { name: 'Sức Khỏe Tuổi 50+ & Cách Phòng Bệnh Tự Nhiên', why: 'Nhu cầu chăm sóc sức khỏe gia đình cực cao, khán giả lớn tuổi chia sẻ mạnh mẽ.', contentType: 'faceless', cpm: '$9 - $20', audience: 'Người trung niên và con cái chăm sóc cha mẹ' },
+        { name: 'Nhân Quả & Triết Lý Sống An Yên Giữa Đời Thường', why: 'Lời khuyên đạo lý chạm cảm xúc, tỷ lệ giữ chân xem hết video rất cao.', contentType: 'faceless', cpm: '$7 - $16', audience: 'Khán giả tìm kiếm sự tĩnh tâm' },
+        { name: 'Bỏ Phố Về Rừng & Tự Làm Nhà Vườn Sinh Thái', why: 'Đánh trúng xu hướng chữa lành và lối sống xanh, hình ảnh mộc mạc thu hút cả triệu view.', contentType: 'hybrid', cpm: '$7 - $15', audience: 'Người trẻ mệt mỏi với áp lực thành phố' }
       ];
     } else {
       master = [
@@ -402,12 +420,20 @@ function generateFallbackNiches({ targetRegion = 'US', count = 12, topicHint = '
         { name: '10-Minute Executive Book Summaries & Mental Models', why: 'High-income knowledge seekers with massive willingness to purchase recommended books, Audible trials, and productivity software.', contentType: 'hybrid', cpm: '$22 - $46', audience: 'Entrepreneurs, ambitious professionals, college grads' },
         { name: 'Minimalist Desk Setup & Aesthetic Workspace Gear', why: 'Viewers directly click Amazon affiliate links to purchase mechanical keyboards, monitor lights, and ergonomic workspace gadgets.', contentType: 'talking_head', cpm: '$25 - $55', audience: 'Tech lovers, remote developers, setup aesthetic enthusiasts' },
         { name: 'Survival Homesteading & Emergency Prepping Tactics', why: 'High viewer urgency and passionate niche community with lucrative sponsorship deals from solar, water-filtration, and freeze-dried food brands.', contentType: 'hybrid', cpm: '$20 - $45', audience: 'Rural homeowners, preppers, outdoor enthusiasts' },
-        { name: 'Psychology of Human Behavior & Dark Mindset Secrets', why: 'Irresistible curiosity gap, high viewer engagement in comments, highly viral among ambitious younger male demographics.', contentType: 'faceless', cpm: '$24 - $48', audience: 'Self-improvement seekers, psychology buffs (18-35)' }
+        { name: 'Psychology of Human Behavior & Dark Mindset Secrets', why: 'Irresistible curiosity gap, high viewer engagement in comments, highly viral among ambitious younger male demographics.', contentType: 'faceless', cpm: '$24 - $48', audience: 'Self-improvement seekers, psychology buffs (18-35)' },
+        { name: 'Deep Sea Anomalies & Oceanic Iceberg Mysteries', why: 'Abyssal terror and ocean secrets have massive organic curiosity gap and viral viewer retention.', contentType: 'faceless', cpm: '$22 - $44', audience: 'Nature & mystery explorers worldwide' },
+        { name: 'Rise and Fall of Business Empires (Corporate Case Studies)', why: 'Premium business audience, strong corporate CPM, compelling storytelling on bankruptcy and scandal.', contentType: 'faceless', cpm: '$38 - $80', audience: 'Entrepreneurs, executives, finance buffs' },
+        { name: 'Medieval Warfare Tactics & Forgotten Siege Engineering', why: 'High male demographic loyalty, fascinating visuals with 3D terrain animations and historical diagrams.', contentType: 'faceless', cpm: '$22 - $46', audience: 'History buffs, strategy gamers, doc fans' },
+        { name: 'Space Anomalies & James Webb Cosmic Discoveries', why: 'Unmatched awe and curiosity, high ad completion rate on stunning cosmic NASA/ESA visual archives.', contentType: 'faceless', cpm: '$25 - $50', audience: 'Astronomy lovers, science enthusiasts' },
+        { name: 'Police Interrogation Psychology & Body Language Breakdown', why: 'Addictive true crime niche, high watch time as viewers analyze behavioral deception cues.', contentType: 'faceless', cpm: '$26 - $52', audience: 'Psychology & crime enthusiasts' },
+        { name: 'Longevity Protocols, Biohacking & Anti-Aging Secrets', why: 'Ultra-high CPM health and supplement advertising, high-net-worth viewers seeking peak vitality.', contentType: 'talking_head', cpm: '$45 - $90', audience: 'Affluent adults 35-65, biohackers' }
       ];
     }
   }
 
-  const selected = master.slice(0, Math.min(count, master.length));
+  // Shuffle master pool to ensure dynamic, flexible, non-static recommendations
+  const shuffled = shuffleArr(master);
+  const selected = shuffled.slice(0, Math.min(count, shuffled.length));
   return {
     niches: selected.map((m, idx) => ({
       id: `fallback_niche_${idx + 1}`,
