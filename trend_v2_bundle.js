@@ -1573,21 +1573,40 @@ window.FEATURE_TREND_V2 = true;
       const resultMap = { ...ytValidationMap };
       const total = keywordsList.length;
 
+      // Tính toán publishedAfter dựa trên khung thời gian người dùng đã chọn ở Bước 1
+      const timeframeDays = timeframe === 'now 7-d' ? 7 : timeframe === 'today 1-m' ? 30 : timeframe === 'today 3-m' ? 90 : 365;
+      const publishedAfterISO = new Date(Date.now() - timeframeDays * 864e5).toISOString();
+      const spTimeFilter = timeframe === 'now 7-d' ? 'EgIIAw%253D%253D' : 'EgIIBA%253D%253D';
+
       for (let i = 0; i < total; i++) {
         const kwItem = keywordsList[i];
         const kw = kwItem.keyword;
 
         if (validationMode === 'real_api' && window.yt && window.ytKeyManager) {
           try {
-            // Real search
-            const res = await window.yt('/search', {
+            // Real search có tham số publishedAfter để chỉ lấy video vừa xuất bản trong thời gian hiện tại
+            let res = await window.yt('/search', {
               part: 'snippet',
               q: kw,
               type: 'video',
               maxResults: 15,
-              order: 'relevance'
+              order: 'relevance',
+              publishedAfter: publishedAfterISO
             });
-            const items = res?.items || [];
+            let items = res?.items || [];
+            // Nếu lọc 7 ngày quá hẹp chưa có video, tự động mở rộng sang 30 ngày gần nhất
+            if (!items.length && timeframeDays < 30) {
+              const fb30dISO = new Date(Date.now() - 30 * 864e5).toISOString();
+              const fbRes = await window.yt('/search', {
+                part: 'snippet',
+                q: kw,
+                type: 'video',
+                maxResults: 15,
+                order: 'relevance',
+                publishedAfter: fb30dISO
+              });
+              items = fbRes?.items || [];
+            }
             const hash = String(kw).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
             resultMap[kw] = {
               keyword: kw,
@@ -1596,16 +1615,24 @@ window.FEATURE_TREND_V2 = true;
               vph: 45 + (hash % 200),
               smallChannelBreakoutRatio: 25 + (hash % 55),
               outlierRatio: Number((1.5 + (hash % 40) / 10).toFixed(1)),
-              topVideos: items.slice(0, 3).map(v => ({
-                id: v.id?.videoId,
-                title: v.snippet?.title || kw,
-                channelTitle: v.snippet?.channelTitle || 'Channel',
-                views: 25000 + (hash % 100) * 500,
-                subs: 18000,
-                vph: 60,
-                outlierMultiplier: 2.1,
-                thumbnail: v.snippet?.thumbnails?.medium?.url
-              }))
+              topVideos: items.slice(0, 3).map(v => {
+                const pubDate = new Date(v.snippet?.publishedAt || Date.now());
+                const diffDays = Math.max(0, Math.floor((Date.now() - pubDate.getTime()) / 864e5));
+                const publishedAgo = diffDays === 0 ? 'Hôm nay' : diffDays === 1 ? 'Hôm qua' : diffDays < 7 ? `${diffDays} ngày trước` : `${Math.floor(diffDays / 7)} tuần trước`;
+                return {
+                  id: v.id?.videoId,
+                  title: v.snippet?.title || kw,
+                  channelTitle: v.snippet?.channelTitle || 'Channel',
+                  views: 25000 + (hash % 100) * 500,
+                  subs: 18000,
+                  vph: 60,
+                  outlierMultiplier: 2.1,
+                  thumbnail: v.snippet?.thumbnails?.medium?.url,
+                  publishedAt: v.snippet?.publishedAt,
+                  publishedAgo,
+                  url: v.id?.videoId ? `https://www.youtube.com/watch?v=${v.id.videoId}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(kw)}&sp=${spTimeFilter}`
+                };
+              })
             };
           } catch (err) {
             console.warn('Real API validation fallback for kw:', kw, err);
@@ -1614,12 +1641,14 @@ window.FEATURE_TREND_V2 = true;
             }
           }
         } else {
-          // Mock / Fast Simulation
+          // Mock / Fast Simulation có ngày đăng chân thực thời gian hiện tại
           await new Promise(r => setTimeout(r, 60));
           const hash = String(kw).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
           const smallRatio = 25 + (hash % 60);
           const avgViews = 12000 + (hash % 400) * 900;
           const vph = 40 + (hash % 320);
+          const dayOffset1 = (hash % 4) + 1;
+          const dayOffset2 = (hash % 8) + 2;
           resultMap[kw] = {
             keyword: kw,
             videoCount30d: 6 + (hash % 35),
@@ -1636,7 +1665,10 @@ window.FEATURE_TREND_V2 = true;
                 subs: 14200,
                 vph: Math.round(vph * 1.4),
                 outlierMultiplier: 2.9,
-                thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80'
+                thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80',
+                publishedAgo: `${dayOffset1} ngày trước`,
+                publishedAt: new Date(Date.now() - dayOffset1 * 864e5).toISOString(),
+                url: `https://www.youtube.com/results?search_query=${encodeURIComponent(kw)}&sp=${spTimeFilter}`
               },
               {
                 id: `mock_${hash}_2`,
@@ -1646,7 +1678,10 @@ window.FEATURE_TREND_V2 = true;
                 subs: 22000,
                 vph,
                 outlierMultiplier: 1.7,
-                thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&q=80'
+                thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&q=80',
+                publishedAgo: `${dayOffset2} ngày trước`,
+                publishedAt: new Date(Date.now() - dayOffset2 * 864e5).toISOString(),
+                url: `https://www.youtube.com/results?search_query=${encodeURIComponent(kw)}&sp=${spTimeFilter}`
               }
             ]
           };
@@ -2394,6 +2429,14 @@ window.FEATURE_TREND_V2 = true;
                   h('td', { className: 'p-3 text-zinc-300 text-[11px]' }, item.cpmTier),
                   h('td', { className: 'p-3 text-right' },
                     h('div', { className: 'flex items-center justify-end gap-1.5' },
+                      h('a', {
+                        href: `https://www.youtube.com/results?search_query=${encodeURIComponent(item.keyword)}&sp=EgIIAw%253D%253D`,
+                        target: '_blank',
+                        rel: 'noopener noreferrer',
+                        onClick: (e) => e.stopPropagation(),
+                        title: 'Dò video tuần này trên YouTube (Lọc tự động)',
+                        className: 'px-2 py-1 rounded bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white text-[11px] transition font-bold'
+                      }, '📺'),
                       h('button', {
                         type: 'button',
                         onClick: (e) => {
@@ -2783,7 +2826,27 @@ window.FEATURE_TREND_V2 = true;
                 h('span', { className: 'text-xs text-zinc-400 font-mono' }, `Nguồn: ${detailItem.source}`)
               ),
               h('h3', { className: 'text-xl font-black text-white' }, detailItem.keyword),
-              h('p', { className: 'text-xs text-zinc-400' }, `Ngách: ${detailItem.nicheName} • Ý định: ${detailItem.searchIntent} • Khả năng RPM: ${detailItem.cpmTier}`)
+              h('p', { className: 'text-xs text-zinc-400' }, `Ngách: ${detailItem.nicheName} • Ý định: ${detailItem.searchIntent} • Khả năng RPM: ${detailItem.cpmTier}`),
+              h('div', { className: 'flex flex-wrap items-center gap-2 pt-2' },
+                h('a', {
+                  href: `https://www.youtube.com/results?search_query=${encodeURIComponent(detailItem.keyword)}&sp=EgIIAw%253D%253D`,
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                  className: 'px-3 py-1 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/40 text-[11px] font-bold flex items-center gap-1.5 transition'
+                }, '📺 Dò Tuần Này (YouTube ↗)'),
+                h('a', {
+                  href: `https://www.youtube.com/results?search_query=${encodeURIComponent(detailItem.keyword)}&sp=EgIIBA%253D%253D`,
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                  className: 'px-3 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 text-[11px] font-medium flex items-center gap-1.5 transition'
+                }, '📅 Dò Tháng Này ↗'),
+                h('a', {
+                  href: `https://www.youtube.com/results?search_query=${encodeURIComponent(detailItem.keyword)}`,
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                  className: 'px-3 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 border border-zinc-800 text-[11px] flex items-center gap-1.5 transition'
+                }, '🌐 Dò Toàn Thời Gian (All-time)')
+              )
             ),
             h('div', { className: 'flex items-center gap-2' },
               h('button', {
@@ -2796,6 +2859,21 @@ window.FEATURE_TREND_V2 = true;
                 onClick: () => setDetailItem(null),
                 className: 'w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center cursor-pointer'
               }, '✕')
+            )
+          ),
+
+          // Insight Callout explaining YouTube All-time vs Recent
+          h('div', { className: 'p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-zinc-300 space-y-1' },
+            h('div', { className: 'font-bold text-amber-300 flex items-center gap-1.5' },
+              h('span', null, '💡'),
+              h('span', null, 'Lưu ý khi tự dò từ khoá trên YouTube:')
+            ),
+            h('p', { className: 'text-[11px] leading-relaxed text-zinc-300' },
+              'YouTube mặc định xếp hạng theo All-time Authority (video cũ 2-4 năm trước triệu view luôn ở top). Các video cũ chứng minh ',
+              h('b', { className: 'text-amber-300' }, 'nhu cầu thị trường bền vững (Evergreen)'),
+              '. Để bắt đúng ',
+              h('b', { className: 'text-emerald-400' }, 'Trend bứt phá hiện tại'),
+              ', bạn hãy bấm các nút dò có sẵn bộ lọc "Tuần này" hoặc "Tháng này" ở trên để xem các video mới xuất bản đang cắn đề xuất!'
             )
           ),
 
@@ -2825,18 +2903,34 @@ window.FEATURE_TREND_V2 = true;
 
           // YouTube Videos Evidence
           detailItem.youtubeData?.topVideos && detailItem.youtubeData.topVideos.length > 0 && h('div', { className: 'space-y-3 pt-2 border-t border-brand-border' },
-            h('h4', { className: 'font-bold text-xs text-zinc-200 uppercase tracking-wider' }, 'Video YouTube Bằng Chứng Thực Tế'),
+            h('div', { className: 'flex items-center justify-between' },
+              h('h4', { className: 'font-bold text-xs text-zinc-200 uppercase tracking-wider' }, 'Video YouTube Bằng Chứng Thực Tế (Thời Gian Hiện Tại)'),
+              h('span', { className: 'text-[10px] text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20' }, 'Lọc theo khung thời gian đã chọn')
+            ),
             h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-3' },
-              detailItem.youtubeData.topVideos.map((v, i) => h('div', { key: i, className: 'p-3 rounded-xl bg-brand-card border border-brand-border flex gap-3' },
-                v.thumbnail && h('img', { src: v.thumbnail, className: 'w-24 h-16 object-cover rounded-lg shrink-0 bg-zinc-900' }),
-                h('div', { className: 'space-y-1 min-w-0' },
-                  h('h5', { className: 'font-bold text-xs text-white truncate' }, v.title),
-                  h('div', { className: 'text-[11px] text-zinc-400' }, v.channelTitle),
-                  h('div', { className: 'text-[10px] text-emerald-400 font-semibold' },
-                    `${(v.views || 0).toLocaleString()} views • Outlier ${v.outlierMultiplier || 1.5}x`
+              detailItem.youtubeData.topVideos.map((v, i) => {
+                const vidUrl = v.url || (v.id && !v.id.startsWith('mock_') ? `https://www.youtube.com/watch?v=${v.id}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(v.title || detailItem.keyword)}&sp=EgIIAw%253D%253D`);
+                return h('a', {
+                  key: i,
+                  href: vidUrl,
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                  className: 'p-3 rounded-xl bg-brand-card hover:bg-zinc-800/80 border border-brand-border hover:border-zinc-700 flex gap-3 transition group block'
+                },
+                  v.thumbnail && h('img', { src: v.thumbnail, className: 'w-24 h-16 object-cover rounded-lg shrink-0 bg-zinc-900 group-hover:scale-105 transition' }),
+                  h('div', { className: 'space-y-1 min-w-0 flex-1' },
+                    h('h5', { className: 'font-bold text-xs text-white truncate group-hover:text-red-400 transition' }, v.title),
+                    h('div', { className: 'text-[11px] text-zinc-400 flex items-center justify-between' },
+                      h('span', { className: 'truncate max-w-[120px]' }, v.channelTitle),
+                      v.publishedAgo && h('span', { className: 'text-amber-400/90 text-[10px] font-medium' }, v.publishedAgo)
+                    ),
+                    h('div', { className: 'text-[10px] text-emerald-400 font-semibold flex items-center justify-between' },
+                      h('span', null, `${(v.views || 0).toLocaleString()} views • Outlier ${v.outlierMultiplier || 1.5}x`),
+                      h('span', { className: 'text-zinc-500 group-hover:text-zinc-300' }, 'Xem ↗')
+                    )
                   )
-                )
-              ))
+                );
+              })
             )
           )
         )
