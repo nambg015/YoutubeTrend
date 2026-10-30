@@ -96,4 +96,26 @@ describe('StudioChartEngine: Flop and Breakout Point Detection', () => {
     assert.ok(result.flopPoint.day <= 60);
     assert.equal(result.status, 'FLOPPED');
   });
+
+  it('compares real video metrics against channel benchmark logic', () => {
+    const channelVideos = [
+      { id: 'v1', views: 200, publishedAt: new Date(Date.now() - 30 * 864e5).toISOString() },
+      { id: 'v2', views: 350, publishedAt: new Date(Date.now() - 20 * 864e5).toISOString() },
+      { id: 'v3', views: 500, publishedAt: new Date(Date.now() - 10 * 864e5).toISOString() },
+      { id: 'v4', views: 800, publishedAt: new Date(Date.now() - 5 * 864e5).toISOString() },
+      { id: 'v5', views: 1200, publishedAt: new Date(Date.now() - 2 * 864e5).toISOString() }
+    ];
+    const benchmark = StudioChartEngine.analyzeChannelBenchmark(channelVideos);
+    assert.equal(benchmark.sampleCount, 5);
+    assert.equal(benchmark.medianViews, 500);
+    assert.ok(benchmark.typicalMin <= 500);
+    assert.ok(benchmark.typicalMax >= 500);
+
+    // Video with 88400 views compared to median 500 views
+    const video = { views: 88400, publishedAt: new Date(Date.now() - 30 * 864e5).toISOString() };
+    const series = StudioChartEngine.generateTimelineSeries(video, 'lifetime', benchmark);
+    const result = StudioChartEngine.detectFlopAndBreakout(series, video, benchmark);
+    assert.ok(result.ratioVsChannel > 100);
+  });
 });
+
