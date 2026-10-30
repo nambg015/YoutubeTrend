@@ -2085,7 +2085,7 @@ window.FEATURE_TREND_V2 = true;
                 ) : h('div', { className: 'text-[11px] text-zinc-500' }, `Hiển thị toàn bộ ${nichesList.length} ngách`),
                 h('button', {
                   type: 'button',
-                  onClick: handleProceedToStep2,
+                  onClick: () => setWizardStep(2),
                   disabled: selectedNicheIds.size === 0,
                   className: 'px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 self-end sm:self-auto'
                 },

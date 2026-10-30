@@ -4193,73 +4193,73 @@ async function loadRpm(nicheId,customPeriod,subOpt,durOpt,viewOpt,queryOverride)
         /*#__PURE__*/React.createElement("button",{onClick:()=>{setKwCat('all');setKwRegion('all');setKwComp('all');setKwSearchQuery('');},className:bSecondary+' mx-auto'},"Đặt lại bộ lọc")
       )
     ):/*#__PURE__*/React.createElement("div",{className:"overflow-x-auto"},
-      /*#__PURE__*/React.createElement("table",{className:"w-full text-left border-collapse"},
+      /*#__PURE__*/React.createElement("table",{className:"w-full text-left border-collapse whitespace-nowrap"},
         /*#__PURE__*/React.createElement("thead",null,
-          /*#__PURE__*/React.createElement("tr",{className:"border-b border-zinc-800 bg-zinc-900/50 text-[11px] font-bold text-zinc-400 uppercase tracking-wider"},
-            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-4"},"Từ Khóa & Phân Loại"),
-            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-3 text-right"},"Tổng View Trending"),
-            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-3 text-right"},"Tốc Độ (VPH)"),
-            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-3 text-center"},"Cạnh Tranh"),
-            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-3 text-center"},"Điểm Hot"),
-            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-3 text-right"},"RPM Ước Tính"),
-            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-4 text-right"},"Thao Tác")
+          /*#__PURE__*/React.createElement("tr",{className:"border-b border-zinc-800 bg-zinc-900/50 text-[11px] font-bold text-zinc-400 uppercase tracking-wider whitespace-nowrap"},
+            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-4 whitespace-nowrap"},"Từ Khóa & Phân Loại"),
+            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-3 text-right whitespace-nowrap"},"Tổng View Trending"),
+            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-3 text-right whitespace-nowrap"},"Tốc Độ (VPH)"),
+            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-3 text-center whitespace-nowrap"},"Cạnh Tranh"),
+            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-3 text-center whitespace-nowrap"},"Điểm Hot"),
+            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-3 text-right whitespace-nowrap"},"RPM Ước Tính"),
+            /*#__PURE__*/React.createElement("th",{className:"py-3.5 px-4 text-right whitespace-nowrap"},"Thao Tác")
           )
         ),
-        /*#__PURE__*/React.createElement("tbody",{className:"divide-y divide-zinc-800/80 text-xs"},
+        /*#__PURE__*/React.createElement("tbody",{className:"divide-y divide-zinc-800/80 text-xs whitespace-nowrap"},
           filteredKeywords.map(k => {
             const ytWeekSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(k.kw)}&sp=EgIIAw%253D%253D`;
-            return /*#__PURE__*/React.createElement("tr",{key:k.id,className:"hover:bg-zinc-900/60 transition group"},
-              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-4"},
+            return /*#__PURE__*/React.createElement("tr",{key:k.id,className:"hover:bg-zinc-900/60 transition group whitespace-nowrap"},
+              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-4 whitespace-nowrap"},
                 /*#__PURE__*/React.createElement("div",{
-                  className:"font-bold text-white text-sm group-hover:text-red-400 transition cursor-pointer",
+                  className:"font-bold text-white text-sm group-hover:text-red-400 transition cursor-pointer whitespace-nowrap",
                   onClick:()=>setSelectedKeyword(k)
                 },k.kw),
-                /*#__PURE__*/React.createElement("div",{className:"flex flex-wrap items-center gap-1.5 mt-1"},
-                  /*#__PURE__*/React.createElement("span",{className:"text-[10px] font-semibold px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/80"},k.videoCount?k.videoCount+' video trending':(k.period||24)+'h'),
-                  /*#__PURE__*/React.createElement("span",{className:"text-[10px] font-semibold px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800"},k.catName||'Giải trí'),
-                  /*#__PURE__*/React.createElement("span",{className:"text-[10px] font-semibold px-1.5 py-0.2 rounded bg-blue-950/40 text-blue-300 border border-blue-800/40"},k.region||'VN')
+                /*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5 mt-1 whitespace-nowrap"},
+                  /*#__PURE__*/React.createElement("span",{className:"text-[10px] font-semibold px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/80 whitespace-nowrap"},k.videoCount?k.videoCount+' video trending':(k.period||24)+'h'),
+                  /*#__PURE__*/React.createElement("span",{className:"text-[10px] font-semibold px-1.5 py-0.2 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 whitespace-nowrap"},k.catName||'Giải trí'),
+                  /*#__PURE__*/React.createElement("span",{className:"text-[10px] font-semibold px-1.5 py-0.2 rounded bg-blue-950/40 text-blue-300 border border-blue-800/40 whitespace-nowrap"},k.region||'VN')
                 )
               ),
-              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-3 text-right font-bold text-zinc-200"},
+              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-3 text-right font-bold text-zinc-200 whitespace-nowrap"},
                 fmt(k.totalViews||k.volume||0),
-                /*#__PURE__*/React.createElement("div",{className:"text-[10px] text-zinc-500 font-normal"},"view tích luỹ")
+                /*#__PURE__*/React.createElement("div",{className:"text-[10px] text-zinc-500 font-normal whitespace-nowrap"},"view tích luỹ")
               ),
-              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-3 text-right font-black text-emerald-400 font-mono"},
+              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-3 text-right font-black text-emerald-400 font-mono whitespace-nowrap"},
                 k.maxVph?fmt(Math.round(k.maxVph)):'+'+(k.growth||0)+'%',
-                /*#__PURE__*/React.createElement("div",{className:"text-[10px] text-emerald-500/80 font-normal"},k.maxVph?'view / giờ thực tế':'bứt phá')
+                /*#__PURE__*/React.createElement("div",{className:"text-[10px] text-emerald-500/80 font-normal whitespace-nowrap"},k.maxVph?'view / giờ thực tế':'bứt phá')
               ),
-              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-3 text-center"},
-                /*#__PURE__*/React.createElement("span",{className:`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${k.competition==='Thấp'?'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30':k.competition==='Trung bình'?'bg-amber-500/20 text-amber-300 border border-amber-500/30':'bg-rose-500/20 text-rose-300 border border-rose-500/30'}`},k.competition)
+              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-3 text-center whitespace-nowrap"},
+                /*#__PURE__*/React.createElement("span",{className:`inline-block px-2.5 py-0.5 rounded text-[11px] font-bold whitespace-nowrap ${k.competition==='Thấp'?'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30':k.competition==='Trung bình'?'bg-amber-500/20 text-amber-300 border border-amber-500/30':'bg-rose-500/20 text-rose-300 border border-rose-500/30'}`},k.competition)
               ),
-              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-3 text-center"},
-                /*#__PURE__*/React.createElement("span",{className:"px-2 py-0.5 rounded text-[11px] font-bold bg-zinc-800 text-zinc-200 border border-zinc-700/80"},k.hotScore," / 100")
+              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-3 text-center whitespace-nowrap"},
+                /*#__PURE__*/React.createElement("span",{className:"px-2 py-0.5 rounded text-[11px] font-bold bg-zinc-800 text-zinc-200 border border-zinc-700/80 whitespace-nowrap"},k.hotScore," / 100")
               ),
-              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-3 text-right font-bold text-amber-400"},k.rpm),
-              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-4 text-right"},
-                /*#__PURE__*/React.createElement("div",{className:"flex items-center justify-end gap-1.5"},
+              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-3 text-right font-bold text-amber-400 whitespace-nowrap"},k.rpm),
+              /*#__PURE__*/React.createElement("td",{className:"py-3.5 px-4 text-right whitespace-nowrap"},
+                /*#__PURE__*/React.createElement("div",{className:"flex items-center justify-end gap-1.5 whitespace-nowrap"},
                   /*#__PURE__*/React.createElement("a",{
                     href:ytWeekSearchUrl,
                     target:"_blank",
                     rel:"noopener noreferrer",
-                    className:"px-2.5 py-1 text-xs font-bold bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 rounded-lg transition flex items-center gap-1 shadow-sm",
+                    className:"px-2.5 py-1 text-xs font-bold bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 rounded-lg transition inline-flex items-center gap-1 shadow-sm whitespace-nowrap shrink-0",
                     title:"Dò video tuần này trên YouTube (Lọc tự động)"
                   },
                     /*#__PURE__*/React.createElement("span",null,"📺"),
-                    /*#__PURE__*/React.createElement("span",null,"Dò Tuần Này ↗")
+                    /*#__PURE__*/React.createElement("span",{className:"whitespace-nowrap"},"Dò Tuần Này ↗")
                   ),
                   /*#__PURE__*/React.createElement("button",{
                     onClick:()=>setSelectedKeyword(k),
-                    className:"px-2.5 py-1 text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 rounded-lg transition cursor-pointer",
+                    className:"px-2.5 py-1 text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 rounded-lg transition cursor-pointer whitespace-nowrap shrink-0",
                     title:"Xem chi tiết phân tích"
                   },"Chi tiết"),
                   /*#__PURE__*/React.createElement("button",{
                     onClick:()=>handleExploreKeywordVideos(k.kw),
-                    className:"px-2.5 py-1 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 rounded-lg transition cursor-pointer",
+                    className:"px-2.5 py-1 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 rounded-lg transition cursor-pointer whitespace-nowrap shrink-0",
                     title:"Quét video thực tế trên YouTube"
                   },"Quét video"),
                   /*#__PURE__*/React.createElement("button",{
                     onClick:()=>copyText(k.kw,'Đã sao chép từ khóa!'),
-                    className:"px-2 py-1 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 rounded-lg transition cursor-pointer",
+                    className:"px-2 py-1 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 rounded-lg transition cursor-pointer whitespace-nowrap shrink-0",
                     title:"Sao chép từ khóa"
                   },"Copy")
                 )
