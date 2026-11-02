@@ -3449,12 +3449,15 @@ const[showTrendV2,setShowTrendV2]=React.useState(false);
 const[realDiscoveredNiches,setRealDiscoveredNiches]=React.useState(()=>{try{// Dọn sạch triệt để các key cache cũ nếu có
 localStorage.removeItem('yt_real_discovered_niches_v2');localStorage.removeItem('yt_real_discovered_niches_v5');localStorage.removeItem('yt_real_discovered_niches_time');
 const mKey=getMarketStorageKey(initialMarket);let saved=[];const raw=localStorage.getItem(mKey);if(raw){saved=JSON.parse(raw);}else if(initialMarket==='VN'){const legacy=localStorage.getItem(STORAGE_KEY);if(legacy)saved=JSON.parse(legacy);}if(!Array.isArray(saved)||saved.length===0)return[];const now=Date.now();// Tự động xoá ngách/video đã hạ nhiệt (> 10 ngày)
-const active=saved.map(n=>{if(n.id&&n.id.includes('_init'))return null;const freshVids=(n.videos||[]).filter(v=>{if(v.id==='xYz12345678'||v.id==='aBcDeFgHiJk'||v.id==='oPqRsTuVwXy'||v.id==='zAbCdEfGhIj'||v.id==='kLmNoPqRsTu'||v.id==='L_LUpnjgPso')return false;const vt=v.ts||(v.published?new Date(v.published).getTime():0);return now-vt<=10*864e5;// trong vòng 10 ngày
+const active=saved.map(n=>{if(n.id&&n.id.includes('_init'))return null;const freshVids=(n.videos||[]).filter(v=>{if(v.id==='xYz12345678'||v.id==='aBcDeFgHiJk'||v.id==='oPqRsTuVwXy'||v.id==='zAbCdEfGhIj'||v.id==='kLmNoPqRsTu'||v.id==='L_LUpnjgPso')return false;const vt=v.ts||(v.published?new Date(v.published).getTime():0);return now-vt<=30*864e5;// trong vòng tối đa 30 ngày
 });if(freshVids.length===0)return null;// hạ nhiệt -> tự xoá
 return{...n,videos:freshVids,topVideo:freshVids[0],maxViews:freshVids[0]?.views||n.maxViews};}).filter(Boolean);return active;}catch(e){return[];}});
 const[activeNicheId,setActiveNicheId]=React.useState(()=>{try{const mKey=getMarketStorageKey(initialMarket);const raw=localStorage.getItem(mKey);const cached=raw?JSON.parse(raw):[];return cached[0]?.id||null;}catch(e){return null;}});const[searchQuery,setSearchQuery]=React.useState('');const[customKeywordInput,setCustomKeywordInput]=React.useState('');const[isScanningNiches,setIsScanningNiches]=React.useState(false);const[scanProgress,setScanProgress]=React.useState(null);// { current, total, topic, foundVideos, foundNiches }
-const cancelScanRef=React.useRef(false);const[inspectingVideo,setInspectingVideo]=React.useState(null);const[showApiGuideModal,setShowApiGuideModal]=React.useState(false);const[subLimitFilter,setSubLimitFilter]=React.useState(30000);// 30k sub mặc định
-const[scanBatchMode,setScanBatchMode]=React.useState('smart12');// 'quick6' | 'smart12' | 'deepAll'
+const cancelScanRef=React.useRef(false);const[inspectingVideo,setInspectingVideo]=React.useState(null);const[showApiGuideModal,setShowApiGuideModal]=React.useState(false);
+const[timeframeFilter,setTimeframeFilter]=React.useState(()=>{try{return localStorage.getItem('yt_topngach_timeframe')||'24h';}catch(e){return'24h';}});
+const[subLimitFilter,setSubLimitFilter]=React.useState(()=>{try{const s=localStorage.getItem('yt_topngach_sublimit');if(s!==null)return Number(s);return 1000;}catch(e){return 1000;}});
+const[minViewsFilter,setMinViewsFilter]=React.useState(()=>{try{const s=localStorage.getItem('yt_topngach_minviews');if(s!==null)return Number(s);return 50000;}catch(e){return 50000;}});
+const[scanBatchMode,setScanBatchMode]=React.useState('smart12');
 const todayStr=React.useMemo(()=>new Date().toLocaleDateString('vi-VN'),[]);
 const[lastScannedTime,setLastScannedTime]=React.useState(()=>{try{return localStorage.getItem(TIME_KEY+'_'+initialMarket)||(initialMarket==='VN'?localStorage.getItem(TIME_KEY):'')||'';}catch(e){return'';}});
 const[lastScannedDate,setLastScannedDate]=React.useState(()=>{try{return localStorage.getItem(getMarketDateKey(initialMarket))||'';}catch(e){return'';}});
@@ -3498,150 +3501,149 @@ const DEFAULT_DEMO_NICHES_MAP = React.useMemo(() => ({
   US: [
     {
       id: 'demo_us_story',
-      name: 'Billionaire & Life Dilemmas (Dò ra 24h qua)',
+      name: 'Billionaire & Life Dilemmas (< 1k sub • > 50k view)',
       category: 'Billionaire Story US',
       rpm: '$25 - $48',
       avgRpm: 35,
       maxViews: 184000,
-      maxOutlier: 8.4,
-      channelsCount: 6,
+      maxOutlier: 296.8,
+      channelsCount: 3,
       videos: [
-        { id: 'W_rU8yBfP8k', title: 'Billionaire Came Home By Surprise... What The Maid Was Doing Shocked The House', channel: 'Echoes of Hope & Life', channelId: 'ch_hope_1', subs: 14800, views: 184000, vph: 420, dur: 3503, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 18).toISOString(), country: 'US', outlierRatio: 12.4 },
-        { id: '8iFmJb7zW3k', title: 'Marcus Aurelius: 7 Stoic Rules To Keep In Mind When Betrayed', channel: 'Daily Stoic Wisdom', channelId: 'ch_stoic_1', subs: 18200, views: 142000, vph: 310, dur: 1240, thumb: 'https://i.ytimg.com/vi/8iFmJb7zW3k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 28).toISOString(), country: 'US', outlierRatio: 7.8 },
-        { id: 'RzL1yH3oZoU', title: 'Why Silence Is Your Greatest Weapon | Lessons From Ancient Wisdom', channel: 'Philosophy & Life', channelId: 'ch_phil_1', subs: 22100, views: 195000, vph: 530, dur: 1450, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 40).toISOString(), country: 'US', outlierRatio: 8.8 }
+        { id: 'W_rU8yBfP8k', title: 'Billionaire Came Home By Surprise... What The Maid Was Doing Shocked The House', channel: 'Echoes of Hope & Life', channelId: 'ch_hope_1', subs: 620, views: 184000, vph: 1250, dur: 3503, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 14).toISOString(), country: 'US', outlierRatio: 296.8 },
+        { id: '8iFmJb7zW3k', title: 'Marcus Aurelius: 7 Stoic Rules To Keep In Mind When Betrayed', channel: 'Daily Stoic Wisdom', channelId: 'ch_stoic_1', subs: 850, views: 142000, vph: 920, dur: 1240, thumb: 'https://i.ytimg.com/vi/8iFmJb7zW3k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 18).toISOString(), country: 'US', outlierRatio: 167.1 },
+        { id: 'RzL1yH3oZoU', title: 'Why Silence Is Your Greatest Weapon | Lessons From Ancient Wisdom', channel: 'Philosophy & Life', channelId: 'ch_phil_1', subs: 740, views: 195000, vph: 1410, dur: 1450, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 20).toISOString(), country: 'US', outlierRatio: 263.5 }
       ]
     },
     {
       id: 'demo_us_prayer',
-      name: 'Catholic Morning Prayer & Bible Deep Sleep (Dò ra 24h qua)',
+      name: 'Catholic Morning Prayer & Bible Deep Sleep (< 1k sub)',
       category: 'Catholic Prayer US',
       rpm: '$22 - $42',
       avgRpm: 32,
       maxViews: 142000,
-      maxOutlier: 7.2,
-      channelsCount: 5,
+      maxOutlier: 218.5,
+      channelsCount: 2,
       videos: [
-        { id: 'RzL1yH3oZoU', title: 'Catholic Morning Prayer | Christ Sees Your Suffering & Rest In God\'s Grace', channel: 'Sacred Echoes of Grace', channelId: 'ch_grace_1', subs: 19500, views: 142000, vph: 360, dur: 2125, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 12).toISOString(), country: 'US', outlierRatio: 7.3 },
-        { id: 'W_rU8yBfP8k', title: 'Pray This Over Your Family Tonight: Powerful Scripture Shield', channel: 'Faithful Reflections', channelId: 'ch_faith_1', subs: 16400, views: 128000, vph: 290, dur: 1840, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 34).toISOString(), country: 'US', outlierRatio: 7.8 }
+        { id: 'RzL1yH3oZoU', title: 'Catholic Morning Prayer | Christ Sees Your Suffering & Rest In God\'s Grace', channel: 'Sacred Echoes of Grace', channelId: 'ch_grace_1', subs: 650, views: 142000, vph: 1040, dur: 2125, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 12).toISOString(), country: 'US', outlierRatio: 218.5 },
+        { id: 'W_rU8yBfP8k', title: 'Pray This Over Your Family Tonight: Powerful Scripture Shield', channel: 'Faithful Reflections', channelId: 'ch_faith_1', subs: 580, views: 128000, vph: 950, dur: 1840, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 19).toISOString(), country: 'US', outlierRatio: 220.7 }
       ]
     }
   ],
   GLOBAL: [
     {
       id: 'demo_gl_case',
-      name: 'Case Study & Rise and Fall of Empires (Dò ra 24h qua)',
+      name: 'Case Study & Rise and Fall of Empires (< 1k sub • > 50k view)',
       category: 'Case Study Global',
       rpm: '$28 - $52',
       avgRpm: 38,
       maxViews: 215000,
-      maxOutlier: 9.6,
-      channelsCount: 7,
+      maxOutlier: 275.6,
+      channelsCount: 3,
       videos: [
-        { id: 'W_rU8yBfP8k', title: 'The Billion-Dollar Collapse: How Bad Leadership Crushed an Industry Leader', channel: 'Business Case Chronicles', channelId: 'ch_biz_gl', subs: 15400, views: 215000, vph: 510, dur: 2420, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 14).toISOString(), country: 'US', outlierRatio: 13.9 },
-        { id: '8iFmJb7zW3k', title: 'How One Decision Triggered a Global Market Meltdown', channel: 'Market Autopsy', channelId: 'ch_mkt_gl', subs: 19800, views: 172000, vph: 390, dur: 1890, thumb: 'https://i.ytimg.com/vi/8iFmJb7zW3k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 30).toISOString(), country: 'US', outlierRatio: 8.7 }
+        { id: 'W_rU8yBfP8k', title: 'The Billion-Dollar Collapse: How Bad Leadership Crushed an Industry Leader', channel: 'Business Case Chronicles', channelId: 'ch_biz_gl', subs: 780, views: 215000, vph: 1620, dur: 2420, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 14).toISOString(), country: 'US', outlierRatio: 275.6 },
+        { id: '8iFmJb7zW3k', title: 'How One Decision Triggered a Global Market Meltdown', channel: 'Market Autopsy', channelId: 'ch_mkt_gl', subs: 910, views: 172000, vph: 1180, dur: 1890, thumb: 'https://i.ytimg.com/vi/8iFmJb7zW3k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 17).toISOString(), country: 'US', outlierRatio: 189.0 }
       ]
     },
     {
       id: 'demo_gl_mystery',
-      name: 'Deep Ocean Mysteries & Unexplained Abyss (Dò ra 24h qua)',
+      name: 'Deep Ocean Mysteries & Unexplained Abyss (< 1k sub)',
       category: 'Ocean Mysteries',
       rpm: '$22 - $40',
       avgRpm: 30,
       maxViews: 190000,
-      maxOutlier: 8.1,
-      channelsCount: 5,
+      maxOutlier: 283.6,
+      channelsCount: 2,
       videos: [
-        { id: 'RzL1yH3oZoU', title: 'What Was Found 10,000 Meters Below Sea Level Shocked Scientists', channel: 'Abyss Chronicles', channelId: 'ch_abyss_1', subs: 17200, views: 190000, vph: 440, dur: 1980, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 20).toISOString(), country: 'GLOBAL', outlierRatio: 11.0 }
+        { id: 'RzL1yH3oZoU', title: 'What Was Found 10,000 Meters Below Sea Level Shocked Scientists', channel: 'Abyss Chronicles', channelId: 'ch_abyss_1', subs: 670, views: 190000, vph: 1390, dur: 1980, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 16).toISOString(), country: 'GLOBAL', outlierRatio: 283.6 }
       ]
     }
   ],
   KR: [
     {
       id: 'demo_kr_health',
-      name: '시니어 건강 & 장수 비결 (Dò ra 24h qua)',
+      name: '시니어 건강 & 장수 비결 (< 1k sub • > 50k view)',
       category: '시니어 건강 KR',
       rpm: '$18 - $35',
       avgRpm: 26,
       maxViews: 185000,
-      maxOutlier: 6.4,
-      channelsCount: 4,
+      maxOutlier: 256.9,
+      channelsCount: 2,
       videos: [
-        { id: 'mNUIrYwBw6Q', title: '의사들이 매일 아침 꼭 챙겨먹는 3가지 음식 (혈관 청소)', channel: '닥터 시니어 건강 KR', channelId: 'ch_health_kr_1', subs: 12500, views: 185000, vph: 460, dur: 890, thumb: 'https://i.ytimg.com/vi/mNUIrYwBw6Q/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 16).toISOString(), country: 'KR', outlierRatio: 14.8 }
+        { id: 'mNUIrYwBw6Q', title: '의사들이 매일 아침 꼭 챙겨먹는 3가지 음식 (혈관 청소)', channel: '닥터 시니어 건강 KR', channelId: 'ch_health_kr_1', subs: 720, views: 185000, vph: 1420, dur: 890, thumb: 'https://i.ytimg.com/vi/mNUIrYwBw6Q/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 15).toISOString(), country: 'KR', outlierRatio: 256.9 }
       ]
     },
     {
       id: 'demo_kr_crime',
-      name: '미제 사건 & 범죄 심리 다큐멘터리 (Dò ra 24h qua)',
+      name: '미제 사건 & 범죄 심리 다큐멘터리 (< 1k sub)',
       category: '범죄 미스터리 KR',
       rpm: '$20 - $38',
       avgRpm: 28,
       maxViews: 168000,
-      maxOutlier: 7.1,
-      channelsCount: 5,
+      maxOutlier: 200.0,
+      channelsCount: 2,
       videos: [
-        { id: 'W_rU8yBfP8k', title: '대한민국 미제 사건의 결정적 단서와 프로파일러 분석', channel: '미스터리 수사대 KR', channelId: 'ch_crime_kr_1', subs: 14200, views: 168000, vph: 390, dur: 1650, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 22).toISOString(), country: 'KR', outlierRatio: 11.8 }
+        { id: 'W_rU8yBfP8k', title: '대한민국 미제 사건의 결정적 단서와 프로파일러 분석', channel: '미스터리 수사대 KR', channelId: 'ch_crime_kr_1', subs: 840, views: 168000, vph: 1100, dur: 1650, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 19).toISOString(), country: 'KR', outlierRatio: 200.0 }
       ]
     }
   ],
   JP: [
     {
       id: 'demo_jp_health',
-      name: '健康・シニアライフの知恵 (Dò ra 24h qua)',
+      name: '健康・シニアライフの知恵 (< 1k sub • > 50k view)',
       category: '健康寿命 JP',
       rpm: '$18 - $35',
       avgRpm: 26,
       maxViews: 165000,
-      maxOutlier: 5.8,
-      channelsCount: 4,
+      maxOutlier: 279.7,
+      channelsCount: 2,
       videos: [
-        { id: 'RzL1yH3oZoU', title: '【医師解説】血管が若返る！毎朝食べるべき最強の食材3選', channel: 'シニア健康倶楽部 JP', channelId: 'ch_jp_health_1', subs: 11800, views: 165000, vph: 410, dur: 940, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 20).toISOString(), country: 'JP', outlierRatio: 14.0 }
+        { id: 'RzL1yH3oZoU', title: '【医師解説】血管が若返る！毎朝食べるべき最強の食材3選', channel: 'シニア健康倶楽部 JP', channelId: 'ch_jp_health_1', subs: 590, views: 165000, vph: 1210, dur: 940, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 13).toISOString(), country: 'JP', outlierRatio: 279.7 }
       ]
     },
     {
       id: 'demo_jp_mystery',
-      name: '未解決事件・ミステリー真相 (Dò ra 24h qua)',
+      name: '未解決事件・ミステリー真相 (< 1k sub)',
       category: '未解決事件 JP',
       rpm: '$22 - $40',
       avgRpm: 30,
       maxViews: 178000,
-      maxOutlier: 6.9,
-      channelsCount: 5,
+      maxOutlier: 247.2,
+      channelsCount: 2,
       videos: [
-        { id: 'W_rU8yBfP8k', title: '日本史の闇と消えた重要証拠の謎を徹底検証', channel: '歴史ミステリー考察 JP', channelId: 'ch_jp_hist_1', subs: 13500, views: 178000, vph: 430, dur: 1720, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 26).toISOString(), country: 'JP', outlierRatio: 13.2 }
+        { id: 'W_rU8yBfP8k', title: '日本史の闇と消えた重要証拠の謎を徹底検証', channel: '歴史ミステリー考察 JP', channelId: 'ch_jp_hist_1', subs: 720, views: 178000, vph: 1330, dur: 1720, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 18).toISOString(), country: 'JP', outlierRatio: 247.2 }
       ]
     }
   ],
   VN: [
     {
       id: 'demo_vn_crime',
-      name: 'Hồ Sơ Vụ Án & Pháp Luật Kỳ Án (Dò ra 24h qua)',
+      name: 'Hồ Sơ Vụ Án & Pháp Luật Kỳ Án (< 1k sub • > 50k view)',
       category: 'Hồ Sơ Vụ Án VN',
       rpm: '$8 - $18',
       avgRpm: 12,
       maxViews: 195000,
-      maxOutlier: 7.8,
-      channelsCount: 5,
+      maxOutlier: 240.7,
+      channelsCount: 2,
       videos: [
-        { id: 'W_rU8yBfP8k', title: 'Lời Khai Bất Ngờ Khiến Điều Tra Viên Lật Lại Toàn Bộ Hồ Sơ Vụ Án', channel: 'Kỳ Án Đời Thực VN', channelId: 'ch_vn_crime_1', subs: 16200, views: 195000, vph: 480, dur: 2100, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 18).toISOString(), country: 'VN', outlierRatio: 12.0 }
+        { id: 'W_rU8yBfP8k', title: 'Lời Khai Bất Ngờ Khiến Điều Tra Viên Lật Lại Toàn Bộ Hồ Sơ Vụ Án', channel: 'Kỳ Án Đời Thực VN', channelId: 'ch_vn_crime_1', subs: 810, views: 195000, vph: 1480, dur: 2100, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 14).toISOString(), country: 'VN', outlierRatio: 240.7 }
       ]
     },
     {
       id: 'demo_vn_health',
-      name: 'Sức Khỏe Người Cao Tuổi & Bài Thuốc Dân Gian (Dò ra 24h qua)',
+      name: 'Sức Khỏe Người Cao Tuổi & Bài Thuốc Dân Gian (< 1k sub)',
       category: 'Sức Khỏe VN',
       rpm: '$6 - $14',
       avgRpm: 10,
       maxViews: 154000,
-      maxOutlier: 6.5,
-      channelsCount: 4,
+      maxOutlier: 226.5,
+      channelsCount: 2,
       videos: [
-        { id: 'RzL1yH3oZoU', title: 'Bác Sĩ Chia Sẻ 3 Thói Quen Buổi Sáng Giúp Huyết Áp Ổn Định Suốt Cả Ngày', channel: 'Sống Vui Sống Khỏe VN', channelId: 'ch_vn_health_1', subs: 14500, views: 154000, vph: 360, dur: 1140, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 30).toISOString(), country: 'VN', outlierRatio: 10.6 }
+        { id: 'RzL1yH3oZoU', title: 'Bác Sĩ Chia Sẻ 3 Thói Quen Buổi Sáng Giúp Huyết Áp Ổn Định Suốt Cả Ngày', channel: 'Sống Vui Sống Khỏe VN', channelId: 'ch_vn_health_1', subs: 680, views: 154000, vph: 1140, dur: 1140, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 17).toISOString(), country: 'VN', outlierRatio: 226.5 }
       ]
     }
   ]
 }), []);
 
-// Thuật toán: Dò ngẫu nhiên 2 ngách thật từ pool, đồng nhất cho mọi tài khoản trong ngày
 const dailyTwoNiches = React.useMemo(() => {
   const marketPool = (realDiscoveredNiches && realDiscoveredNiches.length > 0)
     ? realDiscoveredNiches
@@ -3679,91 +3681,91 @@ const handleClearCache=()=>{try{localStorage.removeItem(getMarketStorageKey(sele
 
 const MARKET_SEEDS = React.useMemo(() => ({
   VN: [
-    { id: 'vn_health', label: 'Sức Khỏe & Y Khoa Người Cao Tuổi', q: 'bác sĩ sức khỏe người già cao tuổi huyết áp tim mạch đột quỵ', rpm: '$8 - $18' },
-    { id: 'vn_crime', label: 'Hồ Sơ Vụ Án & Pháp Luật Kỳ Án', q: 'vụ án bí ẩn lời khai điều tra phá án kỳ án việt nam', rpm: '$6 - $15' },
-    { id: 'vn_life', label: 'Mẹo Vặt Đời Sống & Gia Đình Thông Minh', q: 'mẹo vặt nhà bếp đời sống thông minh gia đình mẹo hay', rpm: '$6 - $14' },
-    { id: 'vn_biz', label: 'Bài Học Kinh Doanh & Câu Chuyện Làm Giàu', q: 'câu chuyện kinh doanh bài học khởi nghiệp đế chế thất bại', rpm: '$10 - $22' },
-    { id: 'vn_karma', label: 'Tâm Linh, Nhân Quả & Đạo Làm Người', q: 'nhân quả cuộc sống bài học làm người triết lý phật pháp', rpm: '$7 - $16' },
-    { id: 'vn_agri', label: 'Nông Nghiệp Sáng Tạo & Thôn Quê', q: 'nông nghiệp sáng tạo bỏ phố về rừng làm vườn homestay', rpm: '$8 - $18' },
-    { id: 'vn_mil', label: 'Lịch Sử Hào Hùng & Bí Mật Quân Sự VN', q: 'lịch sử việt nam chiến dịch trận đánh hào hùng bí mật quân sự', rpm: '$8 - $18' },
-    { id: 'vn_space', label: 'Bí Ẩn Vũ Trụ & Khoa Học Khám Phá', q: 'khám phá vũ trụ khoa học hiện tượng kỳ bí thế giới tự nhiên', rpm: '$9 - $20' },
-    { id: 'vn_finance', label: 'Góc Khuất Tài Chính & Cảnh Báo Lừa Đảo', q: 'bẫy tài chính đầu tư chứng khoán bất động sản cảnh báo lừa đảo', rpm: '$12 - $25' },
-    { id: 'vn_house', label: 'Nhà Vườn Nghỉ Dưỡng & Kiến Trúc Độc Lạ', q: 'nhà vườn nghỉ dưỡng biệt phủ thiết kế kiến trúc thông minh độc lạ', rpm: '$10 - $22' },
-    { id: 'vn_geo', label: 'Địa Lý & Địa Chính Trị Đông Nam Á', q: 'địa lý việt nam biên giới hải đảo địa chính trị bí ẩn địa danh', rpm: '$8 - $18' },
-    { id: 'vn_ai_film', label: 'Hoạt Hình AI & Phim Ngắn Sáng Tạo', q: 'phim ngắn hoạt hình ai 3d kịch bản cảm động nhân văn', rpm: '$10 - $22' },
-    { id: 'vn_psych', label: 'Tâm Lý Học Hành Vi & Nghệ Thuật Ứng Xử', q: 'tâm lý học thao túng thấu hiểu lòng người nghệ thuật giao tiếp', rpm: '$9 - $20' },
-    { id: 'vn_survival', label: 'Kỳ Quan Thiên Nhiên & Sinh Tồn Rừng Sâu', q: 'sinh tồn hoang dã cắm trại rừng sâu khám phá hang động việt nam', rpm: '$8 - $17' },
-    { id: 'vn_collapse', label: 'Lịch Sử Thương Trường & Đại Gia Sụp Đổ', q: 'đại gia việt nam phá sản bê bối thương trường bài học kinh tế', rpm: '$11 - $24' }
+    { id: 'vn_health', label: 'Sức Khỏe & Y Khoa Người Cao Tuổi', q: 'bác sĩ sức khỏe người già huyết áp', rpm: '$8 - $18' },
+    { id: 'vn_crime', label: 'Hồ Sơ Vụ Án & Pháp Luật Kỳ Án', q: 'vụ án bí ẩn kỳ án điều tra phá án', rpm: '$6 - $15' },
+    { id: 'vn_life', label: 'Mẹo Vặt Đời Sống & Gia Đình Thông Minh', q: 'mẹo vặt nhà bếp đời sống thông minh', rpm: '$6 - $14' },
+    { id: 'vn_biz', label: 'Bài Học Kinh Doanh & Câu Chuyện Làm Giàu', q: 'câu chuyện kinh doanh bài học khởi nghiệp', rpm: '$10 - $22' },
+    { id: 'vn_karma', label: 'Tâm Linh, Nhân Quả & Đạo Làm Người', q: 'nhân quả cuộc sống triết lý đạo lý', rpm: '$7 - $16' },
+    { id: 'vn_agri', label: 'Nông Nghiệp Sáng Tạo & Thôn Quê', q: 'nông nghiệp sáng tạo bỏ phố về rừng', rpm: '$8 - $18' },
+    { id: 'vn_mil', label: 'Lịch Sử Hào Hùng & Bí Mật Quân Sự VN', q: 'lịch sử việt nam chiến dịch hào hùng', rpm: '$8 - $18' },
+    { id: 'vn_space', label: 'Bí Ẩn Vũ Trụ & Khoa Học Khám Phá', q: 'khám phá vũ trụ khoa học bí ẩn', rpm: '$9 - $20' },
+    { id: 'vn_finance', label: 'Góc Khuất Tài Chính & Cảnh Báo Lừa Đảo', q: 'bẫy tài chính chứng khoán cảnh báo lừa đảo', rpm: '$12 - $25' },
+    { id: 'vn_house', label: 'Nhà Vườn Nghỉ Dưỡng & Kiến Trúc Độc Lạ', q: 'nhà vườn nghỉ dưỡng biệt phủ độc lạ', rpm: '$10 - $22' },
+    { id: 'vn_geo', label: 'Địa Lý & Địa Chính Trị Đông Nam Á', q: 'địa lý việt nam địa chính trị biên giới', rpm: '$8 - $18' },
+    { id: 'vn_ai_film', label: 'Hoạt Hình AI & Phim Ngắn Sáng Tạo', q: 'phim ngắn hoạt hình ai 3d cảm động', rpm: '$10 - $22' },
+    { id: 'vn_psych', label: 'Tâm Lý Học Hành Vi & Nghệ Thuật Ứng Xử', q: 'tâm lý học thao túng thấu hiểu lòng người', rpm: '$9 - $20' },
+    { id: 'vn_survival', label: 'Kỳ Quan Thiên Nhiên & Sinh Tồn Rừng Sâu', q: 'sinh tồn hoang dã cắm trại rừng sâu', rpm: '$8 - $17' },
+    { id: 'vn_collapse', label: 'Lịch Sử Thương Trường & Đại Gia Sụp Đổ', q: 'đại gia việt nam phá sản bê bối', rpm: '$11 - $24' }
   ],
   JP: [
-    { id: 'jp_health', label: '健康・シニアライフ (Sức Khỏe & Cao Niên JP)', q: '健康 寿命 シニア 高齢者 食事 改善 血管 医者', rpm: '$18 - $35' },
-    { id: 'jp_crime', label: '未解決事件・ミステリー (Bí Ẩn Vụ Án JP)', q: '未解決事件 ドキュメンタリー 闇 真相 心理', rpm: '$20 - $38' },
-    { id: 'jp_trivia', label: '生活の知恵・裏技 (Mẹo Vặt & Trí Tuệ JP)', q: '裏技 ライフハック 節約 暮らし 知恵 雑学', rpm: '$16 - $30' },
-    { id: 'jp_biz', label: '企業倒産・ビジネス事件簿 (Kinh Doanh JP)', q: '企業 倒産 ゆっくり解説 失敗 ビジネス 崩壊', rpm: '$22 - $42' },
-    { id: 'jp_hist', label: '歴史の闇・古代文明 (Bí Mật Lịch Sử JP)', q: '歴史 ミステリー 日本史 古代 文明 封印', rpm: '$18 - $34' },
-    { id: 'jp_dark_psych', label: '人間心理・マインド (Tâm Lý Học JP)', q: '人間関係 心理学 処世術 老後 生き方 教訓', rpm: '$18 - $36' },
-    { id: 'jp_ocean', label: '深海・巨大生物 (Đại Dương Sâu JP)', q: '深海 生物 謎 探検 ダイオウイカ 限界', rpm: '$18 - $32' },
-    { id: 'jp_ai_tech', label: 'AI・未来技術 (Công Nghệ AI JP)', q: 'AI 人工知能 未来 テクノロジー ロボット 進化', rpm: '$20 - $38' },
-    { id: 'jp_aviation', label: '航空機事故・真相解明 (Tai Nạn Hàng Không JP)', q: '航空事故 メーデー ブラックボックス 調査 検証', rpm: '$20 - $38' },
-    { id: 'jp_space', label: '宇宙の謎・深宇宙 (Vũ Trụ JP)', q: '宇宙 謎 ブラックホール ジェームズウェッブ 銀河', rpm: '$18 - $34' }
+    { id: 'jp_health', label: '健康・シニアライフ (Sức Khỏe & Cao Niên JP)', q: '健康 寿命 シニア 血管 医者', rpm: '$18 - $35' },
+    { id: 'jp_crime', label: '未解決事件・ミステリー (Bí Ẩn Vụ Án JP)', q: '未解決事件 ドキュメンタリー 真相 心理', rpm: '$20 - $38' },
+    { id: 'jp_trivia', label: '生活の知恵・裏技 (Mẹo Vặt & Trí Tuệ JP)', q: '裏技 ライフハック 節約 知恵', rpm: '$16 - $30' },
+    { id: 'jp_biz', label: '企業倒産・ビジネス事件簿 (Kinh Doanh JP)', q: '企業 倒産 ゆっくり解説 ビジネス崩壊', rpm: '$22 - $42' },
+    { id: 'jp_hist', label: '歴史の闇・古代文明 (Bí Mật Lịch Sử JP)', q: '歴史 ミステリー 日本史 古代文明', rpm: '$18 - $34' },
+    { id: 'jp_dark_psych', label: '人間心理・マインド (Tâm Lý Học JP)', q: '人間関係 心理学 処世術 教訓', rpm: '$18 - $36' },
+    { id: 'jp_ocean', label: '深海・巨大生物 (Đại Dương Sâu JP)', q: '深海 生物 謎 ダイオウイカ', rpm: '$18 - $32' },
+    { id: 'jp_ai_tech', label: 'AI・未来技術 (Công Nghệ AI JP)', q: 'AI 人工知能 未来 テクノロジー', rpm: '$20 - $38' },
+    { id: 'jp_aviation', label: '航空機事故・真相解明 (Tai Nạn Hàng Không JP)', q: '航空事故 メーデー ブラックボックス 調査', rpm: '$20 - $38' },
+    { id: 'jp_space', label: '宇宙の謎・深宇宙 (Vũ Trụ JP)', q: '宇宙 謎 ブラックホール ジェームズウェッブ', rpm: '$18 - $34' }
   ],
   US: [
-    { id: 'us_case', label: 'Case Study & Rise and Fall of Empires', q: 'case study rise and fall business story', rpm: '$35 - $60' },
-    { id: 'us_crime', label: 'True Crime & Police Interrogations', q: 'police interrogation confession body language psychology jcs', rpm: '$25 - $38' },
-    { id: 'us_stoic', label: 'Stoic Wisdom & Elder Life Lessons', q: 'stoic life lessons marcus aurelius rules', rpm: '$26 - $42' },
-    { id: 'us_dark_psych', label: 'Dark Psychology & Human Manipulation', q: 'dark psychology manipulation laws human nature robert greene', rpm: '$26 - $48' },
-    { id: 'us_military', label: 'Modern Military Tech & Black Projects', q: 'secret military aircraft black projects submarine weapon skunk works', rpm: '$28 - $50' },
-    { id: 'us_prayer', label: 'Catholic Daily Prayer & Bible Sleep', q: 'Catholic morning prayer sleep with scripture peaceful', rpm: '$22 - $42' },
-    { id: 'us_ai', label: 'AI Animation & Cinematic Short Film', q: 'ai animation cinematic film midjourney unreal engine', rpm: '$30 - $48' },
-    { id: 'us_ancient', label: 'Lost Ancient Civilizations & Archaeology', q: 'ancient civilization lost technology forbidden archaeology pyramids', rpm: '$24 - $42' },
-    { id: 'us_ocean', label: 'Deep Ocean Mysteries & Extreme Abyss', q: 'deep ocean mystery abyss creature expedition mariana trench', rpm: '$22 - $40' },
-    { id: 'us_finance', label: 'Finance Meltdowns & Market Crashes', q: 'financial collapse wall street market crash recession bubble', rpm: '$30 - $55' },
-    { id: 'us_aviation', label: 'Aviation Disasters & Black Box Solved', q: 'aviation disaster plane crash investigation black box mayday', rpm: '$25 - $45' },
-    { id: 'us_space', label: 'Space Mysteries & Cosmic Horrors', q: 'space mystery james webb telescope black hole fermi paradox', rpm: '$24 - $40' },
-    { id: 'us_survival', label: 'Survival, Bushcraft & Primitive Shelter', q: 'solo survival shelter primitive building bushcraft deep woods', rpm: '$20 - $36' },
-    { id: 'us_internet', label: 'Unsolved Internet Rabbit Holes & ARGs', q: 'internet mystery lost media rabbit hole iceberg arg dark web', rpm: '$22 - $38' },
-    { id: 'us_geopolitics', label: 'Geopolitics & Strategic Border Wars', q: 'geopolitics geography why country border war military corridor', rpm: '$26 - $45' },
-    { id: 'us_warfare', label: 'Medieval Warfare & Ancient Tactics', q: 'ancient warfare military tactics roman battle siege weapons', rpm: '$22 - $38' },
-    { id: 'us_bunkers', label: 'Billionaire Megaprojects & Luxury Bunkers', q: 'billionaire underground bunker luxury megaproject construction', rpm: '$28 - $52' },
-    { id: 'us_longevity', label: 'Health Longevity & Biohacking Protocols', q: 'longevity neuroscience biohacking sleep optimization doctor protocol', rpm: '$28 - $50' },
-    { id: 'us_philosophy', label: 'Existential Philosophy & Mind Advice', q: 'philosophy existential dread nietzsche life advice lessons', rpm: '$22 - $38' },
-    { id: 'us_supercars', label: 'Engineering Secrets & Automotive Breakdown', q: 'engineering secrets supercar engine breakdown mechanic explain', rpm: '$25 - $45' },
-    { id: 'us_coldcases', label: 'Cold Case Files & Unexplained Disappearances', q: 'unexplained disappearance vanished missing person solved mystery', rpm: '$24 - $40' },
-    { id: 'us_scifi', label: 'Sci-Fi Future Concepts & Dyson Spheres', q: 'dyson sphere kardashev scale future civilization concepts', rpm: '$25 - $46' }
+    { id: 'us_case', label: 'Case Study & Rise and Fall of Empires', q: 'business case study collapse downfall', rpm: '$35 - $60' },
+    { id: 'us_crime', label: 'True Crime & Police Interrogations', q: 'police interrogation confession body language', rpm: '$25 - $38' },
+    { id: 'us_stoic', label: 'Stoic Wisdom & Elder Life Lessons', q: 'stoic rules marcus aurelius life lessons', rpm: '$26 - $42' },
+    { id: 'us_dark_psych', label: 'Dark Psychology & Human Manipulation', q: 'dark psychology manipulation human behavior', rpm: '$26 - $48' },
+    { id: 'us_military', label: 'Modern Military Tech & Black Projects', q: 'military aircraft black projects weapons', rpm: '$28 - $50' },
+    { id: 'us_prayer', label: 'Catholic Daily Prayer & Bible Sleep', q: 'Catholic morning prayer scripture sleep', rpm: '$22 - $42' },
+    { id: 'us_ai', label: 'AI Animation & Cinematic Short Film', q: 'ai animation cinematic film unreal engine', rpm: '$30 - $48' },
+    { id: 'us_ancient', label: 'Lost Ancient Civilizations & Archaeology', q: 'ancient civilization lost technology archaeology', rpm: '$24 - $42' },
+    { id: 'us_ocean', label: 'Deep Ocean Mysteries & Extreme Abyss', q: 'deep ocean abyss creature expedition', rpm: '$22 - $40' },
+    { id: 'us_finance', label: 'Finance Meltdowns & Market Crashes', q: 'financial collapse market crash recession', rpm: '$30 - $55' },
+    { id: 'us_aviation', label: 'Aviation Disasters & Black Box Solved', q: 'aviation disaster crash investigation black box', rpm: '$25 - $45' },
+    { id: 'us_space', label: 'Space Mysteries & Cosmic Horrors', q: 'space mystery james webb black hole', rpm: '$24 - $40' },
+    { id: 'us_survival', label: 'Survival, Bushcraft & Primitive Shelter', q: 'solo survival shelter primitive bushcraft', rpm: '$20 - $36' },
+    { id: 'us_internet', label: 'Unsolved Internet Rabbit Holes & ARGs', q: 'internet mystery rabbit hole iceberg', rpm: '$22 - $38' },
+    { id: 'us_geopolitics', label: 'Geopolitics & Strategic Border Wars', q: 'geopolitics strategic border conflict corridor', rpm: '$26 - $45' },
+    { id: 'us_warfare', label: 'Medieval Warfare & Ancient Tactics', q: 'ancient warfare tactics roman siege battle', rpm: '$22 - $38' },
+    { id: 'us_bunkers', label: 'Billionaire Megaprojects & Luxury Bunkers', q: 'billionaire underground bunker luxury megaproject', rpm: '$28 - $52' },
+    { id: 'us_longevity', label: 'Health Longevity & Biohacking Protocols', q: 'longevity biohacking neuroscience protocol', rpm: '$28 - $50' },
+    { id: 'us_philosophy', label: 'Existential Philosophy & Mind Advice', q: 'existential philosophy nietzsche advice', rpm: '$22 - $38' },
+    { id: 'us_supercars', label: 'Engineering Secrets & Automotive Breakdown', q: 'engineering secrets supercar engine breakdown', rpm: '$25 - $45' },
+    { id: 'us_coldcases', label: 'Cold Case Files & Unexplained Disappearances', q: 'unexplained disappearance missing person mystery', rpm: '$24 - $40' },
+    { id: 'us_scifi', label: 'Sci-Fi Future Concepts & Dyson Spheres', q: 'dyson sphere kardashev scale future civilization', rpm: '$25 - $46' }
   ],
   KR: [
-    { id: 'kr_health', label: '시니어 건강 & 장수 비결 (Sức Khỏe KR)', q: '시니어 건강 장수 비결 음식 관리 혈압 당뇨 의사', rpm: '$16 - $32' },
-    { id: 'kr_crime', label: '미제사건 & 미스터리 (Kỳ Án KR)', q: '미제 사건 범죄 심리 다큐멘터리 진실', rpm: '$18 - $35' },
-    { id: 'kr_life', label: '생활 꿀팁 & 살림 비법 (Mẹo Vặt KR)', q: '살림 꿀팁 생활 꿀팁 정리 노하우 비법', rpm: '$14 - $28' },
-    { id: 'kr_biz', label: '기업 흥망성쇠 (Kinh Doanh KR)', q: '기업 파산 성공 스토리 비즈니스 케이스', rpm: '$20 - $38' },
-    { id: 'kr_hist', label: '한국 고대사 & 숨겨진 역사 (Lịch Sử KR)', q: '한국 고대사 숨겨진 역사 미스터리 발굴', rpm: '$18 - $34' },
-    { id: 'kr_psych', label: '인간관계 & 심리 법칙 (Tâm Lý KR)', q: '인간관계 심리 법칙 인생 조언 처세술', rpm: '$16 - $32' },
-    { id: 'kr_tech', label: '미래 기술 & AI 혁신 (Công Nghệ KR)', q: '미래 기술 ai 인공지능 로봇 과학 혁신', rpm: '$20 - $38' },
-    { id: 'kr_ocean', label: '심해 탐사 & 지구의 신비 (Đại Dương KR)', q: '심해 탐사 미지의 생물 마리아나 해구 신비', rpm: '$16 - $30' }
+    { id: 'kr_health', label: '시니어 건강 & 장수 비결 (Sức Khỏe KR)', q: '시니어 건강 장수 비결 의사 식단', rpm: '$16 - $32' },
+    { id: 'kr_crime', label: '미제사건 & 미스터리 (Kỳ Án KR)', q: '미제 사건 범죄 심리 다큐멘터리', rpm: '$18 - $35' },
+    { id: 'kr_life', label: '생활 꿀팁 & 살림 비법 (Mẹo Vặt KR)', q: '살림 꿀팁 생활 노하우 비법', rpm: '$14 - $28' },
+    { id: 'kr_biz', label: '기업 흥망성쇠 (Kinh Doanh KR)', q: '기업 파산 성공 스토리 비즈니스', rpm: '$20 - $38' },
+    { id: 'kr_hist', label: '한국 고대사 & 숨겨진 역사 (Lịch Sử KR)', q: '한국 고대사 숨겨진 역사 미스터리', rpm: '$18 - $34' },
+    { id: 'kr_psych', label: '인간관계 & 심리 법칙 (Tâm Lý KR)', q: '인간관계 심리 법칙 인생 조언', rpm: '$16 - $32' },
+    { id: 'kr_tech', label: '미래 기술 & AI 혁신 (Công Nghệ KR)', q: '미래 기술 ai 인공지능 로봇', rpm: '$20 - $38' },
+    { id: 'kr_ocean', label: '심해 탐사 & 지구의 신비 (Đại Dương KR)', q: '심해 탐사 마리아나 해구 신비', rpm: '$16 - $30' }
   ],
   GLOBAL: [
-    { id: 'gl_doc', label: 'Mini Documentaries & Hidden Mysteries', q: 'mini documentary mystery uncovered iceberg rabbit hole', rpm: '$25 - $45' },
-    { id: 'gl_biz', label: 'Business Breakdowns & Wealth Lessons', q: 'business breakdown how they got rich empire story', rpm: '$28 - $52' },
-    { id: 'gl_stoic', label: 'Stoic Wisdom & Psychology Rules', q: 'stoic rules psychology lessons you must learn before old', rpm: '$22 - $40' },
-    { id: 'gl_dark_psych', label: 'Dark Psychology & Human Behavior', q: 'dark psychology manipulation laws human nature robert greene', rpm: '$26 - $48' },
-    { id: 'gl_hist', label: 'Lost Ancient Civilizations', q: 'ancient civilization lost technology archaeology forbidden', rpm: '$24 - $40' },
-    { id: 'gl_ocean', label: 'Deep Ocean & Extreme Nature', q: 'deep ocean mystery abyss creature expedition mariana', rpm: '$22 - $38' },
-    { id: 'gl_tech', label: 'Futuristic Tech & AI Innovations', q: 'future technology humanoid robots ai inventions changed world', rpm: '$26 - $48' },
-    { id: 'gl_crime', label: 'True Crime & Police Interrogations', q: 'police interrogation confession body language psychology jcs', rpm: '$24 - $38' },
-    { id: 'gl_military', label: 'Modern Military Tech & Black Projects', q: 'secret military aircraft black projects submarine weapon skunk works', rpm: '$26 - $48' },
-    { id: 'gl_finance', label: 'Finance Meltdowns & Economic Meltdowns', q: 'financial collapse wall street market crash recession bubble', rpm: '$28 - $52' },
-    { id: 'gl_aviation', label: 'Aviation Disasters & Cockpit Recordings', q: 'aviation disaster plane crash investigation black box mayday', rpm: '$24 - $42' },
-    { id: 'gl_space', label: 'Space Mysteries & Cosmic Scale', q: 'space mystery james webb telescope black hole fermi paradox', rpm: '$22 - $38' },
-    { id: 'gl_survival', label: 'Survival, Bushcraft & Primitive Tech', q: 'solo survival shelter primitive building bushcraft deep woods', rpm: '$20 - $35' },
-    { id: 'gl_internet', label: 'Unsolved Internet Mysteries & Icebergs', q: 'internet mystery lost media rabbit hole iceberg arg dark web', rpm: '$22 - $38' },
-    { id: 'gl_geopolitics', label: 'Geopolitics & Strategic Choke Points', q: 'geopolitics geography why country border war military corridor', rpm: '$25 - $45' },
-    { id: 'gl_warfare', label: 'Medieval Warfare & Historic Tactics', q: 'ancient warfare military tactics roman battle siege weapons', rpm: '$22 - $38' },
-    { id: 'gl_bunkers', label: 'Billionaire Megaprojects & Luxury Living', q: 'billionaire underground bunker luxury megaproject construction', rpm: '$26 - $50' },
-    { id: 'gl_longevity', label: 'Longevity Science & Biohacking Protocols', q: 'longevity neuroscience biohacking sleep optimization doctor protocol', rpm: '$26 - $48' },
-    { id: 'gl_ai_film', label: 'Cinematic AI Films & 3D Storytelling', q: 'ai animation cinematic film midjourney unreal engine', rpm: '$28 - $48' },
-    { id: 'gl_philosophy', label: 'Existential Philosophy & Mind Lessons', q: 'philosophy existential dread nietzsche life advice lessons', rpm: '$22 - $38' },
-    { id: 'gl_supercars', label: 'Engineering Secrets & Automotive Breakdown', q: 'engineering secrets supercar engine breakdown mechanic explain', rpm: '$24 - $42' },
-    { id: 'gl_coldcases', label: 'Cold Case Files & Unexplained Mysteries', q: 'unexplained disappearance vanished missing person solved mystery', rpm: '$24 - $40' }
+    { id: 'gl_doc', label: 'Mini Documentaries & Hidden Mysteries', q: 'mini documentary mystery uncovered iceberg', rpm: '$25 - $45' },
+    { id: 'gl_biz', label: 'Business Breakdowns & Wealth Lessons', q: 'business breakdown how they got rich empire', rpm: '$28 - $52' },
+    { id: 'gl_stoic', label: 'Stoic Wisdom & Psychology Rules', q: 'stoic rules psychology lessons ancient wisdom', rpm: '$22 - $40' },
+    { id: 'gl_dark_psych', label: 'Dark Psychology & Human Behavior', q: 'dark psychology manipulation human behavior', rpm: '$26 - $48' },
+    { id: 'gl_hist', label: 'Lost Ancient Civilizations', q: 'ancient civilization lost technology archaeology', rpm: '$24 - $40' },
+    { id: 'gl_ocean', label: 'Deep Ocean & Extreme Nature', q: 'deep ocean abyss creature expedition', rpm: '$22 - $38' },
+    { id: 'gl_tech', label: 'Futuristic Tech & AI Innovations', q: 'future humanoid robots ai inventions', rpm: '$26 - $48' },
+    { id: 'gl_crime', label: 'True Crime & Police Interrogations', q: 'police interrogation confession body language', rpm: '$24 - $38' },
+    { id: 'gl_military', label: 'Modern Military Tech & Black Projects', q: 'military aircraft black projects weapons', rpm: '$26 - $48' },
+    { id: 'gl_finance', label: 'Finance Meltdowns & Economic Meltdowns', q: 'financial collapse market crash recession', rpm: '$28 - $52' },
+    { id: 'gl_aviation', label: 'Aviation Disasters & Cockpit Recordings', q: 'aviation disaster crash investigation black box', rpm: '$24 - $42' },
+    { id: 'gl_space', label: 'Space Mysteries & Cosmic Scale', q: 'space mystery james webb black hole paradox', rpm: '$22 - $38' },
+    { id: 'gl_survival', label: 'Survival, Bushcraft & Primitive Tech', q: 'solo survival shelter primitive bushcraft', rpm: '$20 - $35' },
+    { id: 'gl_internet', label: 'Unsolved Internet Mysteries & Icebergs', q: 'internet mystery rabbit hole iceberg', rpm: '$22 - $38' },
+    { id: 'gl_geopolitics', label: 'Geopolitics & Strategic Choke Points', q: 'geopolitics strategic border conflict corridor', rpm: '$25 - $45' },
+    { id: 'gl_warfare', label: 'Medieval Warfare & Historic Tactics', q: 'ancient warfare tactics roman siege battle', rpm: '$22 - $38' },
+    { id: 'gl_bunkers', label: 'Billionaire Megaprojects & Luxury Living', q: 'billionaire underground bunker luxury megaproject', rpm: '$26 - $50' },
+    { id: 'gl_longevity', label: 'Longevity Science & Biohacking Protocols', q: 'longevity biohacking neuroscience protocol', rpm: '$26 - $48' },
+    { id: 'gl_ai_film', label: 'Cinematic AI Films & 3D Storytelling', q: 'ai animation cinematic film unreal engine', rpm: '$28 - $48' },
+    { id: 'gl_philosophy', label: 'Existential Philosophy & Mind Lessons', q: 'existential philosophy nietzsche advice lessons', rpm: '$22 - $38' },
+    { id: 'gl_supercars', label: 'Engineering Secrets & Automotive Breakdown', q: 'engineering secrets supercar engine breakdown', rpm: '$24 - $42' },
+    { id: 'gl_coldcases', label: 'Cold Case Files & Unexplained Mysteries', q: 'unexplained disappearance missing person mystery', rpm: '$24 - $40' }
   ]
 }), []);
 
@@ -3776,27 +3778,575 @@ const q=(searchQuery||'').trim().toLowerCase();const visibleNiches=React.useMemo
 const activeNiche=React.useMemo(()=>{if(!isPro){if(demoNiche2&&activeNicheId===demoNiche2.id)return demoNiche2;return demoNiche1||demoNiche||null;}return visibleNiches.find(n=>n.id===activeNicheId)||visibleNiches[0]||null;},[isPro,demoNiche1,demoNiche2,demoNiche,visibleNiches,activeNicheId]);// Phân loại định dạng video: 'short' | 'long' | 'live'
 const getVideoFormat=React.useCallback(v=>{if(v.format)return v.format;if(v.isLive)return'live';const d=Number(v.dur)||0;const title=(v.title||'').toLowerCase();if(title.includes('#live')||title.includes('livestream')||title.includes('trực tiếp'))return'live';if(d>0&&d<=60)return'short';if(title.includes('#shorts')||title.includes('#short'))return'short';return'long';},[]);// Tự động phân tích từ khóa và đặt tên ngách sinh động
 const inferNicheTitle=(baseLabel,videos)=>{if(!videos||videos.length===0)return baseLabel;const allTitles=videos.map(v=>v.title).join(' ');const cleaned=allTitles.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/);const stopWords=new Set(['the','and','in','of','to','for','with','a','an','is','on','this','that','by','how','what','why','who','from','at','into','part','episode','full','video','watch','your','you','are','was','were','been','will','about','after','before','more','most']);const freq={};cleaned.forEach(w=>{if(w.length>3&&!stopWords.has(w)){freq[w]=(freq[w]||0)+1;}});const topKeywords=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,2).map(x=>x[0]);if(topKeywords.length>0){const cap=topKeywords.map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' & ');return`${baseLabel} (${cap})`;}return baseLabel;};// QUÉT DÒ NGÁCH THẬT 100% TỪ YOUTUBE DATA API V3 (CÔNG NGHỆ GỐC CHUẨN XÁC)
-const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchSizeOverride, isDailyReset=false)=>{if(!apiKey||typeof yt!=='function'){if(typeof showToast==='function')showToast('Vui lòng nhập YouTube API Key để quét ngách thật!','warning');if(typeof onOpenApiModal==='function')onOpenApiModal();return;}setIsScanningNiches(true);cancelScanRef.current=false;const tenDaysAgoISO=new Date(Date.now()-10*864e5).toISOString();if(isDailyReset&&typeof showToast==='function'){showToast('Đang quét bảng thịnh hành YouTube hôm nay ('+todayStr+') & bóc tách kênh nhỏ view to...','info');}
-let trendingKeywords=[];let chartBreakoutVideos=[];try{const popRegion=selectedMarket==='GLOBAL'?'US':selectedMarket;const popRes=await yt('videos',{part:'snippet,statistics,contentDetails',chart:'mostPopular',regionCode:popRegion,maxResults:50},apiKey);const popItems=popRes.items||[];if(popItems.length>0){const popChanIds=[...new Set(popItems.map(v=>v.snippet.channelId))];const popChanRes=await yt('channels',{part:'statistics,snippet,contentDetails',id:popChanIds.join(',')},apiKey);const popChanMap={};(popChanRes.items||[]).forEach(ch=>{const subCount=ch.statistics.hiddenSubscriberCount?null:Number(ch.statistics.subscriberCount);popChanMap[ch.id]={id:ch.id,name:ch.snippet.title,subCount,videoCount:Number(ch.statistics.videoCount||0),country:ch.snippet.country||popRegion,ageDays:Math.max(1,Math.round((Date.now()-new Date(ch.snippet.publishedAt).getTime())/864e5)),thumb:ch.snippet.thumbnails?.default?.url||''};});popItems.forEach(v=>{const ch=popChanMap[v.snippet.channelId];if(!ch)return;if(ch.subCount!==null&&ch.subCount<=subLimitFilter){const views=Number(v.statistics.viewCount||0);const minPopViews=selectedMarket==='VN'?3000:5000;if(views>=minPopViews){const pubTime=new Date(v.snippet.publishedAt).getTime();const ageHours=(Date.now()-pubTime)/36e5;const outlierRatio=ch.subCount?(views/Math.max(ch.subCount,1)).toFixed(1):(views/15000).toFixed(1);if(Number(outlierRatio)<1.5&&views<25000)return;const vph=Math.round(views/Math.max(0.1,ageHours));const durSeconds=typeof parseDur==='function'?parseDur(v.contentDetails?.duration):1800;const isLiveVid=v.snippet.liveBroadcastContent==='live'||v.snippet.liveBroadcastContent==='upcoming'||(v.snippet.title||'').toLowerCase().includes('#live')||(v.snippet.title||'').toLowerCase().includes('livestream');const isShortVid=!isLiveVid&&(durSeconds<=60||(v.snippet.title||'').toLowerCase().includes('#shorts')||(v.snippet.title||'').toLowerCase().includes('#short')||(v.snippet.tags||[]).some(t=>t.toLowerCase()==='shorts'||t.toLowerCase()==='short'));const vFormat=isLiveVid?'live':isShortVid?'short':'long';chartBreakoutVideos.push({id:v.id,title:v.snippet.title,channel:v.snippet.channelTitle,channelId:v.snippet.channelId,channelThumb:ch.thumb,thumb:typeof getBestThumb==='function'?getBestThumb(v.snippet.thumbnails):v.snippet.thumbnails?.medium?.url||'',published:v.snippet.publishedAt,ts:pubTime,views,likes:v.statistics.likeCount!=null?Number(v.statistics.likeCount):null,comments:v.statistics.commentCount!=null?Number(v.statistics.commentCount):null,dur:durSeconds,subs:ch.subCount,outlierRatio,videoCount:ch.videoCount,country:ch.country,channelAgeDays:ch.ageDays,channelPublishedAt:ch.publishedAt,isBreakout:true,format:vFormat,isLive:isLiveVid,isShort:isShortVid,hasCaptions:v.contentDetails?.caption==='true',licensedContent:!!v.contentDetails?.licensedContent,tags:v.snippet.tags||[],vph});}}});const tagFreq={};popItems.forEach(v=>{const tags=v.snippet.tags||[];const views=Number(v.statistics?.viewCount||0);tags.forEach(t=>{const clean=t.trim().replace(/^#+/,'');const lower=clean.toLowerCase();const junkRegex=/\b(trailer|teaser|official|movie|film|cinema|music\s*video|official\s*video|mv|song|songs|lyrics|remix|audio|soundtrack|ost|episode|reaction|react|tiktok|reels?|shorts?|live|livestream|stream|vlog|gameplay)\b/i;if(junkRegex.test(lower))return;if(clean.length>=3&&clean.length<=35&&!/^\d+$/.test(clean)&&!/^https?:/i.test(clean)){if(!tagFreq[lower])tagFreq[lower]={text:clean,count:0,views:0};tagFreq[lower].count+=1;tagFreq[lower].views+=views;}});});const rawCandidates=Object.values(tagFreq).filter(item=>item.count>=2||item.views>=50000).sort((a,b)=>(b.count*100000+b.views)-(a.count*100000+a.views));const uniqueTrendKeywords=[];for(const cand of rawCandidates){const candLower=cand.text.toLowerCase();const isDuplicate=uniqueTrendKeywords.some(ex=>{const exLower=ex.toLowerCase();return candLower.includes(exLower)||exLower.includes(candLower);});if(!isDuplicate){uniqueTrendKeywords.push(cand.text);}if(uniqueTrendKeywords.length>=3)break;}trendingKeywords=uniqueTrendKeywords;}}catch(popErr){console.warn('Error fetching trending popular videos:',popErr);}
-let seedsToScan=[];if(customQueryOverride){const rawParts=String(customQueryOverride).split(/[,;\n]+/).map(s=>s.trim()).filter(Boolean);if(rawParts.length>0){seedsToScan=rawParts.map((k,idx)=>({id:'custom_'+Date.now()+'_'+idx,label:k.charAt(0).toUpperCase()+k.slice(1),q:k,rpm:selectedMarket==='VN'?'$8 - $20':'$25 - $48'}));}}
-if(seedsToScan.length===0){const pool=SEED_TREND_TOPICS||[];const reqCount=batchSizeOverride||(scanBatchMode==='quick6'?6:scanBatchMode==='deepAll'?pool.length:12);let staticSeeds=[];if(reqCount<pool.length){const shuffled=[...pool].sort(()=>0.5-Math.random());staticSeeds=shuffled.slice(0,reqCount);}else{staticSeeds=[...pool];}if(isDailyReset){const dynamicTrendSeeds=trendingKeywords.map((k,idx)=>({id:'trend_kw_'+idx+'_'+Date.now(),label:'🔥 '+(k.charAt(0).toUpperCase()+k.slice(1))+' (Trend Hôm Nay)',q:k,rpm:selectedMarket==='VN'?'$8 - $20':'$25 - $48',isLiveTrendingTag:true}));seedsToScan=[...dynamicTrendSeeds,...staticSeeds];}else{seedsToScan=staticSeeds;}}
-const discoveredList=[];if(chartBreakoutVideos.length>0){chartBreakoutVideos.sort((a,b)=>b.views-a.views);const chartChannelsMap={};chartBreakoutVideos.forEach(v=>{if(!chartChannelsMap[v.channelId]){chartChannelsMap[v.channelId]={id:v.channelId,name:v.channel,subs:v.subs,url:'https://www.youtube.com/channel/'+v.channelId,videoCount:v.videoCount,country:v.country};}});const maxViews=chartBreakoutVideos[0].views;const maxOutlier=Math.max(...chartBreakoutVideos.map(v=>Number(v.outlierRatio)||0));discoveredList.push({id:'niche_chart_trending_'+Date.now(),name:`🔥 Kênh Nhỏ Lọt Top Thịnh Hành (${todayStr})`,category:'Trending YouTube Outliers',rpmRange:selectedMarket==='VN'?'$8 - $20':'$25 - $48',avgRpm:selectedMarket==='VN'?14:35,channelsCount:Object.keys(chartChannelsMap).length,channels:Object.values(chartChannelsMap),videos:chartBreakoutVideos,topVideo:chartBreakoutVideos[0],maxViews:maxViews,maxOutlier:maxOutlier.toFixed(1),scannedAt:Date.now(),scannedDate:todayStr,isTodayTrend:true});}
-let totalEligibleVideosFound=chartBreakoutVideos.length;let totalEligibleChannelsFound=Object.keys(chartBreakoutVideos.reduce((acc,v)=>({...acc,[v.channelId]:1}),{})).length;try{for(let i=0;i<seedsToScan.length;i++){if(cancelScanRef.current)break;const topic=seedsToScan[i];setScanProgress({current:i+1,total:seedsToScan.length,topic:topic.label,foundVideos:totalEligibleVideosFound,foundNiches:discoveredList.length});
-let searchRes;try{const searchParams={part:'snippet',type:'video',q:topic.q,order:'relevance',publishedAfter:tenDaysAgoISO,maxResults:50};if(selectedMarket==='GLOBAL'){searchParams.regionCode='US';searchParams.relevanceLanguage='en';}else{searchParams.regionCode=selectedMarket;searchParams.relevanceLanguage=selectedMarket==='VN'?'vi':selectedMarket==='JP'?'ja':selectedMarket==='KR'?'ko':'en';}searchRes=await yt('search',searchParams,apiKey);}catch(e){console.warn('Search API error on seed:',topic.label,e);if(e.code==='quotaExceeded'||e.code==='HTTP403'||(e.msg&&e.msg.includes('quota'))){if(typeof ytKeyManager!=='undefined'){const nextK=ytKeyManager.markQuotaExceeded(apiKey);if(nextK){if(typeof showToast==='function')showToast('Key hiện tại hết Quota, tự động xoay sang Key dự phòng!','info');continue;}}throw new Error('API Key đã hết hạn mức Quota hôm nay (10.000 units). Vui lòng thêm Key dự phòng trong cài đặt!');}if(e.code==='keyInvalid'||(e.msg&&e.msg.includes('API key not valid'))){throw new Error('YouTube API Key không hợp lệ. Vui lòng bấm Cấu hình API để nhập lại!');}continue;}
-const items=searchRes.items||[];const videoIds=items.map(it=>it.id&&it.id.videoId).filter(Boolean);if(videoIds.length===0)continue;
-let vidsRes;try{vidsRes=await yt('videos',{part:'snippet,statistics,contentDetails',id:videoIds.join(',')},apiKey);}catch(e){console.warn('Videos API error:',e);continue;}const vidsList=vidsRes.items||[];if(vidsList.length===0)continue;
-const channelIds=[...new Set(vidsList.map(v=>v.snippet.channelId))];let chRes;try{chRes=await yt('channels',{part:'statistics,snippet,contentDetails',id:channelIds.join(',')},apiKey);}catch(e){console.warn('Channels API error:',e);continue;}const channelsMap={};(chRes.items||[]).forEach(ch=>{const subCount=ch.statistics.hiddenSubscriberCount?null:Number(ch.statistics.subscriberCount);channelsMap[ch.id]={id:ch.id,name:ch.snippet.title,subCount:subCount,videoCount:Number(ch.statistics.videoCount||0),country:ch.snippet.country||'US',publishedAt:ch.snippet.publishedAt||'',ageDays:Math.max(1,Math.round((Date.now()-new Date(ch.snippet.publishedAt).getTime())/864e5)),uploadsId:ch.contentDetails?.relatedPlaylists?.uploads||ch.id.replace(/^UC/,'UU'),thumb:ch.snippet.thumbnails?.default?.url||''};});
-const eligibleVideosInTopic=[];const eligibleChannelsMap={};const isVietnameseText=str=>/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(str||'');
-vidsList.forEach(v=>{const chInfo=channelsMap[v.snippet.channelId];if(!chInfo)return;if(selectedMarket!=='VN'){if(isVietnameseText(v.snippet.title)||isVietnameseText(chInfo.name)||(chInfo.country&&chInfo.country==='VN'))return;}if(selectedMarket==='KR'){const hasKorean=/[가-힯ᄀ-ᇿ]/.test((v.snippet.title||'')+' '+(chInfo.name||''));if(!hasKorean)return;}if(selectedMarket==='JP'){const hasJapanese=/[぀-ヿ㐀-䶿一-鿿]/.test((v.snippet.title||'')+' '+(chInfo.name||''));if(!hasJapanese)return;}
-if(chInfo.subCount!==null&&chInfo.subCount>subLimitFilter)return;const views=Number(v.statistics.viewCount||0);const minRequiredViews=selectedMarket==='VN'?(subLimitFilter<=10000?2500:4000):(subLimitFilter<=10000?4000:7000);if(views<minRequiredViews)return;const pubTime=new Date(v.snippet.publishedAt).getTime();const ageHours=(Date.now()-pubTime)/36e5;if(ageHours>240)return;if(v.id==='xYz12345678'||v.id==='aBcDeFgHiJk')return;
-const outlierRatio=chInfo.subCount?(views/Math.max(chInfo.subCount,1)).toFixed(1):(views/15000).toFixed(1);const numericOutlier=Number(outlierRatio)||0;if(numericOutlier<1.5&&views<25000)return;const vph=Math.round(views/Math.max(0.1,ageHours));const likes=v.statistics.likeCount!=null?Number(v.statistics.likeCount):null;const comments=v.statistics.commentCount!=null?Number(v.statistics.commentCount):null;const engRate=views>0?(((likes||0)+(comments||0))/views*100).toFixed(2):'0';const durSeconds=typeof parseDur==='function'?parseDur(v.contentDetails?.duration):1800;const isBreakout=(chInfo.ageDays<=90||chInfo.videoCount<=15)&&views>=3000;const isLiveVid=v.snippet.liveBroadcastContent==='live'||v.snippet.liveBroadcastContent==='upcoming'||(v.snippet.title||'').toLowerCase().includes('#live')||(v.snippet.title||'').toLowerCase().includes('livestream');const isShortVid=!isLiveVid&&(durSeconds<=60||(v.snippet.title||'').toLowerCase().includes('#shorts')||(v.snippet.title||'').toLowerCase().includes('#short')||(v.snippet.tags||[]).some(t=>t.toLowerCase()==='shorts'||t.toLowerCase()==='short'));const vFormat=isLiveVid?'live':isShortVid?'short':'long';const videoObj={id:v.id,title:v.snippet.title,channel:v.snippet.channelTitle,channelId:v.snippet.channelId,channelThumb:chInfo.thumb||'',thumb:typeof getBestThumb==='function'?getBestThumb(v.snippet.thumbnails):v.snippet.thumbnails?.medium?.url||'',published:v.snippet.publishedAt,ts:pubTime,views:views,likes:likes,comments:comments,dur:durSeconds,subs:chInfo.subCount,outlierRatio:outlierRatio,videoCount:chInfo.videoCount,country:chInfo.country,channelAgeDays:chInfo.ageDays,channelPublishedAt:chInfo.publishedAt,uploadsId:chInfo.uploadsId,isBreakout:isBreakout,format:vFormat,isLive:isLiveVid,isShort:isShortVid,hasCaptions:v.contentDetails?.caption==='true',licensedContent:!!v.contentDetails?.licensedContent,tags:v.snippet.tags||[],engRate:engRate,isOrganic:Number(engRate)>=1.0,vph:vph};eligibleVideosInTopic.push(videoObj);if(!eligibleChannelsMap[chInfo.id]){eligibleChannelsMap[chInfo.id]={id:chInfo.id,name:chInfo.name,subs:chInfo.subCount,url:'https://www.youtube.com/channel/'+chInfo.id,videoCount:chInfo.videoCount,country:chInfo.country};}});
-if(eligibleVideosInTopic.length>0){eligibleVideosInTopic.sort((a,b)=>b.views-a.views);const maxViews=eligibleVideosInTopic[0].views;const maxOutlier=Math.max(...eligibleVideosInTopic.map(v=>Number(v.outlierRatio)||0));const minNicheMaxViews=selectedMarket==='VN'?5000:8000;const isNicheQualified=(maxViews>=minNicheMaxViews)||(maxOutlier>=2.2)||(eligibleVideosInTopic.length>=2&&maxViews>=4000);if(!isNicheQualified)continue;const channelList=Object.values(eligibleChannelsMap);totalEligibleVideosFound+=eligibleVideosInTopic.length;totalEligibleChannelsFound+=channelList.length;const inferredTitle=inferNicheTitle(topic.label,eligibleVideosInTopic);discoveredList.push({id:'niche_'+topic.id+'_'+Date.now(),name:inferredTitle,category:topic.label,rpmRange:topic.rpm,avgRpm:Number(topic.rpm.split('-')[0].replace(/\D/g,''))||25,channelsCount:channelList.length,channels:channelList,videos:eligibleVideosInTopic,topVideo:eligibleVideosInTopic[0],maxViews:maxViews,maxOutlier:maxOutlier.toFixed(1),scannedAt:Date.now(),scannedDate:todayStr,isTodayTrend:true});}
-await new Promise(r=>setTimeout(r,150));}
-discoveredList.sort((a,b)=>{const scoreA=(Number(a.maxOutlier)||0)*5000+(a.maxViews||0);const scoreB=(Number(b.maxOutlier)||0)*5000+(b.maxViews||0);return scoreB-scoreA;});const nowStr=new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})+' '+todayStr;setLastScannedTime(nowStr);setLastScannedDate(todayStr);
-setRealDiscoveredNiches(prevList=>{const mKey=getMarketStorageKey(selectedMarket);let finalSaved=[];if(isDailyReset){finalSaved=discoveredList.slice(0,50);}else{let marketCached=[];try{const raw=localStorage.getItem(mKey);if(raw)marketCached=JSON.parse(raw);}catch(e){}const nicheMap=new Map();(marketCached||[]).forEach(n=>{if(n.id&&n.id.includes('_init'))return;const key=(n.category||n.name||'').trim().toLowerCase();if(key)nicheMap.set(key,n);});(discoveredList||[]).forEach(newNiche=>{const key=(newNiche.category||newNiche.name||'').trim().toLowerCase();if(nicheMap.has(key)){const existing=nicheMap.get(key);const vMap=new Map();(existing.videos||[]).forEach(v=>vMap.set(v.id,v));(newNiche.videos||[]).forEach(v=>vMap.set(v.id,v));const mergedVids=Array.from(vMap.values());mergedVids.sort((a,b)=>(b.views||0)-(a.views||0));const chMap=new Map();(existing.channels||[]).forEach(c=>chMap.set(c.id,c));(newNiche.channels||[]).forEach(c=>chMap.set(c.id,c));nicheMap.set(key,{...existing,name:newNiche.name||existing.name,videos:mergedVids,channels:Array.from(chMap.values()),channelsCount:chMap.size,topVideo:mergedVids[0],maxViews:mergedVids[0]?.views||existing.maxViews,maxOutlier:Math.max(Number(existing.maxOutlier)||0,Number(newNiche.maxOutlier)||0).toFixed(1),scannedAt:Date.now()});}else{nicheMap.set(key,newNiche);}});const now=Date.now();let finalMerged=Array.from(nicheMap.values()).map(n=>{const freshVids=(n.videos||[]).filter(v=>{const vt=v.ts||(v.published?new Date(v.published).getTime():0);return now-vt<=10*864e5;});if(freshVids.length===0)return null;return{...n,videos:freshVids,topVideo:freshVids[0],maxViews:freshVids[0]?.views||n.maxViews};}).filter(Boolean);finalMerged.sort((a,b)=>(b.maxViews||0)-(a.maxViews||0));finalSaved=finalMerged.slice(0,30);}
-try{localStorage.setItem(mKey,JSON.stringify(finalSaved));localStorage.setItem(TIME_KEY+'_'+selectedMarket,nowStr);localStorage.setItem(getMarketDateKey(selectedMarket),todayStr);if(selectedMarket==='VN'){localStorage.setItem(STORAGE_KEY,JSON.stringify(finalSaved));localStorage.setItem(TIME_KEY,nowStr);localStorage.setItem(DATE_KEY,todayStr);}}catch(e){}if(finalSaved.length>0&&(!activeNicheId||!finalSaved.some(n=>n.id===activeNicheId))){setActiveNicheId(finalSaved[0].id);}return finalSaved;});
-if(typeof showToast==='function'){if(isDailyReset){showToast(discoveredList.length>0?`🎉 Đã reset thành công Top Ngách bứt phá hôm nay (${todayStr})! Bóc tách được ${discoveredList.length} ngách từ các kênh nhỏ view to.`:`Đã quét xong bảng thịnh hành hôm nay (${todayStr}), chưa có kênh <${subLimitFilter/1000}k sub nào đạt chuẩn mới.`,discoveredList.length>0?'success':'info');}else{showToast(discoveredList.length>0?`Thành công! Đã bóc tách được ${discoveredList.length} ngách trend từ các kênh <${subLimitFilter/1000}k sub.`:`Đã giữ nguyên các ngách đang có.`,discoveredList.length>0?'success':'info');}}
-}catch(err){console.error('Scan error:',err);if(typeof showToast==='function')showToast('Lỗi khi quét: '+(err.message||'Lỗi API'),'error');}finally{setIsScanningNiches(false);setScanProgress(null);}},[apiKey,SEED_TREND_TOPICS,subLimitFilter,showToast,onOpenApiModal,activeNicheId,selectedMarket,scanBatchMode,todayStr]);
+const TIMEFRAME_CONFIG = React.useMemo(() => ({
+  '12h': { label: '12 giờ qua', hours: 12 },
+  '24h': { label: '24 giờ qua', hours: 24 },
+  '3d': { label: '3 ngày qua', hours: 72 },
+  '7d': { label: '7 ngày qua', hours: 168 },
+  '14d': { label: '14 ngày qua', hours: 336 },
+  '30d': { label: '30 ngày qua', hours: 720 }
+}), []);
+
+const isVideoValid = React.useCallback(v => {
+  if (!v) return false;
+  const tfHours = (TIMEFRAME_CONFIG[timeframeFilter] || TIMEFRAME_CONFIG['24h']).hours;
+  const cutoffMs = Date.now() - tfHours * 36e5;
+  const pubMs = v.ts || (v.published ? new Date(v.published).getTime() : 0);
+  const ageHours = (Date.now() - pubMs) / 36e5;
+  if (pubMs < cutoffMs || ageHours > tfHours) return false;
+  if (subLimitFilter > 0 && v.subs !== null && v.subs !== undefined && v.subs > subLimitFilter) return false;
+  if (minViewsFilter > 0 && (v.views || 0) < minViewsFilter) return false;
+  return true;
+}, [timeframeFilter, subLimitFilter, minViewsFilter, TIMEFRAME_CONFIG]);
+
+const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchSizeOverride, isDailyReset=false)=>{
+  if(!apiKey||typeof yt!=='function'){
+    if(typeof showToast==='function')showToast('Vui lòng nhập YouTube API Key để quét ngách thật!','warning');
+    if(typeof onOpenApiModal==='function')onOpenApiModal();
+    return;
+  }
+  setIsScanningNiches(true);
+  cancelScanRef.current=false;
+
+  const tfHours = (TIMEFRAME_CONFIG[timeframeFilter] || TIMEFRAME_CONFIG['24h']).hours;
+  const tfLabel = (TIMEFRAME_CONFIG[timeframeFilter] || TIMEFRAME_CONFIG['24h']).label;
+  const cutoffTimeMs = Date.now() - tfHours * 36e5;
+  const publishedAfterISO = new Date(cutoffTimeMs).toISOString();
+
+  if(isDailyReset&&typeof showToast==='function'){
+    showToast('Đang quét YouTube ['+selectedMarket+'] trong '+tfLabel+' (Kênh <'+(subLimitFilter>0?subLimitFilter/1000+'k sub':'Mọi sub')+', View >'+minViewsFilter/1000+'k)...','info');
+  }
+
+  let trendingKeywords=[];
+  let chartBreakoutVideos=[];
+
+  try {
+    const popRegion = selectedMarket==='GLOBAL'?'US':selectedMarket;
+    const popRes = await yt('videos',{part:'snippet,statistics,contentDetails',chart:'mostPopular',regionCode:popRegion,maxResults:50},apiKey);
+    const popItems = popRes.items||[];
+
+    if(popItems.length > 0) {
+      const popChanIds = [...new Set(popItems.map(v=>v.snippet.channelId))];
+      const popChanRes = await yt('channels',{part:'statistics,snippet,contentDetails',id:popChanIds.join(',')},apiKey);
+      const popChanMap = {};
+      (popChanRes.items||[]).forEach(ch => {
+        const subCount = ch.statistics.hiddenSubscriberCount ? null : Number(ch.statistics.subscriberCount);
+        popChanMap[ch.id] = {
+          id: ch.id,
+          name: ch.snippet.title,
+          subCount: subCount,
+          videoCount: Number(ch.statistics.videoCount||0),
+          country: ch.snippet.country||popRegion,
+          ageDays: Math.max(1, Math.round((Date.now()-new Date(ch.snippet.publishedAt).getTime())/864e5)),
+          thumb: ch.snippet.thumbnails?.default?.url||''
+        };
+      });
+
+      popItems.forEach(v => {
+        const ch = popChanMap[v.snippet.channelId];
+        if(!ch) return;
+        if(subLimitFilter > 0 && ch.subCount !== null && ch.subCount > subLimitFilter) return;
+
+        const views = Number(v.statistics.viewCount||0);
+        if(minViewsFilter > 0 && views < minViewsFilter) return;
+
+        const pubTime = new Date(v.snippet.publishedAt).getTime();
+        const ageHours = (Date.now()-pubTime)/36e5;
+        if(pubTime < cutoffTimeMs || ageHours > tfHours) return;
+
+        const outlierRatio = ch.subCount ? (views/Math.max(ch.subCount,1)).toFixed(1) : (views/1000).toFixed(1);
+        const vph = Math.round(views/Math.max(0.1,ageHours));
+        const durSeconds = typeof parseDur==='function'?parseDur(v.contentDetails?.duration):1800;
+        const isLiveVid = v.snippet.liveBroadcastContent==='live'||v.snippet.liveBroadcastContent==='upcoming'||(v.snippet.title||'').toLowerCase().includes('#live')||(v.snippet.title||'').toLowerCase().includes('livestream');
+        const isShortVid = !isLiveVid && (durSeconds<=60||(v.snippet.title||'').toLowerCase().includes('#shorts')||(v.snippet.title||'').toLowerCase().includes('#short')||(v.snippet.tags||[]).some(t=>t.toLowerCase()==='shorts'||t.toLowerCase()==='short'));
+        const vFormat = isLiveVid ? 'live' : isShortVid ? 'short' : 'long';
+
+        chartBreakoutVideos.push({
+          id: v.id,
+          title: v.snippet.title,
+          channel: v.snippet.channelTitle,
+          channelId: v.snippet.channelId,
+          channelThumb: ch.thumb,
+          thumb: typeof getBestThumb==='function'?getBestThumb(v.snippet.thumbnails):v.snippet.thumbnails?.medium?.url||'',
+          published: v.snippet.publishedAt,
+          ts: pubTime,
+          views: views,
+          likes: v.statistics.likeCount!=null?Number(v.statistics.likeCount):null,
+          comments: v.statistics.commentCount!=null?Number(v.statistics.commentCount):null,
+          dur: durSeconds,
+          subs: ch.subCount,
+          outlierRatio: outlierRatio,
+          videoCount: ch.videoCount,
+          country: ch.country,
+          channelAgeDays: ch.ageDays,
+          channelPublishedAt: ch.publishedAt,
+          isBreakout: true,
+          format: vFormat,
+          isLive: isLiveVid,
+          isShort: isShortVid,
+          hasCaptions: v.contentDetails?.caption==='true',
+          licensedContent: !!v.contentDetails?.licensedContent,
+          tags: v.snippet.tags||[],
+          vph: vph
+        });
+      });
+
+      const tagFreq = {};
+      popItems.forEach(v => {
+        const tags = v.snippet.tags||[];
+        const views = Number(v.statistics?.viewCount||0);
+        tags.forEach(t => {
+          const clean = t.trim().replace(/^#+/,'');
+          const lower = clean.toLowerCase();
+          const junkRegex = /\b(trailer|teaser|official|movie|film|cinema|music\s*video|official\s*video|mv|song|songs|lyrics|remix|audio|soundtrack|ost|episode|reaction|react|tiktok|reels?|shorts?|live|livestream|stream|vlog|gameplay)\b/i;
+          if(junkRegex.test(lower)) return;
+          if(clean.length>=3 && clean.length<=35 && !/^\d+$/.test(clean) && !/^https?:/i.test(clean)){
+            if(!tagFreq[lower]) tagFreq[lower] = { text: clean, count: 0, views: 0 };
+            tagFreq[lower].count += 1;
+            tagFreq[lower].views += views;
+          }
+        });
+      });
+
+      const rawCandidates = Object.values(tagFreq).filter(item=>item.count>=2||item.views>=50000).sort((a,b)=>(b.count*100000+b.views)-(a.count*100000+a.views));
+      const uniqueTrendKeywords = [];
+      for(const cand of rawCandidates){
+        const candLower = cand.text.toLowerCase();
+        const isDuplicate = uniqueTrendKeywords.some(ex=>{
+          const exLower = ex.toLowerCase();
+          return candLower.includes(exLower)||exLower.includes(candLower);
+        });
+        if(!isDuplicate) uniqueTrendKeywords.push(cand.text);
+        if(uniqueTrendKeywords.length>=3) break;
+      }
+      trendingKeywords = uniqueTrendKeywords;
+    }
+  } catch(popErr) {
+    console.warn('Popular videos scan error:', popErr);
+  }
+
+  let seedsToScan = [];
+  if(customQueryOverride){
+    const rawParts = String(customQueryOverride).split(/[,;\n]+/).map(s=>s.trim()).filter(Boolean);
+    if(rawParts.length>0){
+      seedsToScan = rawParts.map((k,idx)=>({
+        id: 'custom_'+Date.now()+'_'+idx,
+        label: k.charAt(0).toUpperCase()+k.slice(1),
+        q: k,
+        rpm: selectedMarket==='VN'?'$8 - $20':'$25 - $48'
+      }));
+    }
+  }
+
+  if(seedsToScan.length === 0){
+    const pool = SEED_TREND_TOPICS||[];
+    const reqCount = batchSizeOverride || (scanBatchMode==='quick6'?6:scanBatchMode==='deepAll'||scanBatchMode==='deepPages'?pool.length:12);
+    let staticSeeds = [];
+    if(reqCount < pool.length){
+      const shuffled = [...pool].sort(()=>0.5-Math.random());
+      staticSeeds = shuffled.slice(0, reqCount);
+    } else {
+      staticSeeds = [...pool];
+    }
+    if(isDailyReset){
+      const dynamicTrendSeeds = trendingKeywords.map((k,idx)=>({
+        id: 'trend_kw_'+idx+'_'+Date.now(),
+        label: '🔥 '+(k.charAt(0).toUpperCase()+k.slice(1))+' (Trend Hôm Nay)',
+        q: k,
+        rpm: selectedMarket==='VN'?'$8 - $20':'$25 - $48',
+        isLiveTrendingTag: true
+      }));
+      seedsToScan = [...dynamicTrendSeeds, ...staticSeeds];
+    } else {
+      seedsToScan = staticSeeds;
+    }
+  }
+
+  const discoveredList = [];
+  if(chartBreakoutVideos.length > 0){
+    chartBreakoutVideos.sort((a,b)=>b.views-a.views);
+    const chartChannelsMap = {};
+    chartBreakoutVideos.forEach(v => {
+      if(!chartChannelsMap[v.channelId]){
+        chartChannelsMap[v.channelId] = {
+          id: v.channelId,
+          name: v.channel,
+          subs: v.subs,
+          url: 'https://www.youtube.com/channel/'+v.channelId,
+          videoCount: v.videoCount,
+          country: v.country
+        };
+      }
+    });
+    const maxViews = chartBreakoutVideos[0].views;
+    const maxOutlier = Math.max(...chartBreakoutVideos.map(v=>Number(v.outlierRatio)||0));
+    discoveredList.push({
+      id: 'niche_chart_trending_'+Date.now(),
+      name: `🔥 Kênh Nhỏ Lọt Top Thịnh Hành (${tfLabel} - ${todayStr})`,
+      category: 'Trending YouTube Outliers',
+      rpmRange: selectedMarket==='VN'?'$8 - $20':'$25 - $48',
+      avgRpm: selectedMarket==='VN'?14:35,
+      channelsCount: Object.keys(chartChannelsMap).length,
+      channels: Object.values(chartChannelsMap),
+      videos: chartBreakoutVideos,
+      topVideo: chartBreakoutVideos[0],
+      maxViews: maxViews,
+      maxOutlier: maxOutlier.toFixed(1),
+      scannedAt: Date.now(),
+      scannedDate: todayStr,
+      isTodayTrend: true
+    });
+  }
+
+  let totalEligibleVideosFound = chartBreakoutVideos.length;
+  let totalEligibleChannelsFound = Object.keys(chartBreakoutVideos.reduce((acc,v)=>({...acc,[v.channelId]:1}),{})).length;
+
+  try {
+    for(let i=0; i<seedsToScan.length; i++){
+      if(cancelScanRef.current) break;
+      const topic = seedsToScan[i];
+      setScanProgress({
+        current: i+1,
+        total: seedsToScan.length,
+        topic: topic.label,
+        foundVideos: totalEligibleVideosFound,
+        foundNiches: discoveredList.length
+      });
+
+      let searchRes;
+      try {
+        const searchParams = {
+          part: 'snippet',
+          type: 'video',
+          q: topic.q,
+          order: 'viewCount', // CRITICAL: viewCount sorting gets the top viewed uploads in this timeframe!
+          publishedAfter: publishedAfterISO,
+          maxResults: 50
+        };
+
+        if(selectedMarket==='GLOBAL'){
+          searchParams.regionCode = 'US';
+          searchParams.relevanceLanguage = 'en';
+        } else {
+          searchParams.regionCode = selectedMarket;
+          searchParams.relevanceLanguage = selectedMarket==='VN'?'vi':selectedMarket==='JP'?'ja':selectedMarket==='KR'?'ko':'en';
+        }
+
+        searchRes = await yt('search', searchParams, apiKey);
+      } catch(e) {
+        console.warn('Search API error on seed:', topic.label, e);
+        if(e.code==='quotaExceeded'||e.code==='HTTP403'||(e.msg&&e.msg.includes('quota'))){
+          if(typeof ytKeyManager!=='undefined'){
+            const nextK = ytKeyManager.markQuotaExceeded(apiKey);
+            if(nextK){
+              if(typeof showToast==='function')showToast('Key hiện tại hết Quota, tự động xoay sang Key dự phòng!','info');
+              continue;
+            }
+          }
+          throw new Error('API Key đã hết hạn mức Quota hôm nay (10.000 units). Vui lòng thêm Key dự phòng trong cài đặt!');
+        }
+        if(e.code==='keyInvalid'||(e.msg&&e.msg.includes('API key not valid'))){
+          throw new Error('YouTube API Key không hợp lệ. Vui lòng bấm Cấu hình API để nhập lại!');
+        }
+        continue;
+      }
+
+      let items = searchRes.items||[];
+      let videoIds = items.map(it=>it.id&&it.id.videoId).filter(Boolean);
+
+      // Deep 2-Page mode: fetch additional 50 items if requested
+      if(scanBatchMode==='deepPages' && searchRes.nextPageToken && videoIds.length > 0){
+        try {
+          const searchParamsP2 = {
+            part: 'snippet',
+            type: 'video',
+            q: topic.q,
+            order: 'viewCount',
+            publishedAfter: publishedAfterISO,
+            maxResults: 50,
+            pageToken: searchRes.nextPageToken
+          };
+          if(selectedMarket==='GLOBAL'){
+            searchParamsP2.regionCode = 'US';
+            searchParamsP2.relevanceLanguage = 'en';
+          } else {
+            searchParamsP2.regionCode = selectedMarket;
+            searchParamsP2.relevanceLanguage = selectedMarket==='VN'?'vi':selectedMarket==='JP'?'ja':selectedMarket==='KR'?'ko':'en';
+          }
+          const p2Res = await yt('search', searchParamsP2, apiKey);
+          const p2Items = p2Res.items||[];
+          const p2Ids = p2Items.map(it=>it.id&&it.id.videoId).filter(Boolean);
+          videoIds = [...videoIds, ...p2Ids];
+        } catch(p2Err){
+          console.warn('Page 2 search error:', p2Err);
+        }
+      }
+
+      if(videoIds.length === 0) continue;
+
+      // Chunk video IDs into slices of 50
+      let vidsList = [];
+      for(let b=0; b<videoIds.length; b+=50){
+        const chunk = videoIds.slice(b, b+50);
+        try {
+          const vidsRes = await yt('videos', {part:'snippet,statistics,contentDetails', id: chunk.join(',')}, apiKey);
+          if(vidsRes.items) vidsList = [...vidsList, ...vidsRes.items];
+        } catch(e){
+          console.warn('Videos batch API error:', e);
+        }
+      }
+      if(vidsList.length === 0) continue;
+
+      const channelIds = [...new Set(vidsList.map(v=>v.snippet.channelId))];
+      const channelsMap = {};
+      for(let b=0; b<channelIds.length; b+=50){
+        const chunk = channelIds.slice(b, b+50);
+        try {
+          const chRes = await yt('channels', {part:'statistics,snippet,contentDetails', id: chunk.join(',')}, apiKey);
+          (chRes.items||[]).forEach(ch => {
+            const subCount = ch.statistics.hiddenSubscriberCount ? null : Number(ch.statistics.subscriberCount);
+            channelsMap[ch.id] = {
+              id: ch.id,
+              name: ch.snippet.title,
+              subCount: subCount,
+              videoCount: Number(ch.statistics.videoCount||0),
+              country: ch.snippet.country||'US',
+              publishedAt: ch.snippet.publishedAt||'',
+              ageDays: Math.max(1, Math.round((Date.now()-new Date(ch.snippet.publishedAt).getTime())/864e5)),
+              uploadsId: ch.contentDetails?.relatedPlaylists?.uploads || ch.id.replace(/^UC/,'UU'),
+              thumb: ch.snippet.thumbnails?.default?.url||''
+            };
+          });
+        } catch(e){
+          console.warn('Channels batch API error:', e);
+        }
+      }
+
+      const eligibleVideosInTopic = [];
+      const eligibleChannelsMap = {};
+      const isVietnameseText = str => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(str||'');
+
+      vidsList.forEach(v => {
+        const chInfo = channelsMap[v.snippet.channelId];
+        if(!chInfo) return;
+
+        if(selectedMarket!=='VN'){
+          if(isVietnameseText(v.snippet.title)||isVietnameseText(chInfo.name)||(chInfo.country&&chInfo.country==='VN')) return;
+        }
+        if(selectedMarket==='KR'){
+          const hasKorean = /[가-힯ᄀ-ᇿ]/.test((v.snippet.title||'')+' '+(chInfo.name||''));
+          if(!hasKorean) return;
+        }
+        if(selectedMarket==='JP'){
+          const hasJapanese = /[぀-ヿ㐀-䶿一-鿿]/.test((v.snippet.title||'')+' '+(chInfo.name||''));
+          if(!hasJapanese) return;
+        }
+
+        // Sub count filter
+        if(subLimitFilter > 0 && chInfo.subCount !== null && chInfo.subCount > subLimitFilter) return;
+
+        // View count filter
+        const views = Number(v.statistics.viewCount||0);
+        if(minViewsFilter > 0 && views < minViewsFilter) return;
+
+        // Timeframe filter: strict cutoff
+        const pubTime = new Date(v.snippet.publishedAt).getTime();
+        const ageHours = (Date.now()-pubTime)/36e5;
+        if(pubTime < cutoffTimeMs || ageHours > tfHours) return;
+
+        if(v.id==='xYz12345678'||v.id==='aBcDeFgHiJk') return;
+
+        const outlierRatio = chInfo.subCount ? (views/Math.max(chInfo.subCount,1)).toFixed(1) : (views/1000).toFixed(1);
+        const vph = Math.round(views/Math.max(0.1, ageHours));
+        const likes = v.statistics.likeCount!=null ? Number(v.statistics.likeCount) : null;
+        const comments = v.statistics.commentCount!=null ? Number(v.statistics.commentCount) : null;
+        const engRate = views > 0 ? (((likes||0)+(comments||0))/views*100).toFixed(2) : '0';
+        const durSeconds = typeof parseDur==='function' ? parseDur(v.contentDetails?.duration) : 1800;
+        const isBreakout = (chInfo.ageDays<=90 || chInfo.videoCount<=20) && views>=15000;
+        const isLiveVid = v.snippet.liveBroadcastContent==='live'||v.snippet.liveBroadcastContent==='upcoming'||(v.snippet.title||'').toLowerCase().includes('#live')||(v.snippet.title||'').toLowerCase().includes('livestream');
+        const isShortVid = !isLiveVid && (durSeconds<=60||(v.snippet.title||'').toLowerCase().includes('#shorts')||(v.snippet.title||'').toLowerCase().includes('#short')||(v.snippet.tags||[]).some(t=>t.toLowerCase()==='shorts'||t.toLowerCase()==='short'));
+        const vFormat = isLiveVid ? 'live' : isShortVid ? 'short' : 'long';
+
+        const videoObj = {
+          id: v.id,
+          title: v.snippet.title,
+          channel: v.snippet.channelTitle,
+          channelId: v.snippet.channelId,
+          channelThumb: chInfo.thumb||'',
+          thumb: typeof getBestThumb==='function'?getBestThumb(v.snippet.thumbnails):v.snippet.thumbnails?.medium?.url||'',
+          published: v.snippet.publishedAt,
+          ts: pubTime,
+          views: views,
+          likes: likes,
+          comments: comments,
+          dur: durSeconds,
+          subs: chInfo.subCount,
+          outlierRatio: outlierRatio,
+          videoCount: chInfo.videoCount,
+          country: chInfo.country,
+          channelAgeDays: chInfo.ageDays,
+          channelPublishedAt: chInfo.publishedAt,
+          uploadsId: chInfo.uploadsId,
+          isBreakout: isBreakout,
+          format: vFormat,
+          isLive: isLiveVid,
+          isShort: isShortVid,
+          hasCaptions: v.contentDetails?.caption==='true',
+          licensedContent: !!v.contentDetails?.licensedContent,
+          tags: v.snippet.tags||[],
+          engRate: engRate,
+          isOrganic: Number(engRate)>=1.0,
+          vph: vph
+        };
+
+        eligibleVideosInTopic.push(videoObj);
+        if(!eligibleChannelsMap[chInfo.id]){
+          eligibleChannelsMap[chInfo.id] = {
+            id: chInfo.id,
+            name: chInfo.name,
+            subs: chInfo.subCount,
+            url: 'https://www.youtube.com/channel/'+chInfo.id,
+            videoCount: chInfo.videoCount,
+            country: chInfo.country
+          };
+        }
+      });
+
+      if(eligibleVideosInTopic.length > 0){
+        eligibleVideosInTopic.sort((a,b)=>b.views-a.views);
+        const maxViews = eligibleVideosInTopic[0].views;
+        const maxOutlier = Math.max(...eligibleVideosInTopic.map(v=>Number(v.outlierRatio)||0));
+        const channelList = Object.values(eligibleChannelsMap);
+        totalEligibleVideosFound += eligibleVideosInTopic.length;
+        totalEligibleChannelsFound += channelList.length;
+        const inferredTitle = inferNicheTitle(topic.label, eligibleVideosInTopic);
+
+        discoveredList.push({
+          id: 'niche_'+topic.id+'_'+Date.now(),
+          name: inferredTitle,
+          category: topic.label,
+          rpmRange: topic.rpm,
+          avgRpm: Number(topic.rpm.split('-')[0].replace(/\D/g,''))||25,
+          channelsCount: channelList.length,
+          channels: channelList,
+          videos: eligibleVideosInTopic,
+          topVideo: eligibleVideosInTopic[0],
+          maxViews: maxViews,
+          maxOutlier: maxOutlier.toFixed(1),
+          scannedAt: Date.now(),
+          scannedDate: todayStr,
+          isTodayTrend: true
+        });
+      }
+
+      await new Promise(r=>setTimeout(r, 120));
+    }
+
+    discoveredList.sort((a,b)=>{
+      const scoreA = (Number(a.maxOutlier)||0)*10000 + (a.maxViews||0);
+      const scoreB = (Number(b.maxOutlier)||0)*10000 + (b.maxViews||0);
+      return scoreB - scoreA;
+    });
+
+    const nowStr = new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})+' '+todayStr;
+    setLastScannedTime(nowStr);
+    setLastScannedDate(todayStr);
+
+    setRealDiscoveredNiches(prevList => {
+      const mKey = getMarketStorageKey(selectedMarket);
+      let finalSaved = [];
+      if(isDailyReset){
+        finalSaved = discoveredList.slice(0, 50);
+      } else {
+        let marketCached = [];
+        try {
+          const raw = localStorage.getItem(mKey);
+          if(raw) marketCached = JSON.parse(raw);
+        } catch(e){}
+
+        const nicheMap = new Map();
+        (marketCached||[]).forEach(n => {
+          if(n.id && n.id.includes('_init')) return;
+          const key = (n.category||n.name||'').trim().toLowerCase();
+          if(key) nicheMap.set(key, n);
+        });
+
+        (discoveredList||[]).forEach(newNiche => {
+          const key = (newNiche.category||newNiche.name||'').trim().toLowerCase();
+          if(nicheMap.has(key)){
+            const existing = nicheMap.get(key);
+            const vMap = new Map();
+            (existing.videos||[]).forEach(v => vMap.set(v.id, v));
+            (newNiche.videos||[]).forEach(v => vMap.set(v.id, v));
+            const mergedVids = Array.from(vMap.values());
+            mergedVids.sort((a,b)=>(b.views||0)-(a.views||0));
+            const chMap = new Map();
+            (existing.channels||[]).forEach(c => chMap.set(c.id, c));
+            (newNiche.channels||[]).forEach(c => chMap.set(c.id, c));
+            nicheMap.set(key, {
+              ...existing,
+              name: newNiche.name||existing.name,
+              videos: mergedVids,
+              channels: Array.from(chMap.values()),
+              channelsCount: chMap.size,
+              topVideo: mergedVids[0],
+              maxViews: mergedVids[0]?.views||existing.maxViews,
+              maxOutlier: Math.max(Number(existing.maxOutlier)||0, Number(newNiche.maxOutlier)||0).toFixed(1),
+              scannedAt: Date.now()
+            });
+          } else {
+            nicheMap.set(key, newNiche);
+          }
+        });
+
+        const now = Date.now();
+        let finalMerged = Array.from(nicheMap.values()).map(n => {
+          const freshVids = (n.videos||[]).filter(v => {
+            const vt = v.ts || (v.published ? new Date(v.published).getTime() : 0);
+            return now - vt <= tfHours * 36e5;
+          });
+          if(freshVids.length === 0) return null;
+          return { ...n, videos: freshVids, topVideo: freshVids[0], maxViews: freshVids[0]?.views||n.maxViews };
+        }).filter(Boolean);
+
+        finalMerged.sort((a,b)=>(b.maxViews||0)-(a.maxViews||0));
+        finalSaved = finalMerged.slice(0, 40);
+      }
+
+      try {
+        localStorage.setItem(mKey, JSON.stringify(finalSaved));
+        localStorage.setItem(TIME_KEY+'_'+selectedMarket, nowStr);
+        localStorage.setItem(getMarketDateKey(selectedMarket), todayStr);
+        if(selectedMarket==='VN'){
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(finalSaved));
+          localStorage.setItem(TIME_KEY, nowStr);
+          localStorage.setItem(DATE_KEY, todayStr);
+        }
+      } catch(e){}
+
+      if(finalSaved.length > 0 && (!activeNicheId || !finalSaved.some(n=>n.id===activeNicheId))){
+        setActiveNicheId(finalSaved[0].id);
+      }
+      return finalSaved;
+    });
+
+    if(typeof showToast==='function'){
+      const subDesc = subLimitFilter > 0 ? `<${subLimitFilter < 1000 ? subLimitFilter : (subLimitFilter/1000)+'k'} sub` : 'mọi kênh';
+      const viewDesc = minViewsFilter > 0 ? `>${minViewsFilter/1000}k view` : '';
+      if(discoveredList.length > 0){
+        showToast(`🎉 Thành công! Bóc tách được ${discoveredList.length} ngách (${totalEligibleVideosFound} video) từ kênh ${subDesc} ${viewDesc} trong ${tfLabel}.`, 'success');
+      } else {
+        showToast(`Đã quét xong: Chưa phát hiện video nào khớp tiêu chí ${subDesc} ${viewDesc} trong ${tfLabel}. Bạn có thể chọn thời gian rộng hơn (3-7 ngày) hoặc hạ ngưỡng view.`, 'info');
+      }
+    }
+  } catch(err){
+    console.error('Scan error:', err);
+    if(typeof showToast==='function') showToast('Lỗi khi quét: '+(err.message||'Lỗi API'),'error');
+  } finally {
+    setIsScanningNiches(false);
+    setScanProgress(null);
+  }
+},[apiKey,SEED_TREND_TOPICS,subLimitFilter,minViewsFilter,timeframeFilter,TIMEFRAME_CONFIG,showToast,onOpenApiModal,activeNicheId,selectedMarket,scanBatchMode,todayStr]);
 const hasAutoResetRef=React.useRef(false);
 React.useEffect(()=>{
   if(hasAutoResetRef.current)return;
@@ -3808,7 +4358,7 @@ React.useEffect(()=>{
     runDeepNicheDiscovery(null,null,true);
   }
 },[apiKey,autoUpdateData?.enabled,lastScannedDate,todayStr,isScanningNiches,runDeepNicheDiscovery]);if(showTrendV2&&typeof window!=='undefined'&&window.TrendToolSectionV2){return/*#__PURE__*/React.createElement("section",{className:"space-y-4 animate-in fade-in duration-200"},/*#__PURE__*/React.createElement(window.TrendToolSectionV2,{apiKey,showToast,onBackToTopNgach:()=>setShowTrendV2(false)}));}
-return/*#__PURE__*/React.createElement("section",{className:"space-y-4 animate-in fade-in duration-200"},/*#__PURE__*/React.createElement("div",{className:"bg-[#121316] border border-zinc-800/90 rounded-xl px-3.5 py-2.5 flex flex-wrap xl:flex-nowrap items-center justify-between gap-2.5 shadow-sm"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2.5 shrink-0 whitespace-nowrap"},/*#__PURE__*/React.createElement("h2",{className:"text-sm sm:text-base font-bold text-white tracking-tight whitespace-nowrap flex items-center gap-2"},/*#__PURE__*/React.createElement("span",null,"Top Ng\xE1ch Xu H\u01B0\u1EDBng")),realDiscoveredNiches.length>0&&/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-zinc-800/90 text-zinc-300 border border-zinc-700/70 whitespace-nowrap shrink-0"},realDiscoveredNiches.length," ng\xE1ch")),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5 flex-wrap sm:flex-nowrap shrink-0 overflow-x-auto no-scrollbar"},/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setShowTrendV2(prev=>!prev),className:`h-8 px-2.5 rounded-lg text-xs font-medium border transition cursor-pointer shrink-0 whitespace-nowrap ${showTrendV2?'bg-zinc-200 text-zinc-950 border-zinc-200 font-semibold':'bg-zinc-800/80 text-zinc-300 border-zinc-700/80 hover:bg-zinc-700'}`,title:"Công Cụ V2"},/*#__PURE__*/React.createElement("span",null,showTrendV2?"Top Ngách":"Công Cụ V2")),/*#__PURE__*/React.createElement("select",{value:selectedMarket,onChange:e=>handleMarketChange(e.target.value),disabled:isScanningNiches,className:"h-8 px-2.5 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-200 border border-zinc-800 hover:border-zinc-700 focus:outline-none cursor-pointer shrink-0"},/*#__PURE__*/React.createElement("option",{value:"GLOBAL"},"To\xE0n C\u1EA7u"),/*#__PURE__*/React.createElement("option",{value:"US"},"Hoa K\u1EF3 (US)"),/*#__PURE__*/React.createElement("option",{value:"VN"},"Vi\u1EC7t Nam"),/*#__PURE__*/React.createElement("option",{value:"JP"},"Nh\u1EADt B\u1EA3n"),/*#__PURE__*/React.createElement("option",{value:"KR"},"H\xE0n Qu\u1ED1c"),/*#__PURE__*/React.createElement("option",{value:"GB"},"Anh (GB)"),/*#__PURE__*/React.createElement("option",{value:"CA"},"Canada"),/*#__PURE__*/React.createElement("option",{value:"AU"},"\xDAc (AU)")),/*#__PURE__*/React.createElement("select",{value:subLimitFilter,onChange:e=>setSubLimitFilter(Number(e.target.value)),disabled:isScanningNiches,className:"h-8 px-2 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-300 border border-zinc-800 hover:border-zinc-700 focus:outline-none cursor-pointer shrink-0",title:"Lọc kênh nhỏ dưới ngưỡng Sub này"},/*#__PURE__*/React.createElement("option",{value:10000},"< 10k sub"),/*#__PURE__*/React.createElement("option",{value:30000},"< 30k sub"),/*#__PURE__*/React.createElement("option",{value:50000},"< 50k sub"),/*#__PURE__*/React.createElement("option",{value:100000},"< 100k sub")),/*#__PURE__*/React.createElement("select",{value:scanBatchMode,onChange:e=>setScanBatchMode(e.target.value),disabled:isScanningNiches,className:"h-8 px-2 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-200 border border-zinc-800 hover:border-zinc-700 focus:outline-none cursor-pointer shrink-0",title:"Số lượng từ khóa quét mỗi lần"},/*#__PURE__*/React.createElement("option",{value:"quick6"},"6 key"),/*#__PURE__*/React.createElement("option",{value:"smart12"},"12 key"),/*#__PURE__*/React.createElement("option",{value:"deepAll"},"22+ key")),realDiscoveredNiches.length>0&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(!isPro){if(onUpgradePrompt)onUpgradePrompt();return;}handleClearCache();},className:"h-8 px-2.5 rounded-lg text-xs font-medium bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shrink-0 whitespace-nowrap",title:"X\xF3a cache \u0111\u1EC3 qu\xE9t l\u1EA1i ng\xE1ch m\u1EDBi"},"X\xF3a Cache"),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setShowApiGuideModal(true),className:"h-8 px-2.5 rounded-lg text-xs font-medium bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shrink-0 whitespace-nowrap",title:"Xem h\u01B0\u1EDBng d\u1EABn t\xEDnh n\u0103ng"},"H\u01B0\u1EDBng D\u1EABn"),isScanningNiches?/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{cancelScanRef.current=true;},className:"h-8 px-3 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 transition cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap"},/*#__PURE__*/React.createElement("span",{className:"w-2 h-2 rounded-full bg-rose-400 animate-pulse"}),/*#__PURE__*/React.createElement("span",null,"Dừng (",scanProgress?.current,"/",scanProgress?.total,")")):/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{runDeepNicheDiscovery(null,null,true);},disabled:isScanningNiches,className:"h-8 px-3 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition-all cursor-pointer shadow-sm shrink-0 whitespace-nowrap flex items-center gap-1.5 active:scale-95",title:"Reset và quét danh sách ngách bứt phá theo trend hôm nay"},/*#__PURE__*/React.createElement("span",{className:"text-[13px] leading-none"},"\u27F3"),/*#__PURE__*/React.createElement("span",null,"Reset Trend Hôm Nay")))),isScanningNiches&&scanProgress&&/*#__PURE__*/React.createElement("div",{className:"bg-[#121316] border border-zinc-800 rounded-xl p-3 space-y-2 text-xs"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-zinc-300"},/*#__PURE__*/React.createElement("span",{className:"flex items-center gap-2 font-medium"},/*#__PURE__*/React.createElement("span",{className:"w-2 h-2 rounded-full bg-amber-400 animate-ping"}),/*#__PURE__*/React.createElement("span",null,"\u0110ang qu\xE9t h\u1EA1t gi\u1ED1ng: ",/*#__PURE__*/React.createElement("b",{className:"text-white"},scanProgress.topic)," (",scanProgress.current,"/",scanProgress.total,")")),/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 text-[11px]"},"\u0110\xE3 ph\xE1t hi\u1EC7n: ",/*#__PURE__*/React.createElement("b",{className:"text-zinc-200"},scanProgress.foundVideos)," video \u2022 ",/*#__PURE__*/React.createElement("b",{className:"text-zinc-200"},scanProgress.foundNiches)," ng\xE1ch \u0111\u1EA1t chu\u1EA9n")),/*#__PURE__*/React.createElement("div",{className:"w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden"},/*#__PURE__*/React.createElement("div",{className:"h-full bg-zinc-300 transition-all duration-300 rounded-full",style:{width:`${Math.round(scanProgress.current/scanProgress.total*100)}%`}}))),/*#__PURE__*/React.createElement("div",{className:"space-y-2"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs text-zinc-400 px-1"},/*#__PURE__*/React.createElement("span",{className:"font-medium text-zinc-300 flex items-center gap-2"},realDiscoveredNiches.length>0?(isTodayUpdated?/*#__PURE__*/React.createElement(React.Fragment,null,/*#__PURE__*/React.createElement("span",{className:"w-1.5 h-1.5 rounded-full bg-emerald-400"}),/*#__PURE__*/React.createElement("span",null,`Ngách bứt phá hôm nay (${todayStr}) • ${realDiscoveredNiches.length} ngách`)):/*#__PURE__*/React.createElement(React.Fragment,null,/*#__PURE__*/React.createElement("span",{className:"w-1.5 h-1.5 rounded-full bg-zinc-500"}),/*#__PURE__*/React.createElement("span",null,`Ngách bứt phá (${realDiscoveredNiches.length} ngách • lưu ngày ${lastScannedDate||"trước đó"})`))):"Chưa có dữ liệu ngách"),lastScannedTime&&/*#__PURE__*/React.createElement("span",{className:"text-[11px] text-zinc-500 font-mono"},"Cập nhật: ",lastScannedTime)),!isPro&&/*#__PURE__*/React.createElement("div",{className:"px-3.5 py-2 rounded-lg bg-[#12141c] border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs mb-2"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-400"},"Dùng thử: 2 ngách mở hôm nay. Nâng cấp PRO để mở khóa toàn bộ."),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(onUpgradePrompt)onUpgradePrompt();},className:"text-xs font-semibold text-zinc-300 hover:text-white underline cursor-pointer shrink-0 self-start sm:self-auto"},"Bảng giá PRO →")),!isPro?/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5"},demoNiche1&&/*#__PURE__*/React.createElement("div",{onClick:()=>setActiveNicheId(demoNiche1.id),className:`p-3 rounded-xl border transition-all flex flex-col justify-between min-h-[92px] select-none cursor-pointer relative ${(activeNicheId===demoNiche1.id||(!activeNicheId&&demoNiche1))?"border-zinc-500 bg-zinc-900":"border-zinc-800 bg-[#101217] hover:border-zinc-700"}`},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs"},/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60 leading-none"},"#1"),/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-medium text-zinc-400"},(demoNiche1.maxOutlier||5.2)+"x View/Sub")),/*#__PURE__*/React.createElement("div",{className:"my-1.5"},/*#__PURE__*/React.createElement("h3",{className:"text-xs sm:text-[13px] font-bold text-white line-clamp-2 leading-snug"},demoNiche1.name),null),/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-[10px] text-zinc-400 pt-1.5 border-t border-zinc-800/80"},/*#__PURE__*/React.createElement("span",{className:"truncate"},"Max: ",typeof fmt==='function'?fmt(demoNiche1.maxViews):demoNiche1.maxViews),/*#__PURE__*/React.createElement("span",{className:"shrink-0 text-zinc-300 font-medium"},(activeNicheId===demoNiche1.id||!activeNicheId)?"Đang xem":"Xem"))),demoNiche2&&/*#__PURE__*/React.createElement("div",{onClick:()=>setActiveNicheId(demoNiche2.id),className:`p-3 rounded-xl border transition-all flex flex-col justify-between min-h-[92px] select-none cursor-pointer relative ${activeNicheId===demoNiche2.id?"border-zinc-500 bg-zinc-900":"border-zinc-800 bg-[#101217] hover:border-zinc-700"}`},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs"},/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60 leading-none"},"#2"),/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-medium text-zinc-400"},(demoNiche2.maxOutlier||4.6)+"x View/Sub")),/*#__PURE__*/React.createElement("div",{className:"my-1.5"},/*#__PURE__*/React.createElement("h3",{className:"text-xs sm:text-[13px] font-bold text-white line-clamp-2 leading-snug"},demoNiche2.name),null),/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-[10px] text-zinc-400 pt-1.5 border-t border-zinc-800/80"},/*#__PURE__*/React.createElement("span",{className:"truncate"},"Max: ",typeof fmt==='function'?fmt(demoNiche2.maxViews):demoNiche2.maxViews),/*#__PURE__*/React.createElement("span",{className:"shrink-0 text-zinc-300 font-medium"},activeNicheId===demoNiche2.id?"Đang xem":"Xem"))),(selectedMarket==='KR'?[{rank:2,title:'미제 사건 & 범죄 심리 다큐멘터리 (Kỳ Án KR)',outlier:'24.2',views:'450K',channels:8},{rank:3,title:'살림 꿀팁 & 생활 노하우 비법 (Mẹo Vặt KR)',outlier:'18.5',views:'280K',channels:5},{rank:4,title:'기업 흥망성쇠 & 성공 스토리 (Kinh Doanh KR)',outlier:'21.0',views:'340K',channels:7},{rank:5,title:'한국 고대사 & 숨겨진 역사 미스터리 (Lịch Sử KR)',outlier:'29.3',views:'520K',channels:11}]:selectedMarket==='JP'?[{rank:2,title:'未解決事件・ミステリー真相 (Bí Ẩn Vụ Án JP)',outlier:'23.4',views:'420K',channels:7},{rank:3,title:'生活の裏技・節約ライフハック (Mẹo Vặt JP)',outlier:'17.8',views:'290K',channels:6},{rank:4,title:'企業倒産・ビジネス失敗の教訓 (Kinh Doanh JP)',outlier:'22.5',views:'360K',channels:8},{rank:5,title:'歴史の闇・古代文明の封印 (Lịch Sử JP)',outlier:'31.0',views:'580K',channels:10}]:(selectedMarket==='US'||selectedMarket==='GLOBAL')?[{rank:2,title:'Global Finance & Market Meltdowns',outlier:'28.4',views:'485K',channels:9},{rank:3,title:'True Crime & Police Interrogations',outlier:'22.1',views:'320K',channels:6},{rank:4,title:'AI Animation & 3D Mini Films',outlier:'19.8',views:'275K',channels:8},{rank:5,title:'Ancient Civilizations & Hidden Mysteries',outlier:'35.6',views:'610K',channels:12}]:[{rank:2,title:'Tài Chính & Khủng Hoảng Kinh Tế Toàn Cầu',outlier:'28.4',views:'485K',channels:9},{rank:3,title:'Hồ Sơ Vụ Án & Góc Khuất Tâm Lý Tội Phạm',outlier:'22.1',views:'320K',channels:6},{rank:4,title:'Điện Ảnh AI & Hoạt Hình Hoá 3D Mini',outlier:'19.8',views:'275K',channels:8},{rank:5,title:'Lịch Sử Bí Ẩn & Văn Minh Cổ Bị Lãng Quên',outlier:'35.6',views:'610K',channels:12}]).map(lockedItem=>/*#__PURE__*/React.createElement("div",{key:lockedItem.rank,onClick:()=>{if(typeof showToast==='function')showToast('🔒 Ngách này dành riêng cho gói PRO. Vui lòng nâng cấp!','info');if(onUpgradePrompt)onUpgradePrompt();},className:"p-3 rounded-xl border border-zinc-800/80 bg-[#101217]/70 hover:border-amber-500/40 hover:bg-[#161922] transition-all duration-150 cursor-pointer flex flex-col justify-between min-h-[92px] select-none relative overflow-hidden group"},/*#__PURE__*/React.createElement("div",{className:"absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"}),/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs relative z-10"},/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60 leading-none"},"#",lockedItem.rank),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60"},"PRO")),/*#__PURE__*/React.createElement("div",{className:"my-1.5 relative z-10"},/*#__PURE__*/React.createElement("h3",{className:"text-xs sm:text-[13px] font-bold text-zinc-400 group-hover:text-amber-300 line-clamp-2 leading-snug transition"},lockedItem.title)),/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-[10px] text-zinc-500 pt-1.5 border-t border-zinc-800/60 relative z-10"},/*#__PURE__*/React.createElement("span",null,lockedItem.outlier,"x View/Sub"),/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 group-hover:text-white font-medium"},"Mở khóa \u2192"))))):realDiscoveredNiches.length===0?/*#__PURE__*/React.createElement("div",{className:"p-8 sm:p-10 text-center border border-dashed border-zinc-800 rounded-xl bg-[#121316] space-y-3"},/*#__PURE__*/React.createElement("span",{className:"text-3xl block"},"\uD83C\uDFAF"),/*#__PURE__*/React.createElement("h3",{className:"text-sm sm:text-base font-bold text-white"},"Ch\u01B0a C\xF3 Ng\xE1ch N\xE0o \u0110\u01B0\u1EE3c Qu\xE9t"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-400 max-w-md mx-auto leading-relaxed"},"H\u1EC7 th\u1ED1ng \u0111\xE3 lo\u1EA1i b\u1ECF ho\xE0n to\xE0n c\xE1c ng\xE1ch gi\u1EA3 l\u1EADp kh\xF4 khan. H\xE3y b\u1EA5m n\xFAt d\u01B0\u1EDBi \u0111\xE2y \u0111\u1EC3 YouTube Data API v3 qu\xE9t th\u1EF1c t\u1EBF to\xE0n b\u1ED9 c\xE1c k\xEAnh <30k sub c\xF3 video b\u1EE9t ph\xE1 trong 10 ng\xE0y qua v\xE0 t\u1EF1 \u0111\u1ED9ng b\xF3c t\xE1ch th\xE0nh c\xE1c ng\xE1ch."),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>runDeepNicheDiscovery(null,null,true),disabled:isScanningNiches,className:"mt-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-amber-400 to-emerald-400 hover:from-amber-300 hover:to-emerald-300 text-black transition cursor-pointer shadow-lg inline-flex items-center gap-2"},/*#__PURE__*/React.createElement("span",null,"🔄"),/*#__PURE__*/React.createElement("span",null,`Reset & Quét Trend Hôm Nay (${todayStr})`))):/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5"},visibleNiches.map((niche,idx)=>{const isSelected=activeNiche&&activeNiche.id===niche.id;return/*#__PURE__*/React.createElement("div",{key:niche.id||idx,onClick:()=>setActiveNicheId(niche.id),className:`p-3 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between min-h-[92px] select-none ${isSelected?'border-zinc-300 bg-zinc-900 shadow-md ring-1 ring-zinc-400/40':'border-zinc-800 bg-[#121316] hover:border-zinc-700 hover:bg-zinc-900/60'}`},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs"},/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60 leading-none"},"#",idx+1),/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-mono font-medium text-zinc-300"},"x",niche.maxOutlier," View/Sub")),/*#__PURE__*/React.createElement("div",{className:"my-1.5"},/*#__PURE__*/React.createElement("h3",{className:"text-xs sm:text-[13px] font-bold text-white line-clamp-2 leading-snug"},niche.name)),/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-[10px] text-zinc-400 pt-1.5 border-t border-zinc-800/80"},/*#__PURE__*/React.createElement("span",{className:"truncate text-zinc-400"},"Max: ",typeof fmt==='function'?fmt(niche.maxViews):niche.maxViews),/*#__PURE__*/React.createElement("span",{className:"shrink-0 text-zinc-400 font-medium"},niche.channelsCount," kênh nhỏ")));}))),/*#__PURE__*/React.createElement("div",{className:"bg-[#121316] border border-zinc-800 rounded-xl p-3 sm:p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm"},/*#__PURE__*/React.createElement("form",{onSubmit:e=>{e.preventDefault();if(!isPro){if(typeof showToast==='function')showToast('Quét ngách theo từ khóa là tính năng của gói PRO!','info');if(onUpgradePrompt)onUpgradePrompt();return;}if(customKeywordInput.trim()){runDeepNicheDiscovery(customKeywordInput.trim());}},className:"flex items-center gap-2 flex-1 max-w-md"},/*#__PURE__*/React.createElement("div",{className:"relative flex-1"},/*#__PURE__*/React.createElement("span",{className:"absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none"},"\uD83D\uDD0D"),/*#__PURE__*/React.createElement("input",{type:"text",value:customKeywordInput,onChange:e=>setCustomKeywordInput(e.target.value),placeholder:"Nhập 1 hoặc nhiều key cách nhau dấu phẩy (vd: BeyondVN, ai film, dark psychology...)",className:"w-full bg-zinc-900/90 border border-zinc-800 rounded-lg pl-9 pr-3.5 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition"})),/*#__PURE__*/React.createElement("button",{type:"submit",disabled:isScanningNiches,className:"px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition cursor-pointer disabled:opacity-50 shrink-0 shadow-sm"},"Qu\xE9t")),activeNiche&&(()=>{const vids=activeNiche.videos||[];const formatCounts={all:vids.length,long:vids.filter(v=>getVideoFormat(v)==='long').length,short:vids.filter(v=>getVideoFormat(v)==='short').length,live:vids.filter(v=>getVideoFormat(v)==='live').length};return/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2 flex-wrap shrink-0"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl text-xs sm:text-sm"},/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('all'),className:`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${videoFormatFilter==='all'?'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700':'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'}`},/*#__PURE__*/React.createElement("span",null,"T\u1EA5t c\u1EA3"),/*#__PURE__*/React.createElement("span",{className:`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter==='all'?'bg-zinc-950 text-zinc-200':'bg-zinc-950/80 text-zinc-400'}`},formatCounts.all)),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('long'),className:`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${videoFormatFilter==='long'?'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700':'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'}`},/*#__PURE__*/React.createElement("span",null,"Video d\xE0i"),/*#__PURE__*/React.createElement("span",{className:`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter==='long'?'bg-zinc-950 text-zinc-200':'bg-zinc-950/80 text-zinc-400'}`},formatCounts.long)),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('short'),className:`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${videoFormatFilter==='short'?'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700':'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'}`},/*#__PURE__*/React.createElement("span",null,"Shorts"),/*#__PURE__*/React.createElement("span",{className:`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter==='short'?'bg-zinc-950 text-zinc-200':'bg-zinc-950/80 text-zinc-400'}`},formatCounts.short)),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('live'),className:`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${videoFormatFilter==='live'?'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700':'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'}`},/*#__PURE__*/React.createElement("span",null,"Live"),/*#__PURE__*/React.createElement("span",{className:`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter==='live'?'bg-zinc-950 text-zinc-200':'bg-zinc-950/80 text-zinc-400'}`},formatCounts.live))),onSelectKeywordForSearch&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(isScanningNiches){cancelScanRef.current=true;return;}runDeepNicheDiscovery(null,null,true);},className:"px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shrink-0"},isScanningNiches?"Đang quét...":"Quét lại"));})()),
+return/*#__PURE__*/React.createElement("section",{className:"space-y-4 animate-in fade-in duration-200"},/*#__PURE__*/React.createElement("div",{className:"bg-[#121316] border border-zinc-800/90 rounded-xl px-3.5 py-2.5 flex flex-wrap xl:flex-nowrap items-center justify-between gap-2.5 shadow-sm"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2.5 shrink-0 whitespace-nowrap"},/*#__PURE__*/React.createElement("h2",{className:"text-sm sm:text-base font-bold text-white tracking-tight whitespace-nowrap flex items-center gap-2"},/*#__PURE__*/React.createElement("span",null,"Top Ng\xE1ch Xu H\u01B0\u1EDBng")),realDiscoveredNiches.length>0&&/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-zinc-800/90 text-zinc-300 border border-zinc-700/70 whitespace-nowrap shrink-0"},realDiscoveredNiches.length," ng\xE1ch")),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5 flex-wrap sm:flex-nowrap shrink-0 overflow-x-auto no-scrollbar"},/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setShowTrendV2(prev=>!prev),className:`h-8 px-2.5 rounded-lg text-xs font-medium border transition cursor-pointer shrink-0 whitespace-nowrap ${showTrendV2?'bg-zinc-200 text-zinc-950 border-zinc-200 font-semibold':'bg-zinc-800/80 text-zinc-300 border-zinc-700/80 hover:bg-zinc-700'}`,title:"Công Cụ V2"},/*#__PURE__*/React.createElement("span",null,showTrendV2?"Top Ngách":"Công Cụ V2")),/*#__PURE__*/React.createElement("select",{value:selectedMarket,onChange:e=>handleMarketChange(e.target.value),disabled:isScanningNiches,className:"h-8 px-2.5 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-200 border border-zinc-800 hover:border-zinc-700 focus:outline-none cursor-pointer shrink-0"},/*#__PURE__*/React.createElement("option",{value:"GLOBAL"},"To\xE0n C\u1EA7u"),/*#__PURE__*/React.createElement("option",{value:"US"},"Hoa K\u1EF3 (US)"),/*#__PURE__*/React.createElement("option",{value:"VN"},"Vi\u1EC7t Nam"),/*#__PURE__*/React.createElement("option",{value:"JP"},"Nh\u1EADt B\u1EA3n"),/*#__PURE__*/React.createElement("option",{value:"KR"},"H\xE0n Qu\u1ED1c"),/*#__PURE__*/React.createElement("option",{value:"GB"},"Anh (GB)"),/*#__PURE__*/React.createElement("option",{value:"CA"},"Canada"),/*#__PURE__*/React.createElement("option",{value:"AU"},"\xDAc (AU)")),/*#__PURE__*/React.createElement("select",{value:timeframeFilter,onChange:e=>{const val=e.target.value;setTimeframeFilter(val);try{localStorage.setItem('yt_topngach_timeframe',val);}catch(err){}},disabled:isScanningNiches,className:"h-8 px-2 rounded-lg text-xs font-semibold bg-zinc-900 text-amber-300 border border-amber-500/30 hover:border-amber-400 focus:outline-none cursor-pointer shrink-0",title:"Độ hot / Thời gian xuất bản video"},/*#__PURE__*/React.createElement("option",{value:"12h"},"🔥 12 giờ qua"),/*#__PURE__*/React.createElement("option",{value:"24h"},"⚡ 24 giờ qua"),/*#__PURE__*/React.createElement("option",{value:"3d"},"📅 3 ngày qua"),/*#__PURE__*/React.createElement("option",{value:"7d"},"📆 7 ngày qua"),/*#__PURE__*/React.createElement("option",{value:"14d"},"🗓️ 14 ngày qua"),/*#__PURE__*/React.createElement("option",{value:"30d"},"🌙 30 ngày qua")),/*#__PURE__*/React.createElement("select",{value:subLimitFilter,onChange:e=>{const val=Number(e.target.value);setSubLimitFilter(val);try{localStorage.setItem('yt_topngach_sublimit',val);}catch(err){}},disabled:isScanningNiches,className:"h-8 px-2 rounded-lg text-xs font-semibold bg-zinc-900 text-emerald-300 border border-emerald-500/30 hover:border-emerald-400 focus:outline-none cursor-pointer shrink-0",title:"Lọc kênh nhỏ dưới ngưỡng Sub này"},/*#__PURE__*/React.createElement("option",{value:1000},"🎯 < 1k sub (Mặc định)"),/*#__PURE__*/React.createElement("option",{value:2500},"< 2.5k sub"),/*#__PURE__*/React.createElement("option",{value:5000},"< 5k sub"),/*#__PURE__*/React.createElement("option",{value:10000},"< 10k sub"),/*#__PURE__*/React.createElement("option",{value:20000},"< 20k sub"),/*#__PURE__*/React.createElement("option",{value:50000},"< 50k sub"),/*#__PURE__*/React.createElement("option",{value:100000},"< 100k sub"),/*#__PURE__*/React.createElement("option",{value:0},"Mọi quy mô sub")),/*#__PURE__*/React.createElement("select",{value:minViewsFilter,onChange:e=>{const val=Number(e.target.value);setMinViewsFilter(val);try{localStorage.setItem('yt_topngach_minviews',val);}catch(err){}},disabled:isScanningNiches,className:"h-8 px-2 rounded-lg text-xs font-semibold bg-zinc-900 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400 focus:outline-none cursor-pointer shrink-0",title:"Lọc video có lượt view tối thiểu"},/*#__PURE__*/React.createElement("option",{value:50000},"👁️ > 50k view (Mặc định)"),/*#__PURE__*/React.createElement("option",{value:10000},"> 10k view"),/*#__PURE__*/React.createElement("option",{value:20000},"> 20k view"),/*#__PURE__*/React.createElement("option",{value:30000},"> 30k view"),/*#__PURE__*/React.createElement("option",{value:100000},"> 100k view"),/*#__PURE__*/React.createElement("option",{value:200000},"> 200k view"),/*#__PURE__*/React.createElement("option",{value:500000},"> 500k view"),/*#__PURE__*/React.createElement("option",{value:5000},"Tất cả view (>5k)")),/*#__PURE__*/React.createElement("select",{value:scanBatchMode,onChange:e=>setScanBatchMode(e.target.value),disabled:isScanningNiches,className:"h-8 px-2 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-200 border border-zinc-800 hover:border-zinc-700 focus:outline-none cursor-pointer shrink-0",title:"Chế độ & độ sâu quét"},/*#__PURE__*/React.createElement("option",{value:"quick6"},"Nhanh (6 key)"),/*#__PURE__*/React.createElement("option",{value:"smart12"},"Chuẩn (12 key)"),/*#__PURE__*/React.createElement("option",{value:"deepAll"},"Toàn diện (22+ key)"),/*#__PURE__*/React.createElement("option",{value:"deepPages"},"🚀 Quét Siêu Sâu (2 Trang)")),realDiscoveredNiches.length>0&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(!isPro){if(onUpgradePrompt)onUpgradePrompt();return;}handleClearCache();},className:"h-8 px-2.5 rounded-lg text-xs font-medium bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shrink-0 whitespace-nowrap",title:"X\xF3a cache \u0111\u1EC3 qu\xE9t l\u1EA1i ng\xE1ch m\u1EDBi"},"X\xF3a Cache"),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setShowApiGuideModal(true),className:"h-8 px-2.5 rounded-lg text-xs font-medium bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shrink-0 whitespace-nowrap",title:"Xem h\u01B0\u1EDBng d\u1EABn t\xEDnh n\u0103ng"},"H\u01B0\u1EDBng D\u1EABn"),isScanningNiches?/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{cancelScanRef.current=true;},className:"h-8 px-3 rounded-lg text-xs font-medium bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 transition cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap"},/*#__PURE__*/React.createElement("span",{className:"w-2 h-2 rounded-full bg-rose-400 animate-pulse"}),/*#__PURE__*/React.createElement("span",null,"Dừng (",scanProgress?.current,"/",scanProgress?.total,")")):/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{runDeepNicheDiscovery(null,null,true);},disabled:isScanningNiches,className:"h-8 px-3 rounded-lg text-xs font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition-all cursor-pointer shadow-sm shrink-0 whitespace-nowrap flex items-center gap-1.5 active:scale-95",title:"Reset và quét danh sách ngách bứt phá theo trend hôm nay"},/*#__PURE__*/React.createElement("span",{className:"text-[13px] leading-none"},"\u27F3"),/*#__PURE__*/React.createElement("span",null,"Reset Trend Hôm Nay")))),isScanningNiches&&scanProgress&&/*#__PURE__*/React.createElement("div",{className:"bg-[#121316] border border-zinc-800 rounded-xl p-3 space-y-2 text-xs"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-zinc-300"},/*#__PURE__*/React.createElement("span",{className:"flex items-center gap-2 font-medium"},/*#__PURE__*/React.createElement("span",{className:"w-2 h-2 rounded-full bg-amber-400 animate-ping"}),/*#__PURE__*/React.createElement("span",null,"\u0110ang qu\xE9t h\u1EA1t gi\u1ED1ng: ",/*#__PURE__*/React.createElement("b",{className:"text-white"},scanProgress.topic)," (",scanProgress.current,"/",scanProgress.total,")")),/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 text-[11px]"},"\u0110\xE3 ph\xE1t hi\u1EC7n: ",/*#__PURE__*/React.createElement("b",{className:"text-zinc-200"},scanProgress.foundVideos)," video \u2022 ",/*#__PURE__*/React.createElement("b",{className:"text-zinc-200"},scanProgress.foundNiches)," ng\xE1ch \u0111\u1EA1t chu\u1EA9n")),/*#__PURE__*/React.createElement("div",{className:"w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden"},/*#__PURE__*/React.createElement("div",{className:"h-full bg-zinc-300 transition-all duration-300 rounded-full",style:{width:`${Math.round(scanProgress.current/scanProgress.total*100)}%`}}))),/*#__PURE__*/React.createElement("div",{className:"space-y-2"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs text-zinc-400 px-1"},/*#__PURE__*/React.createElement("span",{className:"font-medium text-zinc-300 flex items-center gap-2"},realDiscoveredNiches.length>0?(isTodayUpdated?/*#__PURE__*/React.createElement(React.Fragment,null,/*#__PURE__*/React.createElement("span",{className:"w-1.5 h-1.5 rounded-full bg-emerald-400"}),/*#__PURE__*/React.createElement("span",null,`Ngách bứt phá hôm nay (${todayStr}) • ${realDiscoveredNiches.length} ngách`)):/*#__PURE__*/React.createElement(React.Fragment,null,/*#__PURE__*/React.createElement("span",{className:"w-1.5 h-1.5 rounded-full bg-zinc-500"}),/*#__PURE__*/React.createElement("span",null,`Ngách bứt phá (${realDiscoveredNiches.length} ngách • lưu ngày ${lastScannedDate||"trước đó"})`))):"Chưa có dữ liệu ngách"),lastScannedTime&&/*#__PURE__*/React.createElement("span",{className:"text-[11px] text-zinc-500 font-mono"},"Cập nhật: ",lastScannedTime)),!isPro&&/*#__PURE__*/React.createElement("div",{className:"px-3.5 py-2 rounded-lg bg-[#12141c] border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs mb-2"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-400"},"Dùng thử: 2 ngách mở hôm nay. Nâng cấp PRO để mở khóa toàn bộ."),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(onUpgradePrompt)onUpgradePrompt();},className:"text-xs font-semibold text-zinc-300 hover:text-white underline cursor-pointer shrink-0 self-start sm:self-auto"},"Bảng giá PRO →")),!isPro?/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5"},demoNiche1&&/*#__PURE__*/React.createElement("div",{onClick:()=>setActiveNicheId(demoNiche1.id),className:`p-3 rounded-xl border transition-all flex flex-col justify-between min-h-[92px] select-none cursor-pointer relative ${(activeNicheId===demoNiche1.id||(!activeNicheId&&demoNiche1))?"border-zinc-500 bg-zinc-900":"border-zinc-800 bg-[#101217] hover:border-zinc-700"}`},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs"},/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60 leading-none"},"#1"),/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-medium text-zinc-400"},(demoNiche1.maxOutlier||5.2)+"x View/Sub")),/*#__PURE__*/React.createElement("div",{className:"my-1.5"},/*#__PURE__*/React.createElement("h3",{className:"text-xs sm:text-[13px] font-bold text-white line-clamp-2 leading-snug"},demoNiche1.name),null),/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-[10px] text-zinc-400 pt-1.5 border-t border-zinc-800/80"},/*#__PURE__*/React.createElement("span",{className:"truncate"},"Max: ",typeof fmt==='function'?fmt(demoNiche1.maxViews):demoNiche1.maxViews),/*#__PURE__*/React.createElement("span",{className:"shrink-0 text-zinc-300 font-medium"},(activeNicheId===demoNiche1.id||!activeNicheId)?"Đang xem":"Xem"))),demoNiche2&&/*#__PURE__*/React.createElement("div",{onClick:()=>setActiveNicheId(demoNiche2.id),className:`p-3 rounded-xl border transition-all flex flex-col justify-between min-h-[92px] select-none cursor-pointer relative ${activeNicheId===demoNiche2.id?"border-zinc-500 bg-zinc-900":"border-zinc-800 bg-[#101217] hover:border-zinc-700"}`},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs"},/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60 leading-none"},"#2"),/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-medium text-zinc-400"},(demoNiche2.maxOutlier||4.6)+"x View/Sub")),/*#__PURE__*/React.createElement("div",{className:"my-1.5"},/*#__PURE__*/React.createElement("h3",{className:"text-xs sm:text-[13px] font-bold text-white line-clamp-2 leading-snug"},demoNiche2.name),null),/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-[10px] text-zinc-400 pt-1.5 border-t border-zinc-800/80"},/*#__PURE__*/React.createElement("span",{className:"truncate"},"Max: ",typeof fmt==='function'?fmt(demoNiche2.maxViews):demoNiche2.maxViews),/*#__PURE__*/React.createElement("span",{className:"shrink-0 text-zinc-300 font-medium"},activeNicheId===demoNiche2.id?"Đang xem":"Xem"))),(selectedMarket==='KR'?[{rank:2,title:'미제 사건 & 범죄 심리 다큐멘터리 (Kỳ Án KR)',outlier:'24.2',views:'450K',channels:8},{rank:3,title:'살림 꿀팁 & 생활 노하우 비법 (Mẹo Vặt KR)',outlier:'18.5',views:'280K',channels:5},{rank:4,title:'기업 흥망성쇠 & 성공 스토리 (Kinh Doanh KR)',outlier:'21.0',views:'340K',channels:7},{rank:5,title:'한국 고대사 & 숨겨진 역사 미스터리 (Lịch Sử KR)',outlier:'29.3',views:'520K',channels:11}]:selectedMarket==='JP'?[{rank:2,title:'未解決事件・ミステリー真相 (Bí Ẩn Vụ Án JP)',outlier:'23.4',views:'420K',channels:7},{rank:3,title:'生活の裏技・節約ライフハック (Mẹo Vặt JP)',outlier:'17.8',views:'290K',channels:6},{rank:4,title:'企業倒産・ビジネス失敗の教訓 (Kinh Doanh JP)',outlier:'22.5',views:'360K',channels:8},{rank:5,title:'歴史の闇・古代文明の封印 (Lịch Sử JP)',outlier:'31.0',views:'580K',channels:10}]:(selectedMarket==='US'||selectedMarket==='GLOBAL')?[{rank:2,title:'Global Finance & Market Meltdowns',outlier:'28.4',views:'485K',channels:9},{rank:3,title:'True Crime & Police Interrogations',outlier:'22.1',views:'320K',channels:6},{rank:4,title:'AI Animation & 3D Mini Films',outlier:'19.8',views:'275K',channels:8},{rank:5,title:'Ancient Civilizations & Hidden Mysteries',outlier:'35.6',views:'610K',channels:12}]:[{rank:2,title:'Tài Chính & Khủng Hoảng Kinh Tế Toàn Cầu',outlier:'28.4',views:'485K',channels:9},{rank:3,title:'Hồ Sơ Vụ Án & Góc Khuất Tâm Lý Tội Phạm',outlier:'22.1',views:'320K',channels:6},{rank:4,title:'Điện Ảnh AI & Hoạt Hình Hoá 3D Mini',outlier:'19.8',views:'275K',channels:8},{rank:5,title:'Lịch Sử Bí Ẩn & Văn Minh Cổ Bị Lãng Quên',outlier:'35.6',views:'610K',channels:12}]).map(lockedItem=>/*#__PURE__*/React.createElement("div",{key:lockedItem.rank,onClick:()=>{if(typeof showToast==='function')showToast('🔒 Ngách này dành riêng cho gói PRO. Vui lòng nâng cấp!','info');if(onUpgradePrompt)onUpgradePrompt();},className:"p-3 rounded-xl border border-zinc-800/80 bg-[#101217]/70 hover:border-amber-500/40 hover:bg-[#161922] transition-all duration-150 cursor-pointer flex flex-col justify-between min-h-[92px] select-none relative overflow-hidden group"},/*#__PURE__*/React.createElement("div",{className:"absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"}),/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs relative z-10"},/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60 leading-none"},"#",lockedItem.rank),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60"},"PRO")),/*#__PURE__*/React.createElement("div",{className:"my-1.5 relative z-10"},/*#__PURE__*/React.createElement("h3",{className:"text-xs sm:text-[13px] font-bold text-zinc-400 group-hover:text-amber-300 line-clamp-2 leading-snug transition"},lockedItem.title)),/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-[10px] text-zinc-500 pt-1.5 border-t border-zinc-800/60 relative z-10"},/*#__PURE__*/React.createElement("span",null,lockedItem.outlier,"x View/Sub"),/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 group-hover:text-white font-medium"},"Mở khóa \u2192"))))):realDiscoveredNiches.length===0?/*#__PURE__*/React.createElement("div",{className:"p-8 sm:p-10 text-center border border-dashed border-zinc-800 rounded-xl bg-[#121316] space-y-3"},/*#__PURE__*/React.createElement("span",{className:"text-3xl block"},"\uD83C\uDFAF"),/*#__PURE__*/React.createElement("h3",{className:"text-sm sm:text-base font-bold text-white"},"Ch\u01B0a C\xF3 Ng\xE1ch N\xE0o \u0110\u01B0\u1EE3c Qu\xE9t"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-400 max-w-md mx-auto leading-relaxed"},"Hệ thống dùng 100% YouTube Data API v3 quét thực tế các video bứt phá từ kênh nhỏ trong thời gian đã chọn (12h, 24h, 3 ngày, 7 ngày, 14 ngày, 30 ngày) với bộ lọc sub & view theo ý bạn."),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>runDeepNicheDiscovery(null,null,true),disabled:isScanningNiches,className:"mt-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-amber-400 to-emerald-400 hover:from-amber-300 hover:to-emerald-300 text-black transition cursor-pointer shadow-lg inline-flex items-center gap-2"},/*#__PURE__*/React.createElement("span",null,"🔄"),/*#__PURE__*/React.createElement("span",null,`Reset & Quét Trend Hôm Nay (${todayStr})`))):/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5"},visibleNiches.map((niche,idx)=>{const isSelected=activeNiche&&activeNiche.id===niche.id;return/*#__PURE__*/React.createElement("div",{key:niche.id||idx,onClick:()=>setActiveNicheId(niche.id),className:`p-3 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between min-h-[92px] select-none ${isSelected?'border-zinc-300 bg-zinc-900 shadow-md ring-1 ring-zinc-400/40':'border-zinc-800 bg-[#121316] hover:border-zinc-700 hover:bg-zinc-900/60'}`},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs"},/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60 leading-none"},"#",idx+1),/*#__PURE__*/React.createElement("span",{className:"text-[11px] font-mono font-medium text-zinc-300"},"x",niche.maxOutlier," View/Sub")),/*#__PURE__*/React.createElement("div",{className:"my-1.5"},/*#__PURE__*/React.createElement("h3",{className:"text-xs sm:text-[13px] font-bold text-white line-clamp-2 leading-snug"},niche.name)),/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-[10px] text-zinc-400 pt-1.5 border-t border-zinc-800/80"},/*#__PURE__*/React.createElement("span",{className:"truncate text-zinc-400"},"Max: ",typeof fmt==='function'?fmt(niche.maxViews):niche.maxViews),/*#__PURE__*/React.createElement("span",{className:"shrink-0 text-zinc-400 font-medium"},niche.channelsCount," kênh nhỏ")));}))),/*#__PURE__*/React.createElement("div",{className:"bg-[#121316] border border-zinc-800 rounded-xl p-3 sm:p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm"},/*#__PURE__*/React.createElement("form",{onSubmit:e=>{e.preventDefault();if(!isPro){if(typeof showToast==='function')showToast('Quét ngách theo từ khóa là tính năng của gói PRO!','info');if(onUpgradePrompt)onUpgradePrompt();return;}if(customKeywordInput.trim()){runDeepNicheDiscovery(customKeywordInput.trim());}},className:"flex items-center gap-2 flex-1 max-w-md"},/*#__PURE__*/React.createElement("div",{className:"relative flex-1"},/*#__PURE__*/React.createElement("span",{className:"absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none"},"\uD83D\uDD0D"),/*#__PURE__*/React.createElement("input",{type:"text",value:customKeywordInput,onChange:e=>setCustomKeywordInput(e.target.value),placeholder:"Nhập 1 hoặc nhiều key cách nhau dấu phẩy (vd: BeyondVN, ai film, dark psychology...)",className:"w-full bg-zinc-900/90 border border-zinc-800 rounded-lg pl-9 pr-3.5 py-2 sm:py-2.5 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition"})),/*#__PURE__*/React.createElement("button",{type:"submit",disabled:isScanningNiches,className:"px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold bg-zinc-100 hover:bg-white text-zinc-950 transition cursor-pointer disabled:opacity-50 shrink-0 shadow-sm"},"Qu\xE9t")),activeNiche&&(()=>{const vids=activeNiche.videos||[];const formatCounts={all:vids.length,long:vids.filter(v=>getVideoFormat(v)==='long').length,short:vids.filter(v=>getVideoFormat(v)==='short').length,live:vids.filter(v=>getVideoFormat(v)==='live').length};return/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2 flex-wrap shrink-0"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl text-xs sm:text-sm"},/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('all'),className:`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${videoFormatFilter==='all'?'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700':'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'}`},/*#__PURE__*/React.createElement("span",null,"T\u1EA5t c\u1EA3"),/*#__PURE__*/React.createElement("span",{className:`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter==='all'?'bg-zinc-950 text-zinc-200':'bg-zinc-950/80 text-zinc-400'}`},formatCounts.all)),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('long'),className:`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${videoFormatFilter==='long'?'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700':'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'}`},/*#__PURE__*/React.createElement("span",null,"Video d\xE0i"),/*#__PURE__*/React.createElement("span",{className:`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter==='long'?'bg-zinc-950 text-zinc-200':'bg-zinc-950/80 text-zinc-400'}`},formatCounts.long)),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('short'),className:`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${videoFormatFilter==='short'?'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700':'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'}`},/*#__PURE__*/React.createElement("span",null,"Shorts"),/*#__PURE__*/React.createElement("span",{className:`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter==='short'?'bg-zinc-950 text-zinc-200':'bg-zinc-950/80 text-zinc-400'}`},formatCounts.short)),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('live'),className:`px-3 sm:px-3.5 py-1.5 rounded-lg font-medium transition cursor-pointer flex items-center gap-1.5 ${videoFormatFilter==='live'?'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700':'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'}`},/*#__PURE__*/React.createElement("span",null,"Live"),/*#__PURE__*/React.createElement("span",{className:`text-[11px] px-1.5 py-0.5 rounded-md font-mono ${videoFormatFilter==='live'?'bg-zinc-950 text-zinc-200':'bg-zinc-950/80 text-zinc-400'}`},formatCounts.live))),onSelectKeywordForSearch&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(isScanningNiches){cancelScanRef.current=true;return;}runDeepNicheDiscovery(null,null,true);},className:"px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shrink-0"},isScanningNiches?"Đang quét...":"Quét lại"));})()),
 /* Hàng Gợi Ý Từ Khóa Tinh Gọn */
 /*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-0.5 text-xs select-none"},
   /*#__PURE__*/React.createElement("span",{className:"text-[11px] font-medium text-zinc-500 shrink-0 pr-1.5 border-r border-zinc-800"},"Gợi ý:"),
@@ -3859,7 +4409,7 @@ return/*#__PURE__*/React.createElement("section",{className:"space-y-4 animate-i
     },
     className:"px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shrink-0 flex items-center gap-1.5 text-[11px] font-medium disabled:opacity-50"
   },/*#__PURE__*/React.createElement("span",null,item.label),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-mono text-zinc-500"},item.rpm)))
-),activeNiche&&(()=>{const vids=activeNiche.videos||[];const filteredVideos=vids.filter(v=>{if(videoFormatFilter==='all')return true;return getVideoFormat(v)===videoFormatFilter;});return/*#__PURE__*/React.createElement("div",{className:"space-y-2 pt-1"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs px-1"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-semibold flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",null,"\uD83C\uDFAC"),!isPro?" Video Demo Dò Ra Hôm Nay ("+todayStr+"): ":" Video Thực Tế: ",/*#__PURE__*/React.createElement("b",{className:"text-white"},activeNiche.name)),/*#__PURE__*/React.createElement("span",{className:"text-[11px] text-zinc-500"},!isPro?"(Ngách cơ bản nhất trong ngày • Mở khóa PRO để xem Top 2-10)":"Hiển thị "+filteredVideos.length+"/"+vids.length+" video kênh <30k sub trong 10 ngày qua")),filteredVideos.length===0?/*#__PURE__*/React.createElement("div",{className:"p-8 text-center border border-dashed border-zinc-800 rounded-xl bg-[#121316] space-y-2"},/*#__PURE__*/React.createElement("span",{className:"text-2xl block"},"\uD83D\uDD0D"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-300 font-semibold"},"Kh\xF4ng c\xF3 video n\xE0o thu\u1ED9c d\u1EA1ng ",videoFormatFilter==='short'?'Shorts':videoFormatFilter==='live'?'Trực Tiếp (Live)':'Video Dài'," trong ng\xE1ch n\xE0y"),/*#__PURE__*/React.createElement("p",{className:"text-[11px] text-zinc-500"},"H\xE3y b\u1EA5m \"T\u1EA5t C\u1EA3\" \u0111\u1EC3 xem to\xE0n b\u1ED9 ",vids.length," video c\u1EE7a ng\xE1ch."),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('all'),className:"mt-1 px-3 py-1 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 cursor-pointer"},"Xem T\u1EA5t C\u1EA3 Video")):/*#__PURE__*/ /* Lưới video thực tế */React.createElement("div",{className:"grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3"},filteredVideos.map((v,idx)=>{const ytUrl='https://www.youtube.com/watch?v='+v.id;const chUrl='https://www.youtube.com/channel/'+(v.channelId||'');const saved=isSaved&&isSaved(v.id);const rev=typeof calcEstimatedRev==='function'?calcEstimatedRev(v.views,v.dur,activeNiche.avgRpm||30):{low:50,high:150,midrolls:6};const vFmt=getVideoFormat(v);return/*#__PURE__*/React.createElement("article",{key:v.id||idx,className:"bg-[#121316] border border-zinc-800 hover:border-zinc-600 rounded-xl overflow-hidden flex flex-col group transition shadow-sm hover:shadow-md"},/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"relative aspect-video bg-zinc-900 overflow-hidden block",title:"M\u1EDF xem tr\xEAn YouTube"},/*#__PURE__*/React.createElement("img",{src:v.thumb,alt:"",className:"w-full h-full object-cover group-hover:scale-102 transition duration-200",loading:"lazy"}),/*#__PURE__*/React.createElement("div",{className:"absolute top-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-700/80"},v.subs?(typeof fmt==='function'?fmt(v.subs):v.subs)+' subs':'Kênh nhỏ'),v.outlierRatio&&/*#__PURE__*/React.createElement("div",{className:"absolute top-1.5 right-1.5 text-[9px] font-mono font-medium px-1.5 py-0.5 rounded bg-zinc-950/85 text-zinc-200 backdrop-blur-sm border border-zinc-700/70"},"x",v.outlierRatio," View/Sub"),v.isBreakout&&/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-zinc-900/90 text-zinc-200 border border-zinc-600 backdrop-blur-sm"},"\uD83D\uDE80 T\xE2n binh"),vFmt==='live'?/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-600 text-white backdrop-blur-sm border border-red-500 flex items-center gap-1 shadow-sm"},/*#__PURE__*/React.createElement("span",{className:"w-1.5 h-1.5 rounded-full bg-white animate-pulse"}),/*#__PURE__*/React.createElement("span",null,"LIVE")):vFmt==='short'?/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-950/95 text-rose-300 backdrop-blur-sm border border-rose-500/60 flex items-center gap-1 shadow-sm"},/*#__PURE__*/React.createElement("span",null,"\u26A1 Shorts"),/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 font-mono pl-0.5"},typeof fmtDur==='function'?fmtDur(v.dur):'0:45')):/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-800 flex items-center gap-1"},/*#__PURE__*/React.createElement("span",null,"\uD83C\uDFAC ",typeof fmtDur==='function'?fmtDur(v.dur):'25:00'),rev.midrolls>0&&/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 border-l border-zinc-700 pl-1"},"~",rev.midrolls," Ads"))),/*#__PURE__*/React.createElement("div",{className:"p-2.5 flex flex-col gap-1.5 flex-1 justify-between text-xs"},/*#__PURE__*/React.createElement("div",{className:"space-y-1"},/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"text-xs sm:text-[13px] font-semibold text-zinc-200 line-clamp-2 leading-snug hover:text-white transition",title:v.title},v.title),/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400 flex items-center justify-between gap-1"},/*#__PURE__*/React.createElement("a",{href:chUrl,target:"_blank",rel:"noopener noreferrer",className:"truncate max-w-[120px] font-medium text-zinc-300 hover:text-white flex items-center gap-1 transition",title:"M\u1EDF k\xEAnh tr\xEAn YouTube"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDCFA"),/*#__PURE__*/React.createElement("span",{className:"truncate"},v.channel),v.country&&v.country!=='N/A'&&/*#__PURE__*/React.createElement("span",{className:"text-[9px] text-zinc-500 font-mono"},"[",v.country,"]")),/*#__PURE__*/React.createElement("span",{className:"text-[10px] text-zinc-500 shrink-0 font-medium"},"RPM ",activeNiche.rpmRange?activeNiche.rpmRange.split('-')[0].trim():'$25+'))),/*#__PURE__*/React.createElement("div",{className:"pt-1 border-t border-zinc-800/80 flex items-center justify-between text-[10px] text-zinc-400"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"\uD83D\uDC41\uFE0F ",typeof fmt==='function'?fmt(v.views):v.views),v.vph?/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"\u26A1+",typeof fmt==='function'?fmt(v.vph):v.vph,"/h"):null,/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"$",typeof fmt==='function'?fmt(rev.low):rev.low,"-$",typeof fmt==='function'?fmt(rev.high):rev.high)),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{setInspectingVideo(v);},className:"w-full py-1 px-2 rounded-lg font-medium text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-500 flex items-center justify-center gap-1.5 transition cursor-pointer",title:"Soi tags \u1EA9n, b\u1EA3n quy\u1EC1n, t\u01B0\u01A1ng t\xE1c v\xE0 l\u1EA5y 50 video c\u1EE7a k\xEAnh ch\u1EC9 t\u1ED1n 1 quota"},/*#__PURE__*/React.createElement("span",null,"Phân tích"),v.tags&&v.tags.length>0&&/*#__PURE__*/React.createElement("span",{className:"text-[9px] px-1 py-0.2 rounded bg-zinc-900 text-zinc-400 font-mono"},v.tags.length)),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1 text-[10px]"},onToggleSave&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(!isPro){if(typeof showToast==='function')showToast('Lưu video ngách dành riêng cho gói PRO!','info');if(onUpgradePrompt)onUpgradePrompt();return;}onToggleSave(v);},className:`flex-1 py-1 px-1.5 rounded-md font-medium transition text-center truncate cursor-pointer ${saved?'bg-zinc-200 text-zinc-950 font-semibold':'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'}`},saved?'✓ Đã Lưu':'🔖 Lưu'),onAddCompetitor&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(!isPro){if(typeof showToast==='function')showToast('Thêm kênh đối thủ dành riêng cho gói PRO!','info');if(onUpgradePrompt)onUpgradePrompt();return;}onAddCompetitor(v.channel);},className:"py-1 px-1.5 rounded-md font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition truncate cursor-pointer",title:"Th\xEAm k\xEAnh n\xE0y v\xE0o danh s\xE1ch theo d\xF5i \u0111\u1ED1i th\u1EE7"},"+ K\xEAnh"),/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"py-1 px-2 rounded-md font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700 hover:text-white transition text-center truncate shrink-0",title:"Xem tr\u1EF1c ti\u1EBFp tr\xEAn YouTube"},"YT \u2197"))));})));})(),!isPro&&/*#__PURE__*/React.createElement("div",{className:"relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-950/40 via-[#181b26] to-[#121316] border border-amber-500/30 p-5 sm:p-6 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4 mt-5 shadow-xl"},/*#__PURE__*/React.createElement("div",{className:"space-y-1.5"},/*#__PURE__*/React.createElement("div",{className:"inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDC51")," D\xC0NH RI\xCANG CHO T\xC0I KHO\u1EA2N PRO"),/*#__PURE__*/React.createElement("h4",{className:"text-sm sm:text-base font-black text-white"},"B\u1EA1n \u0111ang xem 1 ch\u1EE7 \u0111\u1EC1 demo c\u01A1 b\u1EA3n h\xF4m nay. Mu\u1ED1n m\u1EDF kh\xF3a to\xE0n b\u1ED9 c\xE1c ng\xE1ch b\u1EE9t ph\xE1 tri\u1EC7u view kh\xE1c?"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-300 max-w-xl leading-relaxed"},"H\u1EC7 th\u1ED1ng t\u1EF1 \u0111\u1ED9ng ph\xE1t hi\u1EC7n h\xE0ng ch\u1EE5c ng\xE1ch b\u1EE9t ph\xE1 view kh\u1EE7ng x10\u2013x50 m\u1ED7i ng\xE0y, qu\xE9t video t\u1EEB k\xEAnh nh\u1ECF \xEDt sub, b\xF3c t\xE1ch t\u1EEB kh\xF3a v\xE0 soi tags b\xED m\u1EADt.")),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(onUpgradePrompt)onUpgradePrompt();},className:"px-6 py-3 rounded-xl text-xs sm:text-sm font-black bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white shadow-lg shadow-amber-500/25 transition cursor-pointer shrink-0 transform hover:-translate-y-0.5"},"N\xE2ng C\u1EA5p G\xF3i PRO \u0110\u1EC3 Xem Ti\u1EBFp \u2192")),inspectingVideo&&/*#__PURE__*/React.createElement(ManualCheckModal,{video:inspectingVideo,onClose:()=>setInspectingVideo(null),showToast:showToast}),showApiGuideModal&&/*#__PURE__*/React.createElement(ApiFeaturesGuideModal,{onClose:()=>setShowApiGuideModal(false)}));}// Cửa Sổ Chi Tiết Ngách (Clean & Focused Niche Intelligence Modal)
+),activeNiche&&(()=>{const vids=activeNiche.videos||[];const validVids=vids.filter(isVideoValid);const baseVids=validVids.length>0?validVids:vids;const filteredVideos=baseVids.filter(v=>{if(videoFormatFilter==='all')return true;return getVideoFormat(v)===videoFormatFilter;});return/*#__PURE__*/React.createElement("div",{className:"space-y-2 pt-1"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs px-1"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-semibold flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",null,"\uD83C\uDFAC"),!isPro?" Video Demo Dò Ra Hôm Nay ("+todayStr+"): ":" Video Thực Tế: ",/*#__PURE__*/React.createElement("b",{className:"text-white"},activeNiche.name)),/*#__PURE__*/React.createElement("span",{className:"text-[11px] text-zinc-500"},!isPro?("(Kênh <1k sub • >50k view • "+(TIMEFRAME_CONFIG[timeframeFilter]||TIMEFRAME_CONFIG['24h']).label+")"):("Hiển thị "+filteredVideos.length+" video ("+(subLimitFilter>0?('<'+(subLimitFilter<1000?subLimitFilter:(subLimitFilter/1000)+'k')+' sub'):'mọi sub')+" • "+(TIMEFRAME_CONFIG[timeframeFilter]||TIMEFRAME_CONFIG['24h']).label+" • >"+(minViewsFilter/1000)+"k view)"))),filteredVideos.length===0?/*#__PURE__*/React.createElement("div",{className:"p-8 text-center border border-dashed border-zinc-800 rounded-xl bg-[#121316] space-y-2"},/*#__PURE__*/React.createElement("span",{className:"text-2xl block"},"\uD83D\uDD0D"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-300 font-semibold"},"Kh\xF4ng c\xF3 video n\xE0o thu\u1ED9c d\u1EA1ng ",videoFormatFilter==='short'?'Shorts':videoFormatFilter==='live'?'Trực Tiếp (Live)':'Video Dài'," trong ng\xE1ch n\xE0y"),/*#__PURE__*/React.createElement("p",{className:"text-[11px] text-zinc-500"},"H\xE3y b\u1EA5m \"T\u1EA5t C\u1EA3\" \u0111\u1EC3 xem to\xE0n b\u1ED9 ",vids.length," video c\u1EE7a ng\xE1ch."),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('all'),className:"mt-1 px-3 py-1 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 cursor-pointer"},"Xem T\u1EA5t C\u1EA3 Video")):/*#__PURE__*/ /* Lưới video thực tế */React.createElement("div",{className:"grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3"},filteredVideos.map((v,idx)=>{const ytUrl='https://www.youtube.com/watch?v='+v.id;const chUrl='https://www.youtube.com/channel/'+(v.channelId||'');const saved=isSaved&&isSaved(v.id);const rev=typeof calcEstimatedRev==='function'?calcEstimatedRev(v.views,v.dur,activeNiche.avgRpm||30):{low:50,high:150,midrolls:6};const vFmt=getVideoFormat(v);return/*#__PURE__*/React.createElement("article",{key:v.id||idx,className:"bg-[#121316] border border-zinc-800 hover:border-zinc-600 rounded-xl overflow-hidden flex flex-col group transition shadow-sm hover:shadow-md"},/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"relative aspect-video bg-zinc-900 overflow-hidden block",title:"M\u1EDF xem tr\xEAn YouTube"},/*#__PURE__*/React.createElement("img",{src:v.thumb,alt:"",className:"w-full h-full object-cover group-hover:scale-102 transition duration-200",loading:"lazy"}),/*#__PURE__*/React.createElement("div",{className:"absolute top-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-700/80"},v.subs?((v.subs<=1000?'🎯 ':'')+(typeof fmt==='function'?fmt(v.subs):v.subs)+' subs'):'Kênh nhỏ'),v.outlierRatio&&/*#__PURE__*/React.createElement("div",{className:"absolute top-1.5 right-1.5 text-[9px] font-mono font-medium px-1.5 py-0.5 rounded bg-zinc-950/85 text-zinc-200 backdrop-blur-sm border border-zinc-700/70"},"x",v.outlierRatio," View/Sub"),v.isBreakout&&/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-zinc-900/90 text-zinc-200 border border-zinc-600 backdrop-blur-sm"},"\uD83D\uDE80 T\xE2n binh"),vFmt==='live'?/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-600 text-white backdrop-blur-sm border border-red-500 flex items-center gap-1 shadow-sm"},/*#__PURE__*/React.createElement("span",{className:"w-1.5 h-1.5 rounded-full bg-white animate-pulse"}),/*#__PURE__*/React.createElement("span",null,"LIVE")):vFmt==='short'?/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-950/95 text-rose-300 backdrop-blur-sm border border-rose-500/60 flex items-center gap-1 shadow-sm"},/*#__PURE__*/React.createElement("span",null,"\u26A1 Shorts"),/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 font-mono pl-0.5"},typeof fmtDur==='function'?fmtDur(v.dur):'0:45')):/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-800 flex items-center gap-1"},/*#__PURE__*/React.createElement("span",null,"\uD83C\uDFAC ",typeof fmtDur==='function'?fmtDur(v.dur):'25:00'),rev.midrolls>0&&/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 border-l border-zinc-700 pl-1"},"~",rev.midrolls," Ads"))),/*#__PURE__*/React.createElement("div",{className:"p-2.5 flex flex-col gap-1.5 flex-1 justify-between text-xs"},/*#__PURE__*/React.createElement("div",{className:"space-y-1"},/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"text-xs sm:text-[13px] font-semibold text-zinc-200 line-clamp-2 leading-snug hover:text-white transition",title:v.title},v.title),/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400 flex items-center justify-between gap-1"},/*#__PURE__*/React.createElement("a",{href:chUrl,target:"_blank",rel:"noopener noreferrer",className:"truncate max-w-[120px] font-medium text-zinc-300 hover:text-white flex items-center gap-1 transition",title:"M\u1EDF k\xEAnh tr\xEAn YouTube"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDCFA"),/*#__PURE__*/React.createElement("span",{className:"truncate"},v.channel),v.country&&v.country!=='N/A'&&/*#__PURE__*/React.createElement("span",{className:"text-[9px] text-zinc-500 font-mono"},"[",v.country,"]")),/*#__PURE__*/React.createElement("span",{className:"text-[10px] text-zinc-500 shrink-0 font-medium"},"RPM ",activeNiche.rpmRange?activeNiche.rpmRange.split('-')[0].trim():'$25+'))),/*#__PURE__*/React.createElement("div",{className:"pt-1 border-t border-zinc-800/80 flex items-center justify-between text-[10px] text-zinc-400"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"\uD83D\uDC41\uFE0F ",typeof fmt==='function'?fmt(v.views):v.views),v.vph?/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"\u26A1+",typeof fmt==='function'?fmt(v.vph):v.vph,"/h"):null,/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"$",typeof fmt==='function'?fmt(rev.low):rev.low,"-$",typeof fmt==='function'?fmt(rev.high):rev.high)),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{setInspectingVideo(v);},className:"w-full py-1 px-2 rounded-lg font-medium text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-500 flex items-center justify-center gap-1.5 transition cursor-pointer",title:"Soi tags \u1EA9n, b\u1EA3n quy\u1EC1n, t\u01B0\u01A1ng t\xE1c v\xE0 l\u1EA5y 50 video c\u1EE7a k\xEAnh ch\u1EC9 t\u1ED1n 1 quota"},/*#__PURE__*/React.createElement("span",null,"Phân tích"),v.tags&&v.tags.length>0&&/*#__PURE__*/React.createElement("span",{className:"text-[9px] px-1 py-0.2 rounded bg-zinc-900 text-zinc-400 font-mono"},v.tags.length)),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1 text-[10px]"},onToggleSave&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(!isPro){if(typeof showToast==='function')showToast('Lưu video ngách dành riêng cho gói PRO!','info');if(onUpgradePrompt)onUpgradePrompt();return;}onToggleSave(v);},className:`flex-1 py-1 px-1.5 rounded-md font-medium transition text-center truncate cursor-pointer ${saved?'bg-zinc-200 text-zinc-950 font-semibold':'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'}`},saved?'✓ Đã Lưu':'🔖 Lưu'),onAddCompetitor&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(!isPro){if(typeof showToast==='function')showToast('Thêm kênh đối thủ dành riêng cho gói PRO!','info');if(onUpgradePrompt)onUpgradePrompt();return;}onAddCompetitor(v.channel);},className:"py-1 px-1.5 rounded-md font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition truncate cursor-pointer",title:"Th\xEAm k\xEAnh n\xE0y v\xE0o danh s\xE1ch theo d\xF5i \u0111\u1ED1i th\u1EE7"},"+ K\xEAnh"),/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"py-1 px-2 rounded-md font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700 hover:text-white transition text-center truncate shrink-0",title:"Xem tr\u1EF1c ti\u1EBFp tr\xEAn YouTube"},"YT \u2197"))));})));})(),!isPro&&/*#__PURE__*/React.createElement("div",{className:"relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-950/40 via-[#181b26] to-[#121316] border border-amber-500/30 p-5 sm:p-6 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4 mt-5 shadow-xl"},/*#__PURE__*/React.createElement("div",{className:"space-y-1.5"},/*#__PURE__*/React.createElement("div",{className:"inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDC51")," D\xC0NH RI\xCANG CHO T\xC0I KHO\u1EA2N PRO"),/*#__PURE__*/React.createElement("h4",{className:"text-sm sm:text-base font-black text-white"},"B\u1EA1n \u0111ang xem 1 ch\u1EE7 \u0111\u1EC1 demo c\u01A1 b\u1EA3n h\xF4m nay. Mu\u1ED1n m\u1EDF kh\xF3a to\xE0n b\u1ED9 c\xE1c ng\xE1ch b\u1EE9t ph\xE1 tri\u1EC7u view kh\xE1c?"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-300 max-w-xl leading-relaxed"},"H\u1EC7 th\u1ED1ng t\u1EF1 \u0111\u1ED9ng ph\xE1t hi\u1EC7n h\xE0ng ch\u1EE5c ng\xE1ch b\u1EE9t ph\xE1 view kh\u1EE7ng x10\u2013x50 m\u1ED7i ng\xE0y, qu\xE9t video t\u1EEB k\xEAnh nh\u1ECF \xEDt sub, b\xF3c t\xE1ch t\u1EEB kh\xF3a v\xE0 soi tags b\xED m\u1EADt.")),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(onUpgradePrompt)onUpgradePrompt();},className:"px-6 py-3 rounded-xl text-xs sm:text-sm font-black bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white shadow-lg shadow-amber-500/25 transition cursor-pointer shrink-0 transform hover:-translate-y-0.5"},"N\xE2ng C\u1EA5p G\xF3i PRO \u0110\u1EC3 Xem Ti\u1EBFp \u2192")),inspectingVideo&&/*#__PURE__*/React.createElement(ManualCheckModal,{video:inspectingVideo,onClose:()=>setInspectingVideo(null),showToast:showToast}),showApiGuideModal&&/*#__PURE__*/React.createElement(ApiFeaturesGuideModal,{onClose:()=>setShowApiGuideModal(false)}));}// Cửa Sổ Chi Tiết Ngách (Clean & Focused Niche Intelligence Modal)
 function NicheDetailModal({niche,onClose,onSelectKeywordForSearch,onAddCompetitor,onToggleSave,isSaved,showToast}){const[activeTab,setActiveTab]=React.useState('overview');// 'overview' | 'videos' | 'prompts'
 if(!niche)return null;return/*#__PURE__*/React.createElement("div",{className:"fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200"},/*#__PURE__*/React.createElement("div",{className:"bg-brand-surface border border-brand-border rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto"},/*#__PURE__*/React.createElement("div",{className:"p-4 sm:p-5 border-b border-brand-border flex items-start justify-between gap-3 bg-gradient-to-r from-zinc-900 to-brand-surface"},/*#__PURE__*/React.createElement("div",{className:"space-y-1"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2 flex-wrap"},/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-black px-2 py-0.5 rounded bg-amber-400 text-black"},niche.tag||'High-RPM'),/*#__PURE__*/React.createElement("span",{className:"text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"},"RPM: ",niche.rpmRange," / 1k view"),/*#__PURE__*/React.createElement("span",{className:"text-xs text-zinc-400"},"K\xEAnh m\u1EABu: ",/*#__PURE__*/React.createElement("b",{className:"text-white"},niche.exampleChannel))),/*#__PURE__*/React.createElement("h2",{className:"text-lg sm:text-xl font-black text-white"},niche.name),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-400"},niche.subtitle)),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition"},"\u2715")),/*#__PURE__*/React.createElement("div",{className:"flex border-b border-brand-border px-4 sm:px-5 gap-4 text-xs font-semibold bg-brand-card/50"},/*#__PURE__*/React.createElement("button",{onClick:()=>setActiveTab('overview'),className:`py-3 border-b-2 transition ${activeTab==='overview'?'border-amber-400 text-white font-bold':'border-transparent text-zinc-400 hover:text-zinc-200'}`},"1. T\u1ED5ng Quan & Ti\u1EC1m N\u0103ng"),/*#__PURE__*/React.createElement("button",{onClick:()=>setActiveTab('videos'),className:`py-3 border-b-2 transition ${activeTab==='videos'?'border-amber-400 text-white font-bold':'border-transparent text-zinc-400 hover:text-zinc-200'}`},"2. Video & K\xEAnh Th\u1EADt (API)"),/*#__PURE__*/React.createElement("button",{onClick:()=>setActiveTab('prompts'),className:`py-3 border-b-2 transition ${activeTab==='prompts'?'border-amber-400 text-white font-bold':'border-transparent text-zinc-400 hover:text-zinc-200'}`},"3. C\xE2u L\u1EC7nh AI (Prompts)")),/*#__PURE__*/React.createElement("div",{className:"p-4 sm:p-5 overflow-y-auto space-y-4 flex-1"},activeTab==='overview'&&/*#__PURE__*/React.createElement("div",{className:"space-y-4"},/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-4 rounded-xl border border-brand-border space-y-2"},/*#__PURE__*/React.createElement("h4",{className:"text-xs font-bold text-amber-300 uppercase tracking-wider"},"V\xEC sao ng\xE1ch n\xE0y ki\u1EBFm \u0111\u01B0\u1EE3c nhi\u1EC1u ti\u1EC1n?"),/*#__PURE__*/React.createElement("p",{className:"text-xs sm:text-sm text-zinc-200 leading-relaxed"},niche.whyText||niche.desc)),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs"},/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 block text-[11px]"},"\u0110\u1EB7c \u0111i\u1EC3m video:"),/*#__PURE__*/React.createElement("p",{className:"text-zinc-200 mt-1 font-medium"},niche.desc)),/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 block text-[11px]"},"Gi\u1ECDng \u0111\u1ECDc AI ph\xF9 h\u1EE3p:"),/*#__PURE__*/React.createElement("p",{className:"text-emerald-400 mt-1 font-medium"},niche.aiVoice||'ElevenLabs / Lovo AI'))),niche.queries&&niche.queries.length>0&&/*#__PURE__*/React.createElement("div",{className:"space-y-2"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-zinc-300"},"T\u1EEB kh\xF3a t\xECm ki\u1EBFm \u0103n kh\xE1ch nh\u1EA5t c\u1EE7a ng\xE1ch:"),/*#__PURE__*/React.createElement("div",{className:"flex flex-wrap gap-2"},niche.queries.map((q,idx)=>/*#__PURE__*/React.createElement("button",{key:idx,onClick:()=>{onSelectKeywordForSearch(q);onClose();},className:"px-3 py-1.5 rounded-lg text-xs bg-zinc-800 hover:bg-zinc-700 text-cyan-300 border border-zinc-700 hover:border-cyan-500 transition flex items-center gap-1.5",title:"B\u1EA5m \u0111\u1EC3 chuy\u1EC3n sang tab Ph\xE2n T\xEDch c\u1EE5m t\u1EEB kh\xF3a n\xE0y"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDD0D"),/*#__PURE__*/React.createElement("span",null,q),/*#__PURE__*/React.createElement("span",{className:"text-[10px] text-zinc-400"},"\u2192 Ph\xE2n t\xEDch")))))),activeTab==='videos'&&/*#__PURE__*/React.createElement("div",{className:"space-y-3"},/*#__PURE__*/React.createElement("div",{className:"p-6 rounded-xl bg-brand-card border border-brand-border text-center space-y-3"},/*#__PURE__*/React.createElement("span",{className:"text-2xl block"},"\uD83D\uDEE1\uFE0F"),/*#__PURE__*/React.createElement("h4",{className:"text-sm font-bold text-white"},"Cam k\u1EBFt 100% d\u1EEF li\u1EC7u th\u1EADt t\u1EEB YouTube Data API"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-400 max-w-md mx-auto leading-relaxed"},"H\u1EC7 th\u1ED1ng ",/*#__PURE__*/React.createElement("b",null,"tuy\u1EC7t \u0111\u1ED1i kh\xF4ng d\xF9ng video m\u1EABu gi\u1EA3 ho\u1EB7c k\xEAnh \u1EA3o"),". To\xE0n b\u1ED9 video v\xE0 k\xEAnh \u0111\u01B0\u1EE3c tr\xEDch xu\u1EA5t tr\u1EF1c ti\u1EBFp t\u1EEB YouTube Data API theo th\u1EDDi gian th\u1EF1c khi b\u1EA5m ",/*#__PURE__*/React.createElement("b",null,"\u26A1 Qu\xE9t Trend")," \u1EDF b\u1EA3ng \u0111i\u1EC1u khi\u1EC3n ch\xEDnh."),/*#__PURE__*/React.createElement("div",{className:"pt-2 flex flex-wrap justify-center gap-2"},/*#__PURE__*/React.createElement("a",{href:`https://www.youtube.com/results?search_query=${encodeURIComponent(niche.queries&&niche.queries[0]||niche.name)}`,target:"_blank",rel:"noopener noreferrer",className:"px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 transition flex items-center gap-1"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDCFA")," Xem tr\u1EF1c ti\u1EBFp ng\xE1ch n\xE0y tr\xEAn YouTube \u2197")))),activeTab==='prompts'&&/*#__PURE__*/React.createElement("div",{className:"space-y-4"},/*#__PURE__*/React.createElement("div",{className:"space-y-1.5"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-white"},"Prompt Vi\u1EBFt K\u1ECBch B\u1EA3n Chi Ti\u1EBFt (ChatGPT / Claude):"),/*#__PURE__*/React.createElement("button",{onClick:()=>{const tpl=niche.scriptPromptTpl?niche.scriptPromptTpl(niche.sampleVideos?.[0]?.title||niche.name,niche.exampleChannel):'Kịch bản ngách '+niche.name;navigator.clipboard.writeText(tpl);if(showToast)showToast('Đã sao chép prompt kịch bản!');},className:"text-xs text-amber-400 hover:text-amber-300 font-semibold"},"Sao ch\xE9p prompt")),/*#__PURE__*/React.createElement("pre",{className:"p-3 rounded-xl bg-black/60 border border-zinc-800 text-[11px] text-zinc-300 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto"},niche.scriptPromptTpl?niche.scriptPromptTpl(niche.sampleVideos?.[0]?.title||niche.name,niche.exampleChannel):'Chưa có prompt mẫu')),/*#__PURE__*/React.createElement("div",{className:"space-y-1.5"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-white"},"Prompt T\u1EA1o Thumbnail (Midjourney):"),/*#__PURE__*/React.createElement("button",{onClick:()=>{const tpl=niche.thumbPromptTpl?niche.thumbPromptTpl(niche.sampleVideos?.[0]?.title||niche.name):'Thumbnail prompt';navigator.clipboard.writeText(tpl);if(showToast)showToast('Đã sao chép prompt thumbnail!');},className:"text-xs text-amber-400 hover:text-amber-300 font-semibold"},"Sao ch\xE9p prompt")),/*#__PURE__*/React.createElement("pre",{className:"p-3 rounded-xl bg-black/60 border border-zinc-800 text-[11px] text-zinc-300 font-mono whitespace-pre-wrap max-h-36 overflow-y-auto"},niche.thumbPromptTpl?niche.thumbPromptTpl(niche.sampleVideos?.[0]?.title||niche.name):'Chưa có prompt thumbnail')))),/*#__PURE__*/React.createElement("div",{className:"p-3 sm:p-4 border-t border-brand-border bg-brand-card/40 flex items-center justify-between"},/*#__PURE__*/React.createElement("button",{onClick:()=>{if(niche.queries&&niche.queries[0]){onSelectKeywordForSearch(niche.queries[0]);onClose();}},className:"px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-black transition flex items-center gap-1.5 shadow-md"},/*#__PURE__*/React.createElement("span",null,"\uD83C\uDFAF B\u1EAFt Trend C\u1EE5m T\u1EEB Kh\xF3a Ng\xE1ch N\xE0y"),/*#__PURE__*/React.createElement("span",null,"\u2192")),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"px-3.5 py-2 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition"},"\u0110\xF3ng"))));}// Cửa Sổ Soi Video Chuyên Sâu (Hidden Tags, 1-Quota 50 Videos, Copyright & Organic Check)
 function VideoInspectorModal(){return null;}
