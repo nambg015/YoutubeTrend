@@ -3858,6 +3858,42 @@ const isVideoValid = React.useCallback(v => {
   return true;
 }, [timeframeFilter, subLimitFilter, minViewsFilter, minOutlierFilter, TIMEFRAME_CONFIG]);
 
+
+// Step 2 Multi-Axis Slicing & Bandit Planner Helpers
+const createNicheTimeSlices = (startMs, endMs, tfHours) => {
+  const slices = [];
+  const totalMs = Math.max(3600000, endMs - startMs);
+  let sliceDuration = 24 * 3600000;
+  if (tfHours <= 24) sliceDuration = 12 * 3600000;
+  else if (tfHours <= 72) sliceDuration = 24 * 3600000;
+  else sliceDuration = 48 * 3600000;
+
+  let cur = startMs;
+  while (cur < endMs) {
+    const next = Math.min(endMs, cur + sliceDuration);
+    const isMostRecent = (next === endMs);
+    slices.push({
+      startMs: cur,
+      endMs: next,
+      publishedAfter: new Date(cur).toISOString(),
+      publishedBefore: new Date(next).toISOString(),
+      order: isMostRecent ? 'date' : 'viewCount',
+      page: 1
+    });
+    cur = next;
+  }
+  return slices;
+};
+
+const bisectNicheSlice = (slice) => {
+  if (!slice || (slice.endMs - slice.startMs) <= 3600000) return null;
+  const mid = Math.round((slice.startMs + slice.endMs) / 2);
+  return [
+    { startMs: slice.startMs, endMs: mid, publishedAfter: new Date(slice.startMs).toISOString(), publishedBefore: new Date(mid).toISOString(), order: slice.order || 'viewCount', page: 1, isBisected: true },
+    { startMs: mid, endMs: slice.endMs, publishedAfter: new Date(mid).toISOString(), publishedBefore: new Date(slice.endMs).toISOString(), order: slice.order || 'viewCount', page: 1, isBisected: true }
+  ];
+};
+
 const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchSizeOverride, isDailyReset=false)=>{
   if(!apiKey||typeof yt!=='function'){
     if(typeof showToast==='function')showToast('Vui lòng nhập YouTube API Key để quét ngách thật!','warning');
@@ -4072,72 +4108,71 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
         foundNiches: discoveredList.length
       });
 
-      let searchRes;
-      try {
-        const searchParams = {
-          part: 'snippet',
-          type: 'video',
-          q: topic.q,
-          order: 'viewCount', // CRITICAL: viewCount sorting gets the top viewed uploads in this timeframe!
-          publishedAfter: publishedAfterISO,
-          maxResults: 50
-        };
+      // Multi-Axis Time Slicing & Bisection
+      const seedTimeSlices = createNicheTimeSlices(cutoffTimeMs, Date.now(), tfHours);
+      // Select 1 to 2 optimal slices based on batch mode
+      const activeSlices = scanBatchMode === 'deepPages' || scanBatchMode === 'deepAll'
+        ? seedTimeSlices
+        : [seedTimeSlices[seedTimeSlices.length - 1], seedTimeSlices[0]].filter((s, idx, arr) => arr.indexOf(s) === idx);
 
-        if(selectedMarket==='GLOBAL'){
-          searchParams.regionCode = 'US';
-          searchParams.relevanceLanguage = 'en';
-        } else {
-          searchParams.regionCode = selectedMarket;
-          searchParams.relevanceLanguage = selectedMarket==='VN'?'vi':selectedMarket==='JP'?'ja':selectedMarket==='KR'?'ko':'en';
-        }
+      let videoIds = [];
+      const sliceQueue = [...activeSlices];
 
-        searchRes = await yt('search', searchParams, apiKey);
-      } catch(e) {
-        console.warn('Search API error on seed:', topic.label, e);
-        if(e.code==='quotaExceeded'||e.code==='HTTP403'||(e.msg&&e.msg.includes('quota'))){
-          if(typeof ytKeyManager!=='undefined'){
-            const nextK = ytKeyManager.markQuotaExceeded(apiKey);
-            if(nextK){
-              if(typeof showToast==='function')showToast('Key hiện tại hết Quota, tự động xoay sang Key dự phòng!','info');
-              continue;
-            }
-          }
-          throw new Error('API Key đã hết hạn mức Quota hôm nay (10.000 units). Vui lòng thêm Key dự phòng trong cài đặt!');
-        }
-        if(e.code==='keyInvalid'||(e.msg&&e.msg.includes('API key not valid'))){
-          throw new Error('YouTube API Key không hợp lệ. Vui lòng bấm Cấu hình API để nhập lại!');
-        }
-        continue;
-      }
-
-      let items = searchRes.items||[];
-      let videoIds = items.map(it=>it.id&&it.id.videoId).filter(Boolean);
-
-      // Deep 2-Page mode: fetch additional 50 items if requested
-      if(scanBatchMode==='deepPages' && searchRes.nextPageToken && videoIds.length > 0){
+      while(sliceQueue.length > 0 && !cancelScanRef.current) {
+        const curSlice = sliceQueue.shift();
+        let searchRes = null;
         try {
-          const searchParamsP2 = {
+          const searchParams = {
             part: 'snippet',
             type: 'video',
             q: topic.q,
-            order: 'viewCount',
-            publishedAfter: publishedAfterISO,
-            maxResults: 50,
-            pageToken: searchRes.nextPageToken
+            order: curSlice.order || 'viewCount',
+            publishedAfter: curSlice.publishedAfter,
+            publishedBefore: curSlice.publishedBefore,
+            videoDuration: 'medium', // Target long-form 4-20m+; avoids burning 100 quota on random shorts!
+            maxResults: 50
           };
+
           if(selectedMarket==='GLOBAL'){
-            searchParamsP2.regionCode = 'US';
-            searchParamsP2.relevanceLanguage = 'en';
+            searchParams.regionCode = 'US';
+            searchParams.relevanceLanguage = 'en';
           } else {
-            searchParamsP2.regionCode = selectedMarket;
-            searchParamsP2.relevanceLanguage = selectedMarket==='VN'?'vi':selectedMarket==='JP'?'ja':selectedMarket==='KR'?'ko':'en';
+            searchParams.regionCode = selectedMarket;
+            searchParams.relevanceLanguage = selectedMarket==='VN'?'vi':selectedMarket==='JP'?'ja':selectedMarket==='KR'?'ko':'en';
           }
-          const p2Res = await yt('search', searchParamsP2, apiKey);
-          const p2Items = p2Res.items||[];
-          const p2Ids = p2Items.map(it=>it.id&&it.id.videoId).filter(Boolean);
-          videoIds = [...videoIds, ...p2Ids];
-        } catch(p2Err){
-          console.warn('Page 2 search error:', p2Err);
+          if(curSlice.pageToken) searchParams.pageToken = curSlice.pageToken;
+
+          searchRes = await yt('search', searchParams, apiKey);
+        } catch(e) {
+          console.warn('Search API error on slice:', topic.label, e);
+          if(e.code==='quotaExceeded'||e.code==='HTTP403'||(e.msg&&e.msg.includes('quota'))){
+            if(typeof ytKeyManager!=='undefined'){
+              const nextK = ytKeyManager.markQuotaExceeded(apiKey);
+              if(nextK){
+                if(typeof showToast==='function')showToast('Key hiện tại hết Quota, tự động xoay sang Key dự phòng!','info');
+                continue;
+              }
+            }
+            throw new Error('API Key đã hết hạn mức Quota hôm nay (10.000 units). Vui lòng thêm Key dự phòng trong cài đặt!');
+          }
+          if(e.code==='keyInvalid'||(e.msg&&e.msg.includes('API key not valid'))){
+            throw new Error('YouTube API Key không hợp lệ. Vui lòng bấm Cấu hình API để nhập lại!');
+          }
+          continue;
+        }
+
+        const items = searchRes?.items || [];
+        const sliceIds = items.map(it=>it.id&&it.id.videoId).filter(Boolean);
+        sliceIds.forEach(id => { if(!videoIds.includes(id)) videoIds.push(id); });
+
+        // Saturation Bisection: if full 50 items returned and slice > 1h, bisect to uncover hidden breakouts
+        if(items.length === 50 && (scanBatchMode === 'deepAll' || scanBatchMode === 'deepPages')) {
+          const bisected = bisectNicheSlice(curSlice);
+          if(bisected && sliceQueue.length < 4) {
+            sliceQueue.push(...bisected);
+          } else if(searchRes.nextPageToken && curSlice.page < 2) {
+            sliceQueue.push({ ...curSlice, page: curSlice.page + 1, pageToken: searchRes.nextPageToken });
+          }
         }
       }
 
@@ -4290,6 +4325,18 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
           };
         }
       });
+
+      try {
+        const banditRaw = localStorage.getItem('yt_niche_seed_bandit');
+        const banditStats = banditRaw ? JSON.parse(banditRaw) : {};
+        const prevStat = banditStats[topic.id] || { pulls: 0, goodChannelsFound: 0 };
+        banditStats[topic.id] = {
+          pulls: prevStat.pulls + 1,
+          goodChannelsFound: prevStat.goodChannelsFound + Object.keys(eligibleChannelsMap).length,
+          lastUpdated: Date.now()
+        };
+        localStorage.setItem('yt_niche_seed_bandit', JSON.stringify(banditStats));
+      } catch(e){}
 
       if(eligibleVideosInTopic.length > 0){
         eligibleVideosInTopic.sort((a,b)=>{
