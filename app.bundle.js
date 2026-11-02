@@ -3860,6 +3860,48 @@ const isVideoValid = React.useCallback(v => {
 
 
 // Step 2 Multi-Axis Slicing & Bandit Planner Helpers
+
+// Step 3 Snowball Seed Expansion Helpers
+const SNOWBALL_JUNK_REGEX = /\b(trailer|teaser|official|movie|film|cinema|music\s*video|official\s*video|mv|song|songs|lyrics|remix|audio|soundtrack|ost|episode|reaction|react|tiktok|reels?|shorts?|live|livestream|stream|vlog|gameplay|clip|review|phim|full|hd|4k)\b/i;
+const SNOWBALL_STOPWORDS = new Set(['the','and','in','of','to','for','with','a','an','is','on','this','that','by','how','what','why','who','from','at','into','part','episode','full','video','watch','your','you','are','was','were','been','will','about','after','before','more','most','very','just','best','new','now','all','any','can','could','should','và','là','của','cho','với','trong','các','những','được','khi','này','đó','tại','về','như','đã','sẽ','đang','lại','thì','mà','ra','vào','bởi','theo','từ','qua','lên','xuống','rất','quá','hay','nhiều','video','kênh','tập','phần','bản','mới']);
+
+const extractSnowballKeywords = (qualifiedVideos = [], existingQueries = new Set(), market = 'GLOBAL') => {
+  if (!Array.isArray(qualifiedVideos) || qualifiedVideos.length === 0) return [];
+  const freq = new Map();
+  qualifiedVideos.forEach(v => {
+    const vCount = Number(v.views) || 0;
+    (v.tags || []).forEach(t => {
+      if (!t || typeof t !== 'string') return;
+      if (/https?:/i.test(t) || /www\./i.test(t)) return;
+      const clean = t.replace(/[^a-zA-Z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (clean.length < 3 || clean.length > 35 || /^\d+$/.test(clean) || SNOWBALL_JUNK_REGEX.test(clean) || SNOWBALL_STOPWORDS.has(clean)) return;
+      const item = freq.get(clean) || { term: clean, score: 0 };
+      item.score += 20000 + vCount;
+      freq.set(clean, item);
+    });
+  });
+
+  const candidates = Array.from(freq.values()).sort((a,b) => b.score - a.score);
+  const newSeeds = [];
+  for (const cand of candidates) {
+    if (existingQueries.has(cand.term)) continue;
+    const isDup = newSeeds.some(s => s.q.includes(cand.term) || cand.term.includes(s.q));
+    if (isDup) continue;
+    const cap = cand.term.charAt(0).toUpperCase() + cand.term.slice(1);
+    newSeeds.push({
+      id: 'snowball_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      label: '🌱 ' + cap + ' (Snowball)',
+      q: cand.term,
+      rpm: market === 'VN' ? '$8 - $20' : '$25 - $48',
+      isSnowball: true,
+      efficiencyScore: 1.0,
+      consecutiveFailures: 0
+    });
+    if (newSeeds.length >= 3) break;
+  }
+  return newSeeds;
+};
+
 const createNicheTimeSlices = (startMs, endMs, tfHours) => {
   const slices = [];
   const totalMs = Math.max(3600000, endMs - startMs);
@@ -4034,14 +4076,29 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
   }
 
   if(seedsToScan.length === 0){
-    const pool = SEED_TREND_TOPICS||[];
-    const reqCount = batchSizeOverride || (scanBatchMode==='quick6'?6:scanBatchMode==='deepAll'||scanBatchMode==='deepPages'?pool.length:12);
+    const basePool = SEED_TREND_TOPICS||[];
+    let dynamicSnowballSeeds = [];
+    try {
+      const rawSnow = localStorage.getItem('yt_niche_snowball_seeds_' + selectedMarket);
+      if (rawSnow) {
+        const parsed = JSON.parse(rawSnow);
+        if (Array.isArray(parsed)) {
+          dynamicSnowballSeeds = parsed.filter(s => (s.consecutiveFailures || 0) < 4).sort((a,b)=>(b.efficiencyScore||0)-(a.efficiencyScore||0));
+        }
+      }
+    } catch(e){}
+
+    const combinedPool = [...dynamicSnowballSeeds.slice(0, 4), ...basePool];
+    const reqCount = batchSizeOverride || (scanBatchMode==='quick6'?6:scanBatchMode==='deepAll'||scanBatchMode==='deepPages'?combinedPool.length:12);
     let staticSeeds = [];
-    if(reqCount < pool.length){
-      const shuffled = [...pool].sort(()=>0.5-Math.random());
-      staticSeeds = shuffled.slice(0, reqCount);
+    if(reqCount < combinedPool.length){
+      // Ensure active snowball seeds get prioritized
+      const activeSnow = dynamicSnowballSeeds.slice(0, 2);
+      const remainingSlots = reqCount - activeSnow.length;
+      const shuffledBase = [...basePool].sort(()=>0.5-Math.random());
+      staticSeeds = [...activeSnow, ...shuffledBase.slice(0, Math.max(1, remainingSlots))];
     } else {
-      staticSeeds = [...pool];
+      staticSeeds = [...combinedPool];
     }
     if(isDailyReset){
       const dynamicTrendSeeds = trendingKeywords.map((k,idx)=>({
@@ -4337,6 +4394,23 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
         };
         localStorage.setItem('yt_niche_seed_bandit', JSON.stringify(banditStats));
       } catch(e){}
+
+      // Step 3 Snowball: Extract new seeds from qualified small channel breakout videos
+      if(eligibleVideosInTopic.length > 0){
+        try {
+          const existingQs = new Set(seedsToScan.map(s => (s.q||'').toLowerCase()));
+          const newSnow = extractSnowballKeywords(eligibleVideosInTopic, existingQs, selectedMarket);
+          if (newSnow.length > 0) {
+            const snowKey = 'yt_niche_snowball_seeds_' + selectedMarket;
+            const currentRaw = localStorage.getItem(snowKey);
+            const currentList = currentRaw ? JSON.parse(currentRaw) : [];
+            const mergedSnow = [...newSnow, ...currentList.filter(ex => !newSnow.some(ns => ns.q === ex.q))].slice(0, 30);
+            localStorage.setItem(snowKey, JSON.stringify(mergedSnow));
+          }
+        } catch(snowErr){
+          console.warn('Snowball seed extraction error:', snowErr);
+        }
+      }
 
       if(eligibleVideosInTopic.length > 0){
         eligibleVideosInTopic.sort((a,b)=>{
