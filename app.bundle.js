@@ -3862,6 +3862,13 @@ const isVideoValid = React.useCallback(v => {
 // Step 2 Multi-Axis Slicing & Bandit Planner Helpers
 
 // Step 3 Snowball Seed Expansion Helpers
+
+// Step 4 Cheap Endpoint Discovery (1 Quota per 50 items)
+const getChannelUploadsPlaylistId = (chId) => {
+  if (!chId || typeof chId !== 'string') return '';
+  return chId.startsWith('UC') ? 'UU' + chId.slice(2) : chId;
+};
+
 const SNOWBALL_JUNK_REGEX = /\b(trailer|teaser|official|movie|film|cinema|music\s*video|official\s*video|mv|song|songs|lyrics|remix|audio|soundtrack|ost|episode|reaction|react|tiktok|reels?|shorts?|live|livestream|stream|vlog|gameplay|clip|review|phim|full|hd|4k)\b/i;
 const SNOWBALL_STOPWORDS = new Set(['the','and','in','of','to','for','with','a','an','is','on','this','that','by','how','what','why','who','from','at','into','part','episode','full','video','watch','your','you','are','was','were','been','will','about','after','before','more','most','very','just','best','new','now','all','any','can','could','should','và','là','của','cho','với','trong','các','những','được','khi','này','đó','tại','về','như','đã','sẽ','đang','lại','thì','mà','ra','vào','bởi','theo','từ','qua','lên','xuống','rất','quá','hay','nhiều','video','kênh','tập','phần','bản','mới']);
 
@@ -4152,6 +4159,7 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
 
   let totalEligibleVideosFound = chartBreakoutVideos.length;
   let totalEligibleChannelsFound = Object.keys(chartBreakoutVideos.reduce((acc,v)=>({...acc,[v.channelId]:1}),{})).length;
+  const globalSeenChannelIds = new Set(chartBreakoutVideos.map(v => v.channelId));
 
   try {
     for(let i=0; i<seedsToScan.length; i++){
@@ -4248,14 +4256,19 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
       }
       if(vidsList.length === 0) continue;
 
-      const channelIds = [...new Set(vidsList.map(v=>v.snippet.channelId))];
+      const rawChannelIds = [...new Set(vidsList.map(v=>v.snippet.channelId))];
       const channelsMap = {};
-      for(let b=0; b<channelIds.length; b+=50){
-        const chunk = channelIds.slice(b, b+50);
+      // Filter only unseen channels to prevent duplicate quota usage
+      const newChannelIds = rawChannelIds.filter(id => !globalSeenChannelIds.has(id));
+      const channelIdsToFetch = newChannelIds.length > 0 ? newChannelIds : rawChannelIds;
+
+      for(let b=0; b<channelIdsToFetch.length; b+=50){
+        const chunk = channelIdsToFetch.slice(b, b+50);
         try {
           const chRes = await yt('channels', {part:'statistics,snippet,contentDetails', id: chunk.join(',')}, apiKey);
           (chRes.items||[]).forEach(ch => {
             const subCount = ch.statistics.hiddenSubscriberCount ? null : Number(ch.statistics.subscriberCount);
+            globalSeenChannelIds.add(ch.id);
             channelsMap[ch.id] = {
               id: ch.id,
               name: ch.snippet.title,
