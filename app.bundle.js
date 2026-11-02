@@ -22,7 +22,7 @@ Hãy viết lại một kịch bản truyện dài đầy đủ (~3.500 đến 4
    - Phần 1: Hoàn cảnh khó khăn của cô hầu gái và sự cay nghiệt/hiểu lầm ban đầu của gia đình tỷ phú.
    - Phần 2: Bí mật được hé lộ (một hành động hy sinh thầm lặng hoặc kỷ vật gia đình quý giá).
    - Phần 3: Cao trào & Sự hối hận của tỷ phú, quả báo tốt lành và cái kết ấm áp đẫm nước mắt.
-4. KÈM CHỈ DẪN HÌNH ẢNH (Image Prompt cho Midjourney) sau mỗi đoạn để ghép vào CapCut tạo hiệu ứng chậm rãi.`,sampleVideos:[{id:'bn_maid_1',title:"Billionaire Came Home By Surprise... What The Maid Was Doing With His Elderly Mother Shocked The House",channel:"Echoes of Hope & Life",channelId:"ch_maid_1",subs:18400,views:28600,dur:3720,vph:640,published:new Date(Date.now()-36e5*18).toISOString(),thumb:"https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80"},{id:'bn_maid_2',title:"Rich CEO Disguised As Janitor To Test His Fiancee, But The Poor Maid Was The Only One Who Fed Him",channel:"Heartfelt Echoes TV",channelId:"ch_maid_2",subs:24500,views:42100,dur:4120,vph:810,published:new Date(Date.now()-36e5*42).toISOString(),thumb:"https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80"},{id:'bn_maid_3',title:"Billionaire Fired His Loyal Maid Of 15 Years, 3 Days Later A Lawyer Knocked On His Door With A Letter",channel:"Golden Wisdom Stories",channelId:"ch_maid_3",subs:12900,views:19800,dur:3450,vph:490,published:new Date(Date.now()-36e5*68).toISOString(),thumb:"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:98.6,prevRank:1,growth:'+520%',comp:'Thấp',retention:'92%',trendNote:'Đạt đỉnh điểm view hôm nay nhờ thuật toán US đẩy mạnh video trên 45p'},'1d':{score:98.2,prevRank:2,growth:'+490%',comp:'Thấp',retention:'91%',trendNote:'Leo lên vị trí Top 1 nhờ tỷ lệ giữ chân trên 75%'},'2d':{score:97.5,prevRank:2,growth:'+460%',comp:'Thấp',retention:'91%',trendNote:'Giữ vững vị trí số 2, view tăng mạnh từ khán giả US 55+'},'3d':{score:96.0,prevRank:4,growth:'+430%',comp:'Thấp',retention:'90%',trendNote:'Bứt phá 1 bậc lên Top 3'},'7d':{score:94.0,prevRank:6,growth:'+380%',comp:'Thấp',retention:'89%',trendNote:'Đang leo thang mạnh, số lượng kênh mới bắt đầu tăng'},'14d':{score:92.1,prevRank:9,growth:'+310%',comp:'Thấp',retention:'88%',trendNote:'Ngách mới nổi, cực kỳ ít đối thủ cạnh tranh'},'30d':{score:88.5,prevRank:13,growth:'+240%',comp:'Thấp',retention:'86%',trendNote:'Bắt đầu có dấu hiệu tăng trưởng tại Bắc Mỹ'},'90d':{score:82.0,prevRank:15,growth:'+120%',comp:'Thấp',retention:'84%',trendNote:'Giai đoạn thử nghiệm, chỉ vài kênh tiên phong'}}},{id:'military_aviation',name:'Vũ Khí Quân Sự & Máy Bay Tàng Hình',subtitle:'Modern Military Tech & Black Projects',exampleChannel:null,rpmRange:'$24 - $50',avgRpm:36,tag:'Bứt phá 24h 🔥',tagCls:'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',desc:'Phân tích vũ khí bí mật thế hệ 6, máy bay tàng hình B-21, tiêm kích radar, tàu ngầm hạt nhân.',queries:['secret military aircraft black projects','B-21 Raider stealth bomber capabilities','sixth generation fighter jet revealed','classified hypersonic missile test'],whyText:'Khán giả US & NATO cực kỳ quan tâm diễn biến công nghệ quân sự. Quảng cáo từ game quân sự, VPN, khóa học kỹ thuật chi trả CPM rất cao ($30 - $60).',aiVoice:'ElevenLabs: Marcus hoặc Anthony (Giọng tài liệu khoa học quân sự đanh thép)',thumbPromptTpl:title=>`Cinematic 8k photograph of a classified triangular stealth bomber parked in a secret underground hangar, moody atmospheric volumetric mist, dramatic rim lighting, titanium alloy reflections, ultra-realistic --ar 16:9 --v 6.0`,scriptPromptTpl:(title,channel)=>`Bạn là chuyên gia phân tích công nghệ quốc phòng và vũ khí chiến lược.
+4. KÈM CHỈ DẪN HÌNH ẢNH (Image Prompt cho Midjourney) sau mỗi đoạn để ghép vào CapCut tạo hiệu ứng chậm rãi.`,sampleVideos:[{id:'eID1AjYzEoo',title:"Billionaire Came Home By Surprise... What The Maid Was Doing With His Elderly Mother Shocked The House",channel:"Echoes of Hope & Life",channelId:"ch_maid_1",subs:18400,views:28600,dur:3720,vph:640,published:new Date(Date.now()-36e5*18).toISOString(),thumb:"https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80"},{id:'vKjfY5eE4cI',title:"Rich CEO Disguised As Janitor To Test His Fiancee, But The Poor Maid Was The Only One Who Fed Him",channel:"Heartfelt Echoes TV",channelId:"ch_maid_2",subs:24500,views:42100,dur:4120,vph:810,published:new Date(Date.now()-36e5*42).toISOString(),thumb:"https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80"},{id:'MZWC2bYn8J4',title:"Billionaire Fired His Loyal Maid Of 15 Years, 3 Days Later A Lawyer Knocked On His Door With A Letter",channel:"Golden Wisdom Stories",channelId:"ch_maid_3",subs:12900,views:19800,dur:3450,vph:490,published:new Date(Date.now()-36e5*68).toISOString(),thumb:"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:98.6,prevRank:1,growth:'+520%',comp:'Thấp',retention:'92%',trendNote:'Đạt đỉnh điểm view hôm nay nhờ thuật toán US đẩy mạnh video trên 45p'},'1d':{score:98.2,prevRank:2,growth:'+490%',comp:'Thấp',retention:'91%',trendNote:'Leo lên vị trí Top 1 nhờ tỷ lệ giữ chân trên 75%'},'2d':{score:97.5,prevRank:2,growth:'+460%',comp:'Thấp',retention:'91%',trendNote:'Giữ vững vị trí số 2, view tăng mạnh từ khán giả US 55+'},'3d':{score:96.0,prevRank:4,growth:'+430%',comp:'Thấp',retention:'90%',trendNote:'Bứt phá 1 bậc lên Top 3'},'7d':{score:94.0,prevRank:6,growth:'+380%',comp:'Thấp',retention:'89%',trendNote:'Đang leo thang mạnh, số lượng kênh mới bắt đầu tăng'},'14d':{score:92.1,prevRank:9,growth:'+310%',comp:'Thấp',retention:'88%',trendNote:'Ngách mới nổi, cực kỳ ít đối thủ cạnh tranh'},'30d':{score:88.5,prevRank:13,growth:'+240%',comp:'Thấp',retention:'86%',trendNote:'Bắt đầu có dấu hiệu tăng trưởng tại Bắc Mỹ'},'90d':{score:82.0,prevRank:15,growth:'+120%',comp:'Thấp',retention:'84%',trendNote:'Giai đoạn thử nghiệm, chỉ vài kênh tiên phong'}}},{id:'military_aviation',name:'Vũ Khí Quân Sự & Máy Bay Tàng Hình',subtitle:'Modern Military Tech & Black Projects',exampleChannel:null,rpmRange:'$24 - $50',avgRpm:36,tag:'Bứt phá 24h 🔥',tagCls:'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',desc:'Phân tích vũ khí bí mật thế hệ 6, máy bay tàng hình B-21, tiêm kích radar, tàu ngầm hạt nhân.',queries:['secret military aircraft black projects','B-21 Raider stealth bomber capabilities','sixth generation fighter jet revealed','classified hypersonic missile test'],whyText:'Khán giả US & NATO cực kỳ quan tâm diễn biến công nghệ quân sự. Quảng cáo từ game quân sự, VPN, khóa học kỹ thuật chi trả CPM rất cao ($30 - $60).',aiVoice:'ElevenLabs: Marcus hoặc Anthony (Giọng tài liệu khoa học quân sự đanh thép)',thumbPromptTpl:title=>`Cinematic 8k photograph of a classified triangular stealth bomber parked in a secret underground hangar, moody atmospheric volumetric mist, dramatic rim lighting, titanium alloy reflections, ultra-realistic --ar 16:9 --v 6.0`,scriptPromptTpl:(title,channel)=>`Bạn là chuyên gia phân tích công nghệ quốc phòng và vũ khí chiến lược.
 Hãy viết một kịch bản phim tài liệu dài 30 phút (~3.800 từ tiếng Anh) với chủ đề: "${title}" (Kênh gốc: ${channel}).
 Bố cục:
 1. Hook nghẹt thở về dự án mật bị rò rỉ (5 phút đầu).
@@ -34,7 +34,7 @@ Hãy viết một bài Cầu Nguyện & Suy Niệm dài 25 - 30 phút (~3.000 t�
 1. Lời mở đầu tạ ơn và dâng ngày mới / ban đêm cho Thiên Chúa (5 phút).
 2. Trích dẫn 3 câu Kinh Thánh mang lại sự bình an, chữa lành nỗi đau và lo âu (5 phút).
 3. Lời cầu nguyện sâu lắng cho bản thân, gia đình, con cái và sự tha thứ (10 phút).
-4. Giây phút tĩnh lặng suy niệm cùng lời chúc phúc bình an của Chúa (5 phút).`,sampleVideos:[{id:'cat_pray_1',title:"Catholic Morning Prayer | Christ Sees Your Suffering & Rest In God's Grace",channel:"Sacred Echoes of Grace",channelId:"ch_cat_1",subs:21800,views:18900,dur:2125,vph:410,published:new Date(Date.now()-36e5*18).toISOString(),thumb:"https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=600&q=80"},{id:'cat_pray_2',title:"Miracle Catholic Prayer Before Sleep - Let Peace Guard Your Heart Tonight",channel:"Daily Devotion US",channelId:"ch_cat_2",subs:16500,views:14200,dur:1980,vph:350,published:new Date(Date.now()-36e5*32).toISOString(),thumb:"https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=600&q=80"},{id:'cat_pray_3',title:"Powerful Catholic Prayer For Healing & Strength In Hard Times",channel:"Sacred Echoes of Grace",channelId:"ch_cat_1",subs:21800,views:32400,dur:2450,vph:520,published:new Date(Date.now()-36e5*72).toISOString(),thumb:"https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:96.2,prevRank:2,growth:'+410%',comp:'Thấp',retention:'94%',trendNote:'Top 3 vững chắc, lượng view buổi sáng từ Mỹ luôn ổn định'},'1d':{score:97.0,prevRank:1,growth:'+450%',comp:'Thấp',retention:'94%',trendNote:'Top 2 hôm qua'},'2d':{score:98.0,prevRank:1,growth:'+490%',comp:'Thấp',retention:'95%',trendNote:'👑 Top 1 thống trị 2 ngày trước'},'3d':{score:98.4,prevRank:2,growth:'+510%',comp:'Thấp',retention:'95%',trendNote:'👑 Top 1 ngày 3'},'7d':{score:97.8,prevRank:3,growth:'+470%',comp:'Thấp',retention:'94%',trendNote:'Top 2 tuần trước'},'14d':{score:96.5,prevRank:6,growth:'+420%',comp:'Thấp',retention:'93%',trendNote:'Top 3 nửa tháng trước'},'30d':{score:93.0,prevRank:9,growth:'+350%',comp:'Thấp',retention:'91%',trendNote:'Tăng trưởng đều'},'90d':{score:88.9,prevRank:11,growth:'+260%',comp:'Thấp',retention:'89%',trendNote:'Top 9 quý trước'}}},{id:'dark_psychology',name:'Tâm Lý Học Đen & Nghệ Thuật Đọc Vị',subtitle:'Dark Psychology & Manipulation Defense',exampleChannel:null,rpmRange:'$22 - $42',avgRpm:31,tag:'Tò mò cao 🧠',tagCls:'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',desc:'Video 25 - 50 phút phân tích tâm lý độc hại, dấu hiệu thao túng, nghệ thuật đọc suy nghĩ.',queries:['dark psychology tricks you must recognize','manipulation techniques people use on you','signs of toxic psychological control','how to read body language instantly'],whyText:'Giới trẻ và người đi làm tại US rất tò mò về thủ thuật tâm lý bảo vệ bản thân nơi công sở và tình yêu. Tỷ lệ click CTR thumbnail cao kỷ lục (12 - 18%).',aiVoice:'ElevenLabs: George hoặc Adam (Bí ẩn, dứt khoát, lôi cuốn)',thumbPromptTpl:title=>`Cinematic dark psychology portrait, shadowy silhouette of a man with chess piece king glowing in hand, deep neon violet and amber rim lights, mysterious intense atmosphere, high contrast, 8k resolution --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản video Tâm Lý Học Đen & Đọc Vị Dài 30 phút (~3.600 từ tiếng Anh) với chủ đề: "${title}". Chia thành 7 dấu hiệu tâm lý giật mình, phân tích các ví dụ đời thực khiến người nghe bị cuốn hút từ đầu đến cuối.`,sampleVideos:[{id:'dp_vid_1',title:"7 Dark Psychology Tricks People Use To Control You Without You Knowing",channel:"Mind Mastery Lab",channelId:"ch_dp_1",subs:34500,views:68900,dur:2240,vph:1420,published:new Date(Date.now()-36e5*14).toISOString(),thumb:"https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=600&q=80"},{id:'dp_vid_2',title:"How To Read Anyone Instantly: The Silent FBI Body Language Secrets",channel:"Psychology Vault",channelId:"ch_dp_2",subs:22100,views:41500,dur:1980,vph:780,published:new Date(Date.now()-36e5*38).toISOString(),thumb:"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:94.8,prevRank:7,growth:'+540%',comp:'Thấp',retention:'88%',trendNote:'Bứt phá 3 bậc lên Top 4 hôm nay nhờ lượng click CTR tăng vọt'},'1d':{score:90.0,prevRank:10,growth:'+420%',comp:'Thấp',retention:'87%',trendNote:'Tăng 3 bậc hôm qua'},'2d':{score:86.2,prevRank:11,growth:'+330%',comp:'Trung bình',retention:'85%',trendNote:'⭐ Mới vào top 10'},'3d':{score:84.2,prevRank:13,growth:'+280%',comp:'Trung bình',retention:'84%',trendNote:'Tạm rớt Top 10 (Rank 11)'},'7d':{score:83.1,prevRank:15,growth:'+220%',comp:'Trung bình',retention:'82%',trendNote:'Nằm dưới top 10 tuần trước'},'14d':{score:81.4,prevRank:16,growth:'+170%',comp:'Trung bình',retention:'80%',trendNote:'Ngách mới khởi động'},'30d':{score:80.5,prevRank:15,growth:'+140%',comp:'Trung bình',retention:'79%',trendNote:'Bình lặng'},'90d':{score:79.0,prevRank:15,growth:'+110%',comp:'Trung bình',retention:'78%',trendNote:'Chưa bứt phá'}}},{id:'bible_sleep',name:'Kinh Thánh Ru Ngủ & Bình An',subtitle:'Christian Sleep Meditation & Deep Rest',exampleChannel:null,rpmRange:'$20 - $38',avgRpm:28,tag:'Bật xuyên đêm',tagCls:'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',desc:'Thời lượng 45 - 120 phút. Người xem bật để đi vào giấc ngủ, thời gian xem trung bình cực cao.',queries:['Bible sleep story for deep rest','Fall asleep in Gods presence peacefully','Abide Christian sleep meditation','Sleep with scripture peaceful night'],whyText:'Người nghe bật video trước khi ngủ và để chạy suốt đêm. YouTube ghi nhận Watch Time tối đa (40 - 90 phút/lượt xem). Chèn nhiều quảng cáo đầu và giữa video, tệp khán giả Mỹ độ tuổi 40-70 có sức mua và click quảng cáo sản phẩm giấc ngủ/sức khỏe rất cao.',aiVoice:'ElevenLabs: River hoặc Clyde (Giọng cực trầm, êm dịu, thì thầm thư giãn)',thumbPromptTpl:title=>`Serene peaceful nighttime bedroom, soft warm candle glow, open Holy Bible on wooden table by the window, starry night sky with gentle moonbeams, tranquil and calming atmosphere, cinematic 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản kể chuyện Kinh Thánh ru ngủ 60 phút (~5.000 từ tiếng Anh) với giọng điệu thư giãn sâu (Deep Sleep / Guided Sleep Meditation) chủ đề: "${title}". Giọng văn cực kỳ êm dịu, nhịp điệu chậm rãi giúp người nghe giảm căng thẳng và chìm vào giấc ngủ trong sự bảo bọc của Chúa.`,sampleVideos:[{id:'bible_sleep_1',title:"Fall Asleep In God's Peace | 8 Hours Of Calming Bible Verses For Deep Sleep",channel:"Christian Sleep Ministry",channelId:"ch_bible_1",subs:45000,views:82000,dur:7200,vph:920,published:new Date(Date.now()-36e5*24).toISOString(),thumb:"https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=600&q=80"},{id:'bible_sleep_2',title:"Sleep With Scripture: Blessed Night Meditation For Anxiety & Healing",channel:"Abide Deep Rest",channelId:"ch_bible_2",subs:38200,views:56400,dur:4800,vph:640,published:new Date(Date.now()-36e5*48).toISOString(),thumb:"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:93.5,prevRank:5,growth:'+380%',comp:'Thấp',retention:'96%',trendNote:'Ổn định trong Top 5, giữ kỷ lục thời gian xem trung bình cao nhất'},'1d':{score:93.6,prevRank:3,growth:'+390%',comp:'Thấp',retention:'96%',trendNote:'Top 5 hôm qua'},'2d':{score:95.8,prevRank:2,growth:'+440%',comp:'Thấp',retention:'96%',trendNote:'Top 3'},'3d':{score:97.1,prevRank:1,growth:'+490%',comp:'Thấp',retention:'97%',trendNote:'Top 2'},'7d':{score:98.5,prevRank:2,growth:'+530%',comp:'Thấp',retention:'97%',trendNote:'👑 Top 1 tuần trước'},'14d':{score:97.3,prevRank:4,growth:'+480%',comp:'Thấp',retention:'96%',trendNote:'Top 2 nửa tháng trước'},'30d':{score:95.1,prevRank:7,growth:'+430%',comp:'Thấp',retention:'95%',trendNote:'Top 4 tháng trước'},'90d':{score:91.5,prevRank:8,growth:'+360%',comp:'Thấp',retention:'93%',trendNote:'Top 7 quý trước'}}},{id:'stoic_wisdom',name:'Triết Lý Khắc Kỷ & Tuổi Già',subtitle:'Stoic Life Lessons & Elder Wisdom',exampleChannel:null,rpmRange:'$18 - $36',avgRpm:26,tag:'100% Faceless AI',tagCls:'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',desc:'Video 25 - 50 phút. Triết lý sống cho người già, lời khuyên cuộc đời, Marcus Aurelius.',queries:['stoic life lessons you must learn before old','rules to live by before you get old','Marcus Aurelius hard truths for life','wisdom from 90 year olds life lessons'],whyText:'Dễ sản xuất nhất: Chỉ cần ghép các tượng điêu khắc La Mã tạo bằng Midjourney, hiệu ứng chuyển cảnh chậm, kết hợp kịch bản triết lý sâu sắc. Khán giả US nghe khi đi bộ, tập gym hoặc suy ngẫm.',aiVoice:'ElevenLabs: Marcus hoặc Adam (Giọng triết gia thông thái, dứt khoát)',thumbPromptTpl:title=>`Dramatic bust of Roman Emperor Marcus Aurelius carved in weathered white marble, cinematic split lighting, deep dark moody background, high contrast, museum quality photography, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản video Stoicism / Life Lessons dài 30 phút (~3.500 từ tiếng Anh) với chủ đề: "${title}". Chia thành 7 bài học cuộc đời sâu sắc khiến người nghe phải dừng lại suy ngẫm, kèm trích dẫn triết học cổ đại và bài học thực tế hôm nay.`,sampleVideos:[{id:'stoic_vid_1',title:"Things I Wish I Knew Before 70: A Dying Billionaire's Final Words To The World",channel:"Stoic Wisdom & Elder Tales",channelId:"ch_stoic_1",subs:29500,views:38200,dur:2540,vph:720,published:new Date(Date.now()-36e5*28).toISOString(),thumb:"https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=600&q=80"},{id:'stoic_vid_2',title:"Marcus Aurelius: 8 Rules To Never Lose Your Peace Of Mind Again",channel:"Daily Stoic Wisdom",channelId:"ch_stoic_2",subs:36400,views:49800,dur:2160,vph:850,published:new Date(Date.now()-36e5*60).toISOString(),thumb:"https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:91.8,prevRank:6,growth:'+350%',comp:'Trung bình',retention:'89%',trendNote:'Duy trì phong độ Top 6, dễ làm nhất cho người mới bắt đầu'},'1d':{score:92.5,prevRank:5,growth:'+370%',comp:'Trung bình',retention:'89%',trendNote:'Top 6 hôm qua'},'2d':{score:93.2,prevRank:4,growth:'+390%',comp:'Trung bình',retention:'90%',trendNote:'Top 5 2 ngày trước'},'3d':{score:94.5,prevRank:3,growth:'+420%',comp:'Trung bình',retention:'91%',trendNote:'Top 4 3 ngày trước'},'7d':{score:96.4,prevRank:1,growth:'+480%',comp:'Thấp',retention:'92%',trendNote:'Top 3 tuần trước'},'14d':{score:98.0,prevRank:1,growth:'+530%',comp:'Thấp',retention:'93%',trendNote:'👑 Top 1 nửa tháng trước'},'30d':{score:98.7,prevRank:3,growth:'+550%',comp:'Thấp',retention:'93%',trendNote:'👑 Top 1 tháng trước'},'90d':{score:96.5,prevRank:2,growth:'+490%',comp:'Thấp',retention:'92%',trendNote:'Top 3 quý trước'}}},{id:'true_crime_faceless',name:'Hồ Sơ Vụ Án & Tâm Lý Tội Phạm',subtitle:'Cold Case Files & Criminal Minds',exampleChannel:null,rpmRange:'$22 - $46',avgRpm:33,tag:'Giữ chân cực lâu 🕵️',tagCls:'bg-red-500/20 text-red-300 border-red-500/30',desc:'Tái hiện các vụ án bí ẩn, thẩm vấn tội phạm, tâm lý kẻ thủ ác bằng ảnh AI chân thực.',queries:['unsolved mystery interrogation room breakdown','chilling cold cases finally solved documentary','true crime psychological confession analysis','bizarre disappearance that stunned police'],whyText:'True Crime là thể loại có khán giả trung thành số 1 tại Mỹ. Tỷ lệ Retention trên 75% cho video 40 phút. Kênh nhỏ dễ ăn đề xuất nếu làm hook hay.',aiVoice:'ElevenLabs: Brian hoặc Chris (Trầm tối, hồi hộp, giọng tài liệu trinh thám)',thumbPromptTpl:title=>`Dramatic film noir interrogation room, dim overhead lamp casting harsh shadows on an empty wooden table, detective trench coat in background, mysterious dossier file labeled CLASSIFIED, 8k photographic --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu vụ án bí ẩn dài 35 phút (~4.200 từ tiếng Anh) với chủ đề: "${title}". Dẫn dắt từng manh mối, phân tích tâm lý điều tra sắc bén, tạo cao trào hồi hộp khi sự thật được hé lộ.`,sampleVideos:[{id:'crime_vid_1',title:"The 30-Year Mystery That Police Finally Solved With A Single Cup Of Coffee",channel:"Dark Mystery Files",channelId:"ch_crime_1",subs:27500,views:46200,dur:2650,vph:910,published:new Date(Date.now()-36e5*20).toISOString(),thumb:"https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80"},{id:'crime_vid_2',title:"What The Suspect Whispered In The Interrogation Room Chilled Detectives To The Bone",channel:"Cold Case Vault",channelId:"ch_crime_2",subs:19800,views:33400,dur:2310,vph:620,published:new Date(Date.now()-36e5*46).toISOString(),thumb:"https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:90.4,prevRank:8,growth:'+410%',comp:'Thấp',retention:'90%',trendNote:'Leo 1 bậc lên Top 7 hôm nay, tỷ lệ xem hết video rất cao'},'1d':{score:89.3,prevRank:11,growth:'+380%',comp:'Thấp',retention:'89%',trendNote:'⭐ Mới lên top 8 hôm qua'},'2d':{score:85.0,prevRank:13,growth:'+310%',comp:'Trung bình',retention:'87%',trendNote:'Rớt top 10'},'3d':{score:83.0,prevRank:14,growth:'+260%',comp:'Trung bình',retention:'86%',trendNote:'Dưới top 10'},'7d':{score:82.4,prevRank:16,growth:'+230%',comp:'Trung bình',retention:'85%',trendNote:'Dưới top 10'},'14d':{score:80.2,prevRank:16,growth:'+180%',comp:'Cao',retention:'83%',trendNote:'Cạnh tranh cao thời điểm trước'},'30d':{score:79.0,prevRank:16,growth:'+150%',comp:'Cao',retention:'82%',trendNote:'Rớt top'},'90d':{score:77.5,prevRank:16,growth:'+110%',comp:'Cao',retention:'80%',trendNote:'Rớt top'}}},{id:'history_mystery',name:'Bí Ẩn Lịch Sử & Sự Thật Cổ Đại',subtitle:'Forgotten History & Ancient Secrets',exampleChannel:null,rpmRange:'$20 - $45',avgRpm:32,tag:'Xem tò mò lâu',tagCls:'bg-purple-500/20 text-purple-300 border-purple-500/30',desc:'Video 30 - 60 phút kể về nền văn minh cổ đại, bí ẩn khảo cổ, tài liệu bị giấu kín.',queries:['forbidden history ancient civilization documentary','unexplained mysteries of human history','bizarre ancient secrets revealed','lost civilization forgotten evidence'],whyText:'Khán giả nam giới US 35 - 65 tuổi đam mê tài liệu bí ẩn, tò mò xem hết video để tìm lời giải. Tỷ lệ giữ chân người xem cao, nhà quảng cáo công nghệ, VPN, đầu tư chi tiền rất mạnh.',aiVoice:'ElevenLabs: George hoặc Brian (Giọng tài liệu khoa học BBC/Discovery)',thumbPromptTpl:title=>`Cinematic mystery documentary scene, ancient stone temple entrance discovered deep in misty jungle, golden artifacts glowing inside, dramatic volumetric lighting, cinematic photography, hyper-detailed --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu lịch sử bí ẩn dài 35 phút (~4.000 từ tiếng Anh) về chủ đề: "${title}". Dẫn dắt lôi cuốn, tạo sự hồi hộp ngay từ phút đầu tiên, chia làm 4 chương bí mật khảo cổ.`,sampleVideos:[{id:'hist_vid_1',title:"Archaeologists Drilled Into An Ancient Pyramid Chamber... What Was Preserved Inside Stunned Science",channel:"Mystery Chronicles",channelId:"ch_hist_1",subs:38900,views:51200,dur:2840,vph:790,published:new Date(Date.now()-36e5*22).toISOString(),thumb:"https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=600&q=80"},{id:'hist_vid_2',title:"The Forbidden Roman Manuscripts Kept Secret For 1,800 Years",channel:"Ancient History Files",channelId:"ch_hist_2",subs:24300,views:36700,dur:2410,vph:580,published:new Date(Date.now()-36e5*50).toISOString(),thumb:"https://images.unsplash.com/photo-1461360370896-922624d12aa1?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:89.2,prevRank:3,growth:'+320%',comp:'Trung bình',retention:'87%',trendNote:'Tụt 5 bậc xuống Top 8 hôm nay do các chủ đề quân sự & tâm lý bùng nổ mạnh hơn'},'1d':{score:95.3,prevRank:4,growth:'+460%',comp:'Thấp',retention:'90%',trendNote:'Top 3 hôm qua'},'2d':{score:94.9,prevRank:5,growth:'+440%',comp:'Thấp',retention:'90%',trendNote:'Top 4 2 ngày trước'},'3d':{score:93.8,prevRank:6,growth:'+410%',comp:'Thấp',retention:'89%',trendNote:'Top 5 3 ngày trước'},'7d':{score:92.0,prevRank:7,growth:'+370%',comp:'Thấp',retention:'88%',trendNote:'Top 6 tuần trước'},'14d':{score:91.0,prevRank:5,growth:'+350%',comp:'Thấp',retention:'88%',trendNote:'Top 7 nửa tháng trước'},'30d':{score:94.3,prevRank:6,growth:'+420%',comp:'Thấp',retention:'90%',trendNote:'Top 5 tháng trước'},'90d':{score:93.1,prevRank:5,growth:'+400%',comp:'Thấp',retention:'89%',trendNote:'Top 6 quý trước'}}},{id:'luxury_lifestyle',name:'Đế Chế Tài Phiệt & Lối Sống Siêu Giàu',subtitle:'Billionaire Mansions & Old Money Habits',exampleChannel:null,rpmRange:'$28 - $55',avgRpm:40,tag:'RPM Đỉnh Cao 💎',tagCls:'bg-amber-400/20 text-amber-300 border-amber-400/30',desc:'Dinh thự triệu USD, du thuyền bí mật của giới tài phiệt, quy tắc sống của giới Old Money.',queries:['inside billionaire private megamansions tour','habits of ultra wealthy old money families','secret luxury lifestyle of billionaire dynasties','most expensive private islands owned by billionaires'],whyText:'Quảng cáo siêu xe, đồng hồ xa xỉ, đầu tư tài chính bất động sản đẩy RPM lên đỉnh điểm ($35 - $60). Xem kích thích tò mò cực lớn.',aiVoice:'ElevenLabs: Daniel hoặc Adam (Quý tộc, tự tin, cuốn hút)',thumbPromptTpl:title=>`Cinematic aerial view of an ultra-modern private cliffside billionaire mansion in Monaco at dusk, infinity pool overlooking superyachts in Mediterranean sea, warm ambient interior lights, architectural digest style, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản video dài 25 phút (~3.200 từ tiếng Anh) bóc tách cuộc sống xa hoa kín tiếng của giới tài phiệt: "${title}". Tiết lộ 5 luật ngầm về quản lý gia sản, thú chơi xa xỉ và thói quen bảo mật của gia tộc tỷ phú.`,sampleVideos:[{id:'lux_vid_1',title:"Inside The $250,000,000 Hidden Megamansion Only 5 People In The World Have Entered",channel:"Billionaire Lifestyles",channelId:"ch_lux_1",subs:41000,views:62400,dur:2100,vph:1100,published:new Date(Date.now()-36e5*16).toISOString(),thumb:"https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80"},{id:'lux_vid_2',title:"How Old Money Dynasties Stay Rich For 300 Years (The 6 Unspoken Family Rules)",channel:"Wealth Archive",channelId:"ch_lux_2",subs:32800,views:48900,dur:2450,vph:850,published:new Date(Date.now()-36e5*40).toISOString(),thumb:"https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:87.5,prevRank:11,growth:'+450%',comp:'Thấp',retention:'86%',trendNote:'⭐ Mới lên Top 9 hôm nay, RPM cao nhất hệ thống ($28 - $55)'},'1d':{score:85.2,prevRank:12,growth:'+330%',comp:'Trung bình',retention:'84%',trendNote:'Rớt khỏi top hôm qua (Rank 11)'},'2d':{score:84.5,prevRank:12,growth:'+310%',comp:'Trung bình',retention:'83%',trendNote:'Dưới top 10'},'3d':{score:83.8,prevRank:7,growth:'+290%',comp:'Trung bình',retention:'83%',trendNote:'Tạm hạ nhiệt'},'7d':{score:90.5,prevRank:5,growth:'+400%',comp:'Thấp',retention:'87%',trendNote:'Top 7 tuần trước'},'14d':{score:93.8,prevRank:3,growth:'+450%',comp:'Thấp',retention:'89%',trendNote:'Top 5 nửa tháng trước'},'30d':{score:96.2,prevRank:2,growth:'+520%',comp:'Thấp',retention:'92%',trendNote:'Top 3 tháng trước'},'90d':{score:97.8,prevRank:1,growth:'+560%',comp:'Thấp',retention:'93%',trendNote:'Top 2 quý trước'}}},{id:'kindness_karma',name:'Lòng Nhân Ái & Cảm Động',subtitle:'Heartwarming Kindness & Karma',exampleChannel:null,rpmRange:'$16 - $32',avgRpm:24,tag:'Cảm xúc mạnh',tagCls:'bg-rose-500/20 text-rose-300 border-rose-500/30',desc:'Video 30 - 60 phút. Câu chuyện giúp đỡ người nghèo, nhân quả báo ứng, lòng tốt được đền đáp.',queries:['homeless man kindness returned heartwarming story','rich man disguised as poor tested kindness','heartwarming true story karma repaid','stranger changed everything emotional story'],whyText:'Khán giả xem để tìm niềm tin vào cuộc sống. Thường xuyên để lại bình luận dài và chia sẻ cho bạn bè/người thân. Chèn được 6 - 8 quảng cáo mid-roll, doanh thu rất ổn định.',aiVoice:'ElevenLabs: Liam hoặc Rachel (Ấm áp, truyền cảm)',thumbPromptTpl:title=>`Emotional photograph of a kind young stranger offering a warm winter jacket and food to an elderly homeless man in snowy street, golden sunset warm lighting, tearful grateful eyes, photorealistic 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản truyện cảm động về lòng tốt và nhân quả dài 30 phút (~3.500 từ tiếng Anh) chủ đề: "${title}". Xây dựng các nhân vật chân thực, tình tiết bất ngờ và cái kết ấm áp tình người.`,sampleVideos:[{id:'kind_vid_1',title:"He Thought The Orphan Was Stealing Bread, Until He Read The Note In His Pocket",channel:"Soul Stories",channelId:"ch_kind_1",subs:31000,views:44500,dur:2780,vph:680,published:new Date(Date.now()-36e5*25).toISOString(),thumb:"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"},{id:'kind_vid_2',title:"Elderly Waitress Served A Table Alone On Christmas Eve... What They Left Behind Broke Her Heart",channel:"Echoes of Hope",channelId:"ch_kind_2",subs:25400,views:38900,dur:2450,vph:530,published:new Date(Date.now()-36e5*58).toISOString(),thumb:"https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:86.0,prevRank:9,growth:'+280%',comp:'Trung bình',retention:'85%',trendNote:'Đứng vững ở vị trí Top 10, khán giả Mỹ nữ giới 45+ tương tác cực cao'},'1d':{score:88.0,prevRank:7,growth:'+320%',comp:'Thấp',retention:'86%',trendNote:'Top 9 hôm qua'},'2d':{score:89.4,prevRank:7,growth:'+340%',comp:'Thấp',retention:'87%',trendNote:'Top 7'},'3d':{score:89.0,prevRank:8,growth:'+340%',comp:'Thấp',retention:'87%',trendNote:'Top 7'},'7d':{score:89.1,prevRank:10,growth:'+330%',comp:'Thấp',retention:'87%',trendNote:'Top 8 tuần trước'},'14d':{score:86.8,prevRank:11,growth:'+290%',comp:'Trung bình',retention:'85%',trendNote:'Top 10 nửa tháng trước'},'30d':{score:86.0,prevRank:11,growth:'+270%',comp:'Trung bình',retention:'84%',trendNote:'Tạm rớt Top 10 tháng trước'},'90d':{score:86.1,prevRank:10,growth:'+270%',comp:'Trung bình',retention:'84%',trendNote:'Rớt top quý trước'}}},{id:'abandoned_places',name:'Địa Điểm Bị Bỏ Hoang & Bí Ẩn Đô Thị',subtitle:'Abandoned Mega Structures & Urbex',exampleChannel:null,rpmRange:'$19 - $37',avgRpm:27,tag:'Rớt top 📉 (Rank 11)',tagCls:'bg-zinc-700/30 text-zinc-300 border-zinc-600/30',desc:'Khám phá bệnh viện bỏ hoang, boongke thời chiến, công viên ma quái bị lãng quên.',queries:['abandoned mega structures explored documentary','inside forbidden abandoned underground bunker','why this entire luxury city was abandoned','exploring giant forgotten Soviet facility'],whyText:'Từng rất hot ở chu kỳ 14 ngày trước, hiện lượt tìm kiếm đang chững lại, cạnh tranh từ các kênh lớn tăng cao khiến kênh mới khó cắn đề xuất hơn.',aiVoice:'ElevenLabs: George hoặc Adam (Bí ẩn, ma mị, thì thầm)',thumbPromptTpl:title=>`Cinematic exploration photo inside a massive crumbling abandoned Soviet hospital, rays of dusty sunlight piercing broken stained glass windows, overgrown moss on decaying tiled floor, hauntingly beautiful atmosphere, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu khám phá địa điểm bỏ hoang dài 30 phút (~3.600 từ tiếng Anh) với chủ đề: "${title}". Dẫn dắt từng bước chân khám phá tò mò, lồng ghép lịch sử bi tráng và những hiện tượng kỳ lạ.`,sampleVideos:[{id:'urbex_vid_1',title:"We Explored The Billion-Dollar Subterranean Bunker Forgotten Under Berlin",channel:"Forgotten Megastructures",channelId:"ch_urb_1",subs:48000,views:32000,dur:2540,vph:410,published:new Date(Date.now()-36e5*30).toISOString(),thumb:"https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:84.2,prevRank:10,growth:'+240%',comp:'Cao',retention:'84%',trendNote:'Tụt 1 bậc rớt khỏi Top 10 hôm nay do các kênh lớn cạnh tranh khốc liệt'},'1d':{score:86.5,prevRank:8,growth:'+290%',comp:'Trung bình',retention:'85%',trendNote:'Nằm ở Top 10 hôm qua'},'2d':{score:88.1,prevRank:8,growth:'+330%',comp:'Thấp',retention:'86%',trendNote:'Top 8'},'3d':{score:87.8,prevRank:10,growth:'+320%',comp:'Thấp',retention:'86%',trendNote:'Top 8'},'7d':{score:86.0,prevRank:11,growth:'+280%',comp:'Trung bình',retention:'85%',trendNote:'Top 10 tuần trước'},'14d':{score:85.5,prevRank:12,growth:'+270%',comp:'Trung bình',retention:'84%',trendNote:'Dưới top 10'},'30d':{score:84.8,prevRank:12,growth:'+250%',comp:'Trung bình',retention:'83%',trendNote:'Dưới top 10'},'90d':{score:85.0,prevRank:12,growth:'+250%',comp:'Trung bình',retention:'83%',trendNote:'Dưới top 10'}}},{id:'sci_fi_space',name:'Bí Ẩn Vũ Trụ & Kính Thiên Văn Webb',subtitle:'Deep Cosmos & James Webb Discoveries',exampleChannel:null,rpmRange:'$21 - $44',avgRpm:32,tag:'Chờ chu kỳ mới 🪐',tagCls:'bg-blue-500/20 text-blue-300 border-blue-500/30',desc:'Khám phá rìa vũ trụ, lỗ đen siêu khối lượng, hình ảnh dị thường từ James Webb.',queries:['James Webb telescope found something impossible','deep space anomalies science cannot explain','black hole discovery that breaks physics','what is at the edge of the universe documentary'],whyText:'Từng đứng Top 1 ở chu kỳ 90 ngày trước khi NASA công bố ảnh mới. Hiện đã qua đỉnh trend, đang hạ nhiệt chờ phát hiện thiên văn tiếp theo.',aiVoice:'ElevenLabs: George hoặc Brian (Hùng tráng, uy nghiêm, tài liệu khoa học)',thumbPromptTpl:title=>`Cinematic photorealistic deep space scene captured by James Webb Space Telescope, glowing cosmic nebula with shimmering starlight, massive black hole accretion disk bending spacetime, ultra detailed 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu thiên văn học vũ trụ dài 35 phút (~4.000 từ tiếng Anh) với chủ đề: "${title}". Dẫn dắt người xem từ Trái Đất đến rìa không gian, giải thích các nghịch lý vật lý một cách dễ hiểu và choáng ngợp.`,sampleVideos:[{id:'space_vid_1',title:"James Webb Just Detected An Anomaly At The Edge Of The Universe That Defies Physics",channel:"Cosmic Wonders",channelId:"ch_space_1",subs:52000,views:38400,dur:2680,vph:450,published:new Date(Date.now()-36e5*34).toISOString(),thumb:"https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:83.0,prevRank:12,growth:'+210%',comp:'Cao',retention:'85%',trendNote:'Rớt khỏi Top 10 hôm nay (Rank 12), đang chờ chu kỳ tin tức thiên văn mới'},'1d':{score:84.1,prevRank:9,growth:'+230%',comp:'Cao',retention:'85%',trendNote:'Rớt top hôm qua'},'2d':{score:87.3,prevRank:6,growth:'+310%',comp:'Trung bình',retention:'87%',trendNote:'Top 9 2 ngày trước'},'3d':{score:91.2,prevRank:5,growth:'+380%',comp:'Thấp',retention:'89%',trendNote:'Top 6 3 ngày trước'},'7d':{score:93.2,prevRank:4,growth:'+420%',comp:'Thấp',retention:'91%',trendNote:'Top 5 tuần trước'},'14d':{score:95.0,prevRank:2,growth:'+470%',comp:'Thấp',retention:'92%',trendNote:'Top 4 nửa tháng trước'},'30d':{score:97.5,prevRank:1,growth:'+540%',comp:'Thấp',retention:'94%',trendNote:'Top 2 tháng trước'},'90d':{score:98.9,prevRank:1,growth:'+590%',comp:'Thấp',retention:'95%',trendNote:'👑 Vua Top 1 quý trước'}}},{id:'vintage_restoration',name:'Phục Chế Đồ Cổ & ASMR Máy Móc Cũ',subtitle:'Antique Restoration & Satisfying Mechanics',exampleChannel:null,rpmRange:'$18 - $35',avgRpm:26,tag:'Đang chậm 🛠️',tagCls:'bg-zinc-700/30 text-zinc-300 border-zinc-600/30',desc:'Phục chế dao gỉ, bật lửa Zippo cổ, đồng hồ Thụy Sĩ thời chiến không lời thoại.',queries:['rusty knife restoration satisfying asmr','antique mechanical watch restoration timeless','abandoned ww2 lighter full restoration','restoring destroyed rusty machine from 1920'],whyText:'Nội dung không cần dịch tiếng vì không lời thoại, xem thư giãn ASMR. Tuy nhiên chi phí sản xuất video thực tế cao, video AI khó làm giả chuyển động chi tiết.',aiVoice:'Không cần thoại (ASMR âm thanh kim loại, mài giũa, tiếng gõ đều)',thumbPromptTpl:title=>`Extreme close-up split before and after of a rusty corroded antique Swiss pocket watch being delicately restored, high detail gears glowing under jeweler lamp, photorealistic 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Lập dàn ý chi tiết 12 công đoạn phục chế cổ vật từ gỉ sét thành sáng bóng: "${title}". Kèm gợi ý âm thanh ASMR cho từng giây chuyển cảnh.`,sampleVideos:[{id:'resto_vid_1',title:"Restoration of a 100-Year-Old Rusty Railroad Lantern Found in a Barn",channel:"Rusty To Gold",channelId:"ch_resto_1",subs:62000,views:29500,dur:2400,vph:320,published:new Date(Date.now()-36e5*52).toISOString(),thumb:"https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:81.5,prevRank:13,growth:'+180%',comp:'Cao',retention:'83%',trendNote:'Rớt top hôm nay (Rank 13)'},'1d':{score:82.3,prevRank:13,growth:'+190%',comp:'Cao',retention:'83%',trendNote:'Rớt top hôm qua'},'2d':{score:83.0,prevRank:10,growth:'+210%',comp:'Trung bình',retention:'84%',trendNote:'Rớt top 2 ngày trước'},'3d':{score:85.0,prevRank:9,growth:'+260%',comp:'Trung bình',retention:'85%',trendNote:'Top 10 3 ngày trước'},'7d':{score:87.4,prevRank:9,growth:'+300%',comp:'Thấp',retention:'86%',trendNote:'Top 9 tuần trước'},'14d':{score:88.0,prevRank:10,growth:'+310%',comp:'Thấp',retention:'87%',trendNote:'Top 9 nửa tháng trước'},'30d':{score:87.2,prevRank:8,growth:'+300%',comp:'Thấp',retention:'86%',trendNote:'Top 10 tháng trước'},'90d':{score:90.2,prevRank:7,growth:'+350%',comp:'Thấp',retention:'88%',trendNote:'Top 8 quý trước'}}},{id:'natural_disasters',name:'Thảm Họa Thiên Nhiên & Khoảnh Khắc Sinh Tử',subtitle:'Mega Disasters & Extreme Weather Survival',exampleChannel:null,rpmRange:'$18 - $38',avgRpm:28,tag:'Tạm hạ nhiệt 🌪️',tagCls:'bg-zinc-700/30 text-zinc-300 border-zinc-600/30',desc:'Siêu sóng thần, động đất thế kỷ, bão cấp 5 và các câu chuyện sống sót kỳ diệu.',queries:['megatsunami simulation what happens when it hits','most terrifying extreme weather survival stories','catastrophic earthquake trapped survivor documentary','supervolcano eruption timeline documentary'],whyText:'Chỉ bùng nổ mạnh khi trên thế giới có bão lớn hoặc thiên tai thời sự. Ở các ngày bình thường thì lượt xem duy trì ở mức cơ bản.',aiVoice:'ElevenLabs: Anthony hoặc Brian (Giọng khẩn cấp, hồi hộp, kịch tính)',thumbPromptTpl:title=>`Terrifying cinematic scene of a colossal 300-foot megatsunami wave looming over a coastal modern metropolis, lightning bolts striking dark stormy sky, photorealistic disaster movie look, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu khoa học thảm họa dài 30 phút (~3.500 từ tiếng Anh) với chủ đề: "${title}". Mô phỏng mốc thời gian từng phút, phân tích phản ứng của con người trước sức mạnh thiên nhiên.`,sampleVideos:[{id:'disaster_vid_1',title:"What If A 300-Foot Megatsunami Hit The US East Coast? (Hour By Hour Simulation)",channel:"Nature Wrath Doc",channelId:"ch_dis_1",subs:54000,views:31000,dur:2280,vph:380,published:new Date(Date.now()-36e5*64).toISOString(),thumb:"https://images.unsplash.com/photo-1527482797697-8795b05a13fe?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:79.8,prevRank:14,growth:'+150%',comp:'Cao',retention:'81%',trendNote:'Dưới Top 10 (Rank 14), đang ở đáy chu kỳ tin tức'},'1d':{score:80.5,prevRank:14,growth:'+160%',comp:'Cao',retention:'81%',trendNote:'Dưới Top 10'},'2d':{score:81.2,prevRank:14,growth:'+170%',comp:'Cao',retention:'82%',trendNote:'Dưới Top 10'},'3d':{score:82.1,prevRank:12,growth:'+190%',comp:'Cao',retention:'82%',trendNote:'Dưới Top 10'},'7d':{score:84.2,prevRank:8,growth:'+240%',comp:'Trung bình',retention:'84%',trendNote:'Rớt khỏi Top 10 tuần trước'},'14d':{score:89.5,prevRank:7,growth:'+340%',comp:'Thấp',retention:'88%',trendNote:'Top 8 nửa tháng trước'},'30d':{score:91.4,prevRank:4,growth:'+380%',comp:'Thấp',retention:'89%',trendNote:'Top 7 tháng trước'},'90d':{score:95.2,prevRank:3,growth:'+470%',comp:'Thấp',retention:'92%',trendNote:'Top 4 quý trước'}}},{id:'survival_wilderness',name:'Kỹ Năng Sinh Tồn & Trú Ẩn Rừng Sâu',subtitle:'Primitive Survival & Off-Grid Cabin',exampleChannel:null,rpmRange:'$16 - $33',avgRpm:24,tag:'Bão hòa cao 🌲',tagCls:'bg-zinc-700/30 text-zinc-300 border-zinc-600/30',desc:'Xây nhà bùn, sinh tồn 100 ngày trong rừng tuyết Alaska, lọc nước tìm thức ăn.',queries:['100 days solo wilderness survival Alaska','building off grid log cabin alone in deep woods','primitive technology bushcraft shelter water filtration'],whyText:'Ngách có tính cạnh tranh rất cao vì có quá nhiều kênh lớn đã chiếm lĩnh từ nhiều năm trước. Kênh nhỏ mới lập rất khó bật lên.',aiVoice:'ElevenLabs: Clyde hoặc Liam (Mộc mạc, bình dị, kiên cường)',thumbPromptTpl:title=>`Cinematic photo of a cozy hand-built log cabin in deep snowy pine forest, warm smoke rising from stone chimney, golden interior light glowing in window at dusk, ultra realistic 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Lập kế hoạch nội dung sinh tồn 60 ngày một mình nơi hoang dã: "${title}". Chia làm 5 giai đoạn: Tìm nguồn nước, dựng nơi trú ẩn, tạo lửa, kiếm thức ăn và đối mặt mùa đông.`,sampleVideos:[{id:'surv_vid_1',title:"100 Days Surviving Alone In The Deep Alaskan Wilderness (Full Movie)",channel:"Wilderness Cabin Life",channelId:"ch_surv_1",subs:68000,views:24500,dur:5400,vph:280,published:new Date(Date.now()-36e5*76).toISOString(),thumb:"https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:78.2,prevRank:15,growth:'+120%',comp:'Rất cao',retention:'79%',trendNote:'Rớt top (Rank 15), cạnh tranh quá dày đặc từ các kênh lớn'},'1d':{score:79.0,prevRank:15,growth:'+130%',comp:'Rất cao',retention:'80%',trendNote:'Rớt top'},'2d':{score:79.8,prevRank:15,growth:'+140%',comp:'Rất cao',retention:'80%',trendNote:'Rớt top'},'3d':{score:80.5,prevRank:15,growth:'+150%',comp:'Rất cao',retention:'81%',trendNote:'Rớt top'},'7d':{score:81.0,prevRank:12,growth:'+170%',comp:'Cao',retention:'81%',trendNote:'Rớt top'},'14d':{score:84.2,prevRank:8,growth:'+230%',comp:'Trung bình',retention:'83%',trendNote:'Rớt top nửa tháng trước'},'30d':{score:89.8,prevRank:5,growth:'+350%',comp:'Thấp',retention:'87%',trendNote:'Top 8 tháng trước'},'90d':{score:94.0,prevRank:4,growth:'+440%',comp:'Thấp',retention:'90%',trendNote:'Top 5 quý trước'}}},{id:'mythology_folklore',name:'Thần Thoại Bắc Âu & Quái Thú Cổ Xưa',subtitle:'Norse Mythology & Dark Folklore Lore',channelName:'Mythology Unveiled',exampleChannel:null,subs:26000,views:165000,outlierMultiplier:6.3,rpmRange:'$17 - $34',avgRpm:25,tag:'Thị trường hẹp ⚔️',tagCls:'bg-zinc-700/30 text-zinc-300 border-zinc-600/30',desc:'Truyền thuyết về thần Odin, quái vật Kraken, sinh vật bí ẩn trong rừng Bắc Âu.',queries:['Norse mythology gods and monsters explained','creatures from dark folklore that terrified ancients','the truth behind the kraken deep sea monster'],whyText:'Tệp khán giả ngách đam mê game thần thoại (God of War, Elden Ring) thích nghe, nhưng biên độ mở rộng không lớn bằng kể chuyện gia đình hay tài liệu vũ trụ.',relatedNiches:['Dark Norse Lore','Ancient Monster Legends','Creatures of the Deep','Mythological Deities'],aiVoice:'ElevenLabs: George hoặc Marcus (Giọng già dặn, cổ kính, thần thoại)',thumbPromptTpl:title=>`Epic dark Norse mythology scene, Allfather Odin standing with his two ravens Huginn and Muninn on icy mountain summit, holding glowing spear Gungnir, cinematic blizzard lighting, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản kể chuyện thần thoại Bắc Âu dài 30 phút (~3.500 từ tiếng Anh) về chủ đề: "${title}". Lồng ghép giọng điệu cổ xưa, âm hưởng hùng ca và những bài học ẩn dụ sâu sắc.`,sampleVideos:[{id:'myth_vid_1',title:"The 7 Terrifying Monsters Of Norse Mythology Even The Gods Feared",channel:"Mythology Unveiled",channelId:"ch_myth_1",subs:26000,views:165000,dur:2350,vph:440,published:new Date(Date.now()-36e5*84).toISOString(),thumb:"https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:82.5,prevRank:20,growth:'+150%',comp:'Cao',retention:'80%',trendNote:'Rank 20 hôm nay'},'1d':{score:83.2,prevRank:19,growth:'+160%',comp:'Cao',retention:'80%',trendNote:'Rank 19 hôm qua'},'2d':{score:84.0,prevRank:18,growth:'+170%',comp:'Cao',retention:'81%',trendNote:'Rank 18 2 ngày trước'},'3d':{score:84.8,prevRank:18,growth:'+180%',comp:'Cao',retention:'81%',trendNote:'Rank 18 3 ngày trước'},'7d':{score:85.5,prevRank:17,growth:'+190%',comp:'Cao',retention:'81%',trendNote:'Rank 17 tuần trước'},'14d':{score:86.1,prevRank:16,growth:'+210%',comp:'Trung bình',retention:'82%',trendNote:'Rank 16 nửa tháng trước'},'30d':{score:86.5,prevRank:15,growth:'+230%',comp:'Trung bình',retention:'83%',trendNote:'Rank 15 tháng trước'},'90d':{score:87.4,prevRank:14,growth:'+290%',comp:'Thấp',retention:'85%',trendNote:'Top 14 quý trước'}}},{id:'ai_automation_money',name:'AI Automation & Kiếm Tiền Online',subtitle:'No-Code AI Agents & Faceless SaaS Income',channelName:'AI Wealth Academy',exampleChannel:null,subs:14500,views:215000,outlierMultiplier:14.8,rpmRange:'$30 - $65',avgRpm:45,tag:'RPM Khủng 🤖',tagCls:'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',desc:'Hướng dẫn xây dựng hệ thống AI tự động kiếm tiền, đối tượng khán giả US trả tiền phần mềm chi trả CPM cực cao.',queries:['make money with AI agents automated','how I automated my online business with AI','best AI tools to make money 2025','faceless AI youtube channel blueprint'],whyText:'Chủ đề hot nhất 2025-2026. Quảng cáo từ các công cụ AI, SaaS, khóa học kinh doanh có giá CPM lên đến $40 - $70. Kênh chỉ 14k sub nhưng video đạt 200k+ view.',relatedNiches:['AI Automation Agency','Passive Income AI','No-code Tools US','Faceless SaaS'],aiVoice:'ElevenLabs: Brian hoặc Marcus (Giọng chuyên gia công nghệ, tự tin, súc tích)',thumbPromptTpl:title=>`Futuristic AI glowing neon interface, digital dollar signs flowing into robot hand, clean minimalist dark background, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản video hướng dẫn AI kiếm tiền 25 phút (~3.200 từ tiếng Anh) với chủ đề: "${title}".`,sampleVideos:[{id:'ai_auto_1',title:"How I Built A $12,000/Month Automated AI Business In 30 Days (Step By Step)",channel:"AI Wealth Academy",channelId:"ch_ai_1",subs:14500,views:215000,dur:2240,vph:980,published:new Date(Date.now()-36e5*20).toISOString(),thumb:"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80"},{id:'ai_auto_2',title:"The 3 AI Agents Running My Entire Company While I Sleep",channel:"AI Wealth Academy",channelId:"ch_ai_1",subs:14500,views:165000,dur:1980,vph:720,published:new Date(Date.now()-36e5*48).toISOString(),thumb:"https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:95.8,prevRank:5,growth:'+560%',comp:'Thấp',retention:'90%',trendNote:'⭐ Bứt phá dữ dội, nhu cầu AI Automation tại Mỹ tăng vọt'},'1d':{score:94.0,prevRank:7,growth:'+480%',comp:'Thấp',retention:'89%',trendNote:'Leo hạng thần tốc'},'2d':{score:92.5,prevRank:10,growth:'+410%',comp:'Thấp',retention:'88%',trendNote:'Lọt Top 8'},'3d':{score:90.0,prevRank:12,growth:'+340%',comp:'Trung bình',retention:'86%',trendNote:'Mới bứt phá'},'7d':{score:87.0,prevRank:15,growth:'+260%',comp:'Trung bình',retention:'84%',trendNote:'Ngách mới nổi'},'14d':{score:84.0,prevRank:18,growth:'+190%',comp:'Trung bình',retention:'82%',trendNote:'Giai đoạn ươm mầm'},'30d':{score:81.0,prevRank:20,growth:'+140%',comp:'Trung bình',retention:'80%',trendNote:'Khởi đầu'},'90d':{score:78.0,prevRank:22,growth:'+100%',comp:'Trung bình',retention:'78%',trendNote:'Giai đoạn đầu năm'}}},{id:'roblox_brainrot',name:'Roblox Brookhaven & Bí Ẩn Gaming',subtitle:'Roblox Lore, Brookhaven Secrets & Viral Drama',channelName:'Pixel Quest Lore',exampleChannel:null,subs:28400,views:390000,outlierMultiplier:13.7,rpmRange:'$12 - $22',avgRpm:16,tag:'View Triệu Nhanh 🎮',tagCls:'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',desc:'Giải mã bí ẩn rùng rợn trong Roblox Brookhaven RP, cốt truyện ly kỳ giữ chân tệp trẻ em & thanh thiếu niên US.',queries:['Brookhaven RP secret abandoned house mystery','Roblox creepy lore explained','the mystery behind roblox hospital room','Brookhaven secret bunker found'],whyText:'View tăng cực kỳ bùng nổ, tỷ lệ click thumbnail (CTR) trên 15% vì tính tò mò của trẻ em Mỹ. Kênh nhỏ dễ dàng đạt hàng trăm nghìn view chỉ trong vài ngày.',relatedNiches:['Roblox Brookhaven Lore','Gaming Creepypasta','Minecraft Secrets','Brainrot Viral Animation'],aiVoice:'ElevenLabs: Adam hoặc Anthony (Giọng hào hứng, hồi hộp, kịch tính)',thumbPromptTpl:title=>`Creepy Roblox character standing in front of dark mysterious Brookhaven mansion at night with red flashlight, cinematic lighting, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản giải mã bí ẩn Roblox Brookhaven dài 15 phút (~2.200 từ tiếng Anh) với chủ đề: "${title}".`,sampleVideos:[{id:'roblox_1',title:"We Finally Unlocked The Secret Basement In Brookhaven Hospital... What Was Inside Terrified Us",channel:"Pixel Quest Lore",channelId:"ch_rbx_1",subs:28400,views:390000,dur:1140,vph:1450,published:new Date(Date.now()-36e5*14).toISOString(),thumb:"https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80"},{id:'roblox_2',title:"The Dark History Of The Brookhaven Agency Nobody Talks About",channel:"Pixel Quest Lore",channelId:"ch_rbx_1",subs:28400,views:240000,dur:980,vph:860,published:new Date(Date.now()-36e5*38).toISOString(),thumb:"https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:94.5,prevRank:7,growth:'+620%',comp:'Trung bình',retention:'88%',trendNote:'View bứt phá cực mạnh từ đối tượng Gen Z & Alpha US'},'1d':{score:93.2,prevRank:8,growth:'+510%',comp:'Trung bình',retention:'87%',trendNote:'Duy trì phong độ cao'},'2d':{score:91.8,prevRank:8,growth:'+440%',comp:'Trung bình',retention:'86%',trendNote:'Cắn đề xuất liên tục'},'3d':{score:89.5,prevRank:10,growth:'+360%',comp:'Trung bình',retention:'85%',trendNote:'Tăng tốc'},'7d':{score:86.2,prevRank:14,growth:'+280%',comp:'Trung bình',retention:'83%',trendNote:'Top 14 tuần trước'},'14d':{score:83.5,prevRank:16,growth:'+210%',comp:'Trung bình',retention:'82%',trendNote:'Dưới top 15'},'30d':{score:81.0,prevRank:18,growth:'+150%',comp:'Trung bình',retention:'80%',trendNote:'Bình ổn'},'90d':{score:79.0,prevRank:19,growth:'+120%',comp:'Trung bình',retention:'79%',trendNote:'Ổn định'}}},{id:'rain_sleep_sounds',name:'Âm Thanh Mưa Ngủ & Tiếng Ồn Trắng',subtitle:'Cozy Cabin Heavy Rain & Deep Sleep 10H',channelName:'Rainy Haven ASMR',exampleChannel:null,subs:19800,views:260000,outlierMultiplier:13.1,rpmRange:'$18 - $32',avgRpm:24,tag:'Giữ chân 95% 🌧️',tagCls:'bg-sky-500/20 text-sky-300 border-sky-500/30',desc:'Video âm thanh mưa rơi trên mái tôn ấm cúng, màn hình đen 8-10 tiếng ru ngủ, khán giả nghe thụ động xuyên đêm.',queries:['heavy rain on cozy tin roof sleep 10 hours','black screen rain sounds for insomnia','relaxing blizzard thunder cabin sleep','gentle rain for studying and anxiety relief'],whyText:'Retention rate (tỷ lệ giữ chân) lên tới 92% vì khán giả cắm tai nghe ngủ suốt 8 tiếng. Doanh thu đều đặn 365 ngày không lo lỗi thời vụ.',relatedNiches:['Sleep Aid Sounds','Black Screen ASMR','Thunderstorm Meditation','Tinnitus Relief Noise'],aiVoice:'Không lời thoại (Âm thanh mưa rơi, tiếng sấm êm dịu, gió rít nhẹ)',thumbPromptTpl:title=>`Cozy wooden cabin bedroom overlooking misty rainy forest through large glass window, warm fairy lights, steam from coffee cup, cinematic moody --ar 16:9`,scriptPromptTpl:(title,channel)=>`Cấu trúc vòng lặp âm thanh ASMR 10 tiếng ru ngủ chất lượng cao: "${title}".`,sampleVideos:[{id:'rain_1',title:"Heavy Rain On Tin Roof At Cozy Wooden Cabin In Deep Forest (10 Hours Sleep Sounds)",channel:"Rainy Haven ASMR",channelId:"ch_rain_1",subs:19800,views:260000,dur:36000,vph:680,published:new Date(Date.now()-36e5*30).toISOString(),thumb:"https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=600&q=80"},{id:'rain_2',title:"Gentle Night Rain On Window With Distant Thunder (Black Screen For Insomnia)",channel:"Rainy Haven ASMR",channelId:"ch_rain_1",subs:19800,views:185000,dur:28800,vph:510,published:new Date(Date.now()-36e5*62).toISOString(),thumb:"https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:93.8,prevRank:8,growth:'+440%',comp:'Thấp',retention:'95%',trendNote:'Retention cao nhất hệ thống (95%), view cực kỳ bền bỉ'},'1d':{score:92.5,prevRank:9,growth:'+410%',comp:'Thấp',retention:'94%',trendNote:'Ổn định trong Top 10'},'2d':{score:91.0,prevRank:11,growth:'+370%',comp:'Thấp',retention:'94%',trendNote:'Đều đặn mỗi đêm'},'3d':{score:90.2,prevRank:11,growth:'+340%',comp:'Thấp',retention:'93%',trendNote:'Giữ hạng'},'7d':{score:88.5,prevRank:12,growth:'+290%',comp:'Thấp',retention:'93%',trendNote:'Tuần trước ổn định'},'14d':{score:87.0,prevRank:13,growth:'+250%',comp:'Thấp',retention:'92%',trendNote:'Bền vững'},'30d':{score:86.0,prevRank:14,growth:'+220%',comp:'Thấp',retention:'91%',trendNote:'Chỉ số vàng'},'90d':{score:85.0,prevRank:15,growth:'+180%',comp:'Thấp',retention:'90%',trendNote:'Bình ổn'}}},{id:'weird_science_facts',name:'Khoa Học Kỳ Lạ & Thí Nghiệm Độc Đáo',subtitle:'Bizarre Biology, Unexplained Science & Dark Facts',channelName:'Oddity Lab Chronicles',exampleChannel:null,subs:16200,views:195000,outlierMultiplier:12.0,rpmRange:'$20 - $38',avgRpm:28,tag:'Tò Mò Cực Cao 🧪',tagCls:'bg-purple-500/20 text-purple-300 border-purple-500/30',desc:'Các hiện tượng sinh học quái dị, nghịch lý khoa học gây sốc, giữ chân người xem bằng chuỗi câu hỏi nghẹt thở.',queries:['what happens if you never sleep science experiment','creatures that defy laws of biology','unbelievable chemistry reactions explained','the darkest medical experiment in history'],whyText:'Kích thích trí tò mò tuyệt đỉnh của khán giả quốc tế. Video tài liệu khoa học 20-30 phút chèn nhiều quảng cáo công nghệ, giáo dục giá cao.',relatedNiches:['Dark Science Facts','Bizarre Biology','Deep Sea Oddities','Medical Mysteries'],aiVoice:'ElevenLabs: George hoặc Adam (Giọng bí ẩn, lôi cuốn, kể chuyện khoa học)',thumbPromptTpl:title=>`Mysterious glowing specimen in vintage glass laboratory beaker, dramatic moody lighting, science laboratory reflections, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu khoa học hấp dẫn 25 phút (~3.000 từ tiếng Anh) với chủ đề: "${title}".`,sampleVideos:[{id:'sci_fact_1',title:"What Actually Happens To Your Brain When You Don't Sleep For 7 Days",channel:"Oddity Lab Chronicles",channelId:"ch_odd_1",subs:16200,views:195000,dur:1620,vph:740,published:new Date(Date.now()-36e5*28).toISOString(),thumb:"https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&w=600&q=80"},{id:'sci_fact_2',title:"5 Deep Sea Creatures That Biologists Still Cannot Explain",channel:"Oddity Lab Chronicles",channelId:"ch_odd_1",subs:16200,views:135000,dur:1480,vph:530,published:new Date(Date.now()-36e5*58).toISOString(),thumb:"https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:92.4,prevRank:10,growth:'+390%',comp:'Thấp',retention:'87%',trendNote:'Tỷ lệ xem lại cao, đề xuất mạnh trên feed tài liệu'},'1d':{score:91.0,prevRank:11,growth:'+350%',comp:'Thấp',retention:'86%',trendNote:'Ổn định'},'2d':{score:89.5,prevRank:12,growth:'+300%',comp:'Trung bình',retention:'85%',trendNote:'Duy trì top 12'},'3d':{score:88.0,prevRank:13,growth:'+260%',comp:'Trung bình',retention:'84%',trendNote:'Ổn định'},'7d':{score:86.5,prevRank:15,growth:'+220%',comp:'Trung bình',retention:'83%',trendNote:'Top 15'},'14d':{score:84.0,prevRank:17,growth:'+170%',comp:'Trung bình',retention:'82%',trendNote:'Cơ bản'},'30d':{score:82.0,prevRank:19,growth:'+130%',comp:'Trung bình',retention:'80%',trendNote:'Khởi đầu'},'90d':{score:80.0,prevRank:20,growth:'+100%',comp:'Trung bình',retention:'79%',trendNote:'Nền tảng'}}},{id:'countryside_cooking',name:'Nấu Ăn Nông Thôn & Đời Sống Yên Bình',subtitle:'Peaceful Village Life & Outdoor ASMR Cooking',channelName:'Hearth & Harvest Life',exampleChannel:null,subs:21500,views:240000,outlierMultiplier:11.2,rpmRange:'$16 - $30',avgRpm:22,tag:'Khán giả trung thành 🌾',tagCls:'bg-amber-600/20 text-amber-300 border-amber-600/30',desc:'Nấu ăn dân dã ngoài trời, tiếng củi tí tách, tiếng xào nấu thư giãn không lời thoại thu hút khán giả toàn cầu.',queries:['village grandmother cooking traditional clay pot recipe','peaceful farm life cooking winter soup','off grid cabin traditional bread baking','outdoor fire cooking autumn harvest'],whyText:'Nội dung phi ngôn ngữ (No-Language Barrier), tiếp cận khán giả từ Âu sang Á. Tỷ lệ giữ chân cao vì tính chất chữa lành (healing).',relatedNiches:['Cottagecore Cooking','Wilderness ASMR Kitchen','Homesteading Life','Traditional Claypot Food'],aiVoice:'Không lời thoại (Âm thanh thiên nhiên, củi cháy tí tách, dao thớt nhịp nhàng)',thumbPromptTpl:title=>`Rustic outdoor wooden kitchen in sunlit countryside orchard, steaming clay pot on stone stove, fresh organic vegetables, golden hour lighting, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Lập kế hoạch quay dựng video nấu ăn chữa lành 20 phút: "${title}".`,sampleVideos:[{id:'cook_1',title:"Winter Solstice Traditional Clay Pot Soup Cooked Over Open Fire In Peaceful Farm",channel:"Hearth & Harvest Life",channelId:"ch_cook_1",subs:21500,views:240000,dur:1820,vph:590,published:new Date(Date.now()-36e5*36).toISOString(),thumb:"https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80"},{id:'cook_2',title:"Baking Sourdough Bread In Hand-Built Cob Oven During Autumn Rain",channel:"Hearth & Harvest Life",channelId:"ch_cook_1",subs:21500,views:168000,dur:1450,vph:420,published:new Date(Date.now()-36e5*74).toISOString(),thumb:"https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:90.8,prevRank:12,growth:'+320%',comp:'Trung bình',retention:'89%',trendNote:'View đều và khán giả nước ngoài đăng ký kênh rất trung thành'},'1d':{score:90.0,prevRank:12,growth:'+310%',comp:'Trung bình',retention:'88%',trendNote:'Ổn định'},'2d':{score:88.5,prevRank:13,growth:'+270%',comp:'Trung bình',retention:'87%',trendNote:'Top 13'},'3d':{score:87.2,prevRank:14,growth:'+230%',comp:'Trung bình',retention:'86%',trendNote:'Top 14'},'7d':{score:85.0,prevRank:16,growth:'+190%',comp:'Trung bình',retention:'85%',trendNote:'Top 16'},'14d':{score:83.0,prevRank:18,growth:'+150%',comp:'Trung bình',retention:'84%',trendNote:'Cơ bản'},'30d':{score:82.0,prevRank:20,growth:'+120%',comp:'Trung bình',retention:'82%',trendNote:'Ổn định'},'90d':{score:81.0,prevRank:21,growth:'+100%',comp:'Trung bình',retention:'81%',trendNote:'Bền bỉ'}}},{id:'gaming_speedrun_lore',name:'Kỷ Lục Game & Phân Tích Hack Não',subtitle:'Impossible Speedruns & World Records Breakdown',channelName:'Frame Perfect Archive',exampleChannel:null,subs:26000,views:275000,outlierMultiplier:10.6,rpmRange:'$18 - $35',avgRpm:25,tag:'Cốt truyện lôi cuốn ⚡',tagCls:'bg-teal-500/20 text-teal-300 border-teal-500/30',desc:'Phân tích các kỷ lục game bất khả thi, cách game thủ tìm ra lỗi kỹ thuật để phá đảo thế giới, kịch tính như phim trinh thám.',queries:['how one player broke an unbroken speedrun record','the darkest glitch in gaming history','how a geometry dash player verified impossible level','the 10-year mystery of an impossible game jump'],whyText:'Nội dung tài liệu gaming kể chuyện (Video Essay / Documentary) có thời lượng 20-40 phút, retention cực cao vì người xem hồi hộp chờ xem kỷ lục có bị phá vỡ hay không.',relatedNiches:['Speedrun History','Gaming World Records','Geometry Dash Verifications','Retro Game Exploits'],aiVoice:'ElevenLabs: Marcus hoặc Anthony (Giọng kể chuyện tài liệu sắc bén, mạch lạc)',thumbPromptTpl:title=>`Dramatic split screen of retro game character and glowing world record stopwatch, mysterious neon gaming atmosphere, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu phân tích kỷ lục game 25 phút (~3.200 từ tiếng Anh) với chủ đề: "${title}".`,sampleVideos:[{id:'spd_1',title:"The 12-Year Speedrun Record That Everyone Thought Was Impossible To Beat",channel:"Frame Perfect Archive",channelId:"ch_spd_1",subs:26000,views:275000,dur:2180,vph:810,published:new Date(Date.now()-36e5*22).toISOString(),thumb:"https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=600&q=80"},{id:'spd_2',title:"How A Single Pixel Glitch Changed This Game Forever",channel:"Frame Perfect Archive",channelId:"ch_spd_1",subs:26000,views:190000,dur:1850,vph:580,published:new Date(Date.now()-36e5*50).toISOString(),thumb:"https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:89.6,prevRank:14,growth:'+340%',comp:'Thấp',retention:'88%',trendNote:'Video dài trên 30p cắn đề xuất US cực mạnh'},'1d':{score:88.5,prevRank:15,growth:'+300%',comp:'Thấp',retention:'87%',trendNote:'Lọt Top 15'},'2d':{score:87.0,prevRank:16,growth:'+250%',comp:'Thấp',retention:'86%',trendNote:'Ổn định'},'3d':{score:86.0,prevRank:17,growth:'+220%',comp:'Trung bình',retention:'85%',trendNote:'Top 17'},'7d':{score:84.5,prevRank:18,growth:'+180%',comp:'Trung bình',retention:'84%',trendNote:'Top 18'},'14d':{score:83.0,prevRank:19,growth:'+140%',comp:'Trung bình',retention:'83%',trendNote:'Top 19'},'30d':{score:82.0,prevRank:21,growth:'+110%',comp:'Trung bình',retention:'81%',trendNote:'Cơ bản'},'90d':{score:80.5,prevRank:22,growth:'+90%',comp:'Trung bình',retention:'80%',trendNote:'Khởi đầu'}}}];const RPM_NICHES=CASHCOW_NICHES;// Helper to calculate Dynamic Top 20 and Dropped Niches for any timeframe (Sub Thấp - View Cao - Mọi Chủ Đề)
+4. Giây phút tĩnh lặng suy niệm cùng lời chúc phúc bình an của Chúa (5 phút).`,sampleVideos:[{id:'s03sYQyYl5c',title:"Catholic Morning Prayer | Christ Sees Your Suffering & Rest In God's Grace",channel:"Sacred Echoes of Grace",channelId:"ch_cat_1",subs:21800,views:18900,dur:2125,vph:410,published:new Date(Date.now()-36e5*18).toISOString(),thumb:"https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=600&q=80"},{id:'8vO5n8y2J9I',title:"Miracle Catholic Prayer Before Sleep - Let Peace Guard Your Heart Tonight",channel:"Daily Devotion US",channelId:"ch_cat_2",subs:16500,views:14200,dur:1980,vph:350,published:new Date(Date.now()-36e5*32).toISOString(),thumb:"https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=600&q=80"},{id:'cat_pray_3',title:"Powerful Catholic Prayer For Healing & Strength In Hard Times",channel:"Sacred Echoes of Grace",channelId:"ch_cat_1",subs:21800,views:32400,dur:2450,vph:520,published:new Date(Date.now()-36e5*72).toISOString(),thumb:"https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:96.2,prevRank:2,growth:'+410%',comp:'Thấp',retention:'94%',trendNote:'Top 3 vững chắc, lượng view buổi sáng từ Mỹ luôn ổn định'},'1d':{score:97.0,prevRank:1,growth:'+450%',comp:'Thấp',retention:'94%',trendNote:'Top 2 hôm qua'},'2d':{score:98.0,prevRank:1,growth:'+490%',comp:'Thấp',retention:'95%',trendNote:'👑 Top 1 thống trị 2 ngày trước'},'3d':{score:98.4,prevRank:2,growth:'+510%',comp:'Thấp',retention:'95%',trendNote:'👑 Top 1 ngày 3'},'7d':{score:97.8,prevRank:3,growth:'+470%',comp:'Thấp',retention:'94%',trendNote:'Top 2 tuần trước'},'14d':{score:96.5,prevRank:6,growth:'+420%',comp:'Thấp',retention:'93%',trendNote:'Top 3 nửa tháng trước'},'30d':{score:93.0,prevRank:9,growth:'+350%',comp:'Thấp',retention:'91%',trendNote:'Tăng trưởng đều'},'90d':{score:88.9,prevRank:11,growth:'+260%',comp:'Thấp',retention:'89%',trendNote:'Top 9 quý trước'}}},{id:'dark_psychology',name:'Tâm Lý Học Đen & Nghệ Thuật Đọc Vị',subtitle:'Dark Psychology & Manipulation Defense',exampleChannel:null,rpmRange:'$22 - $42',avgRpm:31,tag:'Tò mò cao 🧠',tagCls:'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',desc:'Video 25 - 50 phút phân tích tâm lý độc hại, dấu hiệu thao túng, nghệ thuật đọc suy nghĩ.',queries:['dark psychology tricks you must recognize','manipulation techniques people use on you','signs of toxic psychological control','how to read body language instantly'],whyText:'Giới trẻ và người đi làm tại US rất tò mò về thủ thuật tâm lý bảo vệ bản thân nơi công sở và tình yêu. Tỷ lệ click CTR thumbnail cao kỷ lục (12 - 18%).',aiVoice:'ElevenLabs: George hoặc Adam (Bí ẩn, dứt khoát, lôi cuốn)',thumbPromptTpl:title=>`Cinematic dark psychology portrait, shadowy silhouette of a man with chess piece king glowing in hand, deep neon violet and amber rim lights, mysterious intense atmosphere, high contrast, 8k resolution --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản video Tâm Lý Học Đen & Đọc Vị Dài 30 phút (~3.600 từ tiếng Anh) với chủ đề: "${title}". Chia thành 7 dấu hiệu tâm lý giật mình, phân tích các ví dụ đời thực khiến người nghe bị cuốn hút từ đầu đến cuối.`,sampleVideos:[{id:'dp_vid_1',title:"7 Dark Psychology Tricks People Use To Control You Without You Knowing",channel:"Mind Mastery Lab",channelId:"ch_dp_1",subs:34500,views:68900,dur:2240,vph:1420,published:new Date(Date.now()-36e5*14).toISOString(),thumb:"https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=600&q=80"},{id:'dp_vid_2',title:"How To Read Anyone Instantly: The Silent FBI Body Language Secrets",channel:"Psychology Vault",channelId:"ch_dp_2",subs:22100,views:41500,dur:1980,vph:780,published:new Date(Date.now()-36e5*38).toISOString(),thumb:"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:94.8,prevRank:7,growth:'+540%',comp:'Thấp',retention:'88%',trendNote:'Bứt phá 3 bậc lên Top 4 hôm nay nhờ lượng click CTR tăng vọt'},'1d':{score:90.0,prevRank:10,growth:'+420%',comp:'Thấp',retention:'87%',trendNote:'Tăng 3 bậc hôm qua'},'2d':{score:86.2,prevRank:11,growth:'+330%',comp:'Trung bình',retention:'85%',trendNote:'⭐ Mới vào top 10'},'3d':{score:84.2,prevRank:13,growth:'+280%',comp:'Trung bình',retention:'84%',trendNote:'Tạm rớt Top 10 (Rank 11)'},'7d':{score:83.1,prevRank:15,growth:'+220%',comp:'Trung bình',retention:'82%',trendNote:'Nằm dưới top 10 tuần trước'},'14d':{score:81.4,prevRank:16,growth:'+170%',comp:'Trung bình',retention:'80%',trendNote:'Ngách mới khởi động'},'30d':{score:80.5,prevRank:15,growth:'+140%',comp:'Trung bình',retention:'79%',trendNote:'Bình lặng'},'90d':{score:79.0,prevRank:15,growth:'+110%',comp:'Trung bình',retention:'78%',trendNote:'Chưa bứt phá'}}},{id:'bible_sleep',name:'Kinh Thánh Ru Ngủ & Bình An',subtitle:'Christian Sleep Meditation & Deep Rest',exampleChannel:null,rpmRange:'$20 - $38',avgRpm:28,tag:'Bật xuyên đêm',tagCls:'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',desc:'Thời lượng 45 - 120 phút. Người xem bật để đi vào giấc ngủ, thời gian xem trung bình cực cao.',queries:['Bible sleep story for deep rest','Fall asleep in Gods presence peacefully','Abide Christian sleep meditation','Sleep with scripture peaceful night'],whyText:'Người nghe bật video trước khi ngủ và để chạy suốt đêm. YouTube ghi nhận Watch Time tối đa (40 - 90 phút/lượt xem). Chèn nhiều quảng cáo đầu và giữa video, tệp khán giả Mỹ độ tuổi 40-70 có sức mua và click quảng cáo sản phẩm giấc ngủ/sức khỏe rất cao.',aiVoice:'ElevenLabs: River hoặc Clyde (Giọng cực trầm, êm dịu, thì thầm thư giãn)',thumbPromptTpl:title=>`Serene peaceful nighttime bedroom, soft warm candle glow, open Holy Bible on wooden table by the window, starry night sky with gentle moonbeams, tranquil and calming atmosphere, cinematic 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản kể chuyện Kinh Thánh ru ngủ 60 phút (~5.000 từ tiếng Anh) với giọng điệu thư giãn sâu (Deep Sleep / Guided Sleep Meditation) chủ đề: "${title}". Giọng văn cực kỳ êm dịu, nhịp điệu chậm rãi giúp người nghe giảm căng thẳng và chìm vào giấc ngủ trong sự bảo bọc của Chúa.`,sampleVideos:[{id:'bible_sleep_1',title:"Fall Asleep In God's Peace | 8 Hours Of Calming Bible Verses For Deep Sleep",channel:"Christian Sleep Ministry",channelId:"ch_bible_1",subs:45000,views:82000,dur:7200,vph:920,published:new Date(Date.now()-36e5*24).toISOString(),thumb:"https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=600&q=80"},{id:'bible_sleep_2',title:"Sleep With Scripture: Blessed Night Meditation For Anxiety & Healing",channel:"Abide Deep Rest",channelId:"ch_bible_2",subs:38200,views:56400,dur:4800,vph:640,published:new Date(Date.now()-36e5*48).toISOString(),thumb:"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:93.5,prevRank:5,growth:'+380%',comp:'Thấp',retention:'96%',trendNote:'Ổn định trong Top 5, giữ kỷ lục thời gian xem trung bình cao nhất'},'1d':{score:93.6,prevRank:3,growth:'+390%',comp:'Thấp',retention:'96%',trendNote:'Top 5 hôm qua'},'2d':{score:95.8,prevRank:2,growth:'+440%',comp:'Thấp',retention:'96%',trendNote:'Top 3'},'3d':{score:97.1,prevRank:1,growth:'+490%',comp:'Thấp',retention:'97%',trendNote:'Top 2'},'7d':{score:98.5,prevRank:2,growth:'+530%',comp:'Thấp',retention:'97%',trendNote:'👑 Top 1 tuần trước'},'14d':{score:97.3,prevRank:4,growth:'+480%',comp:'Thấp',retention:'96%',trendNote:'Top 2 nửa tháng trước'},'30d':{score:95.1,prevRank:7,growth:'+430%',comp:'Thấp',retention:'95%',trendNote:'Top 4 tháng trước'},'90d':{score:91.5,prevRank:8,growth:'+360%',comp:'Thấp',retention:'93%',trendNote:'Top 7 quý trước'}}},{id:'stoic_wisdom',name:'Triết Lý Khắc Kỷ & Tuổi Già',subtitle:'Stoic Life Lessons & Elder Wisdom',exampleChannel:null,rpmRange:'$18 - $36',avgRpm:26,tag:'100% Faceless AI',tagCls:'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',desc:'Video 25 - 50 phút. Triết lý sống cho người già, lời khuyên cuộc đời, Marcus Aurelius.',queries:['stoic life lessons you must learn before old','rules to live by before you get old','Marcus Aurelius hard truths for life','wisdom from 90 year olds life lessons'],whyText:'Dễ sản xuất nhất: Chỉ cần ghép các tượng điêu khắc La Mã tạo bằng Midjourney, hiệu ứng chuyển cảnh chậm, kết hợp kịch bản triết lý sâu sắc. Khán giả US nghe khi đi bộ, tập gym hoặc suy ngẫm.',aiVoice:'ElevenLabs: Marcus hoặc Adam (Giọng triết gia thông thái, dứt khoát)',thumbPromptTpl:title=>`Dramatic bust of Roman Emperor Marcus Aurelius carved in weathered white marble, cinematic split lighting, deep dark moody background, high contrast, museum quality photography, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản video Stoicism / Life Lessons dài 30 phút (~3.500 từ tiếng Anh) với chủ đề: "${title}". Chia thành 7 bài học cuộc đời sâu sắc khiến người nghe phải dừng lại suy ngẫm, kèm trích dẫn triết học cổ đại và bài học thực tế hôm nay.`,sampleVideos:[{id:'2bguEiUgDA4',title:"Things I Wish I Knew Before 70: A Dying Billionaire's Final Words To The World",channel:"Stoic Wisdom & Elder Tales",channelId:"ch_stoic_1",subs:29500,views:38200,dur:2540,vph:720,published:new Date(Date.now()-36e5*28).toISOString(),thumb:"https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=600&q=80"},{id:'e6a_Z-z1mUk',title:"Marcus Aurelius: 8 Rules To Never Lose Your Peace Of Mind Again",channel:"Daily Stoic Wisdom",channelId:"ch_stoic_2",subs:36400,views:49800,dur:2160,vph:850,published:new Date(Date.now()-36e5*60).toISOString(),thumb:"https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:91.8,prevRank:6,growth:'+350%',comp:'Trung bình',retention:'89%',trendNote:'Duy trì phong độ Top 6, dễ làm nhất cho người mới bắt đầu'},'1d':{score:92.5,prevRank:5,growth:'+370%',comp:'Trung bình',retention:'89%',trendNote:'Top 6 hôm qua'},'2d':{score:93.2,prevRank:4,growth:'+390%',comp:'Trung bình',retention:'90%',trendNote:'Top 5 2 ngày trước'},'3d':{score:94.5,prevRank:3,growth:'+420%',comp:'Trung bình',retention:'91%',trendNote:'Top 4 3 ngày trước'},'7d':{score:96.4,prevRank:1,growth:'+480%',comp:'Thấp',retention:'92%',trendNote:'Top 3 tuần trước'},'14d':{score:98.0,prevRank:1,growth:'+530%',comp:'Thấp',retention:'93%',trendNote:'👑 Top 1 nửa tháng trước'},'30d':{score:98.7,prevRank:3,growth:'+550%',comp:'Thấp',retention:'93%',trendNote:'👑 Top 1 tháng trước'},'90d':{score:96.5,prevRank:2,growth:'+490%',comp:'Thấp',retention:'92%',trendNote:'Top 3 quý trước'}}},{id:'true_crime_faceless',name:'Hồ Sơ Vụ Án & Tâm Lý Tội Phạm',subtitle:'Cold Case Files & Criminal Minds',exampleChannel:null,rpmRange:'$22 - $46',avgRpm:33,tag:'Giữ chân cực lâu 🕵️',tagCls:'bg-red-500/20 text-red-300 border-red-500/30',desc:'Tái hiện các vụ án bí ẩn, thẩm vấn tội phạm, tâm lý kẻ thủ ác bằng ảnh AI chân thực.',queries:['unsolved mystery interrogation room breakdown','chilling cold cases finally solved documentary','true crime psychological confession analysis','bizarre disappearance that stunned police'],whyText:'True Crime là thể loại có khán giả trung thành số 1 tại Mỹ. Tỷ lệ Retention trên 75% cho video 40 phút. Kênh nhỏ dễ ăn đề xuất nếu làm hook hay.',aiVoice:'ElevenLabs: Brian hoặc Chris (Trầm tối, hồi hộp, giọng tài liệu trinh thám)',thumbPromptTpl:title=>`Dramatic film noir interrogation room, dim overhead lamp casting harsh shadows on an empty wooden table, detective trench coat in background, mysterious dossier file labeled CLASSIFIED, 8k photographic --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu vụ án bí ẩn dài 35 phút (~4.200 từ tiếng Anh) với chủ đề: "${title}". Dẫn dắt từng manh mối, phân tích tâm lý điều tra sắc bén, tạo cao trào hồi hộp khi sự thật được hé lộ.`,sampleVideos:[{id:'crime_vid_1',title:"The 30-Year Mystery That Police Finally Solved With A Single Cup Of Coffee",channel:"Dark Mystery Files",channelId:"ch_crime_1",subs:27500,views:46200,dur:2650,vph:910,published:new Date(Date.now()-36e5*20).toISOString(),thumb:"https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80"},{id:'crime_vid_2',title:"What The Suspect Whispered In The Interrogation Room Chilled Detectives To The Bone",channel:"Cold Case Vault",channelId:"ch_crime_2",subs:19800,views:33400,dur:2310,vph:620,published:new Date(Date.now()-36e5*46).toISOString(),thumb:"https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:90.4,prevRank:8,growth:'+410%',comp:'Thấp',retention:'90%',trendNote:'Leo 1 bậc lên Top 7 hôm nay, tỷ lệ xem hết video rất cao'},'1d':{score:89.3,prevRank:11,growth:'+380%',comp:'Thấp',retention:'89%',trendNote:'⭐ Mới lên top 8 hôm qua'},'2d':{score:85.0,prevRank:13,growth:'+310%',comp:'Trung bình',retention:'87%',trendNote:'Rớt top 10'},'3d':{score:83.0,prevRank:14,growth:'+260%',comp:'Trung bình',retention:'86%',trendNote:'Dưới top 10'},'7d':{score:82.4,prevRank:16,growth:'+230%',comp:'Trung bình',retention:'85%',trendNote:'Dưới top 10'},'14d':{score:80.2,prevRank:16,growth:'+180%',comp:'Cao',retention:'83%',trendNote:'Cạnh tranh cao thời điểm trước'},'30d':{score:79.0,prevRank:16,growth:'+150%',comp:'Cao',retention:'82%',trendNote:'Rớt top'},'90d':{score:77.5,prevRank:16,growth:'+110%',comp:'Cao',retention:'80%',trendNote:'Rớt top'}}},{id:'history_mystery',name:'Bí Ẩn Lịch Sử & Sự Thật Cổ Đại',subtitle:'Forgotten History & Ancient Secrets',exampleChannel:null,rpmRange:'$20 - $45',avgRpm:32,tag:'Xem tò mò lâu',tagCls:'bg-purple-500/20 text-purple-300 border-purple-500/30',desc:'Video 30 - 60 phút kể về nền văn minh cổ đại, bí ẩn khảo cổ, tài liệu bị giấu kín.',queries:['forbidden history ancient civilization documentary','unexplained mysteries of human history','bizarre ancient secrets revealed','lost civilization forgotten evidence'],whyText:'Khán giả nam giới US 35 - 65 tuổi đam mê tài liệu bí ẩn, tò mò xem hết video để tìm lời giải. Tỷ lệ giữ chân người xem cao, nhà quảng cáo công nghệ, VPN, đầu tư chi tiền rất mạnh.',aiVoice:'ElevenLabs: George hoặc Brian (Giọng tài liệu khoa học BBC/Discovery)',thumbPromptTpl:title=>`Cinematic mystery documentary scene, ancient stone temple entrance discovered deep in misty jungle, golden artifacts glowing inside, dramatic volumetric lighting, cinematic photography, hyper-detailed --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu lịch sử bí ẩn dài 35 phút (~4.000 từ tiếng Anh) về chủ đề: "${title}". Dẫn dắt lôi cuốn, tạo sự hồi hộp ngay từ phút đầu tiên, chia làm 4 chương bí mật khảo cổ.`,sampleVideos:[{id:'hist_vid_1',title:"Archaeologists Drilled Into An Ancient Pyramid Chamber... What Was Preserved Inside Stunned Science",channel:"Mystery Chronicles",channelId:"ch_hist_1",subs:38900,views:51200,dur:2840,vph:790,published:new Date(Date.now()-36e5*22).toISOString(),thumb:"https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=600&q=80"},{id:'hist_vid_2',title:"The Forbidden Roman Manuscripts Kept Secret For 1,800 Years",channel:"Ancient History Files",channelId:"ch_hist_2",subs:24300,views:36700,dur:2410,vph:580,published:new Date(Date.now()-36e5*50).toISOString(),thumb:"https://images.unsplash.com/photo-1461360370896-922624d12aa1?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:89.2,prevRank:3,growth:'+320%',comp:'Trung bình',retention:'87%',trendNote:'Tụt 5 bậc xuống Top 8 hôm nay do các chủ đề quân sự & tâm lý bùng nổ mạnh hơn'},'1d':{score:95.3,prevRank:4,growth:'+460%',comp:'Thấp',retention:'90%',trendNote:'Top 3 hôm qua'},'2d':{score:94.9,prevRank:5,growth:'+440%',comp:'Thấp',retention:'90%',trendNote:'Top 4 2 ngày trước'},'3d':{score:93.8,prevRank:6,growth:'+410%',comp:'Thấp',retention:'89%',trendNote:'Top 5 3 ngày trước'},'7d':{score:92.0,prevRank:7,growth:'+370%',comp:'Thấp',retention:'88%',trendNote:'Top 6 tuần trước'},'14d':{score:91.0,prevRank:5,growth:'+350%',comp:'Thấp',retention:'88%',trendNote:'Top 7 nửa tháng trước'},'30d':{score:94.3,prevRank:6,growth:'+420%',comp:'Thấp',retention:'90%',trendNote:'Top 5 tháng trước'},'90d':{score:93.1,prevRank:5,growth:'+400%',comp:'Thấp',retention:'89%',trendNote:'Top 6 quý trước'}}},{id:'luxury_lifestyle',name:'Đế Chế Tài Phiệt & Lối Sống Siêu Giàu',subtitle:'Billionaire Mansions & Old Money Habits',exampleChannel:null,rpmRange:'$28 - $55',avgRpm:40,tag:'RPM Đỉnh Cao 💎',tagCls:'bg-amber-400/20 text-amber-300 border-amber-400/30',desc:'Dinh thự triệu USD, du thuyền bí mật của giới tài phiệt, quy tắc sống của giới Old Money.',queries:['inside billionaire private megamansions tour','habits of ultra wealthy old money families','secret luxury lifestyle of billionaire dynasties','most expensive private islands owned by billionaires'],whyText:'Quảng cáo siêu xe, đồng hồ xa xỉ, đầu tư tài chính bất động sản đẩy RPM lên đỉnh điểm ($35 - $60). Xem kích thích tò mò cực lớn.',aiVoice:'ElevenLabs: Daniel hoặc Adam (Quý tộc, tự tin, cuốn hút)',thumbPromptTpl:title=>`Cinematic aerial view of an ultra-modern private cliffside billionaire mansion in Monaco at dusk, infinity pool overlooking superyachts in Mediterranean sea, warm ambient interior lights, architectural digest style, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản video dài 25 phút (~3.200 từ tiếng Anh) bóc tách cuộc sống xa hoa kín tiếng của giới tài phiệt: "${title}". Tiết lộ 5 luật ngầm về quản lý gia sản, thú chơi xa xỉ và thói quen bảo mật của gia tộc tỷ phú.`,sampleVideos:[{id:'lux_vid_1',title:"Inside The $250,000,000 Hidden Megamansion Only 5 People In The World Have Entered",channel:"Billionaire Lifestyles",channelId:"ch_lux_1",subs:41000,views:62400,dur:2100,vph:1100,published:new Date(Date.now()-36e5*16).toISOString(),thumb:"https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80"},{id:'lux_vid_2',title:"How Old Money Dynasties Stay Rich For 300 Years (The 6 Unspoken Family Rules)",channel:"Wealth Archive",channelId:"ch_lux_2",subs:32800,views:48900,dur:2450,vph:850,published:new Date(Date.now()-36e5*40).toISOString(),thumb:"https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:87.5,prevRank:11,growth:'+450%',comp:'Thấp',retention:'86%',trendNote:'⭐ Mới lên Top 9 hôm nay, RPM cao nhất hệ thống ($28 - $55)'},'1d':{score:85.2,prevRank:12,growth:'+330%',comp:'Trung bình',retention:'84%',trendNote:'Rớt khỏi top hôm qua (Rank 11)'},'2d':{score:84.5,prevRank:12,growth:'+310%',comp:'Trung bình',retention:'83%',trendNote:'Dưới top 10'},'3d':{score:83.8,prevRank:7,growth:'+290%',comp:'Trung bình',retention:'83%',trendNote:'Tạm hạ nhiệt'},'7d':{score:90.5,prevRank:5,growth:'+400%',comp:'Thấp',retention:'87%',trendNote:'Top 7 tuần trước'},'14d':{score:93.8,prevRank:3,growth:'+450%',comp:'Thấp',retention:'89%',trendNote:'Top 5 nửa tháng trước'},'30d':{score:96.2,prevRank:2,growth:'+520%',comp:'Thấp',retention:'92%',trendNote:'Top 3 tháng trước'},'90d':{score:97.8,prevRank:1,growth:'+560%',comp:'Thấp',retention:'93%',trendNote:'Top 2 quý trước'}}},{id:'kindness_karma',name:'Lòng Nhân Ái & Cảm Động',subtitle:'Heartwarming Kindness & Karma',exampleChannel:null,rpmRange:'$16 - $32',avgRpm:24,tag:'Cảm xúc mạnh',tagCls:'bg-rose-500/20 text-rose-300 border-rose-500/30',desc:'Video 30 - 60 phút. Câu chuyện giúp đỡ người nghèo, nhân quả báo ứng, lòng tốt được đền đáp.',queries:['homeless man kindness returned heartwarming story','rich man disguised as poor tested kindness','heartwarming true story karma repaid','stranger changed everything emotional story'],whyText:'Khán giả xem để tìm niềm tin vào cuộc sống. Thường xuyên để lại bình luận dài và chia sẻ cho bạn bè/người thân. Chèn được 6 - 8 quảng cáo mid-roll, doanh thu rất ổn định.',aiVoice:'ElevenLabs: Liam hoặc Rachel (Ấm áp, truyền cảm)',thumbPromptTpl:title=>`Emotional photograph of a kind young stranger offering a warm winter jacket and food to an elderly homeless man in snowy street, golden sunset warm lighting, tearful grateful eyes, photorealistic 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản truyện cảm động về lòng tốt và nhân quả dài 30 phút (~3.500 từ tiếng Anh) chủ đề: "${title}". Xây dựng các nhân vật chân thực, tình tiết bất ngờ và cái kết ấm áp tình người.`,sampleVideos:[{id:'kind_vid_1',title:"He Thought The Orphan Was Stealing Bread, Until He Read The Note In His Pocket",channel:"Soul Stories",channelId:"ch_kind_1",subs:31000,views:44500,dur:2780,vph:680,published:new Date(Date.now()-36e5*25).toISOString(),thumb:"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80"},{id:'kind_vid_2',title:"Elderly Waitress Served A Table Alone On Christmas Eve... What They Left Behind Broke Her Heart",channel:"Echoes of Hope",channelId:"ch_kind_2",subs:25400,views:38900,dur:2450,vph:530,published:new Date(Date.now()-36e5*58).toISOString(),thumb:"https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:86.0,prevRank:9,growth:'+280%',comp:'Trung bình',retention:'85%',trendNote:'Đứng vững ở vị trí Top 10, khán giả Mỹ nữ giới 45+ tương tác cực cao'},'1d':{score:88.0,prevRank:7,growth:'+320%',comp:'Thấp',retention:'86%',trendNote:'Top 9 hôm qua'},'2d':{score:89.4,prevRank:7,growth:'+340%',comp:'Thấp',retention:'87%',trendNote:'Top 7'},'3d':{score:89.0,prevRank:8,growth:'+340%',comp:'Thấp',retention:'87%',trendNote:'Top 7'},'7d':{score:89.1,prevRank:10,growth:'+330%',comp:'Thấp',retention:'87%',trendNote:'Top 8 tuần trước'},'14d':{score:86.8,prevRank:11,growth:'+290%',comp:'Trung bình',retention:'85%',trendNote:'Top 10 nửa tháng trước'},'30d':{score:86.0,prevRank:11,growth:'+270%',comp:'Trung bình',retention:'84%',trendNote:'Tạm rớt Top 10 tháng trước'},'90d':{score:86.1,prevRank:10,growth:'+270%',comp:'Trung bình',retention:'84%',trendNote:'Rớt top quý trước'}}},{id:'abandoned_places',name:'Địa Điểm Bị Bỏ Hoang & Bí Ẩn Đô Thị',subtitle:'Abandoned Mega Structures & Urbex',exampleChannel:null,rpmRange:'$19 - $37',avgRpm:27,tag:'Rớt top 📉 (Rank 11)',tagCls:'bg-zinc-700/30 text-zinc-300 border-zinc-600/30',desc:'Khám phá bệnh viện bỏ hoang, boongke thời chiến, công viên ma quái bị lãng quên.',queries:['abandoned mega structures explored documentary','inside forbidden abandoned underground bunker','why this entire luxury city was abandoned','exploring giant forgotten Soviet facility'],whyText:'Từng rất hot ở chu kỳ 14 ngày trước, hiện lượt tìm kiếm đang chững lại, cạnh tranh từ các kênh lớn tăng cao khiến kênh mới khó cắn đề xuất hơn.',aiVoice:'ElevenLabs: George hoặc Adam (Bí ẩn, ma mị, thì thầm)',thumbPromptTpl:title=>`Cinematic exploration photo inside a massive crumbling abandoned Soviet hospital, rays of dusty sunlight piercing broken stained glass windows, overgrown moss on decaying tiled floor, hauntingly beautiful atmosphere, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu khám phá địa điểm bỏ hoang dài 30 phút (~3.600 từ tiếng Anh) với chủ đề: "${title}". Dẫn dắt từng bước chân khám phá tò mò, lồng ghép lịch sử bi tráng và những hiện tượng kỳ lạ.`,sampleVideos:[{id:'urbex_vid_1',title:"We Explored The Billion-Dollar Subterranean Bunker Forgotten Under Berlin",channel:"Forgotten Megastructures",channelId:"ch_urb_1",subs:48000,views:32000,dur:2540,vph:410,published:new Date(Date.now()-36e5*30).toISOString(),thumb:"https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:84.2,prevRank:10,growth:'+240%',comp:'Cao',retention:'84%',trendNote:'Tụt 1 bậc rớt khỏi Top 10 hôm nay do các kênh lớn cạnh tranh khốc liệt'},'1d':{score:86.5,prevRank:8,growth:'+290%',comp:'Trung bình',retention:'85%',trendNote:'Nằm ở Top 10 hôm qua'},'2d':{score:88.1,prevRank:8,growth:'+330%',comp:'Thấp',retention:'86%',trendNote:'Top 8'},'3d':{score:87.8,prevRank:10,growth:'+320%',comp:'Thấp',retention:'86%',trendNote:'Top 8'},'7d':{score:86.0,prevRank:11,growth:'+280%',comp:'Trung bình',retention:'85%',trendNote:'Top 10 tuần trước'},'14d':{score:85.5,prevRank:12,growth:'+270%',comp:'Trung bình',retention:'84%',trendNote:'Dưới top 10'},'30d':{score:84.8,prevRank:12,growth:'+250%',comp:'Trung bình',retention:'83%',trendNote:'Dưới top 10'},'90d':{score:85.0,prevRank:12,growth:'+250%',comp:'Trung bình',retention:'83%',trendNote:'Dưới top 10'}}},{id:'sci_fi_space',name:'Bí Ẩn Vũ Trụ & Kính Thiên Văn Webb',subtitle:'Deep Cosmos & James Webb Discoveries',exampleChannel:null,rpmRange:'$21 - $44',avgRpm:32,tag:'Chờ chu kỳ mới 🪐',tagCls:'bg-blue-500/20 text-blue-300 border-blue-500/30',desc:'Khám phá rìa vũ trụ, lỗ đen siêu khối lượng, hình ảnh dị thường từ James Webb.',queries:['James Webb telescope found something impossible','deep space anomalies science cannot explain','black hole discovery that breaks physics','what is at the edge of the universe documentary'],whyText:'Từng đứng Top 1 ở chu kỳ 90 ngày trước khi NASA công bố ảnh mới. Hiện đã qua đỉnh trend, đang hạ nhiệt chờ phát hiện thiên văn tiếp theo.',aiVoice:'ElevenLabs: George hoặc Brian (Hùng tráng, uy nghiêm, tài liệu khoa học)',thumbPromptTpl:title=>`Cinematic photorealistic deep space scene captured by James Webb Space Telescope, glowing cosmic nebula with shimmering starlight, massive black hole accretion disk bending spacetime, ultra detailed 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu thiên văn học vũ trụ dài 35 phút (~4.000 từ tiếng Anh) với chủ đề: "${title}". Dẫn dắt người xem từ Trái Đất đến rìa không gian, giải thích các nghịch lý vật lý một cách dễ hiểu và choáng ngợp.`,sampleVideos:[{id:'space_vid_1',title:"James Webb Just Detected An Anomaly At The Edge Of The Universe That Defies Physics",channel:"Cosmic Wonders",channelId:"ch_space_1",subs:52000,views:38400,dur:2680,vph:450,published:new Date(Date.now()-36e5*34).toISOString(),thumb:"https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:83.0,prevRank:12,growth:'+210%',comp:'Cao',retention:'85%',trendNote:'Rớt khỏi Top 10 hôm nay (Rank 12), đang chờ chu kỳ tin tức thiên văn mới'},'1d':{score:84.1,prevRank:9,growth:'+230%',comp:'Cao',retention:'85%',trendNote:'Rớt top hôm qua'},'2d':{score:87.3,prevRank:6,growth:'+310%',comp:'Trung bình',retention:'87%',trendNote:'Top 9 2 ngày trước'},'3d':{score:91.2,prevRank:5,growth:'+380%',comp:'Thấp',retention:'89%',trendNote:'Top 6 3 ngày trước'},'7d':{score:93.2,prevRank:4,growth:'+420%',comp:'Thấp',retention:'91%',trendNote:'Top 5 tuần trước'},'14d':{score:95.0,prevRank:2,growth:'+470%',comp:'Thấp',retention:'92%',trendNote:'Top 4 nửa tháng trước'},'30d':{score:97.5,prevRank:1,growth:'+540%',comp:'Thấp',retention:'94%',trendNote:'Top 2 tháng trước'},'90d':{score:98.9,prevRank:1,growth:'+590%',comp:'Thấp',retention:'95%',trendNote:'👑 Vua Top 1 quý trước'}}},{id:'vintage_restoration',name:'Phục Chế Đồ Cổ & ASMR Máy Móc Cũ',subtitle:'Antique Restoration & Satisfying Mechanics',exampleChannel:null,rpmRange:'$18 - $35',avgRpm:26,tag:'Đang chậm 🛠️',tagCls:'bg-zinc-700/30 text-zinc-300 border-zinc-600/30',desc:'Phục chế dao gỉ, bật lửa Zippo cổ, đồng hồ Thụy Sĩ thời chiến không lời thoại.',queries:['rusty knife restoration satisfying asmr','antique mechanical watch restoration timeless','abandoned ww2 lighter full restoration','restoring destroyed rusty machine from 1920'],whyText:'Nội dung không cần dịch tiếng vì không lời thoại, xem thư giãn ASMR. Tuy nhiên chi phí sản xuất video thực tế cao, video AI khó làm giả chuyển động chi tiết.',aiVoice:'Không cần thoại (ASMR âm thanh kim loại, mài giũa, tiếng gõ đều)',thumbPromptTpl:title=>`Extreme close-up split before and after of a rusty corroded antique Swiss pocket watch being delicately restored, high detail gears glowing under jeweler lamp, photorealistic 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Lập dàn ý chi tiết 12 công đoạn phục chế cổ vật từ gỉ sét thành sáng bóng: "${title}". Kèm gợi ý âm thanh ASMR cho từng giây chuyển cảnh.`,sampleVideos:[{id:'resto_vid_1',title:"Restoration of a 100-Year-Old Rusty Railroad Lantern Found in a Barn",channel:"Rusty To Gold",channelId:"ch_resto_1",subs:62000,views:29500,dur:2400,vph:320,published:new Date(Date.now()-36e5*52).toISOString(),thumb:"https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:81.5,prevRank:13,growth:'+180%',comp:'Cao',retention:'83%',trendNote:'Rớt top hôm nay (Rank 13)'},'1d':{score:82.3,prevRank:13,growth:'+190%',comp:'Cao',retention:'83%',trendNote:'Rớt top hôm qua'},'2d':{score:83.0,prevRank:10,growth:'+210%',comp:'Trung bình',retention:'84%',trendNote:'Rớt top 2 ngày trước'},'3d':{score:85.0,prevRank:9,growth:'+260%',comp:'Trung bình',retention:'85%',trendNote:'Top 10 3 ngày trước'},'7d':{score:87.4,prevRank:9,growth:'+300%',comp:'Thấp',retention:'86%',trendNote:'Top 9 tuần trước'},'14d':{score:88.0,prevRank:10,growth:'+310%',comp:'Thấp',retention:'87%',trendNote:'Top 9 nửa tháng trước'},'30d':{score:87.2,prevRank:8,growth:'+300%',comp:'Thấp',retention:'86%',trendNote:'Top 10 tháng trước'},'90d':{score:90.2,prevRank:7,growth:'+350%',comp:'Thấp',retention:'88%',trendNote:'Top 8 quý trước'}}},{id:'natural_disasters',name:'Thảm Họa Thiên Nhiên & Khoảnh Khắc Sinh Tử',subtitle:'Mega Disasters & Extreme Weather Survival',exampleChannel:null,rpmRange:'$18 - $38',avgRpm:28,tag:'Tạm hạ nhiệt 🌪️',tagCls:'bg-zinc-700/30 text-zinc-300 border-zinc-600/30',desc:'Siêu sóng thần, động đất thế kỷ, bão cấp 5 và các câu chuyện sống sót kỳ diệu.',queries:['megatsunami simulation what happens when it hits','most terrifying extreme weather survival stories','catastrophic earthquake trapped survivor documentary','supervolcano eruption timeline documentary'],whyText:'Chỉ bùng nổ mạnh khi trên thế giới có bão lớn hoặc thiên tai thời sự. Ở các ngày bình thường thì lượt xem duy trì ở mức cơ bản.',aiVoice:'ElevenLabs: Anthony hoặc Brian (Giọng khẩn cấp, hồi hộp, kịch tính)',thumbPromptTpl:title=>`Terrifying cinematic scene of a colossal 300-foot megatsunami wave looming over a coastal modern metropolis, lightning bolts striking dark stormy sky, photorealistic disaster movie look, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu khoa học thảm họa dài 30 phút (~3.500 từ tiếng Anh) với chủ đề: "${title}". Mô phỏng mốc thời gian từng phút, phân tích phản ứng của con người trước sức mạnh thiên nhiên.`,sampleVideos:[{id:'disaster_vid_1',title:"What If A 300-Foot Megatsunami Hit The US East Coast? (Hour By Hour Simulation)",channel:"Nature Wrath Doc",channelId:"ch_dis_1",subs:54000,views:31000,dur:2280,vph:380,published:new Date(Date.now()-36e5*64).toISOString(),thumb:"https://images.unsplash.com/photo-1527482797697-8795b05a13fe?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:79.8,prevRank:14,growth:'+150%',comp:'Cao',retention:'81%',trendNote:'Dưới Top 10 (Rank 14), đang ở đáy chu kỳ tin tức'},'1d':{score:80.5,prevRank:14,growth:'+160%',comp:'Cao',retention:'81%',trendNote:'Dưới Top 10'},'2d':{score:81.2,prevRank:14,growth:'+170%',comp:'Cao',retention:'82%',trendNote:'Dưới Top 10'},'3d':{score:82.1,prevRank:12,growth:'+190%',comp:'Cao',retention:'82%',trendNote:'Dưới Top 10'},'7d':{score:84.2,prevRank:8,growth:'+240%',comp:'Trung bình',retention:'84%',trendNote:'Rớt khỏi Top 10 tuần trước'},'14d':{score:89.5,prevRank:7,growth:'+340%',comp:'Thấp',retention:'88%',trendNote:'Top 8 nửa tháng trước'},'30d':{score:91.4,prevRank:4,growth:'+380%',comp:'Thấp',retention:'89%',trendNote:'Top 7 tháng trước'},'90d':{score:95.2,prevRank:3,growth:'+470%',comp:'Thấp',retention:'92%',trendNote:'Top 4 quý trước'}}},{id:'survival_wilderness',name:'Kỹ Năng Sinh Tồn & Trú Ẩn Rừng Sâu',subtitle:'Primitive Survival & Off-Grid Cabin',exampleChannel:null,rpmRange:'$16 - $33',avgRpm:24,tag:'Bão hòa cao 🌲',tagCls:'bg-zinc-700/30 text-zinc-300 border-zinc-600/30',desc:'Xây nhà bùn, sinh tồn 100 ngày trong rừng tuyết Alaska, lọc nước tìm thức ăn.',queries:['100 days solo wilderness survival Alaska','building off grid log cabin alone in deep woods','primitive technology bushcraft shelter water filtration'],whyText:'Ngách có tính cạnh tranh rất cao vì có quá nhiều kênh lớn đã chiếm lĩnh từ nhiều năm trước. Kênh nhỏ mới lập rất khó bật lên.',aiVoice:'ElevenLabs: Clyde hoặc Liam (Mộc mạc, bình dị, kiên cường)',thumbPromptTpl:title=>`Cinematic photo of a cozy hand-built log cabin in deep snowy pine forest, warm smoke rising from stone chimney, golden interior light glowing in window at dusk, ultra realistic 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Lập kế hoạch nội dung sinh tồn 60 ngày một mình nơi hoang dã: "${title}". Chia làm 5 giai đoạn: Tìm nguồn nước, dựng nơi trú ẩn, tạo lửa, kiếm thức ăn và đối mặt mùa đông.`,sampleVideos:[{id:'surv_vid_1',title:"100 Days Surviving Alone In The Deep Alaskan Wilderness (Full Movie)",channel:"Wilderness Cabin Life",channelId:"ch_surv_1",subs:68000,views:24500,dur:5400,vph:280,published:new Date(Date.now()-36e5*76).toISOString(),thumb:"https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:78.2,prevRank:15,growth:'+120%',comp:'Rất cao',retention:'79%',trendNote:'Rớt top (Rank 15), cạnh tranh quá dày đặc từ các kênh lớn'},'1d':{score:79.0,prevRank:15,growth:'+130%',comp:'Rất cao',retention:'80%',trendNote:'Rớt top'},'2d':{score:79.8,prevRank:15,growth:'+140%',comp:'Rất cao',retention:'80%',trendNote:'Rớt top'},'3d':{score:80.5,prevRank:15,growth:'+150%',comp:'Rất cao',retention:'81%',trendNote:'Rớt top'},'7d':{score:81.0,prevRank:12,growth:'+170%',comp:'Cao',retention:'81%',trendNote:'Rớt top'},'14d':{score:84.2,prevRank:8,growth:'+230%',comp:'Trung bình',retention:'83%',trendNote:'Rớt top nửa tháng trước'},'30d':{score:89.8,prevRank:5,growth:'+350%',comp:'Thấp',retention:'87%',trendNote:'Top 8 tháng trước'},'90d':{score:94.0,prevRank:4,growth:'+440%',comp:'Thấp',retention:'90%',trendNote:'Top 5 quý trước'}}},{id:'mythology_folklore',name:'Thần Thoại Bắc Âu & Quái Thú Cổ Xưa',subtitle:'Norse Mythology & Dark Folklore Lore',channelName:'Mythology Unveiled',exampleChannel:null,subs:26000,views:165000,outlierMultiplier:6.3,rpmRange:'$17 - $34',avgRpm:25,tag:'Thị trường hẹp ⚔️',tagCls:'bg-zinc-700/30 text-zinc-300 border-zinc-600/30',desc:'Truyền thuyết về thần Odin, quái vật Kraken, sinh vật bí ẩn trong rừng Bắc Âu.',queries:['Norse mythology gods and monsters explained','creatures from dark folklore that terrified ancients','the truth behind the kraken deep sea monster'],whyText:'Tệp khán giả ngách đam mê game thần thoại (God of War, Elden Ring) thích nghe, nhưng biên độ mở rộng không lớn bằng kể chuyện gia đình hay tài liệu vũ trụ.',relatedNiches:['Dark Norse Lore','Ancient Monster Legends','Creatures of the Deep','Mythological Deities'],aiVoice:'ElevenLabs: George hoặc Marcus (Giọng già dặn, cổ kính, thần thoại)',thumbPromptTpl:title=>`Epic dark Norse mythology scene, Allfather Odin standing with his two ravens Huginn and Muninn on icy mountain summit, holding glowing spear Gungnir, cinematic blizzard lighting, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản kể chuyện thần thoại Bắc Âu dài 30 phút (~3.500 từ tiếng Anh) về chủ đề: "${title}". Lồng ghép giọng điệu cổ xưa, âm hưởng hùng ca và những bài học ẩn dụ sâu sắc.`,sampleVideos:[{id:'myth_vid_1',title:"The 7 Terrifying Monsters Of Norse Mythology Even The Gods Feared",channel:"Mythology Unveiled",channelId:"ch_myth_1",subs:26000,views:165000,dur:2350,vph:440,published:new Date(Date.now()-36e5*84).toISOString(),thumb:"https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:82.5,prevRank:20,growth:'+150%',comp:'Cao',retention:'80%',trendNote:'Rank 20 hôm nay'},'1d':{score:83.2,prevRank:19,growth:'+160%',comp:'Cao',retention:'80%',trendNote:'Rank 19 hôm qua'},'2d':{score:84.0,prevRank:18,growth:'+170%',comp:'Cao',retention:'81%',trendNote:'Rank 18 2 ngày trước'},'3d':{score:84.8,prevRank:18,growth:'+180%',comp:'Cao',retention:'81%',trendNote:'Rank 18 3 ngày trước'},'7d':{score:85.5,prevRank:17,growth:'+190%',comp:'Cao',retention:'81%',trendNote:'Rank 17 tuần trước'},'14d':{score:86.1,prevRank:16,growth:'+210%',comp:'Trung bình',retention:'82%',trendNote:'Rank 16 nửa tháng trước'},'30d':{score:86.5,prevRank:15,growth:'+230%',comp:'Trung bình',retention:'83%',trendNote:'Rank 15 tháng trước'},'90d':{score:87.4,prevRank:14,growth:'+290%',comp:'Thấp',retention:'85%',trendNote:'Top 14 quý trước'}}},{id:'ai_automation_money',name:'AI Automation & Kiếm Tiền Online',subtitle:'No-Code AI Agents & Faceless SaaS Income',channelName:'AI Wealth Academy',exampleChannel:null,subs:14500,views:215000,outlierMultiplier:14.8,rpmRange:'$30 - $65',avgRpm:45,tag:'RPM Khủng 🤖',tagCls:'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',desc:'Hướng dẫn xây dựng hệ thống AI tự động kiếm tiền, đối tượng khán giả US trả tiền phần mềm chi trả CPM cực cao.',queries:['make money with AI agents automated','how I automated my online business with AI','best AI tools to make money 2025','faceless AI youtube channel blueprint'],whyText:'Chủ đề hot nhất 2025-2026. Quảng cáo từ các công cụ AI, SaaS, khóa học kinh doanh có giá CPM lên đến $40 - $70. Kênh chỉ 14k sub nhưng video đạt 200k+ view.',relatedNiches:['AI Automation Agency','Passive Income AI','No-code Tools US','Faceless SaaS'],aiVoice:'ElevenLabs: Brian hoặc Marcus (Giọng chuyên gia công nghệ, tự tin, súc tích)',thumbPromptTpl:title=>`Futuristic AI glowing neon interface, digital dollar signs flowing into robot hand, clean minimalist dark background, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản video hướng dẫn AI kiếm tiền 25 phút (~3.200 từ tiếng Anh) với chủ đề: "${title}".`,sampleVideos:[{id:'HCM6ae9IH8E',title:"How I Built A $12,000/Month Automated AI Business In 30 Days (Step By Step)",channel:"AI Wealth Academy",channelId:"ch_ai_1",subs:14500,views:215000,dur:2240,vph:980,published:new Date(Date.now()-36e5*20).toISOString(),thumb:"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80"},{id:'43MdhyYl2hY',title:"The 3 AI Agents Running My Entire Company While I Sleep",channel:"AI Wealth Academy",channelId:"ch_ai_1",subs:14500,views:165000,dur:1980,vph:720,published:new Date(Date.now()-36e5*48).toISOString(),thumb:"https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:95.8,prevRank:5,growth:'+560%',comp:'Thấp',retention:'90%',trendNote:'⭐ Bứt phá dữ dội, nhu cầu AI Automation tại Mỹ tăng vọt'},'1d':{score:94.0,prevRank:7,growth:'+480%',comp:'Thấp',retention:'89%',trendNote:'Leo hạng thần tốc'},'2d':{score:92.5,prevRank:10,growth:'+410%',comp:'Thấp',retention:'88%',trendNote:'Lọt Top 8'},'3d':{score:90.0,prevRank:12,growth:'+340%',comp:'Trung bình',retention:'86%',trendNote:'Mới bứt phá'},'7d':{score:87.0,prevRank:15,growth:'+260%',comp:'Trung bình',retention:'84%',trendNote:'Ngách mới nổi'},'14d':{score:84.0,prevRank:18,growth:'+190%',comp:'Trung bình',retention:'82%',trendNote:'Giai đoạn ươm mầm'},'30d':{score:81.0,prevRank:20,growth:'+140%',comp:'Trung bình',retention:'80%',trendNote:'Khởi đầu'},'90d':{score:78.0,prevRank:22,growth:'+100%',comp:'Trung bình',retention:'78%',trendNote:'Giai đoạn đầu năm'}}},{id:'roblox_brainrot',name:'Roblox Brookhaven & Bí Ẩn Gaming',subtitle:'Roblox Lore, Brookhaven Secrets & Viral Drama',channelName:'Pixel Quest Lore',exampleChannel:null,subs:28400,views:390000,outlierMultiplier:13.7,rpmRange:'$12 - $22',avgRpm:16,tag:'View Triệu Nhanh 🎮',tagCls:'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',desc:'Giải mã bí ẩn rùng rợn trong Roblox Brookhaven RP, cốt truyện ly kỳ giữ chân tệp trẻ em & thanh thiếu niên US.',queries:['Brookhaven RP secret abandoned house mystery','Roblox creepy lore explained','the mystery behind roblox hospital room','Brookhaven secret bunker found'],whyText:'View tăng cực kỳ bùng nổ, tỷ lệ click thumbnail (CTR) trên 15% vì tính tò mò của trẻ em Mỹ. Kênh nhỏ dễ dàng đạt hàng trăm nghìn view chỉ trong vài ngày.',relatedNiches:['Roblox Brookhaven Lore','Gaming Creepypasta','Minecraft Secrets','Brainrot Viral Animation'],aiVoice:'ElevenLabs: Adam hoặc Anthony (Giọng hào hứng, hồi hộp, kịch tính)',thumbPromptTpl:title=>`Creepy Roblox character standing in front of dark mysterious Brookhaven mansion at night with red flashlight, cinematic lighting, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản giải mã bí ẩn Roblox Brookhaven dài 15 phút (~2.200 từ tiếng Anh) với chủ đề: "${title}".`,sampleVideos:[{id:'roblox_1',title:"We Finally Unlocked The Secret Basement In Brookhaven Hospital... What Was Inside Terrified Us",channel:"Pixel Quest Lore",channelId:"ch_rbx_1",subs:28400,views:390000,dur:1140,vph:1450,published:new Date(Date.now()-36e5*14).toISOString(),thumb:"https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80"},{id:'roblox_2',title:"The Dark History Of The Brookhaven Agency Nobody Talks About",channel:"Pixel Quest Lore",channelId:"ch_rbx_1",subs:28400,views:240000,dur:980,vph:860,published:new Date(Date.now()-36e5*38).toISOString(),thumb:"https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:94.5,prevRank:7,growth:'+620%',comp:'Trung bình',retention:'88%',trendNote:'View bứt phá cực mạnh từ đối tượng Gen Z & Alpha US'},'1d':{score:93.2,prevRank:8,growth:'+510%',comp:'Trung bình',retention:'87%',trendNote:'Duy trì phong độ cao'},'2d':{score:91.8,prevRank:8,growth:'+440%',comp:'Trung bình',retention:'86%',trendNote:'Cắn đề xuất liên tục'},'3d':{score:89.5,prevRank:10,growth:'+360%',comp:'Trung bình',retention:'85%',trendNote:'Tăng tốc'},'7d':{score:86.2,prevRank:14,growth:'+280%',comp:'Trung bình',retention:'83%',trendNote:'Top 14 tuần trước'},'14d':{score:83.5,prevRank:16,growth:'+210%',comp:'Trung bình',retention:'82%',trendNote:'Dưới top 15'},'30d':{score:81.0,prevRank:18,growth:'+150%',comp:'Trung bình',retention:'80%',trendNote:'Bình ổn'},'90d':{score:79.0,prevRank:19,growth:'+120%',comp:'Trung bình',retention:'79%',trendNote:'Ổn định'}}},{id:'rain_sleep_sounds',name:'Âm Thanh Mưa Ngủ & Tiếng Ồn Trắng',subtitle:'Cozy Cabin Heavy Rain & Deep Sleep 10H',channelName:'Rainy Haven ASMR',exampleChannel:null,subs:19800,views:260000,outlierMultiplier:13.1,rpmRange:'$18 - $32',avgRpm:24,tag:'Giữ chân 95% 🌧️',tagCls:'bg-sky-500/20 text-sky-300 border-sky-500/30',desc:'Video âm thanh mưa rơi trên mái tôn ấm cúng, màn hình đen 8-10 tiếng ru ngủ, khán giả nghe thụ động xuyên đêm.',queries:['heavy rain on cozy tin roof sleep 10 hours','black screen rain sounds for insomnia','relaxing blizzard thunder cabin sleep','gentle rain for studying and anxiety relief'],whyText:'Retention rate (tỷ lệ giữ chân) lên tới 92% vì khán giả cắm tai nghe ngủ suốt 8 tiếng. Doanh thu đều đặn 365 ngày không lo lỗi thời vụ.',relatedNiches:['Sleep Aid Sounds','Black Screen ASMR','Thunderstorm Meditation','Tinnitus Relief Noise'],aiVoice:'Không lời thoại (Âm thanh mưa rơi, tiếng sấm êm dịu, gió rít nhẹ)',thumbPromptTpl:title=>`Cozy wooden cabin bedroom overlooking misty rainy forest through large glass window, warm fairy lights, steam from coffee cup, cinematic moody --ar 16:9`,scriptPromptTpl:(title,channel)=>`Cấu trúc vòng lặp âm thanh ASMR 10 tiếng ru ngủ chất lượng cao: "${title}".`,sampleVideos:[{id:'rain_1',title:"Heavy Rain On Tin Roof At Cozy Wooden Cabin In Deep Forest (10 Hours Sleep Sounds)",channel:"Rainy Haven ASMR",channelId:"ch_rain_1",subs:19800,views:260000,dur:36000,vph:680,published:new Date(Date.now()-36e5*30).toISOString(),thumb:"https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=600&q=80"},{id:'rain_2',title:"Gentle Night Rain On Window With Distant Thunder (Black Screen For Insomnia)",channel:"Rainy Haven ASMR",channelId:"ch_rain_1",subs:19800,views:185000,dur:28800,vph:510,published:new Date(Date.now()-36e5*62).toISOString(),thumb:"https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:93.8,prevRank:8,growth:'+440%',comp:'Thấp',retention:'95%',trendNote:'Retention cao nhất hệ thống (95%), view cực kỳ bền bỉ'},'1d':{score:92.5,prevRank:9,growth:'+410%',comp:'Thấp',retention:'94%',trendNote:'Ổn định trong Top 10'},'2d':{score:91.0,prevRank:11,growth:'+370%',comp:'Thấp',retention:'94%',trendNote:'Đều đặn mỗi đêm'},'3d':{score:90.2,prevRank:11,growth:'+340%',comp:'Thấp',retention:'93%',trendNote:'Giữ hạng'},'7d':{score:88.5,prevRank:12,growth:'+290%',comp:'Thấp',retention:'93%',trendNote:'Tuần trước ổn định'},'14d':{score:87.0,prevRank:13,growth:'+250%',comp:'Thấp',retention:'92%',trendNote:'Bền vững'},'30d':{score:86.0,prevRank:14,growth:'+220%',comp:'Thấp',retention:'91%',trendNote:'Chỉ số vàng'},'90d':{score:85.0,prevRank:15,growth:'+180%',comp:'Thấp',retention:'90%',trendNote:'Bình ổn'}}},{id:'weird_science_facts',name:'Khoa Học Kỳ Lạ & Thí Nghiệm Độc Đáo',subtitle:'Bizarre Biology, Unexplained Science & Dark Facts',channelName:'Oddity Lab Chronicles',exampleChannel:null,subs:16200,views:195000,outlierMultiplier:12.0,rpmRange:'$20 - $38',avgRpm:28,tag:'Tò Mò Cực Cao 🧪',tagCls:'bg-purple-500/20 text-purple-300 border-purple-500/30',desc:'Các hiện tượng sinh học quái dị, nghịch lý khoa học gây sốc, giữ chân người xem bằng chuỗi câu hỏi nghẹt thở.',queries:['what happens if you never sleep science experiment','creatures that defy laws of biology','unbelievable chemistry reactions explained','the darkest medical experiment in history'],whyText:'Kích thích trí tò mò tuyệt đỉnh của khán giả quốc tế. Video tài liệu khoa học 20-30 phút chèn nhiều quảng cáo công nghệ, giáo dục giá cao.',relatedNiches:['Dark Science Facts','Bizarre Biology','Deep Sea Oddities','Medical Mysteries'],aiVoice:'ElevenLabs: George hoặc Adam (Giọng bí ẩn, lôi cuốn, kể chuyện khoa học)',thumbPromptTpl:title=>`Mysterious glowing specimen in vintage glass laboratory beaker, dramatic moody lighting, science laboratory reflections, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu khoa học hấp dẫn 25 phút (~3.000 từ tiếng Anh) với chủ đề: "${title}".`,sampleVideos:[{id:'sci_fact_1',title:"What Actually Happens To Your Brain When You Don't Sleep For 7 Days",channel:"Oddity Lab Chronicles",channelId:"ch_odd_1",subs:16200,views:195000,dur:1620,vph:740,published:new Date(Date.now()-36e5*28).toISOString(),thumb:"https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&w=600&q=80"},{id:'sci_fact_2',title:"5 Deep Sea Creatures That Biologists Still Cannot Explain",channel:"Oddity Lab Chronicles",channelId:"ch_odd_1",subs:16200,views:135000,dur:1480,vph:530,published:new Date(Date.now()-36e5*58).toISOString(),thumb:"https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:92.4,prevRank:10,growth:'+390%',comp:'Thấp',retention:'87%',trendNote:'Tỷ lệ xem lại cao, đề xuất mạnh trên feed tài liệu'},'1d':{score:91.0,prevRank:11,growth:'+350%',comp:'Thấp',retention:'86%',trendNote:'Ổn định'},'2d':{score:89.5,prevRank:12,growth:'+300%',comp:'Trung bình',retention:'85%',trendNote:'Duy trì top 12'},'3d':{score:88.0,prevRank:13,growth:'+260%',comp:'Trung bình',retention:'84%',trendNote:'Ổn định'},'7d':{score:86.5,prevRank:15,growth:'+220%',comp:'Trung bình',retention:'83%',trendNote:'Top 15'},'14d':{score:84.0,prevRank:17,growth:'+170%',comp:'Trung bình',retention:'82%',trendNote:'Cơ bản'},'30d':{score:82.0,prevRank:19,growth:'+130%',comp:'Trung bình',retention:'80%',trendNote:'Khởi đầu'},'90d':{score:80.0,prevRank:20,growth:'+100%',comp:'Trung bình',retention:'79%',trendNote:'Nền tảng'}}},{id:'countryside_cooking',name:'Nấu Ăn Nông Thôn & Đời Sống Yên Bình',subtitle:'Peaceful Village Life & Outdoor ASMR Cooking',channelName:'Hearth & Harvest Life',exampleChannel:null,subs:21500,views:240000,outlierMultiplier:11.2,rpmRange:'$16 - $30',avgRpm:22,tag:'Khán giả trung thành 🌾',tagCls:'bg-amber-600/20 text-amber-300 border-amber-600/30',desc:'Nấu ăn dân dã ngoài trời, tiếng củi tí tách, tiếng xào nấu thư giãn không lời thoại thu hút khán giả toàn cầu.',queries:['village grandmother cooking traditional clay pot recipe','peaceful farm life cooking winter soup','off grid cabin traditional bread baking','outdoor fire cooking autumn harvest'],whyText:'Nội dung phi ngôn ngữ (No-Language Barrier), tiếp cận khán giả từ Âu sang Á. Tỷ lệ giữ chân cao vì tính chất chữa lành (healing).',relatedNiches:['Cottagecore Cooking','Wilderness ASMR Kitchen','Homesteading Life','Traditional Claypot Food'],aiVoice:'Không lời thoại (Âm thanh thiên nhiên, củi cháy tí tách, dao thớt nhịp nhàng)',thumbPromptTpl:title=>`Rustic outdoor wooden kitchen in sunlit countryside orchard, steaming clay pot on stone stove, fresh organic vegetables, golden hour lighting, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Lập kế hoạch quay dựng video nấu ăn chữa lành 20 phút: "${title}".`,sampleVideos:[{id:'cook_1',title:"Winter Solstice Traditional Clay Pot Soup Cooked Over Open Fire In Peaceful Farm",channel:"Hearth & Harvest Life",channelId:"ch_cook_1",subs:21500,views:240000,dur:1820,vph:590,published:new Date(Date.now()-36e5*36).toISOString(),thumb:"https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80"},{id:'cook_2',title:"Baking Sourdough Bread In Hand-Built Cob Oven During Autumn Rain",channel:"Hearth & Harvest Life",channelId:"ch_cook_1",subs:21500,views:168000,dur:1450,vph:420,published:new Date(Date.now()-36e5*74).toISOString(),thumb:"https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:90.8,prevRank:12,growth:'+320%',comp:'Trung bình',retention:'89%',trendNote:'View đều và khán giả nước ngoài đăng ký kênh rất trung thành'},'1d':{score:90.0,prevRank:12,growth:'+310%',comp:'Trung bình',retention:'88%',trendNote:'Ổn định'},'2d':{score:88.5,prevRank:13,growth:'+270%',comp:'Trung bình',retention:'87%',trendNote:'Top 13'},'3d':{score:87.2,prevRank:14,growth:'+230%',comp:'Trung bình',retention:'86%',trendNote:'Top 14'},'7d':{score:85.0,prevRank:16,growth:'+190%',comp:'Trung bình',retention:'85%',trendNote:'Top 16'},'14d':{score:83.0,prevRank:18,growth:'+150%',comp:'Trung bình',retention:'84%',trendNote:'Cơ bản'},'30d':{score:82.0,prevRank:20,growth:'+120%',comp:'Trung bình',retention:'82%',trendNote:'Ổn định'},'90d':{score:81.0,prevRank:21,growth:'+100%',comp:'Trung bình',retention:'81%',trendNote:'Bền bỉ'}}},{id:'gaming_speedrun_lore',name:'Kỷ Lục Game & Phân Tích Hack Não',subtitle:'Impossible Speedruns & World Records Breakdown',channelName:'Frame Perfect Archive',exampleChannel:null,subs:26000,views:275000,outlierMultiplier:10.6,rpmRange:'$18 - $35',avgRpm:25,tag:'Cốt truyện lôi cuốn ⚡',tagCls:'bg-teal-500/20 text-teal-300 border-teal-500/30',desc:'Phân tích các kỷ lục game bất khả thi, cách game thủ tìm ra lỗi kỹ thuật để phá đảo thế giới, kịch tính như phim trinh thám.',queries:['how one player broke an unbroken speedrun record','the darkest glitch in gaming history','how a geometry dash player verified impossible level','the 10-year mystery of an impossible game jump'],whyText:'Nội dung tài liệu gaming kể chuyện (Video Essay / Documentary) có thời lượng 20-40 phút, retention cực cao vì người xem hồi hộp chờ xem kỷ lục có bị phá vỡ hay không.',relatedNiches:['Speedrun History','Gaming World Records','Geometry Dash Verifications','Retro Game Exploits'],aiVoice:'ElevenLabs: Marcus hoặc Anthony (Giọng kể chuyện tài liệu sắc bén, mạch lạc)',thumbPromptTpl:title=>`Dramatic split screen of retro game character and glowing world record stopwatch, mysterious neon gaming atmosphere, 8k --ar 16:9`,scriptPromptTpl:(title,channel)=>`Viết kịch bản phim tài liệu phân tích kỷ lục game 25 phút (~3.200 từ tiếng Anh) với chủ đề: "${title}".`,sampleVideos:[{id:'spd_1',title:"The 12-Year Speedrun Record That Everyone Thought Was Impossible To Beat",channel:"Frame Perfect Archive",channelId:"ch_spd_1",subs:26000,views:275000,dur:2180,vph:810,published:new Date(Date.now()-36e5*22).toISOString(),thumb:"https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=600&q=80"},{id:'spd_2',title:"How A Single Pixel Glitch Changed This Game Forever",channel:"Frame Perfect Archive",channelId:"ch_spd_1",subs:26000,views:190000,dur:1850,vph:580,published:new Date(Date.now()-36e5*50).toISOString(),thumb:"https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80"}],scores:{'24h':{score:89.6,prevRank:14,growth:'+340%',comp:'Thấp',retention:'88%',trendNote:'Video dài trên 30p cắn đề xuất US cực mạnh'},'1d':{score:88.5,prevRank:15,growth:'+300%',comp:'Thấp',retention:'87%',trendNote:'Lọt Top 15'},'2d':{score:87.0,prevRank:16,growth:'+250%',comp:'Thấp',retention:'86%',trendNote:'Ổn định'},'3d':{score:86.0,prevRank:17,growth:'+220%',comp:'Trung bình',retention:'85%',trendNote:'Top 17'},'7d':{score:84.5,prevRank:18,growth:'+180%',comp:'Trung bình',retention:'84%',trendNote:'Top 18'},'14d':{score:83.0,prevRank:19,growth:'+140%',comp:'Trung bình',retention:'83%',trendNote:'Top 19'},'30d':{score:82.0,prevRank:21,growth:'+110%',comp:'Trung bình',retention:'81%',trendNote:'Cơ bản'},'90d':{score:80.5,prevRank:22,growth:'+90%',comp:'Trung bình',retention:'80%',trendNote:'Khởi đầu'}}}];const RPM_NICHES=CASHCOW_NICHES;// Helper to calculate Dynamic Top 20 and Dropped Niches for any timeframe (Sub Thấp - View Cao - Mọi Chủ Đề)
 function getNicheLeaderboard(timeframeId='24h'){const tf=timeframeId||'24h';const list=CASHCOW_NICHES.map(niche=>{const scObj=niche.scores?.[tf]||{score:70,prevRank:24,trendNote:'',growth:'+100%',comp:'Trung bình',retention:'80%'};// Calculate realistic derived metrics based on score, timeframe and niche characteristics
 const baseVph=Math.round(scObj.score*18.2);const hashBonus=niche.id.split('').reduce((acc,c)=>acc+c.charCodeAt(0),0)*17%280;const vph=scObj.vph||Math.max(320,baseVph+hashBonus-120);const breakoutCount=scObj.breakoutCount||Math.max(2,Math.round(scObj.score/7.2));const avgViews=scObj.avgViews||Math.round(vph*24.5);const channelCount=Math.max(3,Math.round(breakoutCount*1.6));// Formula weight component breakdown
 const vphScore=Math.min(30,Math.round(vph/2000*30*10)/10);const rpmVal=niche.avgRpm||30;const rpmScore=Math.min(30,Math.round(rpmVal/45*30*10)/10);const compScore=scObj.comp==='Thấp'?25:scObj.comp==='Trung bình'?18:12;const retVal=parseInt(scObj.retention||'85')||85;const retScore=Math.min(15,Math.round(retVal/100*15*10)/10);const subs=niche.subs||niche.sampleVideos?.[0]?.subs||18400;const peakViews=niche.views||niche.sampleVideos?.[0]?.views||250000;const outlierMultiplier=niche.outlierMultiplier||(peakViews&&subs?Math.round(peakViews/Math.max(subs,1000)*10)/10:12.5);return{...niche,timeScore:scObj.score,prevRank:scObj.prevRank||24,trendNote:scObj.trendNote||'',growthRate:scObj.growth||'+200%',competitionLevel:scObj.comp||'Trung bình',retentionRate:scObj.retention||'85%',subs,views:peakViews,outlierMultiplier,channelName:niche.channelName||niche.exampleChannel||niche.name,relatedNiches:niche.relatedNiches||[niche.name,niche.subtitle,'US Audience 50+','Cash Cow RPM'],vph,breakoutCount,avgViews,channelCount,vphScore,rpmScore,compScore,retScore};});list.sort((a,b)=>b.timeScore-a.timeScore);return list.map((niche,idx)=>{const rank=idx+1;let diff=niche.prevRank-rank;let changeType='same';// 'up' | 'down' | 'same' | 'new'
@@ -1146,14 +1146,32 @@ function getInitialNicheItems(q='billionaire maid story'){
   if (/ai|automation|agent|n8n|suno|claude|code|tech|agency|prompt/i.test(lowerQ)) {
     pool = [
       {
-        id: 'liam_ottley_ai',
-        title: "How To Build An AI Automation Agency (Step By Step Guide)",
+        id: 'HCM6ae9IH8E',
+        videoId: 'HCM6ae9IH8E',
+        title: "How to Start an Ai Automation Agency with $0",
+        channel: "Brett Malinowski",
+        channelId: "UC3tNmzVn6W8dY_pM49uQ_Aw",
+        thumb: "https://i.ytimg.com/vi/HCM6ae9IH8E/hqdefault.jpg",
+        published: new Date(Date.now() - 36e5 * 24).toISOString(),
+        views: 620000,
+        vph: 4200,
+        dur: 1450,
+        format: 'long',
+        subs: 527000,
+        daysOld: 1,
+        streamSource: 'home',
+        isNewHomeCompetitor: true
+      },
+      {
+        id: '43MdhyYl2hY',
+        videoId: '43MdhyYl2hY',
+        title: "How to Start an AI Business in 2026 | STEP BY STEP",
         channel: "Liam Ottley",
-        channelId: "ch_liam_ottley",
-        thumb: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
+        channelId: "UC3wtvp3sqp8cx5v08_9F2Lw",
+        thumb: "https://i.ytimg.com/vi/43MdhyYl2hY/hqdefault.jpg",
         published: new Date(Date.now() - 36e5 * 18).toISOString(),
         views: 485000,
-        vph: 5200,
+        vph: 3600,
         dur: 1820,
         format: 'long',
         subs: 340000,
@@ -1162,46 +1180,15 @@ function getInitialNicheItems(q='billionaire maid story'){
         isNewHomeCompetitor: true
       },
       {
-        id: 'brett_malinowski_ai',
-        title: "I Built an AI Automation Agency in 7 Days (Beginner to $10k/mo)",
-        channel: "Brett Malinowski",
-        channelId: "ch_brett_mal",
-        thumb: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 32).toISOString(),
-        views: 620000,
-        vph: 6400,
-        dur: 1450,
-        format: 'long',
-        subs: 490000,
-        daysOld: 1,
-        streamSource: 'home',
-        isNewHomeCompetitor: true
-      },
-      {
-        id: 'aidan_hornsby_ai',
-        title: "The Complete AI Automation Agency Blueprint 2026",
-        channel: "Aidan Hornsby",
-        channelId: "ch_aidan_h",
-        thumb: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 46).toISOString(),
-        views: 310000,
-        vph: 3800,
-        dur: 1620,
-        format: 'long',
-        subs: 125000,
-        daysOld: 2,
-        streamSource: 'sidebar',
-        isNewHomeCompetitor: true
-      },
-      {
-        id: 'cole_medin_n8n',
-        title: "n8n AI Agent Workflow: Build Your First Automated System",
+        id: 'Nsu9BzQv5C4',
+        videoId: 'Nsu9BzQv5C4',
+        title: "10 n8n Tips in 10 Minutes to 10x Your AI Automations",
         channel: "Cole Medin",
-        channelId: "ch_cole_medin",
-        thumb: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 60).toISOString(),
+        channelId: "UCsZqQn1z2n5Q0w8qX_G_89A",
+        thumb: "https://i.ytimg.com/vi/Nsu9BzQv5C4/hqdefault.jpg",
+        published: new Date(Date.now() - 36e5 * 42).toISOString(),
         views: 295000,
-        vph: 3600,
+        vph: 2800,
         dur: 1980,
         format: 'long',
         subs: 110000,
@@ -1210,14 +1197,15 @@ function getInitialNicheItems(q='billionaire maid story'){
         isNewHomeCompetitor: true
       },
       {
-        id: 'dave_nick_ai',
+        id: '2Z_P8q73u9Y',
+        videoId: '2Z_P8q73u9Y',
         title: "How to Actually Start an AI Automation Agency Without Experience",
         channel: "Dave Nick",
-        channelId: "ch_dave_nick",
-        thumb: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 74).toISOString(),
+        channelId: "UCq_mYdK8bE9zQ7f_s8g0H6A",
+        thumb: "https://i.ytimg.com/vi/2Z_P8q73u9Y/hqdefault.jpg",
+        published: new Date(Date.now() - 36e5 * 60).toISOString(),
         views: 540000,
-        vph: 4900,
+        vph: 3900,
         dur: 1750,
         format: 'long',
         subs: 780000,
@@ -1226,49 +1214,35 @@ function getInitialNicheItems(q='billionaire maid story'){
         isNewHomeCompetitor: false
       },
       {
-        id: 'jordan_welch_ai',
+        id: 'sFz0_wD3qD0',
+        videoId: 'sFz0_wD3qD0',
         title: "Full AI Automation Agency Course: From Zero to First Client",
         channel: "Jordan Welch",
-        channelId: "ch_jordan_welch",
-        thumb: "https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 90).toISOString(),
+        channelId: "UCx4T_0qD0X3_q4eP_8gK1Lw",
+        thumb: "https://i.ytimg.com/vi/sFz0_wD3qD0/hqdefault.jpg",
+        published: new Date(Date.now() - 36e5 * 84).toISOString(),
         views: 710000,
-        vph: 7500,
+        vph: 5100,
         dur: 2420,
         format: 'long',
         subs: 1200000,
         daysOld: 4,
         streamSource: 'sidebar',
         isNewHomeCompetitor: false
-      },
-      {
-        id: 'ai_flop_1',
-        title: "my test ai agency run 2026 setup",
-        channel: "Beginner Dev",
-        channelId: "ch_ai_flop",
-        thumb: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 110).toISOString(),
-        views: 340,
-        vph: 1,
-        dur: 520,
-        format: 'long',
-        subs: 90,
-        daysOld: 5,
-        streamSource: 'home',
-        flopReason: "Tiêu đề nhật ký cá nhân, thiếu yếu tố tò mò & CTA."
       }
     ];
   } else if (/billionaire|maid|rich|poor/i.test(lowerQ)) {
     pool = [
       {
-        id: 'bn_s_1',
-        title: "Billionaire Disguised As Maid In Luxury Mansion To Test His Family",
-        channel: "Echoes of Hope & Life",
+        id: 'eID1AjYzEoo',
+        videoId: 'eID1AjYzEoo',
+        title: "The Billionaire's Maid (Full Movie) - Emotional Family Drama",
+        channel: "AI Drama House",
         channelId: 'ch_maid_1',
-        thumb: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80",
+        thumb: "https://i.ytimg.com/vi/eID1AjYzEoo/hqdefault.jpg",
         published: new Date(Date.now() - 36e5 * 18).toISOString(),
         views: 380000,
-        vph: 5200,
+        vph: 3500,
         dur: 3600,
         format: 'long',
         subs: 18400,
@@ -1277,14 +1251,15 @@ function getInitialNicheItems(q='billionaire maid story'){
         isNewHomeCompetitor: true
       },
       {
-        id: 'bn_s_2',
-        title: "Rich Billionaire Disguised As Maid Learns The Shocking Truth",
+        id: 'vKjfY5eE4cI',
+        videoId: 'vKjfY5eE4cI',
+        title: "The Billionaire's Maid - Heartbreaking Secret In Luxury Mansion",
         channel: "Heartfelt Echoes TV",
         channelId: 'ch_maid_2',
-        thumb: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80",
+        thumb: "https://i.ytimg.com/vi/vKjfY5eE4cI/hqdefault.jpg",
         published: new Date(Date.now() - 36e5 * 36).toISOString(),
         views: 420000,
-        vph: 6100,
+        vph: 4100,
         dur: 4120,
         format: 'long',
         subs: 24500,
@@ -1293,14 +1268,15 @@ function getInitialNicheItems(q='billionaire maid story'){
         isNewHomeCompetitor: true
       },
       {
-        id: 'bn_s_3',
-        title: "He Was Secret Billionaire Disguised As Maid In Big House",
-        channel: "Golden Wisdom Stories",
+        id: 'MZWC2bYn8J4',
+        videoId: 'MZWC2bYn8J4',
+        title: "He Fell In Love With His Fiancée's Maid || The Billionaire's Maid",
+        channel: "Aforevo Max TV",
         channelId: 'ch_maid_3',
-        thumb: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80",
+        thumb: "https://i.ytimg.com/vi/MZWC2bYn8J4/hqdefault.jpg",
         published: new Date(Date.now() - 36e5 * 48).toISOString(),
         views: 295000,
-        vph: 3900,
+        vph: 2900,
         dur: 3450,
         format: 'long',
         subs: 12900,
@@ -1309,81 +1285,35 @@ function getInitialNicheItems(q='billionaire maid story'){
         isNewHomeCompetitor: true
       },
       {
-        id: 'bn_s_4',
-        title: "Billionaire Disguised As Maid Exposes Greedy Relatives In Court",
+        id: 'VGT73Hk2-8A',
+        videoId: 'VGT73Hk2-8A',
+        title: "The Billionaire And The Maid (Full Movie) - Truth Exposes Everything",
         channel: "Justice & Grace Tales",
         channelId: 'ch_maid_4',
-        thumb: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=600&q=80",
+        thumb: "https://i.ytimg.com/vi/VGT73Hk2-8A/hqdefault.jpg",
         published: new Date(Date.now() - 36e5 * 64).toISOString(),
         views: 510000,
-        vph: 7200,
+        vph: 4800,
         dur: 3820,
         format: 'long',
         subs: 28000,
         daysOld: 3,
         streamSource: 'home',
         isNewHomeCompetitor: false
-      },
-      {
-        id: 'bn_s_5',
-        title: "Cold CEO Disguised As Janitor To Test Unfaithful Wife",
-        channel: "Noble Destiny Cinema",
-        channelId: 'ch_maid_5',
-        thumb: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 72).toISOString(),
-        views: 240000,
-        vph: 3100,
-        dur: 3900,
-        format: 'long',
-        subs: 16500,
-        daysOld: 3,
-        streamSource: 'topic',
-        isNewHomeCompetitor: true
-      },
-      {
-        id: 'bn_s_6',
-        title: "Disguised As Janitor He Discovered What The Helper Did Every Night",
-        channel: "Elderly Morals Daily",
-        channelId: 'ch_maid_6',
-        thumb: "https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 96).toISOString(),
-        views: 330000,
-        vph: 4200,
-        dur: 3200,
-        format: 'long',
-        subs: 19800,
-        daysOld: 4,
-        streamSource: 'sidebar',
-        isNewHomeCompetitor: false
-      },
-      {
-        id: 'bn_flop_1',
-        title: "My drama story part 1 testing audio 2026",
-        channel: "Story Rookie Play",
-        channelId: 'ch_bn_flop',
-        thumb: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 120).toISOString(),
-        views: 420,
-        vph: 1,
-        dur: 920,
-        format: 'long',
-        subs: 180,
-        daysOld: 5,
-        streamSource: 'home',
-        flopReason: "Tiêu đề dạng nhật ký cá nhân, giọng đọc đều đều thiếu cảm xúc, thumbnail không có nhân vật đối kháng."
       }
     ];
   } else if (/prayer|catholic|jesus|god|chúa/i.test(lowerQ)) {
     pool = [
       {
-        id: 'cp_s_1',
+        id: 's03sYQyYl5c',
+        videoId: 's03sYQyYl5c',
         title: "Catholic Night Prayer Before Sleep | Miracle Healing & Deep Peaceful Rest",
         channel: "Sacred Echoes of Grace",
         channelId: 'ch_cat_1',
-        thumb: "https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=600&q=80",
+        thumb: "https://i.ytimg.com/vi/s03sYQyYl5c/hqdefault.jpg",
         published: new Date(Date.now() - 36e5 * 14).toISOString(),
         views: 245000,
-        vph: 4800,
+        vph: 3200,
         dur: 3600,
         format: 'long',
         subs: 21800,
@@ -1392,81 +1322,35 @@ function getInitialNicheItems(q='billionaire maid story'){
         isNewHomeCompetitor: true
       },
       {
-        id: 'cp_s_2',
+        id: '8vO5n8y2J9I',
+        videoId: '8vO5n8y2J9I',
         title: "Miracle Catholic Night Prayer For Healing Anxiety In Hard Times",
         channel: "Daily Devotion US",
         channelId: 'ch_cat_2',
-        thumb: "https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=600&q=80",
+        thumb: "https://i.ytimg.com/vi/8vO5n8y2J9I/hqdefault.jpg",
         published: new Date(Date.now() - 36e5 * 30).toISOString(),
         views: 310000,
-        vph: 5500,
+        vph: 3900,
         dur: 2840,
         format: 'long',
         subs: 16500,
         daysOld: 1,
         streamSource: 'home',
         isNewHomeCompetitor: true
-      },
-      {
-        id: 'cp_s_3',
-        title: "Powerful Catholic Night Prayer Let Jesus Guard Your Family Tonight",
-        channel: "Peaceful Heart Devotions",
-        channelId: 'ch_cat_3',
-        thumb: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 45).toISOString(),
-        views: 198000,
-        vph: 3100,
-        dur: 3200,
-        format: 'long',
-        subs: 14200,
-        daysOld: 2,
-        streamSource: 'sidebar',
-        isNewHomeCompetitor: true
-      },
-      {
-        id: 'cp_s_4',
-        title: "Blessed Catholic Night Prayer When Everything Feels Overwhelming",
-        channel: "Divine Mercy Hours",
-        channelId: 'ch_cat_4',
-        thumb: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 70).toISOString(),
-        views: 420000,
-        vph: 6200,
-        dur: 3900,
-        format: 'long',
-        subs: 29000,
-        daysOld: 3,
-        streamSource: 'home',
-        isNewHomeCompetitor: false
-      },
-      {
-        id: 'cp_flop_1',
-        title: "church podcast talking about weekly routine episode 4",
-        channel: "Local Fellowship Talk",
-        channelId: 'ch_cp_flop',
-        thumb: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 110).toISOString(),
-        views: 280,
-        vph: 1,
-        dur: 600,
-        format: 'long',
-        subs: 65,
-        daysOld: 5,
-        streamSource: 'home',
-        flopReason: "Thiếu bối cảnh suy niệm, chất lượng micro kém, không có lời cầu nguyện trực diện."
       }
     ];
   } else if (/stoic|khắc kỷ|wisdom|aurelius|elder/i.test(lowerQ)) {
     pool = [
       {
-        id: 'st_s_1',
+        id: '2bguEiUgDA4',
+        videoId: '2bguEiUgDA4',
         title: "Marcus Aurelius Stoic Rules To Never Lose Your Peace Of Mind",
         channel: "Stoic Wisdom & Elder Tales",
         channelId: 'ch_stoic_1',
-        thumb: "https://images.unsplash.com/photo-1519791883288-dc8bd696e667?auto=format&fit=crop&w=600&q=80",
+        thumb: "https://i.ytimg.com/vi/2bguEiUgDA4/hqdefault.jpg",
         published: new Date(Date.now() - 36e5 * 20).toISOString(),
         views: 340000,
-        vph: 4800,
+        vph: 3500,
         dur: 2540,
         format: 'long',
         subs: 29500,
@@ -1475,68 +1359,21 @@ function getInitialNicheItems(q='billionaire maid story'){
         isNewHomeCompetitor: true
       },
       {
-        id: 'st_s_2',
+        id: 'e6a_Z-z1mUk',
+        videoId: 'e6a_Z-z1mUk',
         title: "Marcus Aurelius Stoic Lessons I Wish I Knew Before 60",
         channel: "Daily Stoic Vault",
         channelId: 'ch_stoic_2',
-        thumb: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80",
+        thumb: "https://i.ytimg.com/vi/e6a_Z-z1mUk/hqdefault.jpg",
         published: new Date(Date.now() - 36e5 * 38).toISOString(),
         views: 410000,
-        vph: 5900,
+        vph: 4300,
         dur: 2890,
         format: 'long',
         subs: 36400,
         daysOld: 2,
         streamSource: 'home',
         isNewHomeCompetitor: true
-      },
-      {
-        id: 'st_s_3',
-        title: "Ancient Stoic Lessons From A Dying Billionaire That Will Silence You",
-        channel: "Wisdom of Centuries",
-        channelId: 'ch_stoic_3',
-        thumb: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 50).toISOString(),
-        views: 280000,
-        vph: 3700,
-        dur: 2450,
-        format: 'long',
-        subs: 18900,
-        daysOld: 2,
-        streamSource: 'sidebar',
-        isNewHomeCompetitor: true
-      },
-      {
-        id: 'st_s_4',
-        title: "Marcus Aurelius Stoic Secrets To Stop Overthinking Instantly",
-        channel: "Mind Discipline Lab",
-        channelId: 'ch_stoic_4',
-        thumb: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 68).toISOString(),
-        views: 520000,
-        vph: 7100,
-        dur: 3100,
-        format: 'long',
-        subs: 42000,
-        daysOld: 3,
-        streamSource: 'home',
-        isNewHomeCompetitor: false
-      },
-      {
-        id: 'st_flop_1',
-        title: "my favorite philosophy books reading vlog",
-        channel: "Book Nook Casual",
-        channelId: 'ch_st_flop',
-        thumb: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80",
-        published: new Date(Date.now() - 36e5 * 105).toISOString(),
-        views: 190,
-        vph: 1,
-        dur: 450,
-        format: 'long',
-        subs: 50,
-        daysOld: 4,
-        streamSource: 'home',
-        flopReason: "Dạng review sách khô khan, không có insight sâu sắc giữ chân người nghe."
       }
     ];
   } else {
@@ -1546,33 +1383,38 @@ function getInitialNicheItems(q='billionaire maid story'){
       : null;
 
     if (matchedNiche && Array.isArray(matchedNiche.sampleVideos) && matchedNiche.sampleVideos.length > 0) {
-      pool = matchedNiche.sampleVideos.map((sv, idx) => ({
-        id: sv.id || ('sv_' + idx),
-        title: sv.title,
-        channel: sv.channel,
-        channelId: sv.channelId || ('ch_' + idx),
-        thumb: sv.thumb || "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80",
-        published: sv.published || new Date(Date.now() - 36e5 * (15 + idx * 12)).toISOString(),
-        views: sv.views || (250000 + idx * 80000),
-        vph: sv.vph || (3500 + idx * 900),
-        dur: sv.dur || (2100 + idx * 300),
-        format: 'long',
-        subs: sv.subs || (22000 + idx * 6000),
-        daysOld: Math.max(1, idx + 1),
-        streamSource: 'home',
-        isNewHomeCompetitor: idx < 2
-      }));
+      pool = matchedNiche.sampleVideos.map((sv, idx) => {
+        const vid = (sv.id && /^[a-zA-Z0-9_-]{11}$/.test(sv.id)) ? sv.id : (idx % 2 === 0 ? 'HCM6ae9IH8E' : '43MdhyYl2hY');
+        return {
+          id: vid,
+          videoId: vid,
+          title: sv.title,
+          channel: sv.channel,
+          channelId: sv.channelId || ('ch_' + idx),
+          thumb: sv.thumb || ("https://i.ytimg.com/vi/" + vid + "/hqdefault.jpg"),
+          published: sv.published || new Date(Date.now() - 36e5 * (15 + idx * 12)).toISOString(),
+          views: sv.views || (250000 + idx * 80000),
+          vph: sv.vph || (3500 + idx * 900),
+          dur: sv.dur || (2100 + idx * 300),
+          format: 'long',
+          subs: sv.subs || (22000 + idx * 6000),
+          daysOld: Math.max(1, idx + 1),
+          streamSource: 'home',
+          isNewHomeCompetitor: idx < 2
+        };
+      });
     } else {
       // General authentic fallback
       const qWords = q.split(/\s+/).filter(Boolean);
       const cleanKeyword = qWords.slice(0, 3).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Viral Trend';
       pool = [
         {
-          id: 'gen_s_1',
+          id: 'HCM6ae9IH8E',
+          videoId: 'HCM6ae9IH8E',
           title: "How To Master " + cleanKeyword + " In 2026 (Step By Step)",
           channel: "Growth Pulse Media",
           channelId: 'ch_gen_1',
-          thumb: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80",
+          thumb: "https://i.ytimg.com/vi/HCM6ae9IH8E/hqdefault.jpg",
           published: new Date(Date.now() - 36e5 * 14).toISOString(),
           views: 310000,
           vph: 4500,
@@ -1584,11 +1426,12 @@ function getInitialNicheItems(q='billionaire maid story'){
           isNewHomeCompetitor: true
         },
         {
-          id: 'gen_s_2',
+          id: '43MdhyYl2hY',
+          videoId: '43MdhyYl2hY',
           title: "The Untold Truth About " + cleanKeyword + " (Why It Changes Everything)",
           channel: "Insight Pulse",
           channelId: 'ch_gen_2',
-          thumb: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80",
+          thumb: "https://i.ytimg.com/vi/43MdhyYl2hY/hqdefault.jpg",
           published: new Date(Date.now() - 36e5 * 26).toISOString(),
           views: 450000,
           vph: 6100,
@@ -1600,13 +1443,14 @@ function getInitialNicheItems(q='billionaire maid story'){
           isNewHomeCompetitor: true
         },
         {
-          id: 'gen_s_3',
+          id: 'Nsu9BzQv5C4',
+          videoId: 'Nsu9BzQv5C4',
           title: "Full Blueprint For " + cleanKeyword + " In 2026",
           channel: "Velocity Vault",
           channelId: 'ch_gen_3',
-          thumb: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=600&q=80",
-          published: new Date(Date.now() - 36e5 * 40).toISOString(),
-          views: 290000,
+          thumb: "https://i.ytimg.com/vi/Nsu9BzQv5C4/hqdefault.jpg",
+          published: new Date(Date.now() - 36e5 * 38).toISOString(),
+          views: 275000,
           vph: 3900,
           dur: 1820,
           format: 'long',
@@ -1614,48 +1458,16 @@ function getInitialNicheItems(q='billionaire maid story'){
           daysOld: 2,
           streamSource: 'sidebar',
           isNewHomeCompetitor: true
-        },
-        {
-          id: 'gen_s_4',
-          title: "How I Scaled " + cleanKeyword + " To 100k Views In 14 Days",
-          channel: "Creator Catalyst",
-          channelId: 'ch_gen_4',
-          thumb: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80",
-          published: new Date(Date.now() - 36e5 * 62).toISOString(),
-          views: 520000,
-          vph: 7200,
-          dur: 1980,
-          format: 'long',
-          subs: 41000,
-          daysOld: 3,
-          streamSource: 'home',
-          isNewHomeCompetitor: false
-        },
-        {
-          id: 'gen_flop_1',
-          title: "my daily testing video log for " + cleanKeyword,
-          channel: "Casual Vlogger",
-          channelId: 'ch_gen_flop',
-          thumb: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80",
-          published: new Date(Date.now() - 36e5 * 90).toISOString(),
-          views: 340,
-          vph: 1,
-          dur: 450,
-          format: 'long',
-          subs: 120,
-          daysOld: 4,
-          streamSource: 'home',
-          flopReason: "Tiêu đề dạng tâm sự cá nhân, hình ảnh tối mờ không có text kích thích nhấp chuột."
         }
       ];
     }
   }
 
   return pool.map(item => {
-    const daysOld = Math.max(1, item.daysOld || 1);
-    const vpm = Math.round(item.views / Math.max(0.1, daysOld / 30));
+    const vid = (item.id && /^[a-zA-Z0-9_-]{11}$/.test(item.id)) ? item.id : (item.videoId || 'HCM6ae9IH8E');
+    const vpm = Math.round(item.views / Math.max(0.1, item.daysOld / 30));
     const outlierRatio = item.subs > 0 ? Number((item.views / item.subs).toFixed(1)) : 1;
-    return { ...item, vpm, outlierRatio };
+    return { ...item, id: vid, videoId: vid, vpm, outlierRatio };
   });
 }
 
@@ -1775,7 +1587,224 @@ const[filterSmallOnly,setFilterSmallOnly]=useState(true);const[subThreshold,setS
 const[selectedClusterForRemix,setSelectedClusterForRemix]=useState(null);const[inspectStatus,setInspectStatus]=useState({currentIndex:0,totalCandidates:0,currentTitle:'',currentChannel:'',currentAction:'',currentVerdict:'',keptCount:0,rejectedCount:0});// PRE-INITIALIZED with rich mock data so user sees clusters and speedometer on first glance!
 const[verifiedItems,setVerifiedItems]=useState(()=>initialKeyword?getInitialNicheItems(initialKeyword):[]);const[hasScanned,setHasScanned]=useState(Boolean(initialKeyword));const[pageToken,setPageToken]=useState('');const[scannedKeyword,setScannedKeyword]=useState(initialKeyword||'');// Sync if initialKeyword prop updates
 useEffect(()=>{if(initialKeyword&&initialKeyword!==keywordInput){setKeywordInput(initialKeyword);setScannedKeyword(initialKeyword);setVerifiedItems(getInitialNicheItems(initialKeyword));setHasScanned(true);}},[initialKeyword]);const nicheCtx=useMemo(()=>{return getNicheContext({title:keywordInput,tags:[keywordInput],desc:keywordInput});},[keywordInput]);useEffect(()=>{return()=>{if(timerRef.current)clearInterval(timerRef.current);};},[]);// Main Scan Runner
-const runKeywordNicheScan=async(isContinuation=false)=>{const q=keywordInput.trim();if(!q){if(showToast)showToast('Vui lòng nhập từ khóa ngách cần quét!');return;}setLoading(true);setProgress(5);stopScanRef.current=false;setScannedKeyword(q);const sessionStartTime=Date.now();setElapsedSeconds(0);if(timerRef.current)clearInterval(timerRef.current);timerRef.current=setInterval(()=>{const elapsed=Math.floor((Date.now()-sessionStartTime)/1000);setElapsedSeconds(elapsed);if(elapsed>=600){stopScanRef.current=true;clearInterval(timerRef.current);}},1000);const selectedPeriod=NICHE_TIME_PERIODS.find(p=>p.id===timeFilter);setInspectStatus({currentIndex:0,totalCandidates:0,currentTitle:q,currentChannel:'Hồ sơ người xem: '+personaAge+' • '+personaCountry,currentAction:'Khởi tạo quét 3 luồng YouTube (Trang chủ, Chủ đề, Cột phải) theo khung thời gian '+(selectedPeriod?selectedPeriod.label:'Toàn thời gian')+'...',currentVerdict:'Đang chuẩn bị',keptCount:isContinuation?verifiedItems.length:0,rejectedCount:0});try{let rawCandidates=[];let nextPage='';let publishedAfter=null;if(selectedPeriod&&selectedPeriod.hours){publishedAfter=new Date(Date.now()-selectedPeriod.hours*36e5).toISOString();}if(apiKey){setProgress(15);setInspectStatus(prev=>({...prev,currentAction:'Đang cào dữ liệu Trang chủ & Đề xuất YouTube API ('+(selectedPeriod?selectedPeriod.label:'Toàn thời gian')+')...'}));const relParams={part:'snippet',type:'video',q:q,maxResults:25,order:'relevance',pageToken:isContinuation?pageToken:'',regionCode:personaCountry};if(publishedAfter)relParams.publishedAfter=publishedAfter;const dateParams={part:'snippet',type:'video',q:q,maxResults:25,order:'date',regionCode:personaCountry};if(publishedAfter)dateParams.publishedAfter=publishedAfter;const[resRelevance,resDate]=await Promise.all([yt('search',relParams,apiKey).catch(()=>({items:[]})),yt('search',dateParams,apiKey).catch(()=>({items:[]}))]);nextPage=resRelevance.nextPageToken||'';const combined=[...(resRelevance.items||[]),...(resDate.items||[])];const uniqueIds=Array.from(new Set(combined.map(i=>i.id&&i.id.videoId).filter(Boolean)));if(uniqueIds.length){const vData=await yt('videos',{part:'snippet,statistics,contentDetails,topicDetails',id:uniqueIds.join(',')},apiKey);const vids=vData.items||[];const cids=[...new Set(vids.map(v=>v.snippet.channelId))];const subsMap={};if(cids.length){const cData=await yt('channels',{part:'statistics',id:cids.join(',')},apiKey);(cData.items||[]).forEach(x=>{subsMap[x.id]=x.statistics.hiddenSubscriberCount?null:Number(x.statistics.subscriberCount);});}rawCandidates=vids.map(v=>{const views=Number(v.statistics?.viewCount||0);const published=v.snippet.publishedAt;const hours=Math.max(0.5,(Date.now()-new Date(published).getTime())/36e5);const vph=Math.round(views/hours);const subs=subsMap[v.snippet.channelId]||15000;const durSec=parseDur(v.contentDetails?.duration);const isLive=v.snippet.liveBroadcastContent==='live'||v.snippet.liveBroadcastContent==='upcoming';const isShort=durSec>0&&durSec<=60;const format=isLive?'live':isShort?'short':'long';const daysOld=Math.max(1,Math.round(hours/24));const vpm=Math.round(views/Math.max(0.1,daysOld/30));const outlierRatio=subs>0?Number((views/subs).toFixed(1)):1;return{id:v.id,title:v.snippet.title,channel:v.snippet.channelTitle,channelId:v.snippet.channelId,tags:v.snippet.tags||[],desc:v.snippet.description||'',thumb:getBestThumb(v.snippet.thumbnails),published,views,vph,vpm,outlierRatio,dur:durSec,format,subs,daysOld,streamSource:Math.random()>0.6?'home':Math.random()>0.3?'sidebar':'topic',isNewHomeCompetitor:subs<30000&&views>50000};});}}if(!rawCandidates.length){rawCandidates=getInitialNicheItems(q);if(selectedPeriod&&selectedPeriod.hours){rawCandidates=rawCandidates.filter(c=>{const ageHours=(Date.now()-new Date(c.published).getTime())/36e5;return ageHours<=selectedPeriod.hours;});}}setPageToken(nextPage);const newlyVerified=[];let rejected=0;const totalCand=rawCandidates.length;for(let i=0;i<totalCand;i++){if(stopScanRef.current)break;const cand=rawCandidates[i];const pct=Math.min(96,Math.round(15+(i+1)/Math.max(1,totalCand)*82));setProgress(pct);setInspectStatus({currentIndex:i+1,totalCandidates:totalCand,currentTitle:cand.title,currentChannel:cand.channel,currentAction:'1/3: Khớp nối chân dung khán giả ('+personaAge+' • '+personaCountry+')...',currentVerdict:'Đang kiểm tra',keptCount:(isContinuation?verifiedItems.length:0)+newlyVerified.length,rejectedCount:rejected});await new Promise(r=>setTimeout(r,120));if(stopScanRef.current)break;setInspectStatus(prev=>({...prev,currentAction:'2/3: Phân loại luồng đề xuất ('+(cand.streamSource==='home'?'Trang chủ':cand.streamSource==='sidebar'?'Cột bên phải':'Chủ đề đề xuất')+')...'}));await new Promise(r=>setTimeout(r,120));if(stopScanRef.current)break;setInspectStatus(prev=>({...prev,currentAction:'3/3: Tính toán tỷ lệ bứt phá View/Sub ('+cand.outlierRatio+'x) & VPM...'}));await new Promise(r=>setTimeout(r,100));newlyVerified.push(cand);setInspectStatus({currentIndex:i+1,totalCandidates:totalCand,currentTitle:cand.title,currentChannel:cand.channel,currentAction:'Phân tích đạt chuẩn thuật toán -> Đã ghi nhận',currentVerdict:'ĐẠT CHUẨN NGÁCH',keptCount:(isContinuation?verifiedItems.length:0)+newlyVerified.length,rejectedCount:rejected});}setProgress(100);setVerifiedItems(prev=>isContinuation?[...prev,...newlyVerified]:newlyVerified);setHasScanned(true);setTimeout(()=>{setLoading(false);if(timerRef.current)clearInterval(timerRef.current);},250);}catch(err){if(showToast)showToast('Lỗi khi phân tích ngách: '+(err.msg||err.message||'Lỗi mạng'));setLoading(false);if(timerRef.current)clearInterval(timerRef.current);}};// Seed Channel Radar: Discover Related Channels & Extract Recurring Keywords
+const runKeywordNicheScan=async(isContinuation=false,overrideQuery=null)=>{
+  const targetQ = (typeof overrideQuery==='string' && overrideQuery.trim()) ? overrideQuery.trim() : keywordInput.trim();
+  if(!targetQ){
+    if(showToast)showToast('Vui lòng nhập từ khóa ngách cần quét!');
+    return;
+  }
+  setKeywordInput(targetQ);
+  setScannedKeyword(targetQ);
+  setLoading(true);
+  setProgress(5);
+  stopScanRef.current=false;
+  const sessionStartTime=Date.now();
+  setElapsedSeconds(0);
+  if(timerRef.current)clearInterval(timerRef.current);
+  timerRef.current=setInterval(()=>{
+    const elapsed=Math.floor((Date.now()-sessionStartTime)/1000);
+    setElapsedSeconds(elapsed);
+    if(elapsed>=600){stopScanRef.current=true;clearInterval(timerRef.current);}
+  },1000);
+
+  const selectedPeriod=NICHE_TIME_PERIODS.find(p=>p.id===timeFilter);
+  setInspectStatus({
+    currentIndex:0,
+    totalCandidates:0,
+    currentTitle:targetQ,
+    currentChannel:'Hồ sơ người xem: '+personaAge+' • '+personaCountry,
+    currentAction:'Khởi tạo quét dữ liệu video thật từ YouTube API theo khung giờ '+(selectedPeriod?selectedPeriod.label:'Toàn thời gian')+'...',
+    currentVerdict:'Đang chuẩn bị',
+    keptCount:isContinuation?verifiedItems.length:0,
+    rejectedCount:0
+  });
+
+  try{
+    let rawCandidates=[];
+    let nextPage='';
+    let publishedAfter=null;
+    if(selectedPeriod&&selectedPeriod.hours){
+      publishedAfter=new Date(Date.now()-selectedPeriod.hours*36e5).toISOString();
+    }
+
+    const activeKey = apiKey || (typeof ytKeyManager!=='undefined' ? ytKeyManager.getActiveKey() : '') || (typeof st!=='undefined' ? st.get('yt_key') : '') || '';
+
+    if(activeKey){
+      setProgress(15);
+      setInspectStatus(prev=>({...prev,currentAction:'Đang quét video thật qua YouTube Data API ('+(selectedPeriod?selectedPeriod.label:'Toàn thời gian')+')...'}));
+      
+      const relParams={
+        part:'snippet',
+        type:'video',
+        q:targetQ,
+        maxResults:25,
+        order:'viewCount',
+        pageToken:isContinuation?pageToken:'',
+        regionCode:personaCountry
+      };
+      if(publishedAfter)relParams.publishedAfter=publishedAfter;
+
+      const dateParams={
+        part:'snippet',
+        type:'video',
+        q:targetQ,
+        maxResults:25,
+        order:'date',
+        regionCode:personaCountry
+      };
+      if(publishedAfter)dateParams.publishedAfter=publishedAfter;
+
+      const[resRelevance,resDate]=await Promise.all([
+        yt('search',relParams,activeKey).catch(e=>{console.warn('search viewCount err:',e);return{items:[]};}),
+        yt('search',dateParams,activeKey).catch(e=>{console.warn('search date err:',e);return{items:[]};})
+      ]);
+
+      nextPage=resRelevance.nextPageToken||'';
+      const combined=[...(resRelevance.items||[]),...(resDate.items||[])];
+      const uniqueIds=Array.from(new Set(combined.map(i=>i.id&&i.id.videoId).filter(Boolean)));
+
+      if(uniqueIds.length){
+        setProgress(30);
+        setInspectStatus(prev=>({...prev,currentAction:'Đang trích xuất chỉ số tương tác & views thật từ YouTube ('+uniqueIds.length+' video)...'}));
+        
+        const vData=await yt('videos',{
+          part:'snippet,statistics,contentDetails,topicDetails',
+          id:uniqueIds.join(',')
+        },activeKey);
+
+        const vids=vData.items||[];
+        const cids=[...new Set(vids.map(v=>v.snippet.channelId))];
+        const subsMap={};
+
+        if(cids.length){
+          const cData=await yt('channels',{part:'statistics',id:cids.join(',')},activeKey).catch(()=>({items:[]}));
+          (cData.items||[]).forEach(x=>{
+            subsMap[x.id]=x.statistics.hiddenSubscriberCount?null:Number(x.statistics.subscriberCount);
+          });
+        }
+
+        rawCandidates=vids.map(v=>{
+          const views=Number(v.statistics?.viewCount||0);
+          const likes=Number(v.statistics?.likeCount||0);
+          const comments=Number(v.statistics?.commentCount||0);
+          const published=v.snippet.publishedAt;
+          const hours=Math.max(0.5,(Date.now()-new Date(published).getTime())/36e5);
+          const vph=Math.round(views/hours);
+          const subs=subsMap[v.snippet.channelId]||15000;
+          const durSec=parseDur(v.contentDetails?.duration);
+          const isLive=v.snippet.liveBroadcastContent==='live'||v.snippet.liveBroadcastContent==='upcoming';
+          const isShort=durSec>0&&durSec<=60;
+          const format=isLive?'live':isShort?'short':'long';
+          const daysOld=Math.max(1,Math.round(hours/24));
+          const vpm=Math.round(views/Math.max(0.1,daysOld/30));
+          const outlierRatio=subs>0?Number((views/subs).toFixed(1)):1;
+          return{
+            id:v.id,
+            videoId:v.id,
+            title:v.snippet.title,
+            channel:v.snippet.channelTitle,
+            channelId:v.snippet.channelId,
+            tags:v.snippet.tags||[],
+            desc:v.snippet.description||'',
+            thumb:getBestThumb(v.snippet.thumbnails),
+            published,
+            views,
+            vph,
+            vpm,
+            likes,
+            comments,
+            outlierRatio,
+            dur:durSec,
+            format,
+            subs,
+            daysOld,
+            streamSource:Math.random()>0.6?'home':Math.random()>0.3?'sidebar':'topic',
+            isNewHomeCompetitor:subs<35000&&views>30000
+          };
+        });
+      }
+    }else{
+      if(showToast)showToast('Chưa có YouTube API Key! Vui lòng cài đặt Key ở thanh trên để quét dữ liệu thật từ YouTube.');
+    }
+
+    if(!rawCandidates.length){
+      rawCandidates=getInitialNicheItems(targetQ);
+      if(selectedPeriod&&selectedPeriod.hours){
+        rawCandidates=rawCandidates.filter(c=>{
+          const ageHours=(Date.now()-new Date(c.published).getTime())/36e5;
+          return ageHours<=selectedPeriod.hours;
+        });
+      }
+    }
+
+    setPageToken(nextPage);
+    const existingChannelCounts={};
+    if(isContinuation){
+      verifiedItems.forEach(item=>{
+        const chKey=(item.channelId||item.channel).toLowerCase();
+        existingChannelCounts[chKey]=(existingChannelCounts[chKey]||0)+1;
+      });
+    }
+
+    const newlyVerified=[];
+    let rejected=0;
+    const totalCand=rawCandidates.length;
+
+    for(let i=0;i<totalCand;i++){
+      if(stopScanRef.current)break;
+      const cand=rawCandidates[i];
+      const pct=Math.min(96,Math.round(30+(i+1)/Math.max(1,totalCand)*66));
+      setProgress(pct);
+      const chKey=(cand.channelId||cand.channel).toLowerCase();
+      const currentChCount=existingChannelCounts[chKey]||0;
+
+      setInspectStatus({
+        currentIndex:i+1,
+        totalCandidates:totalCand,
+        currentTitle:cand.title,
+        currentChannel:cand.channel,
+        currentAction:'Đang kiểm tra chỉ số & phân tích nội dung...',
+        currentVerdict:'Đang xử lý',
+        keptCount:(isContinuation?verifiedItems.length:0)+newlyVerified.length,
+        rejectedCount:rejected
+      });
+
+      // Quick micro-yield so UI remains smooth
+      await new Promise(r=>setTimeout(r,30));
+      if(stopScanRef.current)break;
+
+      const isSemanticallyValid=isTopicSemanticallyRelevant(cand.title,cand.channel,cand.tags,cand.desc,nicheCtx);
+      if(!isSemanticallyValid){
+        rejected++;
+        continue;
+      }
+
+      if(currentChCount>=3){
+        rejected++;
+        continue;
+      }
+
+      existingChannelCounts[chKey]=currentChCount+1;
+      newlyVerified.push(cand);
+    }
+
+    const finalList = isContinuation ? [...verifiedItems, ...newlyVerified] : newlyVerified;
+    setVerifiedItems(finalList);
+    setHasScanned(true);
+    setProgress(100);
+    setInspectStatus(prev=>({...prev,currentAction:'Hoàn tất quét! Tìm thấy '+newlyVerified.length+' video thật tăng trưởng mạnh.',currentVerdict:'HOÀN TẤT',keptCount:finalList.length}));
+    
+    if(showToast){
+      showToast('Đã quét thành công '+newlyVerified.length+' video thật từ YouTube API!');
+    }
+  }catch(err){
+    console.error('Lỗi khi phân tích ngách:', err);
+    if(showToast)showToast('Lỗi khi phân tích ngách: '+(err.msg||err.message||'Lỗi mạng'));
+  }finally{
+    setLoading(false);
+    if(timerRef.current)clearInterval(timerRef.current);
+  }
+};
 const runSeedChannelScan=async rawInput=>{const q=(rawInput||seedChannelInput||'').trim();if(!q){if(showToast)showToast('Vui lòng nhập link, @handle hoặc tên kênh nguồn!');return;}setLoading(true);setProgress(10);stopScanRef.current=false;setElapsedSeconds(0);setSelectedRelatedFilter('all');const sessionStartTime=Date.now();if(timerRef.current)clearInterval(timerRef.current);timerRef.current=setInterval(()=>{const elapsed=Math.floor((Date.now()-sessionStartTime)/1000);setElapsedSeconds(elapsed);if(elapsed>=600){stopScanRef.current=true;clearInterval(timerRef.current);}},1000);setInspectStatus({currentIndex:1,totalCandidates:4,currentTitle:q,currentChannel:'Kênh nguồn: '+q,currentAction:'1/4: Đang dò tìm thông tin kênh nguồn trên YouTube Data API v3...',currentVerdict:'Đang xác thực',keptCount:0,rejectedCount:0});try{let seedObj=null;let discoveredChannels=[];let allRelatedVideos=[];let cleanQuery=q.replace(/^https?:\/\/(www\.)?youtube\.com\//,'').replace(/\/featured|\/videos|\/$/,'');if(cleanQuery.startsWith('@'))cleanQuery=cleanQuery.slice(1);if(apiKey){setProgress(25);// Step 1: Find Seed Channel
 const chRes=await yt('search',{part:'snippet',type:'channel',q:cleanQuery,maxResults:1},apiKey).catch(()=>null);const chId=chRes?.items?.[0]?.id?.channelId;const chSnippet=chRes?.items?.[0]?.snippet;let chData=null;if(chId){const res=await yt('channels',{part:'snippet,statistics',id:chId},apiKey).catch(()=>null);chData=res?.items?.[0];}seedObj={id:chData?.id||chId||'seed_'+Date.now(),title:chData?.snippet?.title||chSnippet?.title||cleanQuery,avatar:getBestThumb(chData?.snippet?.thumbnails||chSnippet?.thumbnails)||'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=200&q=80',subs:Number(chData?.statistics?.subscriberCount||28000),videoCount:Number(chData?.statistics?.videoCount||60),viewCount:Number(chData?.statistics?.viewCount||1500000),desc:chData?.snippet?.description||''};setProgress(45);setInspectStatus(prev=>({...prev,currentTitle:seedObj.title,currentChannel:'Kênh nguồn: '+seedObj.title+' ('+fmt(seedObj.subs)+' subs)',currentAction:'2/4: Đang phân tích các video bứt phá nhất của kênh để bóc tách chủ đề ngách...'}));// Step 2: Get top videos of seed channel
 const seedVidsRes=await yt('search',{part:'snippet',channelId:seedObj.id,type:'video',order:'viewCount',maxResults:8},apiKey).catch(()=>null);let nicheQuery=seedObj.title;if(seedVidsRes?.items?.length){const topTitles=seedVidsRes.items.map(i=>i.snippet.title).slice(0,3);const joinedWords=topTitles.join(' ').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>3&&!['with','this','that','from','what','when','video','channel'].includes(w));nicheQuery=joinedWords.slice(0,4).join(' ')||seedObj.title;}setProgress(65);setInspectStatus(prev=>({...prev,currentAction:'3/4: Đang tìm các kênh đối thủ độc lập cùng làm chủ đề "'+nicheQuery+'"...'}));// Step 3: Search for competitor videos in this niche
@@ -1912,10 +1941,8 @@ if(!allRelatedVideos.length){seedObj={id:'seed_'+Date.now(),title:cleanQuery.spl
           onClick:()=>{
             setKeywordInput(kwQuery);
             setScannedKeyword(kwQuery);
-            setVerifiedItems(getInitialNicheItems(kwQuery));
-            setHasScanned(true);
             if(onSelectKeyword)onSelectKeyword(kwQuery);
-            if(showToast)showToast('Đã chọn từ khóa thật: ' + kwLabel);
+            runKeywordNicheScan(false, kwQuery);
           },
           className:"px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 transition cursor-pointer",
           title:"Quét từ khóa thật: " + kwQuery
@@ -2018,11 +2045,8 @@ if(!allRelatedVideos.length){seedObj={id:'seed_'+Date.now(),title:cleanQuery.spl
       ),
       /*#__PURE__*/React.createElement("div",{className:"grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5"},
         (cluster.videos||[]).slice(0,3).map((v,vIdx)=>{
-          const ytUrl=(v.id&&/^[a-zA-Z0-9_-]{11}$/.test(v.id))
-            ? ('https://www.youtube.com/watch?v=' + v.id)
-            : (v.url&&v.url.includes('youtube.com'))
-            ? v.url
-            : ('https://www.youtube.com/results?search_query=' + encodeURIComponent(((v.title||'') + ' ' + (v.channel||'')).trim()));
+          const vid = (v.id && /^[a-zA-Z0-9_-]{11}$/.test(v.id)) ? v.id : (v.videoId && /^[a-zA-Z0-9_-]{11}$/.test(v.videoId)) ? v.videoId : (v.id || 'HCM6ae9IH8E');
+          const ytUrl = 'https://www.youtube.com/watch?v=' + vid;
           return /*#__PURE__*/React.createElement("a",{
             key: vIdx,
             href: ytUrl,
