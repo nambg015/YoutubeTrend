@@ -3500,6 +3500,46 @@ const handleApproveTrend=trend=>{if(onApproveTrend){onApproveTrend(trend);}const
 const DEFAULT_DEMO_NICHES_MAP = React.useMemo(() => ({
   US: [
     {
+      id: 'demo_aviation_breakout',
+      name: 'Aviation Disasters & Cockpit Recordings (Florida & Learjet)',
+      category: 'Aviation ATC Crash',
+      rpm: '$25 - $45',
+      avgRpm: 35,
+      maxViews: 93400,
+      maxOutlier: 1373.8,
+      channelsCount: 3,
+      videos: [
+        {
+          id: 'jpn1SGBOpaE',
+          title: 'Learjet 60 Crash in Palm Beach County, Florida: Real ATC Audio of the Final Minute.',
+          channel: 'Aviation Archives',
+          channelId: 'UC1l8b5FbTJxZiKvJ0y0Glkg',
+          subs: 68,
+          views: 93400,
+          vph: 5800,
+          dur: 118,
+          thumb: 'https://i.ytimg.com/vi/jpn1SGBOpaE/hqdefault.jpg',
+          published: new Date(Date.now() - 36e5 * 16).toISOString(),
+          country: 'US',
+          outlierRatio: 1373.8
+        },
+        {
+          id: 'W_rU8yBfP8k',
+          title: 'Billionaire Came Home By Surprise... What The Maid Was Doing Shocked The House',
+          channel: 'Echoes of Hope & Life',
+          channelId: 'ch_hope_1',
+          subs: 620,
+          views: 184000,
+          vph: 1250,
+          dur: 3503,
+          thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg',
+          published: new Date(Date.now() - 36e5 * 14).toISOString(),
+          country: 'US',
+          outlierRatio: 296.8
+        }
+      ]
+    },
+    {
       id: 'demo_us_story',
       name: 'Billionaire & Life Dilemmas (< 1k sub • > 50k view)',
       category: 'Billionaire Story US',
@@ -3513,23 +3553,49 @@ const DEFAULT_DEMO_NICHES_MAP = React.useMemo(() => ({
         { id: '8iFmJb7zW3k', title: 'Marcus Aurelius: 7 Stoic Rules To Keep In Mind When Betrayed', channel: 'Daily Stoic Wisdom', channelId: 'ch_stoic_1', subs: 850, views: 142000, vph: 920, dur: 1240, thumb: 'https://i.ytimg.com/vi/8iFmJb7zW3k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 18).toISOString(), country: 'US', outlierRatio: 167.1 },
         { id: 'RzL1yH3oZoU', title: 'Why Silence Is Your Greatest Weapon | Lessons From Ancient Wisdom', channel: 'Philosophy & Life', channelId: 'ch_phil_1', subs: 740, views: 195000, vph: 1410, dur: 1450, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 20).toISOString(), country: 'US', outlierRatio: 263.5 }
       ]
-    },
-    {
-      id: 'demo_us_prayer',
-      name: 'Catholic Morning Prayer & Bible Deep Sleep (< 1k sub)',
-      category: 'Catholic Prayer US',
-      rpm: '$22 - $42',
-      avgRpm: 32,
-      maxViews: 142000,
-      maxOutlier: 218.5,
-      channelsCount: 2,
-      videos: [
-        { id: 'RzL1yH3oZoU', title: 'Catholic Morning Prayer | Christ Sees Your Suffering & Rest In God\'s Grace', channel: 'Sacred Echoes of Grace', channelId: 'ch_grace_1', subs: 650, views: 142000, vph: 1040, dur: 2125, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 12).toISOString(), country: 'US', outlierRatio: 218.5 },
-        { id: 'W_rU8yBfP8k', title: 'Pray This Over Your Family Tonight: Powerful Scripture Shield', channel: 'Faithful Reflections', channelId: 'ch_faith_1', subs: 580, views: 128000, vph: 950, dur: 1840, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 19).toISOString(), country: 'US', outlierRatio: 220.7 }
-      ]
     }
   ],
   GLOBAL: [
+    {
+      id: 'demo_aviation_breakout_gl',
+      name: 'Aviation Disasters & Cockpit Recordings (Florida & Learjet)',
+      category: 'Aviation ATC Crash',
+      rpm: '$24 - $42',
+      avgRpm: 35,
+      maxViews: 93400,
+      maxOutlier: 1373.8,
+      channelsCount: 3,
+      videos: [
+        {
+          id: 'jpn1SGBOpaE',
+          title: 'Learjet 60 Crash in Palm Beach County, Florida: Real ATC Audio of the Final Minute.',
+          channel: 'Aviation Archives',
+          channelId: 'UC1l8b5FbTJxZiKvJ0y0Glkg',
+          subs: 68,
+          views: 93400,
+          vph: 5800,
+          dur: 118,
+          thumb: 'https://i.ytimg.com/vi/jpn1SGBOpaE/hqdefault.jpg',
+          published: new Date(Date.now() - 36e5 * 16).toISOString(),
+          country: 'US',
+          outlierRatio: 1373.8
+        },
+        {
+          id: 'W_rU8yBfP8k',
+          title: 'The Billion-Dollar Collapse: How Bad Leadership Crushed an Industry Leader',
+          channel: 'Business Case Chronicles',
+          channelId: 'ch_biz_gl',
+          subs: 780,
+          views: 215000,
+          vph: 1620,
+          dur: 2420,
+          thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg',
+          published: new Date(Date.now() - 36e5 * 14).toISOString(),
+          country: 'US',
+          outlierRatio: 275.6
+        }
+      ]
+    },
     {
       id: 'demo_gl_case',
       name: 'Case Study & Rise and Fall of Empires (< 1k sub • > 50k view)',
@@ -3542,19 +3608,6 @@ const DEFAULT_DEMO_NICHES_MAP = React.useMemo(() => ({
       videos: [
         { id: 'W_rU8yBfP8k', title: 'The Billion-Dollar Collapse: How Bad Leadership Crushed an Industry Leader', channel: 'Business Case Chronicles', channelId: 'ch_biz_gl', subs: 780, views: 215000, vph: 1620, dur: 2420, thumb: 'https://i.ytimg.com/vi/W_rU8yBfP8k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 14).toISOString(), country: 'US', outlierRatio: 275.6 },
         { id: '8iFmJb7zW3k', title: 'How One Decision Triggered a Global Market Meltdown', channel: 'Market Autopsy', channelId: 'ch_mkt_gl', subs: 910, views: 172000, vph: 1180, dur: 1890, thumb: 'https://i.ytimg.com/vi/8iFmJb7zW3k/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 17).toISOString(), country: 'US', outlierRatio: 189.0 }
-      ]
-    },
-    {
-      id: 'demo_gl_mystery',
-      name: 'Deep Ocean Mysteries & Unexplained Abyss (< 1k sub)',
-      category: 'Ocean Mysteries',
-      rpm: '$22 - $40',
-      avgRpm: 30,
-      maxViews: 190000,
-      maxOutlier: 283.6,
-      channelsCount: 2,
-      videos: [
-        { id: 'RzL1yH3oZoU', title: 'What Was Found 10,000 Meters Below Sea Level Shocked Scientists', channel: 'Abyss Chronicles', channelId: 'ch_abyss_1', subs: 670, views: 190000, vph: 1390, dur: 1980, thumb: 'https://i.ytimg.com/vi/RzL1yH3oZoU/mqdefault.jpg', published: new Date(Date.now() - 36e5 * 16).toISOString(), country: 'GLOBAL', outlierRatio: 283.6 }
       ]
     }
   ],
@@ -3720,7 +3773,7 @@ const MARKET_SEEDS = React.useMemo(() => ({
     { id: 'us_ancient', label: 'Lost Ancient Civilizations & Archaeology', q: 'ancient civilization lost technology archaeology', rpm: '$24 - $42' },
     { id: 'us_ocean', label: 'Deep Ocean Mysteries & Extreme Abyss', q: 'deep ocean abyss creature expedition', rpm: '$22 - $40' },
     { id: 'us_finance', label: 'Finance Meltdowns & Market Crashes', q: 'financial collapse market crash recession', rpm: '$30 - $55' },
-    { id: 'us_aviation', label: 'Aviation Disasters & Black Box Solved', q: 'aviation disaster crash investigation black box', rpm: '$25 - $45' },
+    { id: 'us_aviation', label: 'Aviation Disasters & Cockpit Recordings', q: 'plane crash atc audio', rpm: '$25 - $45' },
     { id: 'us_space', label: 'Space Mysteries & Cosmic Horrors', q: 'space mystery james webb black hole', rpm: '$24 - $40' },
     { id: 'us_survival', label: 'Survival, Bushcraft & Primitive Shelter', q: 'solo survival shelter primitive bushcraft', rpm: '$20 - $36' },
     { id: 'us_internet', label: 'Unsolved Internet Rabbit Holes & ARGs', q: 'internet mystery rabbit hole iceberg', rpm: '$22 - $38' },
@@ -3754,7 +3807,7 @@ const MARKET_SEEDS = React.useMemo(() => ({
     { id: 'gl_crime', label: 'True Crime & Police Interrogations', q: 'police interrogation confession body language', rpm: '$24 - $38' },
     { id: 'gl_military', label: 'Modern Military Tech & Black Projects', q: 'military aircraft black projects weapons', rpm: '$26 - $48' },
     { id: 'gl_finance', label: 'Finance Meltdowns & Economic Meltdowns', q: 'financial collapse market crash recession', rpm: '$28 - $52' },
-    { id: 'gl_aviation', label: 'Aviation Disasters & Cockpit Recordings', q: 'aviation disaster crash investigation black box', rpm: '$24 - $42' },
+    { id: 'gl_aviation', label: 'Aviation Disasters & Cockpit Recordings', q: 'plane crash atc audio', rpm: '$24 - $42' },
     { id: 'gl_space', label: 'Space Mysteries & Cosmic Scale', q: 'space mystery james webb black hole paradox', rpm: '$22 - $38' },
     { id: 'gl_survival', label: 'Survival, Bushcraft & Primitive Tech', q: 'solo survival shelter primitive bushcraft', rpm: '$20 - $35' },
     { id: 'gl_internet', label: 'Unsolved Internet Mysteries & Icebergs', q: 'internet mystery rabbit hole iceberg', rpm: '$22 - $38' },
@@ -4221,7 +4274,7 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
         totalEligibleChannelsFound += channelList.length;
         const inferredTitle = inferNicheTitle(topic.label, eligibleVideosInTopic);
 
-        discoveredList.push({
+        const newDiscoveredNiche = {
           id: 'niche_'+topic.id+'_'+Date.now(),
           name: inferredTitle,
           category: topic.label,
@@ -4236,10 +4289,19 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
           scannedAt: Date.now(),
           scannedDate: todayStr,
           isTodayTrend: true
+        };
+        discoveredList.push(newDiscoveredNiche);
+        // REAL-TIME PROGRESSIVE DISPLAY: Update UI immediately so niches show up live as they are found!
+        setRealDiscoveredNiches(prev => {
+          const mKey = getMarketStorageKey(selectedMarket);
+          const updated = [newDiscoveredNiche, ...prev.filter(n => n.category !== topic.label && n.id !== newDiscoveredNiche.id)];
+          try { localStorage.setItem(mKey, JSON.stringify(updated)); } catch(e){}
+          return updated;
         });
+        if(!activeNicheId) setActiveNicheId(newDiscoveredNiche.id);
       }
 
-      await new Promise(r=>setTimeout(r, 120));
+      await new Promise(r=>setTimeout(r, 100));
     }
 
     discoveredList.sort((a,b)=>{
@@ -4389,14 +4451,14 @@ return/*#__PURE__*/React.createElement("section",{className:"space-y-4 animate-i
     {label:'Dark Psychology',q:'dark psychology manipulation laws human nature robert greene',rpm:'$26-48'},
     {label:'Business Breakdown',q:'business breakdown how they got rich empire story',rpm:'$28-55'},
     {label:'AI Cinema & Tech',q:'future technology ai animation inventions changed world',rpm:'$28-48'},
-    {label:'Aviation Incidents',q:'aviation disaster plane crash investigation black box mayday',rpm:'$25-45'},
+    {label:'Aviation Incidents',q:'plane crash atc audio',rpm:'$25-45'},
     {label:'Deep Ocean Abyss',q:'deep ocean mystery abyss creature expedition mariana trench',rpm:'$22-40'},
     {label:'Ancient Civilizations',q:'ancient civilization lost technology archaeology forbidden',rpm:'$24-42'},
-    {label:'Market Meltdowns',q:'financial collapse wall street market crash recession bubble',rpm:'$30-55'},
-    {label:'Police Interrogation',q:'police interrogation confession body language psychology jcs',rpm:'$25-38'},
+    {label:'Market Meltdowns',q:'financial collapse market crash',rpm:'$30-55'},
+    {label:'Police Interrogation',q:'police interrogation confession',rpm:'$25-38'},
     {label:'Ancient Warfare',q:'ancient warfare military tactics roman battle siege weapons',rpm:'$22-38'},
-    {label:'Wilderness Survival',q:'solo survival shelter primitive building bushcraft deep woods',rpm:'$20-36'},
-    {label:'Longevity Science',q:'longevity neuroscience biohacking sleep optimization doctor protocol',rpm:'$28-50'},
+    {label:'Wilderness Survival',q:'solo survival primitive shelter',rpm:'$20-36'},
+    {label:'Longevity Science',q:'longevity biohacking protocol',rpm:'$28-50'},
     {label:'Geopolitics & Borders',q:'geopolitics geography why country border war military corridor',rpm:'$26-45'},
     {label:'Cosmic Mysteries',q:'space mystery james webb telescope black hole fermi paradox',rpm:'$24-40'}
   ]).map(item=>/*#__PURE__*/React.createElement("button",{
