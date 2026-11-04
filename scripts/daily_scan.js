@@ -4,7 +4,7 @@ const fs = require('fs'), OUT = 'data/top_ngach.json';
 const KEYS = (process.env.YT_API_KEYS || process.env.YT_API_KEY || '').split(',').map(s => s.trim()).filter(Boolean);
 const GEM = process.env.GEMINI_API_KEY, MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const HOURS = +process.env.HOURS || 72, MIN_OUT = +process.env.MIN_OUTLIER || 5, MAX = +process.env.MAX_NICHES || 1200;
-const M = { EN: ['🌍', 'US', 'en', 'English (global)'], VN: ['🇻🇳', 'VN', 'vi', 'Vietnamese'], JP: ['🇯🇵', 'JP', 'ja', 'Japanese'], KR: ['🇰🇷', 'KR', 'ko', 'Korean'], DE: ['🇩🇪', 'DE', 'de', 'German'], FR: ['🇫🇷', 'FR', 'fr', 'French'], ES: ['🇪🇸', 'MX', 'es', 'Spanish'], BR: ['🇧🇷', 'BR', 'pt', 'Portuguese'], IN: ['🇮🇳', 'IN', 'hi', 'Hindi'], ID: ['🇮🇩', 'ID', 'id', 'Indonesian'], TH: ['🇹🇭', 'TH', 'th', 'Thai'], RU: ['🇷🇺', 'RU', 'ru', 'Russian'] };
+const M = { EN: ['🇺🇸', 'US', 'en', 'English (global)'], VN: ['🇻🇳', 'VN', 'vi', 'Vietnamese'], JP: ['🇯🇵', 'JP', 'ja', 'Japanese'], KR: ['🇰🇷', 'KR', 'ko', 'Korean'], DE: ['🇩🇪', 'DE', 'de', 'German'], FR: ['🇫🇷', 'FR', 'fr', 'French'], ES: ['🇪🇸', 'MX', 'es', 'Spanish'], BR: ['🇧🇷', 'BR', 'pt', 'Portuguese'], IN: ['🇮🇳', 'IN', 'hi', 'Hindi'], ID: ['🇮🇩', 'ID', 'id', 'Indonesian'], TH: ['🇹🇭', 'TH', 'th', 'Thai'], RU: ['🇷🇺', 'RU', 'ru', 'Russian'] };
 const MARKETS = (process.env.MARKETS || Object.keys(M).join(',')).split(',').filter(k => M[k]);
 const dead = new Set(); let units = 0, ki = 0;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -95,7 +95,7 @@ const SEED = ['plane crash cockpit recording', 'true crime documentary', 'dark p
     await Promise.all(grp.map(async n => {
       const sr = await yt('search', { part: 'snippet', type: 'video', order: 'viewCount', maxResults: 50, q: n.query, publishedAfter: after, relevanceLanguage: M[n.mk][2], regionCode: M[n.mk][1] });
       const ids = (sr.items || []).map(i => i.id.videoId).filter(id => id && !seen.has(id)); ids.forEach(i => seen.add(i));
-      const label = (n.mk === 'EN' ? '' : M[n.mk][0] + ' ') + n.name;
+      const label = M[n.mk][0] + ' ' + n.name;
       const got = await enrich(ids, label, n.mk); got.forEach(v => items.set(v.id, v));
       stat.set(n.mk + '|' + n.query, { name: n.name, query: n.query, mk: n.mk, hits: got.length, top: Math.max(0, ...got.map(v => v.views / Math.max(v.subs, 1))) });
     }));
@@ -116,7 +116,7 @@ const SEED = ['plane crash cockpit recording', 'true crime documentary', 'dark p
     const ids = (pl.items || []).map(i => i.contentDetails.videoId).filter(id => !seen.has(id)); ids.forEach(i => seen.add(i));
     (await enrich(ids, v.niche, v.mk)).filter(x => x.t >= Date.now() - HOURS * 36e5).forEach(x => items.set(x.id, x));
   }));
-  const res = [...items.values()].sort((a, b) => b.views / b.subs - a.views / a.subs).slice(0, 6000).map(({ mk, ...v }) => v);
+  const res = [...items.values()].sort((a, b) => b.views / b.subs - a.views / a.subs).slice(0, 6000);
   // 4) AI nhận định top ngách
   const g = {}; res.forEach(v => (g[v.niche] = g[v.niche] || []).push(v));
   const top = Object.entries(g).map(([n, a]) => ({ n, c: new Set(a.map(v => v.channelId)).size, o: Math.round(a[0].views / a[0].subs), t: a.slice(0, 3).map(v => v.title) })).sort((a, b) => b.c * Math.log10(1 + b.o) - a.c * Math.log10(1 + a.o)).slice(0, 12);
