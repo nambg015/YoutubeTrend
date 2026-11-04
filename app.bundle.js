@@ -3720,13 +3720,13 @@ async function tnEnrich(ids,key,niche,mk){// videos + channels → pool items (s
 function TopNgachSection({apiKey,onSelectKeywordForSearch,onAddCompetitor,onToggleSave,isSaved,showToast,onOpenApiModal,isPro=false,onUpgradePrompt}){
   const h=React.createElement,ls=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d;}catch(e){return d;}};
   const[f,setF]=useState(()=>ls('yt_tn8_filters',{market:'MIX',hours:168,maxSub:5000,minView:5000,minOut:20,type:'all',n:8}));
-  const[pool,setPool]=useState(()=>{const c=ls('yt_tn7_pool',null);return c&&c.day===new Date().toDateString()?c:{items:[],q:0,at:0,key:''};});
+  const[pool,setPool]=useState(()=>{const c=ls('yt_tn7_pool',null);return c&&c.items?c:{items:[],q:0,at:0};});
   const[show,setShow]=useState('');const[busy,setBusy]=useState('');const[kw,setKw]=useState('');const[active,setActive]=useState('');const[err,setErr]=useState('');
   const[daily,setDaily]=useState(null);
   useEffect(()=>{fetch('/data/top_ngach.json?d='+new Date().toISOString().slice(0,13)).then(r=>r.ok?r.json():null).then(j=>j&&j.items&&setDaily(j)).catch(()=>{});},[]);
   const set=(k,v)=>setF(p=>{const n={...p,[k]:v};try{localStorage.setItem('yt_tn8_filters',JSON.stringify(n));}catch(e){}return n;});
   const now=Date.now();
-  const own=pool.items.length>0,src=own?pool.items:(daily?daily.items:[]);
+  const src=useMemo(()=>{const m=new Map();((daily&&daily.items)||[]).forEach(v=>m.set(v.id,v));pool.items.forEach(v=>m.set(v.id,v));return[...m.values()];},[pool,daily]);
   const all=useMemo(()=>src.map(v=>{const hrs=Math.max(1,(now-v.t)/36e5);return{...v,thumb:v.thumb||'https://i.ytimg.com/vi/'+v.id+'/mqdefault.jpg',hrs,vph:Math.round(v.views/hrs),out:v.views/Math.max(v.subs,1),format:v.dur<=60?'short':'long'};})
     .filter(v=>v.subs<=f.maxSub&&v.views>=f.minView&&v.out>=f.minOut&&v.hrs<=f.hours&&(f.type==='all'||v.format===f.type)).sort((a,b)=>b.out-a.out),[src,f]);
   const mkc=useMemo(()=>{const m={};all.forEach(v=>{if(v.mk)m[v.mk]=(m[v.mk]||0)+1;});return m;},[all]);
@@ -3764,8 +3764,8 @@ function TopNgachSection({apiKey,onSelectKeywordForSearch,onAddCompetitor,onTogg
           const ids=(pl.items||[]).map(i=>i.contentDetails.videoId).filter(id=>!seen.has(id));ids.forEach(id=>seen.add(id));
           const r=await tnEnrich(ids,apiKey,()=>v.niche,v.mk);q+=r.q;items.push(...r.out.filter(x=>x.t>=now-f.hours*36e5));}catch(e){}}));
       }
-      const merged=custom?[...pool.items.filter(o=>!seen.has(o.id)),...items]:items;
-      save({items:merged,q:(pool.q||0)+q,at:now,day:new Date().toDateString()});
+      const keep=pool.items.filter(o=>!seen.has(o.id)&&o.t>=now-30*864e5),merged=[...items,...keep].sort((a,b)=>b.views/Math.max(b.subs,1)-a.views/Math.max(a.subs,1)).slice(0,3000);
+      save({items:merged,q:(pool.q||0)+q,at:now});
       showToast&&showToast('Quét xong: '+items.length+' video nhỏ nổ view • ~'+q+' quota');
     }catch(e){setErr(e.msg||e.message||'Lỗi quét');}
     setBusy('');
@@ -3789,13 +3789,13 @@ function TopNgachSection({apiKey,onSelectKeywordForSearch,onAddCompetitor,onTogg
         h('input',{value:kw,onChange:e=>setKw(e.target.value),onKeyDown:e=>e.key==='Enter'&&kw.trim()&&!busy&&scan(kw),placeholder:'Tự nhập từ khóa (cách nhau bằng dấu phẩy) rồi Enter...',className:'flex-1 min-w-[220px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-zinc-100'}),
         h('button',{disabled:!!busy||!kw.trim(),onClick:()=>scan(kw),className:'px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 text-zinc-950 disabled:opacity-40 cursor-pointer'},'Quét từ khóa'),
         h('button',{disabled:!!busy,onClick:()=>scan(),className:'px-3 py-1.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-500 text-white disabled:opacity-40 cursor-pointer'},busy?'⏳ Đang quét...':'🚀 Quét trend + ngách'),
-        h('button',{onClick:()=>{save({items:[],q:0,at:0,day:new Date().toDateString()});setActive('');},className:'px-3 py-1.5 rounded-lg text-xs bg-zinc-800 text-zinc-300 cursor-pointer'},'Xóa kết quả'),
+        h('button',{onClick:()=>{save({items:[],q:0,at:0});setActive('');},className:'px-3 py-1.5 rounded-lg text-xs bg-zinc-800 text-zinc-300 cursor-pointer'},'Xóa kết quả'),
         vids.length>0&&h('button',{onClick:csv,className:'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 cursor-pointer'},'📥 CSV')),
       h('div',{className:'text-[11px] text-zinc-500 flex flex-wrap gap-x-4'},
-        busy?h('span',{className:'text-amber-300'},busy):!own&&daily?h('span',{className:'text-emerald-300'},'🤖 AI quét tự động: '+daily.scanned+' ngách • '+src.length+' video nhỏ • cập nhật '+new Date(daily.updated).toLocaleString('vi-VN')):h('span',null,pool.at?'Cập nhật '+new Date(pool.at).toLocaleTimeString('vi-VN')+' • đã dùng ~'+pool.q+' quota hôm nay':'Chưa quét. Bấm "Quét ngách ngẫu nhiên" để bắt đầu (kết quả lưu cả ngày, đổi bộ lọc không tốn quota).'),
+        busy?h('span',{className:'text-amber-300'},busy):h('span',null,daily?'🤖 AI quét tự động: '+daily.scanned+' ngách ('+new Date(daily.updated).toLocaleString('vi-VN')+') • ':'',pool.at?'Cập nhật '+new Date(pool.at).toLocaleTimeString('vi-VN')+' • đã dùng ~'+pool.q+' quota hôm nay':'Chưa quét. Bấm "Quét ngách ngẫu nhiên" để bắt đầu (kết quả lưu cả ngày, đổi bộ lọc không tốn quota).'),
         h('span',null,'Chỉ lấy kênh ẩn sub → loại. Outlier = view ÷ sub.')),
       err&&h('div',{className:'text-xs text-rose-300 bg-rose-950/40 border border-rose-500/30 rounded-lg px-3 py-2'},err)),
-    !own&&daily&&daily.insights&&daily.insights.length>0&&h('details',{className:'bg-[#121316] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-300'},
+    daily&&daily.insights&&daily.insights.length>0&&h('details',{className:'bg-[#121316] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-300'},
       h('summary',{className:'cursor-pointer font-bold text-white'},'🧠 AI nhận định ngách nổ hôm nay ('+daily.insights.length+')'),
       h('div',{className:'mt-2 space-y-2'},daily.insights.map((x,i)=>h('div',{key:i,onClick:()=>setActive(x.niche),className:'cursor-pointer hover:bg-zinc-800/60 rounded-lg p-1.5'},h('b',{className:'text-amber-300'},x.niche),h('span',{className:'text-zinc-500'},' • cạnh tranh '+x.risk),h('div',null,x.why),h('div',{className:'text-emerald-300'},'💡 '+x.idea))))),
     Object.keys(mkc).length>1&&h('div',{className:'flex flex-wrap gap-1.5'},[['','🌍 Tất cả',all.length]].concat(Object.entries(mkc).sort((a,b)=>b[1]-a[1]).map(([k,c])=>[k,(TN_M[k]?TN_M[k][0]+' '+TN_M[k][1]:k),c])).map(([k,l,c])=>h('button',{key:k||'all',onClick:()=>{setShow(k);setActive('');},className:chip+(show===k?'bg-zinc-100 text-zinc-950 border-zinc-100 font-bold':'bg-zinc-900 text-zinc-300 border-zinc-700 hover:border-zinc-500')},l+' ',h('b',null,c)))),
