@@ -4147,24 +4147,44 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
         });
       });
 
+      // ENHANCED: Extract trending keywords from BOTH tags AND video titles
       const tagFreq = {};
+      const junkRegexGlobal = /\b(trailer|teaser|official|movie|film|cinema|music\s*video|official\s*video|mv|song|songs|lyrics|remix|audio|soundtrack|ost|episode|reaction|react|tiktok|reels?|shorts?|live|livestream|stream|vlog|gameplay|compilation|mix|cover|dance|challenge|meme|funny|prank|hack|asmr|mukbang|tutorial|diy|how\s*to)\b/i;
+      const trendStopSet = new Set(['the','and','in','of','to','for','with','a','an','is','on','this','that','by','how','what','why','who','from','at','into','full','video','watch','2024','2025','2026','new','latest','best','top','vs','part','ep','episode']);
+
       popItems.forEach(v => {
+        const viewCount = Number(v.statistics?.viewCount||0);
+        // Source 1: Tags
         const tags = v.snippet.tags||[];
-        const views = Number(v.statistics?.viewCount||0);
         tags.forEach(t => {
           const clean = t.trim().replace(/^#+/,'');
           const lower = clean.toLowerCase();
-          const junkRegex = /\b(trailer|teaser|official|movie|film|cinema|music\s*video|official\s*video|mv|song|songs|lyrics|remix|audio|soundtrack|ost|episode|reaction|react|tiktok|reels?|shorts?|live|livestream|stream|vlog|gameplay)\b/i;
-          if(junkRegex.test(lower)) return;
-          if(clean.length>=3 && clean.length<=35 && !/^\d+$/.test(clean) && !/^https?:/i.test(clean)){
-            if(!tagFreq[lower]) tagFreq[lower] = { text: clean, count: 0, views: 0 };
+          if(junkRegexGlobal.test(lower)) return;
+          if(clean.length>=4 && clean.length<=35 && !/^\d+$/.test(clean) && !/^https?:/i.test(clean)){
+            if(!tagFreq[lower]) tagFreq[lower] = { text: clean, count: 0, views: 0, fromTitle: false };
             tagFreq[lower].count += 1;
-            tagFreq[lower].views += views;
+            tagFreq[lower].views += viewCount;
           }
         });
+
+        // Source 2: 2-word phrases from video title (much richer signal)
+        const titleWords = (v.snippet.title||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w => w.length > 2 && !trendStopSet.has(w) && !junkRegexGlobal.test(w));
+        for(let wi=0; wi<titleWords.length-1; wi++){
+          const phrase = titleWords[wi]+' '+titleWords[wi+1];
+          if(phrase.length >= 6 && phrase.length <= 30 && !trendStopSet.has(titleWords[wi]) && !trendStopSet.has(titleWords[wi+1])){
+            if(!tagFreq[phrase]) tagFreq[phrase] = { text: phrase, count: 0, views: 0, fromTitle: true };
+            tagFreq[phrase].count += 1;
+            tagFreq[phrase].views += viewCount;
+          }
+        }
       });
 
-      const rawCandidates = Object.values(tagFreq).filter(item=>item.count>=2||item.views>=50000).sort((a,b)=>(b.count*100000+b.views)-(a.count*100000+a.views));
+      // Score: title-extracted phrases get 3x weight (more reliable signal than tags)
+      const rawCandidates = Object.values(tagFreq).filter(item=>item.count>=2||item.views>=30000).sort((a,b)=>{
+        const scoreA = (a.fromTitle?3:1)*a.count*100000 + a.views;
+        const scoreB = (b.fromTitle?3:1)*b.count*100000 + b.views;
+        return scoreB - scoreA;
+      });
       const uniqueTrendKeywords = [];
       for(const cand of rawCandidates){
         const candLower = cand.text.toLowerCase();
@@ -4173,7 +4193,7 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
           return candLower.includes(exLower)||exLower.includes(candLower);
         });
         if(!isDuplicate) uniqueTrendKeywords.push(cand.text);
-        if(uniqueTrendKeywords.length>=3) break;
+        if(uniqueTrendKeywords.length>=6) break; // Increased from 3 to 6 trending seeds
       }
       trendingKeywords = uniqueTrendKeywords;
     }
@@ -4218,18 +4238,16 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
     } else {
       staticSeeds = [...combinedPool];
     }
-    if(isDailyReset){
-      const dynamicTrendSeeds = trendingKeywords.map((k,idx)=>({
-        id: 'trend_kw_'+idx+'_'+Date.now(),
-        label: '🔥 '+(k.charAt(0).toUpperCase()+k.slice(1))+' (Trend Hôm Nay)',
-        q: k,
-        rpm: selectedMarket==='VN'?'$8 - $20':'$25 - $48',
-        isLiveTrendingTag: true
-      }));
-      seedsToScan = [...dynamicTrendSeeds, ...staticSeeds];
-    } else {
-      seedsToScan = staticSeeds;
-    }
+    // DYNAMIC: Luôn inject trending keywords vào seed pool (bất kể isDailyReset)
+    // trendingKeywords được extract từ chart=mostPopular ở trên (1 quota, luôn fresh)
+    const dynamicTrendSeeds = trendingKeywords.map((k,idx)=>({
+      id: 'trend_kw_'+idx+'_'+Date.now(),
+      label: '🔥 '+(k.charAt(0).toUpperCase()+k.slice(1))+' (Trend Hôm Nay)',
+      q: k,
+      rpm: selectedMarket==='VN'?'$8 - $20':'$25 - $48',
+      isLiveTrendingTag: true
+    }));
+    seedsToScan = [...dynamicTrendSeeds, ...staticSeeds];
   }
 
   // Bandit Prioritization: Prioritize seeds that historically yielded small breakout channels
@@ -4248,6 +4266,19 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
       return scoreB - scoreA;
     });
   } catch(e){}
+
+  // SESSION ROTATION: Track seeds used in this browser session to avoid repeat results
+  // Seeds used in previous scans this session go to the end of the queue
+  const SESSION_USED_KEY = 'yt_session_used_seeds_' + selectedMarket;
+  let sessionUsedIds = new Set();
+  try {
+    const raw = sessionStorage.getItem(SESSION_USED_KEY);
+    if (raw) sessionUsedIds = new Set(JSON.parse(raw));
+  } catch(e){}
+  // Move already-used seeds to end (unless they're trending/snowball — always keep those fresh)
+  const freshSeeds = seedsToScan.filter(s => !sessionUsedIds.has(s.id) || s.isLiveTrendingTag || s.isSnowball);
+  const staleSeedsAppended = seedsToScan.filter(s => sessionUsedIds.has(s.id) && !s.isLiveTrendingTag && !s.isSnowball);
+  seedsToScan = [...freshSeeds, ...staleSeedsAppended];
 
   const discoveredList = [];
   if(chartBreakoutVideos.length > 0){
@@ -4283,6 +4314,49 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
       scannedDate: todayStr,
       isTodayTrend: true
     });
+  }
+
+  // AUTOCOMPLETE EXPANSION: Dùng JSONP suggest (0 quota) để expand top seeds thành biến thể mới
+  // Chỉ expand cho các static seeds không phải trending/snowball (những cái này đã có q tốt rồi)
+  if(typeof fetchYtSuggestionsJsonp === 'function'){
+    try {
+      const seedsToExpand = seedsToScan.filter(s => !s.isLiveTrendingTag && !s.isSnowball && !s.isHarvestedFromViral).slice(0, 4);
+      const existingQSet = new Set(seedsToScan.map(s => (s.q||'').toLowerCase()));
+      const autoExpandedSeeds = [];
+      for(const seed of seedsToExpand){
+        try {
+          // Extract the most meaningful 1-2 words from the seed query as suggest base
+          const basePhrase = (seed.q||'').replace(/"([^"]+)"/g, '$1').replace(/[()|-]/g, ' ').replace(/s+/g, ' ').trim().split(' ').filter(w=>w.length>3).slice(0,2).join(' ');
+          if(!basePhrase || basePhrase.length < 4) continue;
+          const suggestions = await fetchYtSuggestionsJsonp(basePhrase);
+          const validSuggestions = (suggestions||[]).filter(s => {
+            const sl = (s||'').toLowerCase();
+            return sl.length > 5 && sl.length < 60 && !existingQSet.has(sl) && !/^(tiktok|shorts|reaction|music|song|lyrics|dance|challenge)/i.test(sl);
+          }).slice(0, 2);
+          validSuggestions.forEach(sug => {
+            const sugId = 'autocomplete_'+sug.replace(/s+/g,'_').slice(0,30)+'_'+Date.now();
+            if(!existingQSet.has(sug.toLowerCase())){
+              existingQSet.add(sug.toLowerCase());
+              autoExpandedSeeds.push({
+                id: sugId,
+                label: '🔎 '+sug+' (Autocomplete)',
+                q: '"'+sug+'" -shorts',
+                rpm: seed.rpm || (selectedMarket==='VN'?'$8 - $20':'$25 - $48'),
+                isAutocomplete: true
+              });
+            }
+          });
+        } catch(sugErr){/* silent */}
+      }
+      if(autoExpandedSeeds.length > 0){
+        // Insert autocomplete seeds after trending seeds but before static seeds
+        const trendingPart = seedsToScan.filter(s => s.isLiveTrendingTag);
+        const restPart = seedsToScan.filter(s => !s.isLiveTrendingTag);
+        seedsToScan = [...trendingPart, ...autoExpandedSeeds, ...restPart];
+      }
+    } catch(acErr){
+      console.warn('Autocomplete expansion error:', acErr);
+    }
   }
 
   let totalEligibleVideosFound = chartBreakoutVideos.length;
@@ -4765,6 +4839,67 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
         };
         localStorage.setItem('yt_niche_seed_bandit', JSON.stringify(banditStats));
       } catch(e){}
+
+      // SESSION: Mark this seed as used
+      try {
+        sessionUsedIds.add(topic.id);
+        sessionStorage.setItem(SESSION_USED_KEY, JSON.stringify([...sessionUsedIds]));
+      } catch(e){}
+
+      // LIVE KEYWORD HARVESTING: Extract creator hook phrases from viral video titles
+      // found in this seed → inject as new seeds to scan LATER in the SAME session
+      if(eligibleVideosInTopic.length >= 1){
+        try {
+          // Only harvest from breakout videos (outlierRatio >= 3x)
+          const breakoutTitles = eligibleVideosInTopic
+            .filter(v => (Number(v.outlierRatio)||0) >= 3.0)
+            .slice(0, 5)
+            .map(v => (v.title||'').toLowerCase());
+
+          const harvestFreq = {};
+          // Extract 2-4 word phrases from titles
+          const harvestStopWords = new Set(['the','and','in','of','to','for','with','a','an','is','on','this','that','by','how','what','why','who','from','at','into','part','full','video','new','2024','2025','2026','|','vs','vs.']);
+          breakoutTitles.forEach(title => {
+            const words = title.replace(/[^a-z0-9s]/g, ' ').split(/s+/).filter(w => w.length > 2 && !harvestStopWords.has(w));
+            // Extract 2-word phrases
+            for (let wi = 0; wi < words.length - 1; wi++) {
+              const phrase = words[wi] + ' ' + words[wi+1];
+              if (phrase.length >= 6 && phrase.length <= 30) {
+                harvestFreq[phrase] = (harvestFreq[phrase]||0) + 1;
+              }
+            }
+            // Extract 3-word phrases
+            for (let wi = 0; wi < words.length - 2; wi++) {
+              const phrase = words[wi] + ' ' + words[wi+1] + ' ' + words[wi+2];
+              if (phrase.length >= 8 && phrase.length <= 35) {
+                harvestFreq[phrase] = (harvestFreq[phrase]||0) + 1;
+              }
+            }
+          });
+
+          // Pick top harvested phrases not already in seedsToScan
+          const existingQSet = new Set(seedsToScan.map(s => (s.q||'').toLowerCase()));
+          const harvestCandidates = Object.entries(harvestFreq)
+            .filter(([phrase]) => !existingQSet.has(phrase) && !sessionUsedIds.has('harvest_'+phrase))
+            .sort((a,b) => b[1]-a[1])
+            .slice(0, 2);
+
+          harvestCandidates.forEach(([phrase, freq]) => {
+            const cap = phrase.split(' ').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+            const harvestSeed = {
+              id: 'harvest_'+phrase.replace(/s+/g,'_'),
+              label: '🌊 '+cap+' (Từ Video Viral)',
+              q: '"'+phrase+'" -shorts',
+              rpm: selectedMarket==='VN'?'$8 - $20':'$25 - $48',
+              isHarvestedFromViral: true
+            };
+            // Inject at the end of seedsToScan (processed later in this loop)
+            seedsToScan.push(harvestSeed);
+          });
+        } catch(harvestErr){
+          console.warn('Live keyword harvest error:', harvestErr);
+        }
+      }
 
       // Snowball seed expansion from breakout videos
       if(eligibleVideosInTopic.length > 0){
