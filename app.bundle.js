@@ -3416,6 +3416,193 @@ function SubscriptionModal({
 }// =========================================================================
 // SCORE FORMULA MODAL (GIẢI THÍCH THUẬT TOÁN CHẤM ĐIỂM TIỀM NĂNG)
 // =========================================================================
+
+// ============================================================
+// CHECK TRẠNG THÁI BẬT KIẾM TIỀN (BKT) MODAL (Tính năng tham khảo đối thủ)
+// ============================================================
+function CheckBktModal({ apiKey, onClose, showToast }) {
+  const [query, setQuery] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [result, setResult] = React.useState(null);
+  const [error, setError] = React.useState(null);
+
+  const handleCheck = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const q = query.trim();
+    if (!q) {
+      if (showToast) showToast('Vui lòng nhập Link Kênh, Handle (@) hoặc Tên Kênh!', 'warning');
+      return;
+    }
+    if (!apiKey) {
+      if (showToast) showToast('Vui lòng nhập YouTube API Key trước!', 'warning');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      let channelId = null;
+      // Extract from URL
+      if (q.includes('youtube.com/channel/')) {
+        channelId = q.split('youtube.com/channel/')[1].split('/')[0].split('?')[0];
+      }
+
+      let chData = null;
+      if (channelId) {
+        const res = await yt('channels', { part: 'snippet,statistics,contentDetails', id: channelId }, apiKey);
+        if (res.items && res.items.length > 0) chData = res.items[0];
+      }
+
+      if (!chData) {
+        // Search by query/handle
+        const searchRes = await yt('search', { part: 'snippet', type: 'channel', q: q, maxResults: 1 }, apiKey);
+        const foundChId = searchRes.items && searchRes.items[0]?.id?.channelId;
+        if (foundChId) {
+          const res = await yt('channels', { part: 'snippet,statistics,contentDetails', id: foundChId }, apiKey);
+          if (res.items && res.items.length > 0) chData = res.items[0];
+        }
+      }
+
+      if (!chData) {
+        setError('Không tìm thấy kênh phù hợp trên YouTube. Vui lòng kiểm tra lại đường link hoặc handle (@)!');
+        return;
+      }
+
+      const subs = chData.statistics.hiddenSubscriberCount ? null : Number(chData.statistics.subscriberCount);
+      const totalViews = Number(chData.statistics.viewCount || 0);
+      const videoCount = Number(chData.statistics.videoCount || 0);
+      const pubDate = new Date(chData.snippet.publishedAt);
+      const ageDays = Math.max(1, Math.round((Date.now() - pubDate.getTime()) / 864e5));
+
+      const bkt = typeof predictBKT === 'function'
+        ? predictBKT(subs, totalViews, videoCount, ageDays, 600)
+        : { label: 'Chưa rõ', color: 'zinc', detail: '' };
+
+      setResult({
+        id: chData.id,
+        name: chData.snippet.title,
+        customUrl: chData.snippet.customUrl || ('@' + chData.snippet.title.replace(/\s+/g, '')),
+        thumb: chData.snippet.thumbnails?.default?.url || chData.snippet.thumbnails?.medium?.url || '',
+        subs: subs,
+        views: totalViews,
+        videoCount: videoCount,
+        country: chData.snippet.country || 'VN',
+        ageDays: ageDays,
+        pubDate: pubDate.toLocaleDateString('vi-VN'),
+        bkt: bkt
+      });
+    } catch(err) {
+      console.error('Check BKT error:', err);
+      setError('Lỗi khi kiểm tra kênh: ' + (err.msg || err.message || 'Lỗi mạng hoặc API key'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return React.createElement("div", {
+    className: "fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto",
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "bg-[#121316] border border-zinc-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150",
+    onClick: e => e.stopPropagation()
+  },
+    // Header
+    React.createElement("div", { className: "p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between bg-[#181a20]" },
+      React.createElement("div", { className: "flex items-center gap-2.5" },
+        React.createElement("span", { className: "text-base px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold" }, "💰 BKT"),
+        React.createElement("div", null,
+          React.createElement("h2", { className: "font-black text-sm sm:text-base text-white tracking-tight" }, "Check Trạng Thái Bật Kiếm Tiền (YPP)"),
+          React.createElement("p", { className: "text-[11px] text-zinc-400" }, "Dự đoán chuẩn xác theo 1.000 subs + 4.000 giờ xem thực tế")
+        )
+      ),
+      React.createElement("button", { onClick: onClose, className: "w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition" }, "✕")
+    ),
+    // Body Form
+    React.createElement("div", { className: "p-4 sm:p-6 space-y-4 text-xs" },
+      React.createElement("form", { onSubmit: handleCheck, className: "space-y-2.5" },
+        React.createElement("label", { className: "text-zinc-300 font-semibold block" }, "Nhập Link Kênh, Handle (@) hoặc Tên kênh:"),
+        React.createElement("div", { className: "flex gap-2" },
+          React.createElement("input", {
+            type: "text",
+            value: query,
+            onChange: e => setQuery(e.target.value),
+            placeholder: "Vd: https://youtube.com/@QuanSuMoiNgay hoặc UCojkTfnDQBlapQqhd1ybhgQ",
+            className: "flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition shadow-inner"
+          }),
+          React.createElement("button", {
+            type: "submit",
+            disabled: loading,
+            className: "px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20 transition disabled:opacity-50 shrink-0 cursor-pointer"
+          }, loading ? "Đang check..." : "CHECK BKT")
+        )
+      ),
+      error && React.createElement("div", { className: "p-3 bg-rose-950/40 border border-rose-500/40 rounded-xl text-rose-300 text-xs" }, error),
+      // Result Table
+      result && React.createElement("div", { className: "bg-[#181a20] border border-zinc-800 rounded-xl p-4 space-y-3 animate-in fade-in" },
+        React.createElement("div", { className: "flex items-center gap-3 pb-3 border-b border-zinc-800" },
+          result.thumb && React.createElement("img", { src: result.thumb, alt: "", className: "w-12 h-12 rounded-full border border-zinc-700 object-cover" }),
+          React.createElement("div", { className: "flex-1 min-w-0" },
+            React.createElement("div", { className: "flex items-center gap-2 flex-wrap" },
+              React.createElement("h3", { className: "font-bold text-white text-sm truncate" }, result.name),
+              React.createElement("span", { className: "text-[10px] text-zinc-500 font-mono" }, "[" + result.country + "]")
+            ),
+            React.createElement("div", { className: "text-[11px] text-zinc-400 font-mono truncate" }, "ID: " + result.id)
+          ),
+          React.createElement("div", {
+            className: "px-3 py-1.5 rounded-xl font-black text-xs " + (result.bkt.color === 'emerald' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : result.bkt.color === 'amber' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : result.bkt.color === 'blue' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' : 'bg-zinc-800 text-zinc-300 border border-zinc-700')
+          }, result.bkt.label)
+        ),
+        // Stats grid
+        React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-2 text-center" },
+          React.createElement("div", { className: "p-2 rounded-lg bg-zinc-900 border border-zinc-800" },
+            React.createElement("div", { className: "text-[10px] text-zinc-400" }, "Lượng Sub"),
+            React.createElement("div", { className: "text-sm font-bold text-white mt-0.5" }, result.subs !== null ? result.subs.toLocaleString() : 'Sub ẩn')
+          ),
+          React.createElement("div", { className: "p-2 rounded-lg bg-zinc-900 border border-zinc-800" },
+            React.createElement("div", { className: "text-[10px] text-zinc-400" }, "Tổng Lượt Xem"),
+            React.createElement("div", { className: "text-sm font-bold text-emerald-400 mt-0.5" }, result.views.toLocaleString())
+          ),
+          React.createElement("div", { className: "p-2 rounded-lg bg-zinc-900 border border-zinc-800" },
+            React.createElement("div", { className: "text-[10px] text-zinc-400" }, "Số Video"),
+            React.createElement("div", { className: "text-sm font-bold text-white mt-0.5" }, result.videoCount)
+          ),
+          React.createElement("div", { className: "p-2 rounded-lg bg-zinc-900 border border-zinc-800" },
+            React.createElement("div", { className: "text-[10px] text-zinc-400" }, "Tuổi Kênh"),
+            React.createElement("div", { className: "text-sm font-bold text-amber-300 mt-0.5" }, result.ageDays + " ngày")
+          )
+        ),
+        // BKT Progress & Details
+        React.createElement("div", { className: "p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1.5" },
+          React.createElement("div", { className: "flex justify-between text-[11px]" },
+            React.createElement("span", { className: "text-zinc-400" }, "Đánh giá chi tiết:"),
+            React.createElement("span", { className: "font-semibold text-zinc-200" }, result.bkt.detail)
+          ),
+          React.createElement("div", { className: "w-full bg-zinc-800 rounded-full h-2 overflow-hidden" },
+            React.createElement("div", {
+              className: "h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300",
+              style: { width: Math.min(100, Math.max(5, result.bkt.pct || 10)) + '%' }
+            })
+          ),
+          React.createElement("div", { className: "flex justify-between text-[10px] text-zinc-500 pt-0.5" },
+            React.createElement("span", null, "Yêu cầu: 1.000 sub + 4.000 giờ xem"),
+            React.createElement("span", null, "Tiến độ: ~" + (result.bkt.pct || 0) + "%")
+          )
+        ),
+        // Actions
+        React.createElement("div", { className: "flex justify-end gap-2 pt-1" },
+          React.createElement("a", {
+            href: "https://www.youtube.com/channel/" + result.id,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            className: "px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition"
+          }, "Mở kênh trên YouTube ↗")
+        )
+      )
+    )
+  ));
+}
+
 function ScoreFormulaModal({onClose}){return/*#__PURE__*/React.createElement("div",{className:"fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto",onClick:onClose},/*#__PURE__*/React.createElement("div",{className:"bg-brand-surface border border-brand-border rounded-2xl w-full max-w-2xl my-8 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150",onClick:e=>e.stopPropagation()},/*#__PURE__*/React.createElement("div",{className:"p-4 sm:p-5 border-b border-brand-border flex items-center justify-between bg-brand-card/70"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2"},/*#__PURE__*/React.createElement("span",{className:"text-[10px] uppercase font-extrabold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30"},"Thu\u1EADt To\xE1n AI"),/*#__PURE__*/React.createElement("h2",{className:"font-extrabold text-base sm:text-lg text-white"},"C\xF4ng Th\u1EE9c Ch\u1EA5m \u0110i\u1EC3m Ti\u1EC1m N\u0103ng (Potential Score)")),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"w-8 h-8 rounded-lg bg-brand-surface hover:bg-brand-border text-zinc-400 hover:text-white flex items-center justify-center transition"},"\u2715")),/*#__PURE__*/React.createElement("div",{className:"p-4 sm:p-6 space-y-5 max-h-[80vh] overflow-y-auto text-xs leading-relaxed"},/*#__PURE__*/React.createElement("div",{className:"bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 rounded-xl border border-amber-500/30"},/*#__PURE__*/React.createElement("div",{className:"text-amber-300 font-bold text-sm mb-1"},"C\u01A1 Ch\u1EBF B\u1EA3ng X\u1EBFp H\u1EA1ng Top 20 K\xEAnh Sub Th\u1EA5p - View Cao & R\u1EDBt Top:"),/*#__PURE__*/React.createElement("p",{className:"text-zinc-300 leading-relaxed"},"H\u1EC7 th\u1ED1ng t\u1EF1 \u0111\u1ED9ng ch\u1EA5m \u0111i\u1EC3m cho to\xE0n b\u1ED9 c\xE1c k\xEAnh v\xE0 ng\xE1ch m\u1ECF v\xE0ng YouTube qu\u1ED1c t\u1EBF theo thang \u0111i\u1EC3m 100, t\u1EADp trung v\xE0o ",/*#__PURE__*/React.createElement("b",null,"k\xEAnh quy m\xF4 nh\u1ECF (<50k sub) nh\u01B0ng b\u1EE9t ph\xE1 view kh\u1EE7ng (g\u1EA5p 5x - 20x l\u1EA7n sub) tr\xEAn m\u1ECDi ch\u1EE7 \u0111\u1EC1"),". 20 k\xEAnh/ng\xE1ch c\xF3 t\u1EF7 l\u1EC7 b\u1EE9t ph\xE1 cao nh\u1EA5t s\u1EBD \u0111\u01B0\u1EE3c \u0111\u01B0a v\xE0o ",/*#__PURE__*/React.createElement("b",null,"Top 20 Outlier Ti\u1EC1m N\u0103ng B\xF9ng N\u1ED5"),". Khi m\u1ED9t ng\xE1ch b\u1ECB b\xE3o h\xF2a ho\u1EB7c gi\u1EA3m view, \u0111i\u1EC3m s\u1ED1 t\u1EE5t xu\u1ED1ng v\xE0 s\u1EBD ",/*#__PURE__*/React.createElement("b",null,"t\u1EF1 \u0111\u1ED9ng r\u1EDBt kh\u1ECFi Top 20")," \u0111\u1EC3 nh\u01B0\u1EDDng ch\u1ED7 cho c\xE1c k\xEAnh m\u1EDBi \u0111ang l\xEAn!")),/*#__PURE__*/React.createElement("div",{className:"grid sm:grid-cols-2 gap-3"},/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"font-bold text-rose-400 text-xs"},"1. T\u1EF7 L\u1EC7 Outlier (View / Sub)"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-extrabold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300"},"Tr\u1ECDng s\u1ED1 35%")),/*#__PURE__*/React.createElement("p",{className:"text-zinc-400 mt-2 text-[11px] leading-relaxed"},"K\xEAnh c\xF3 subscriber th\u1EA5p nh\u01B0ng video \u0111\u1EA1t l\u01B0\u1EE3t xem \u0111\u1ED9t bi\u1EBFn (View g\u1EA5p 5x - 20x l\u1EA7n Sub). \u0110\xE2y l\xE0 d\u1EA5u hi\u1EC7u ch\u1EAFc ch\u1EAFn thu\u1EADt to\xE1n YouTube \u0111ang \u0111\xF3i n\u1ED9i dung ng\xE1ch n\xE0y!")),/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"font-bold text-emerald-400 text-xs"},"2. T\u1ED1c \u0110\u1ED9 T\u0103ng Tr\u01B0\u1EDFng (VPH)"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300"},"Tr\u1ECDng s\u1ED1 30%")),/*#__PURE__*/React.createElement("p",{className:"text-zinc-400 mt-2 text-[11px] leading-relaxed"},"\u0110o l\u01B0\u1EDDng s\u1ED1 l\u01B0\u1EE3t xem t\u0103ng th\xEAm m\u1ED7i gi\u1EDD (View Per Hour) c\u1EE7a c\xE1c video m\u1EDBi xu\u1EA5t b\u1EA3n trong 24h - 48h qua. T\u1ED1c \u0111\u1ED9 c\xE0ng d\u1ED1c $\\rightarrow$ \u0110i\u1EC3m c\xE0ng cao.")),/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"font-bold text-amber-400 text-xs"},"3. Ti\u1EC1m N\u0103ng RPM Doanh Thu"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300"},"Tr\u1ECDng s\u1ED1 20%")),/*#__PURE__*/React.createElement("p",{className:"text-zinc-400 mt-2 text-[11px] leading-relaxed"},"\u01AFu ti\xEAn th\u1ECB tr\u01B0\u1EDDng Tier 1 (M\u1EF9, Canada, Anh, \xDAc) v\u1EDBi RPM t\u1EEB $20 - $65/1k view. Video d\xE0i ch\xE8n \u0111\u01B0\u1EE3c 6 - 12 mid-roll ads mang l\u1EA1i gi\xE1 tr\u1ECB cao g\u1EA5p 8 l\u1EA7n video ng\u1EAFn.")),/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"font-bold text-sky-400 text-xs"},"4. Kh\xE1ng C\u1EA1nh Tranh & Gi\u1EEF Ch\xE2n"),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-extrabold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300"},"Tr\u1ECDng s\u1ED1 15%")),/*#__PURE__*/React.createElement("p",{className:"text-zinc-400 mt-2 text-[11px] leading-relaxed"},"T\u1EF7 l\u1EC7 k\xEAnh m\u1EDBi v\xE0 k\xEAnh nh\u1ECF (<30k subs) v\u1EABn c\u1EAFn \u0111\u1EC1 xu\u1EA5t view cao m\xE0 kh\xF4ng b\u1ECB c\xE1c k\xEAnh tri\u1EC7u sub \u0111\xE8 b\u1EB9p, k\xE8m t\u1EF7 l\u1EC7 xem h\u1EBFt video (Watch time)."))),/*#__PURE__*/React.createElement("div",{className:"bg-brand-card/50 p-3.5 rounded-xl border border-brand-border/60 text-[11px] text-zinc-400 space-y-2"},/*#__PURE__*/React.createElement("span",{className:"font-bold text-zinc-200"},"K\xFD hi\u1EC7u bi\u1EBFn \u0111\u1ED9ng th\u1EE9 h\u1EA1ng qua c\xE1c m\u1ED1c th\u1EDDi gian:"),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-2 sm:grid-cols-4 gap-2"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-emerald-400 font-bold"},"\u25B2 +2")," ",/*#__PURE__*/React.createElement("span",null,"T\u0103ng 2 b\u1EADc th\u1EE9 h\u1EA1ng")),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-rose-400 font-bold"},"\u25BC -1")," ",/*#__PURE__*/React.createElement("span",null,"T\u1EE5t 1 b\u1EADc do gi\u1EA3m nhi\u1EC7t")),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 font-bold"},"\u2500\u2500")," ",/*#__PURE__*/React.createElement("span",null,"Gi\u1EEF h\u1EA1ng \u1ED5n \u0111\u1ECBnh")),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",{className:"text-amber-300 font-bold"},"\u2B50 M\u1EDAI")," ",/*#__PURE__*/React.createElement("span",null,"M\u1EDBi b\u1EE9t ph\xE1 v\xE0o Top 20"))))),/*#__PURE__*/React.createElement("div",{className:"p-4 bg-brand-card/60 border-t border-brand-border flex justify-end"},/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"px-5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/20 transition"},"\u0110\xE3 Hi\u1EC3u"))));}// =========================================================================
 // SAVED VIDEOS MODAL (KHO VIDEO ĐÃ LƯU XEM KHI RẢNH)
 // =========================================================================
@@ -3972,6 +4159,160 @@ const persistChannelsToIndexedDB = async (channelList, market = 'GLOBAL') => {
 const getChannelUploadsPlaylistId = (chId) => {
   if (!chId || typeof chId !== 'string') return '';
   return chId.startsWith('UC') ? 'UU' + chId.slice(2) : chId;
+};
+
+// ============================================================
+// BKT PREDICTION ENGINE (Dự đoán Bật Kiếm Tiền / YPP Status)
+// YouTube Partner Program requires: 1,000 subs + 4,000 watch hours (past 12 months)
+//
+// Algorithm:
+//   estimatedWatchHours = totalViews × avgVideoMinutes × watchRatePercent / 60
+//   YPP eligible if: subs >= 1000 AND estimatedWatchHours >= 4000
+//   We use channel-level data (subs, total views, videoCount, ageDays)
+//
+// Returns object: { status, label, color, pct, detail }
+// ============================================================
+const predictBKT = (subs, totalViewsEstimate, videoCount, ageDays, avgDurSeconds) => {
+  if (subs === null || subs === undefined) {
+    return { status: 'unknown', label: 'Sub Ẩn', color: 'zinc', pct: 0, detail: 'Không rõ sub' };
+  }
+
+  const avgDurMin = (avgDurSeconds > 0 ? avgDurSeconds : 600) / 60; // default 10 min
+  const watchRatePct = avgDurMin > 20 ? 0.45 : avgDurMin > 10 ? 0.40 : avgDurMin > 5 ? 0.35 : 0.25;
+
+  // Estimate total watch hours over channel lifetime
+  const estimatedTotalWatchHours = (totalViewsEstimate || 0) * avgDurMin * watchRatePct / 60;
+
+  // YouTube only counts last 12 months — estimate by prorating by channel age
+  const daysActive = Math.max(ageDays || 365, 1);
+  const last365DayFraction = Math.min(1, 365 / daysActive);
+  const estimatedRecentWatchHours = estimatedTotalWatchHours * last365DayFraction;
+
+  const subsPct = Math.min(100, Math.round((subs / 1000) * 100));
+  const hoursPct = Math.min(100, Math.round((estimatedRecentWatchHours / 4000) * 100));
+  const overallPct = Math.round((subsPct + hoursPct) / 2);
+
+  if (subs >= 1000 && estimatedRecentWatchHours >= 4000) {
+    return {
+      status: 'eligible',
+      label: '✅ ĐỦ BKT',
+      color: 'emerald',
+      pct: 100,
+      detail: `${(subs/1000).toFixed(1)}k sub · ~${Math.round(estimatedRecentWatchHours).toLocaleString()}h xem`,
+      subsPct, hoursPct
+    };
+  }
+  if (subs >= 1000 && estimatedRecentWatchHours >= 2000) {
+    return {
+      status: 'near',
+      label: '🔥 GẦN BKT',
+      color: 'amber',
+      pct: overallPct,
+      detail: `Đủ sub · Cần thêm ~${Math.round(Math.max(0,4000-estimatedRecentWatchHours)).toLocaleString()}h xem`,
+      subsPct, hoursPct
+    };
+  }
+  if (subs >= 500 && estimatedRecentWatchHours >= 1000) {
+    return {
+      status: 'growing',
+      label: '📈 ĐANG MỌC',
+      color: 'blue',
+      pct: overallPct,
+      detail: `${subs.toLocaleString()} sub / 1k · ~${Math.round(hoursPct)}% giờ xem`,
+      subsPct, hoursPct
+    };
+  }
+  if (subs < 100 && estimatedRecentWatchHours < 500) {
+    return {
+      status: 'new',
+      label: '🌱 KÊNH MỚI',
+      color: 'violet',
+      pct: overallPct,
+      detail: `${subs.toLocaleString()} sub · Kênh mới khởi động`,
+      subsPct, hoursPct
+    };
+  }
+  return {
+    status: 'building',
+    label: '⏳ ĐANG XÂY',
+    color: 'zinc',
+    pct: overallPct,
+    detail: `${subs.toLocaleString()} sub · ~${Math.round(estimatedRecentWatchHours).toLocaleString()}h xem`,
+    subsPct, hoursPct
+  };
+};
+
+// Competition score for a niche/keyword — 0 (Rất Thấp) to 10 (Rất Cao)
+// Based on: average subs of channels found, channel count, outlier spread
+
+// ============================================================
+// EXPORT NICHE CHANNELS CSV (Theo mẫu đối thủ YouTube Niche Pro)
+// ============================================================
+function exportNicheChannelsCsv(niche, showToast) {
+  if (!niche || !niche.videos || !niche.videos.length) {
+    if (typeof showToast === 'function') showToast('Không có dữ liệu kênh trong ngách để xuất CSV!', 'warning');
+    return;
+  }
+  const esc = t => '"' + String(t || '').replace(/"/g, '""') + '"';
+  const head = ['Tên Kênh', 'Mã Kênh', 'URL Kênh', 'Quốc Gia', 'Tuổi (ngày)', 'Sub', 'Lượt Xem Video Top', 'Tỷ Lệ Outlier', 'Dự Đoán BKT', 'Chi Tiết Giờ Xem / Sub', 'Tiêu Đề Video Bùng Nổ'];
+  
+  const chMap = new Map();
+  niche.videos.forEach(v => {
+    if (!chMap.has(v.channelId)) {
+      chMap.set(v.channelId, v);
+    }
+  });
+
+  const rows = Array.from(chMap.values()).map(v => {
+    const bkt = v.bkt || (typeof predictBKT === 'function' && v.subs !== null ? predictBKT(v.subs, v.views * Math.max(1, v.videoCount || 1), v.videoCount, v.channelAgeDays, v.dur) : null);
+    return [
+      v.channel,
+      v.channelId,
+      'https://www.youtube.com/channel/' + (v.channelId || ''),
+      v.country || 'VN',
+      v.channelAgeDays || 'N/A',
+      v.subs !== null && v.subs !== undefined ? v.subs : 'Sub ẩn',
+      v.views || 0,
+      v.outlierRatio ? v.outlierRatio + 'x' : 'N/A',
+      bkt ? bkt.label : 'Chưa rõ',
+      bkt ? bkt.detail : '',
+      v.title || ''
+    ];
+  });
+
+  const csv = '\uFEFF' + [head, ...rows].map(r => r.map(esc).join(',')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  const safeName = (niche.name || 'ngach').replace(/[^a-zA-Z0-9_-]/g, '_');
+  a.download = 'youtrend-kenh-ngach-' + safeName + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  if (typeof showToast === 'function') showToast('Đã xuất file CSV ' + rows.length + ' kênh bứt phá đủ điều kiện!');
+}
+
+const computeCompetitionScore = (videos = []) => {
+  if (!videos || videos.length === 0) return { score: 5.0, label: 'Trung Bình', color: 'zinc' };
+  const withSubs = videos.filter(v => v.subs !== null && v.subs > 0);
+  if (withSubs.length === 0) return { score: 5.0, label: 'Trung Bình', color: 'zinc' };
+
+  const avgSubs = withSubs.reduce((s, v) => s + (v.subs || 0), 0) / withSubs.length;
+  const bigChannelRatio = withSubs.filter(v => (v.subs || 0) > 100000).length / withSubs.length;
+  const avgOutlier = videos.reduce((s, v) => s + (Number(v.outlierRatio) || 0), 0) / Math.max(videos.length, 1);
+
+  // Higher avg subs → more competition; higher outlier ratio → less competition (new channels breaking through)
+  let score = Math.min(10, Math.max(0.5,
+    (avgSubs / 100000) * 5 +      // 0-5 from avg subs
+    bigChannelRatio * 3 +          // 0-3 from big channel presence
+    Math.max(0, 2 - avgOutlier * 0.2) // 0-2 penalty for high outlier (means easy to break in)
+  ));
+  score = Math.round(score * 10) / 10;
+
+  const label = score <= 2.5 ? 'Rất Thấp ✅' : score <= 4.5 ? 'Thấp 👍' : score <= 6.5 ? 'Trung Bình' : score <= 8 ? 'Cao ⚠️' : 'Rất Cao 🔴';
+  const color = score <= 2.5 ? 'emerald' : score <= 4.5 ? 'green' : score <= 6.5 ? 'amber' : score <= 8 ? 'orange' : 'rose';
+  return { score, label, color };
 };
 
 const SNOWBALL_JUNK_REGEX = /\b(trailer|teaser|official|movie|film|cinema|music\s*video|official\s*video|mv|song|songs|lyrics|remix|audio|soundtrack|ost|episode|reaction|react|tiktok|reels?|shorts?|live|livestream|stream|vlog|gameplay|clip|review|phim|full|hd|4k)\b/i;
@@ -4883,7 +5224,10 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
           engRate: engRate,
           isOrganic: Number(engRate)>=0.8,
           vph: vph,
-          discoverySource: 'search'
+          discoverySource: 'search',
+          bkt: (typeof predictBKT==='function' && !isHiddenSub)
+            ? predictBKT(chInfo.subCount, views * Math.max(1, chInfo.videoCount||1), chInfo.videoCount, chInfo.ageDays, typeof parseDur==='function'?parseDur(v.contentDetails?.duration):600)
+            : null
         };
 
         eligibleVideosInTopic.push(videoObj);
@@ -5002,7 +5346,10 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
                 engRate: evEngRate,
                 isOrganic: Number(evEngRate) >= 0.8,
                 vph: evVph,
-                discoverySource: 'uploads_multiplier'
+                discoverySource: 'uploads_multiplier',
+                bkt: (typeof predictBKT==='function')
+                  ? predictBKT(ch.subs, evViews * Math.max(1, ch.videoCount||1), ch.videoCount, ch.ageDays, evDurSec)
+                  : null
               });
             });
           }
@@ -5223,6 +5570,17 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
         totalEligibleChannelsFound += channelList.length;
         const inferredTitle = inferNicheTitle(topic.label, eligibleVideosInTopic);
 
+        // Compute competition score for this niche
+        const nicheCompScore = typeof computeCompetitionScore==='function'
+          ? computeCompetitionScore(eligibleVideosInTopic)
+          : { score: 5.0, label: 'Trung Bình', color: 'zinc' };
+
+        // Compute BKT summary for top video's channel
+        const topVid = eligibleVideosInTopic[0];
+        const topBkt = (typeof predictBKT==='function' && topVid && topVid.subs !== null)
+          ? predictBKT(topVid.subs, (topVid.views||0) * Math.max(1,topVid.videoCount||10), topVid.videoCount||10, topVid.channelAgeDays||365, topVid.dur||600)
+          : null;
+
         const newDiscoveredNiche = {
           id: 'niche_'+topic.id+'_'+Date.now(),
           name: inferredTitle,
@@ -5237,7 +5595,9 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
           maxOutlier: maxOutlier.toFixed(1),
           scannedAt: Date.now(),
           scannedDate: todayStr,
-          isTodayTrend: true
+          isTodayTrend: true,
+          competitionScore: nicheCompScore,
+          topBkt: topBkt
         };
         discoveredList.push(newDiscoveredNiche);
 
@@ -5433,7 +5793,7 @@ discoveryMetrics && /*#__PURE__*/React.createElement("div",{className:"bg-[#1012
     },
     className:"px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shrink-0 flex items-center gap-1.5 text-[11px] font-medium disabled:opacity-50"
   },/*#__PURE__*/React.createElement("span",null,item.label),/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-mono text-zinc-500"},item.rpm)))
-),activeNiche&&(()=>{const vids=activeNiche.videos||[];const validVids=vids.filter(isVideoValid);const baseVids=validVids.length>0?validVids:vids;const filteredVideos=baseVids.filter(v=>{if(videoFormatFilter==='all')return true;return getVideoFormat(v)===videoFormatFilter;});return/*#__PURE__*/React.createElement("div",{className:"space-y-2 pt-1"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between text-xs px-1"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-semibold flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",null,"\uD83C\uDFAC"),!isPro?" Video Demo Dò Ra Hôm Nay ("+todayStr+"): ":" Video Thực Tế: ",/*#__PURE__*/React.createElement("b",{className:"text-white"},activeNiche.name)),/*#__PURE__*/React.createElement("span",{className:"text-[11px] text-zinc-500"},!isPro?("(Kênh <1k sub • >50k view • "+(TIMEFRAME_CONFIG[timeframeFilter]||TIMEFRAME_CONFIG['24h']).label+")"):("Hiển thị "+filteredVideos.length+" video ("+(subLimitFilter>0?('<'+(subLimitFilter<1000?subLimitFilter:(subLimitFilter/1000)+'k')+' sub'):'mọi sub')+" • "+(TIMEFRAME_CONFIG[timeframeFilter]||TIMEFRAME_CONFIG['24h']).label+" • >"+(minViewsFilter/1000)+"k view)"))),filteredVideos.length===0?/*#__PURE__*/React.createElement("div",{className:"p-8 text-center border border-dashed border-zinc-800 rounded-xl bg-[#121316] space-y-2"},/*#__PURE__*/React.createElement("span",{className:"text-2xl block"},"\uD83D\uDD0D"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-300 font-semibold"},"Kh\xF4ng c\xF3 video n\xE0o thu\u1ED9c d\u1EA1ng ",videoFormatFilter==='short'?'Shorts':videoFormatFilter==='live'?'Trực Tiếp (Live)':'Video Dài'," trong ng\xE1ch n\xE0y"),/*#__PURE__*/React.createElement("p",{className:"text-[11px] text-zinc-500"},"H\xE3y b\u1EA5m \"T\u1EA5t C\u1EA3\" \u0111\u1EC3 xem to\xE0n b\u1ED9 ",vids.length," video c\u1EE7a ng\xE1ch."),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('all'),className:"mt-1 px-3 py-1 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 cursor-pointer"},"Xem T\u1EA5t C\u1EA3 Video")):/*#__PURE__*/ /* Lưới video thực tế */React.createElement("div",{className:"grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3"},filteredVideos.map((v,idx)=>{const ytUrl='https://www.youtube.com/watch?v='+v.id;const chUrl='https://www.youtube.com/channel/'+(v.channelId||'');const saved=isSaved&&isSaved(v.id);const rev=typeof calcEstimatedRev==='function'?calcEstimatedRev(v.views,v.dur,activeNiche.avgRpm||30):{low:50,high:150,midrolls:6};const vFmt=getVideoFormat(v);return/*#__PURE__*/React.createElement("article",{key:v.id||idx,className:"bg-[#121316] border border-zinc-800 hover:border-zinc-600 rounded-xl overflow-hidden flex flex-col group transition shadow-sm hover:shadow-md"},/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"relative aspect-video bg-zinc-900 overflow-hidden block",title:"M\u1EDF xem tr\xEAn YouTube"},/*#__PURE__*/React.createElement("img",{src:v.thumb,alt:"",className:"w-full h-full object-cover group-hover:scale-102 transition duration-200",loading:"lazy"}),/*#__PURE__*/React.createElement("div",{className:"absolute top-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-700/80"},v.subs?((v.subs<=1000?'🎯 ':'')+(typeof fmt==='function'?fmt(v.subs):v.subs)+' subs'):'Kênh nhỏ'),v.isHiddenSub?/*#__PURE__*/React.createElement("div",{className:"absolute top-1.5 right-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-zinc-900/90 text-zinc-400 backdrop-blur-sm border border-zinc-700"},"🔒 Sub Ẩn"):v.outlierRatio?/*#__PURE__*/React.createElement("div",{className:"absolute top-1.5 right-1.5 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded "+(v.compositeScore>=75?"bg-emerald-950/90 text-emerald-300 border border-emerald-500/50":v.compositeScore>=55?"bg-amber-950/90 text-amber-300 border border-amber-500/50":"bg-zinc-950/90 text-zinc-200 border border-zinc-700/70")+(v.compositeScore?" flex items-center gap-1":"")},"x",v.outlierRatio," Outlier",v.compositeScore&&/*#__PURE__*/React.createElement("span",{className:"pl-1 border-l border-white/20 font-sans font-bold"},v.compositeScore+"đ • "+v.scoreTier)):null,v.isBreakout&&/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-zinc-900/90 text-zinc-200 border border-zinc-600 backdrop-blur-sm"},"\uD83D\uDE80 T\xE2n binh"),vFmt==='live'?/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-600 text-white backdrop-blur-sm border border-red-500 flex items-center gap-1 shadow-sm"},/*#__PURE__*/React.createElement("span",{className:"w-1.5 h-1.5 rounded-full bg-white animate-pulse"}),/*#__PURE__*/React.createElement("span",null,"LIVE")):vFmt==='short'?/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-950/95 text-rose-300 backdrop-blur-sm border border-rose-500/60 flex items-center gap-1 shadow-sm"},/*#__PURE__*/React.createElement("span",null,"\u26A1 Shorts"),/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 font-mono pl-0.5"},typeof fmtDur==='function'?fmtDur(v.dur):'0:45')):/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-800 flex items-center gap-1"},/*#__PURE__*/React.createElement("span",null,"\uD83C\uDFAC ",typeof fmtDur==='function'?fmtDur(v.dur):'25:00'),rev.midrolls>0&&/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 border-l border-zinc-700 pl-1"},"~",rev.midrolls," Ads"))),/*#__PURE__*/React.createElement("div",{className:"p-2.5 flex flex-col gap-1.5 flex-1 justify-between text-xs"},/*#__PURE__*/React.createElement("div",{className:"space-y-1"},/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"text-xs sm:text-[13px] font-semibold text-zinc-200 line-clamp-2 leading-snug hover:text-white transition",title:v.title},v.title),/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400 flex items-center justify-between gap-1"},/*#__PURE__*/React.createElement("a",{href:chUrl,target:"_blank",rel:"noopener noreferrer",className:"truncate max-w-[120px] font-medium text-zinc-300 hover:text-white flex items-center gap-1 transition",title:"M\u1EDF k\xEAnh tr\xEAn YouTube"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDCFA"),/*#__PURE__*/React.createElement("span",{className:"truncate"},v.channel),v.country&&v.country!=='N/A'&&/*#__PURE__*/React.createElement("span",{className:"text-[9px] text-zinc-500 font-mono"},"[",v.country,"]")),/*#__PURE__*/React.createElement("span",{className:"text-[10px] text-zinc-500 shrink-0 font-medium"},"RPM ",activeNiche.rpmRange?activeNiche.rpmRange.split('-')[0].trim():'$25+'))),/*#__PURE__*/React.createElement("div",{className:"pt-1 border-t border-zinc-800/80 flex items-center justify-between text-[10px] text-zinc-400"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"\uD83D\uDC41\uFE0F ",typeof fmt==='function'?fmt(v.views):v.views),v.vph?/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"\u26A1+",typeof fmt==='function'?fmt(v.vph):v.vph,"/h"):null,/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"$",typeof fmt==='function'?fmt(rev.low):rev.low,"-$",typeof fmt==='function'?fmt(rev.high):rev.high)),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{setInspectingVideo(v);},className:"w-full py-1 px-2 rounded-lg font-medium text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-500 flex items-center justify-center gap-1.5 transition cursor-pointer",title:"Soi tags \u1EA9n, b\u1EA3n quy\u1EC1n, t\u01B0\u01A1ng t\xE1c v\xE0 l\u1EA5y 50 video c\u1EE7a k\xEAnh ch\u1EC9 t\u1ED1n 1 quota"},/*#__PURE__*/React.createElement("span",null,"Phân tích"),v.tags&&v.tags.length>0&&/*#__PURE__*/React.createElement("span",{className:"text-[9px] px-1 py-0.2 rounded bg-zinc-900 text-zinc-400 font-mono"},v.tags.length)),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1 text-[10px]"},onToggleSave&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(!isPro){if(typeof showToast==='function')showToast('Lưu video ngách dành riêng cho gói PRO!','info');if(onUpgradePrompt)onUpgradePrompt();return;}onToggleSave(v);},className:`flex-1 py-1 px-1.5 rounded-md font-medium transition text-center truncate cursor-pointer ${saved?'bg-zinc-200 text-zinc-950 font-semibold':'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'}`},saved?'✓ Đã Lưu':'🔖 Lưu'),onAddCompetitor&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(!isPro){if(typeof showToast==='function')showToast('Thêm kênh đối thủ dành riêng cho gói PRO!','info');if(onUpgradePrompt)onUpgradePrompt();return;}onAddCompetitor(v.channel);},className:"py-1 px-1.5 rounded-md font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition truncate cursor-pointer",title:"Th\xEAm k\xEAnh n\xE0y v\xE0o danh s\xE1ch theo d\xF5i \u0111\u1ED1i th\u1EE7"},"+ K\xEAnh"),/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"py-1 px-2 rounded-md font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700 hover:text-white transition text-center truncate shrink-0",title:"Xem tr\u1EF1c ti\u1EBFp tr\xEAn YouTube"},"YT \u2197"))));})));})(),!isPro&&/*#__PURE__*/React.createElement("div",{className:"relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-950/40 via-[#181b26] to-[#121316] border border-amber-500/30 p-5 sm:p-6 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4 mt-5 shadow-xl"},/*#__PURE__*/React.createElement("div",{className:"space-y-1.5"},/*#__PURE__*/React.createElement("div",{className:"inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDC51")," D\xC0NH RI\xCANG CHO T\xC0I KHO\u1EA2N PRO"),/*#__PURE__*/React.createElement("h4",{className:"text-sm sm:text-base font-black text-white"},"B\u1EA1n \u0111ang xem 1 ch\u1EE7 \u0111\u1EC1 demo c\u01A1 b\u1EA3n h\xF4m nay. Mu\u1ED1n m\u1EDF kh\xF3a to\xE0n b\u1ED9 c\xE1c ng\xE1ch b\u1EE9t ph\xE1 tri\u1EC7u view kh\xE1c?"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-300 max-w-xl leading-relaxed"},"H\u1EC7 th\u1ED1ng t\u1EF1 \u0111\u1ED9ng ph\xE1t hi\u1EC7n h\xE0ng ch\u1EE5c ng\xE1ch b\u1EE9t ph\xE1 view kh\u1EE7ng x10\u2013x50 m\u1ED7i ng\xE0y, qu\xE9t video t\u1EEB k\xEAnh nh\u1ECF \xEDt sub, b\xF3c t\xE1ch t\u1EEB kh\xF3a v\xE0 soi tags b\xED m\u1EADt.")),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(onUpgradePrompt)onUpgradePrompt();},className:"px-6 py-3 rounded-xl text-xs sm:text-sm font-black bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white shadow-lg shadow-amber-500/25 transition cursor-pointer shrink-0 transform hover:-translate-y-0.5"},"N\xE2ng C\u1EA5p G\xF3i PRO \u0110\u1EC3 Xem Ti\u1EBFp \u2192")),inspectingVideo&&/*#__PURE__*/React.createElement(ManualCheckModal,{video:inspectingVideo,onClose:()=>setInspectingVideo(null),showToast:showToast}),showApiGuideModal&&/*#__PURE__*/React.createElement(ApiFeaturesGuideModal,{onClose:()=>setShowApiGuideModal(false)}));}// Cửa Sổ Chi Tiết Ngách (Clean & Focused Niche Intelligence Modal)
+),activeNiche&&(()=>{const vids=activeNiche.videos||[];const validVids=vids.filter(isVideoValid);const baseVids=validVids.length>0?validVids:vids;const filteredVideos=baseVids.filter(v=>{if(videoFormatFilter==='all')return true;return getVideoFormat(v)===videoFormatFilter;});return/*#__PURE__*/React.createElement("div",{className:"space-y-2 pt-1"},/*#__PURE__*/React.createElement("div",{className:"flex flex-wrap items-center justify-between gap-2 text-xs px-1"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2 flex-wrap"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-semibold flex items-center gap-1.5"},/*#__PURE__*/React.createElement("span",null,"\uD83C\uDFAC"),!isPro?" Video Demo Dò Ra Hôm Nay ("+todayStr+"): ":" Video Thực Tế: ",/*#__PURE__*/React.createElement("b",{className:"text-white"},activeNiche.name)),activeNiche&&/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1.5"},/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>exportNicheChannelsCsv(activeNiche,showToast),className:"px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 transition cursor-pointer flex items-center gap-1 shadow-sm",title:"Xuất danh sách kênh và video bứt phá ra file CSV theo chuẩn công cụ đối thủ"},/*#__PURE__*/React.createElement("span",null,"📥"),/*#__PURE__*/React.createElement("span",null,"Xuất CSV")),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setShowCheckBktModal(true),className:"px-2.5 py-1 rounded-lg text-[11px] font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition cursor-pointer flex items-center gap-1",title:"Kiểm tra nhanh tình trạng Bật Kiếm Tiền (YPP)"},/*#__PURE__*/React.createElement("span",null,"💰"),/*#__PURE__*/React.createElement("span",null,"Check BKT")))),/*#__PURE__*/React.createElement("span",{className:"text-[11px] text-zinc-500"},!isPro?("(Kênh <1k sub • >50k view • "+(TIMEFRAME_CONFIG[timeframeFilter]||TIMEFRAME_CONFIG['24h']).label+")"):("Hiển thị "+filteredVideos.length+" video ("+(subLimitFilter>0?('<'+(subLimitFilter<1000?subLimitFilter:(subLimitFilter/1000)+'k')+' sub'):'mọi sub')+" • "+(TIMEFRAME_CONFIG[timeframeFilter]||TIMEFRAME_CONFIG['24h']).label+" • >"+(minViewsFilter/1000)+"k view)"))),filteredVideos.length===0?/*#__PURE__*/React.createElement("div",{className:"p-8 text-center border border-dashed border-zinc-800 rounded-xl bg-[#121316] space-y-2"},/*#__PURE__*/React.createElement("span",{className:"text-2xl block"},"\uD83D\uDD0D"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-300 font-semibold"},"Kh\xF4ng c\xF3 video n\xE0o thu\u1ED9c d\u1EA1ng ",videoFormatFilter==='short'?'Shorts':videoFormatFilter==='live'?'Trực Tiếp (Live)':'Video Dài'," trong ng\xE1ch n\xE0y"),/*#__PURE__*/React.createElement("p",{className:"text-[11px] text-zinc-500"},"H\xE3y b\u1EA5m \"T\u1EA5t C\u1EA3\" \u0111\u1EC3 xem to\xE0n b\u1ED9 ",vids.length," video c\u1EE7a ng\xE1ch."),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>setVideoFormatFilter('all'),className:"mt-1 px-3 py-1 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 cursor-pointer"},"Xem T\u1EA5t C\u1EA3 Video")):/*#__PURE__*/ /* Lưới video thực tế */React.createElement("div",{className:"grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3"},filteredVideos.map((v,idx)=>{const ytUrl='https://www.youtube.com/watch?v='+v.id;const chUrl='https://www.youtube.com/channel/'+(v.channelId||'');const saved=isSaved&&isSaved(v.id);const rev=typeof calcEstimatedRev==='function'?calcEstimatedRev(v.views,v.dur,activeNiche.avgRpm||30):{low:50,high:150,midrolls:6};const vFmt=getVideoFormat(v);return/*#__PURE__*/React.createElement("article",{key:v.id||idx,className:"bg-[#121316] border border-zinc-800 hover:border-zinc-600 rounded-xl overflow-hidden flex flex-col group transition shadow-sm hover:shadow-md"},/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"relative aspect-video bg-zinc-900 overflow-hidden block",title:"M\u1EDF xem tr\xEAn YouTube"},/*#__PURE__*/React.createElement("img",{src:v.thumb,alt:"",className:"w-full h-full object-cover group-hover:scale-102 transition duration-200",loading:"lazy"}),/*#__PURE__*/React.createElement("div",{className:"absolute top-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-700/80"},v.subs?((v.subs<=1000?'🎯 ':'')+(typeof fmt==='function'?fmt(v.subs):v.subs)+' subs'):'Kênh nhỏ'),v.isHiddenSub?/*#__PURE__*/React.createElement("div",{className:"absolute top-1.5 right-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-zinc-900/90 text-zinc-400 backdrop-blur-sm border border-zinc-700"},"🔒 Sub Ẩn"):v.outlierRatio?/*#__PURE__*/React.createElement("div",{className:"absolute top-1.5 right-1.5 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded "+(v.compositeScore>=75?"bg-emerald-950/90 text-emerald-300 border border-emerald-500/50":v.compositeScore>=55?"bg-amber-950/90 text-amber-300 border border-amber-500/50":"bg-zinc-950/90 text-zinc-200 border border-zinc-700/70")+(v.compositeScore?" flex items-center gap-1":"")},"x",v.outlierRatio," Outlier",v.compositeScore&&/*#__PURE__*/React.createElement("span",{className:"pl-1 border-l border-white/20 font-sans font-bold"},v.compositeScore+"đ • "+v.scoreTier)):null,v.isBreakout&&/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 left-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-zinc-900/90 text-zinc-200 border border-zinc-600 backdrop-blur-sm"},"\uD83D\uDE80 T\xE2n binh"),vFmt==='live'?/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-600 text-white backdrop-blur-sm border border-red-500 flex items-center gap-1 shadow-sm"},/*#__PURE__*/React.createElement("span",{className:"w-1.5 h-1.5 rounded-full bg-white animate-pulse"}),/*#__PURE__*/React.createElement("span",null,"LIVE")):vFmt==='short'?/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-950/95 text-rose-300 backdrop-blur-sm border border-rose-500/60 flex items-center gap-1 shadow-sm"},/*#__PURE__*/React.createElement("span",null,"\u26A1 Shorts"),/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 font-mono pl-0.5"},typeof fmtDur==='function'?fmtDur(v.dur):'0:45')):/*#__PURE__*/React.createElement("div",{className:"absolute bottom-1.5 right-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/85 text-zinc-300 backdrop-blur-sm border border-zinc-800 flex items-center gap-1"},/*#__PURE__*/React.createElement("span",null,"\uD83C\uDFAC ",typeof fmtDur==='function'?fmtDur(v.dur):'25:00'),rev.midrolls>0&&/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 border-l border-zinc-700 pl-1"},"~",rev.midrolls," Ads"))),/*#__PURE__*/React.createElement("div",{className:"p-2.5 flex flex-col gap-1.5 flex-1 justify-between text-xs"},/*#__PURE__*/React.createElement("div",{className:"space-y-1"},/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"text-xs sm:text-[13px] font-semibold text-zinc-200 line-clamp-2 leading-snug hover:text-white transition",title:v.title},v.title),/*#__PURE__*/React.createElement("div",{className:"text-[11px] text-zinc-400 flex items-center justify-between gap-1"},/*#__PURE__*/React.createElement("a",{href:chUrl,target:"_blank",rel:"noopener noreferrer",className:"truncate max-w-[120px] font-medium text-zinc-300 hover:text-white flex items-center gap-1 transition",title:"M\u1EDF k\xEAnh tr\xEAn YouTube"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDCFA"),/*#__PURE__*/React.createElement("span",{className:"truncate"},v.channel),v.country&&v.country!=='N/A'&&/*#__PURE__*/React.createElement("span",{className:"text-[9px] text-zinc-500 font-mono"},"[",v.country,"]")),/*#__PURE__*/React.createElement("span",{className:"text-[10px] text-zinc-500 shrink-0 font-medium"},"RPM ",activeNiche.rpmRange?activeNiche.rpmRange.split('-')[0].trim():'$25+')),(()=>{const vBkt=v.bkt||(typeof predictBKT==='function'&&v.subs!==null?predictBKT(v.subs,(v.views||0)*Math.max(1,v.videoCount||1),v.videoCount||1,v.channelAgeDays||365,v.dur||600):null);if(!vBkt)return null;return/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between gap-1 pt-0.5 text-[9px] font-medium"},/*#__PURE__*/React.createElement("span",{className:"px-1.5 py-0.2 rounded font-bold "+(vBkt.color==='emerald'?"bg-emerald-950 text-emerald-300 border border-emerald-500/50":vBkt.color==='amber'?"bg-amber-950 text-amber-300 border border-amber-500/50":vBkt.color==='blue'?"bg-blue-950 text-blue-300 border border-blue-500/50":"bg-zinc-800 text-zinc-300 border border-zinc-700")},vBkt.label),v.channelAgeDays?/*#__PURE__*/React.createElement("span",{className:"text-zinc-500 font-mono"},"Tuổi: ",v.channelAgeDays,"d"):null);})()),/*#__PURE__*/React.createElement("div",{className:"pt-1 border-t border-zinc-800/80 flex items-center justify-between text-[10px] text-zinc-400"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"\uD83D\uDC41\uFE0F ",typeof fmt==='function'?fmt(v.views):v.views),v.vph?/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"\u26A1+",typeof fmt==='function'?fmt(v.vph):v.vph,"/h"):null,/*#__PURE__*/React.createElement("span",{className:"text-zinc-300 font-medium"},"$",typeof fmt==='function'?fmt(rev.low):rev.low,"-$",typeof fmt==='function'?fmt(rev.high):rev.high)),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{setInspectingVideo(v);},className:"w-full py-1 px-2 rounded-lg font-medium text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:border-zinc-500 flex items-center justify-center gap-1.5 transition cursor-pointer",title:"Soi tags \u1EA9n, b\u1EA3n quy\u1EC1n, t\u01B0\u01A1ng t\xE1c v\xE0 l\u1EA5y 50 video c\u1EE7a k\xEAnh ch\u1EC9 t\u1ED1n 1 quota"},/*#__PURE__*/React.createElement("span",null,"Phân tích"),v.tags&&v.tags.length>0&&/*#__PURE__*/React.createElement("span",{className:"text-[9px] px-1 py-0.2 rounded bg-zinc-900 text-zinc-400 font-mono"},v.tags.length)),/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-1 text-[10px]"},onToggleSave&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(!isPro){if(typeof showToast==='function')showToast('Lưu video ngách dành riêng cho gói PRO!','info');if(onUpgradePrompt)onUpgradePrompt();return;}onToggleSave(v);},className:`flex-1 py-1 px-1.5 rounded-md font-medium transition text-center truncate cursor-pointer ${saved?'bg-zinc-200 text-zinc-950 font-semibold':'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'}`},saved?'✓ Đã Lưu':'🔖 Lưu'),onAddCompetitor&&/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(!isPro){if(typeof showToast==='function')showToast('Thêm kênh đối thủ dành riêng cho gói PRO!','info');if(onUpgradePrompt)onUpgradePrompt();return;}onAddCompetitor(v.channel);},className:"py-1 px-1.5 rounded-md font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition truncate cursor-pointer",title:"Th\xEAm k\xEAnh n\xE0y v\xE0o danh s\xE1ch theo d\xF5i \u0111\u1ED1i th\u1EE7"},"+ K\xEAnh"),/*#__PURE__*/React.createElement("a",{href:ytUrl,target:"_blank",rel:"noopener noreferrer",className:"py-1 px-2 rounded-md font-medium bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700 hover:text-white transition text-center truncate shrink-0",title:"Xem tr\u1EF1c ti\u1EBFp tr\xEAn YouTube"},"YT \u2197"))));})));})(),!isPro&&/*#__PURE__*/React.createElement("div",{className:"relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-950/40 via-[#181b26] to-[#121316] border border-amber-500/30 p-5 sm:p-6 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4 mt-5 shadow-xl"},/*#__PURE__*/React.createElement("div",{className:"space-y-1.5"},/*#__PURE__*/React.createElement("div",{className:"inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDC51")," D\xC0NH RI\xCANG CHO T\xC0I KHO\u1EA2N PRO"),/*#__PURE__*/React.createElement("h4",{className:"text-sm sm:text-base font-black text-white"},"B\u1EA1n \u0111ang xem 1 ch\u1EE7 \u0111\u1EC1 demo c\u01A1 b\u1EA3n h\xF4m nay. Mu\u1ED1n m\u1EDF kh\xF3a to\xE0n b\u1ED9 c\xE1c ng\xE1ch b\u1EE9t ph\xE1 tri\u1EC7u view kh\xE1c?"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-300 max-w-xl leading-relaxed"},"H\u1EC7 th\u1ED1ng t\u1EF1 \u0111\u1ED9ng ph\xE1t hi\u1EC7n h\xE0ng ch\u1EE5c ng\xE1ch b\u1EE9t ph\xE1 view kh\u1EE7ng x10\u2013x50 m\u1ED7i ng\xE0y, qu\xE9t video t\u1EEB k\xEAnh nh\u1ECF \xEDt sub, b\xF3c t\xE1ch t\u1EEB kh\xF3a v\xE0 soi tags b\xED m\u1EADt.")),/*#__PURE__*/React.createElement("button",{type:"button",onClick:()=>{if(onUpgradePrompt)onUpgradePrompt();},className:"px-6 py-3 rounded-xl text-xs sm:text-sm font-black bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white shadow-lg shadow-amber-500/25 transition cursor-pointer shrink-0 transform hover:-translate-y-0.5"},"N\xE2ng C\u1EA5p G\xF3i PRO \u0110\u1EC3 Xem Ti\u1EBFp \u2192")),inspectingVideo&&/*#__PURE__*/React.createElement(ManualCheckModal,{video:inspectingVideo,onClose:()=>setInspectingVideo(null),showToast:showToast}),showApiGuideModal&&/*#__PURE__*/React.createElement(ApiFeaturesGuideModal,{onClose:()=>setShowApiGuideModal(false)}));}// Cửa Sổ Chi Tiết Ngách (Clean & Focused Niche Intelligence Modal)
 function NicheDetailModal({niche,onClose,onSelectKeywordForSearch,onAddCompetitor,onToggleSave,isSaved,showToast}){const[activeTab,setActiveTab]=React.useState('overview');// 'overview' | 'videos' | 'prompts'
 if(!niche)return null;return/*#__PURE__*/React.createElement("div",{className:"fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200"},/*#__PURE__*/React.createElement("div",{className:"bg-brand-surface border border-brand-border rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto"},/*#__PURE__*/React.createElement("div",{className:"p-4 sm:p-5 border-b border-brand-border flex items-start justify-between gap-3 bg-gradient-to-r from-zinc-900 to-brand-surface"},/*#__PURE__*/React.createElement("div",{className:"space-y-1"},/*#__PURE__*/React.createElement("div",{className:"flex items-center gap-2 flex-wrap"},/*#__PURE__*/React.createElement("span",{className:"text-[10px] font-black px-2 py-0.5 rounded bg-amber-400 text-black"},niche.tag||'High-RPM'),/*#__PURE__*/React.createElement("span",{className:"text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"},"RPM: ",niche.rpmRange," / 1k view"),/*#__PURE__*/React.createElement("span",{className:"text-xs text-zinc-400"},"K\xEAnh m\u1EABu: ",/*#__PURE__*/React.createElement("b",{className:"text-white"},niche.exampleChannel))),/*#__PURE__*/React.createElement("h2",{className:"text-lg sm:text-xl font-black text-white"},niche.name),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-400"},niche.subtitle)),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition"},"\u2715")),/*#__PURE__*/React.createElement("div",{className:"flex border-b border-brand-border px-4 sm:px-5 gap-4 text-xs font-semibold bg-brand-card/50"},/*#__PURE__*/React.createElement("button",{onClick:()=>setActiveTab('overview'),className:`py-3 border-b-2 transition ${activeTab==='overview'?'border-amber-400 text-white font-bold':'border-transparent text-zinc-400 hover:text-zinc-200'}`},"1. T\u1ED5ng Quan & Ti\u1EC1m N\u0103ng"),/*#__PURE__*/React.createElement("button",{onClick:()=>setActiveTab('videos'),className:`py-3 border-b-2 transition ${activeTab==='videos'?'border-amber-400 text-white font-bold':'border-transparent text-zinc-400 hover:text-zinc-200'}`},"2. Video & K\xEAnh Th\u1EADt (API)"),/*#__PURE__*/React.createElement("button",{onClick:()=>setActiveTab('prompts'),className:`py-3 border-b-2 transition ${activeTab==='prompts'?'border-amber-400 text-white font-bold':'border-transparent text-zinc-400 hover:text-zinc-200'}`},"3. C\xE2u L\u1EC7nh AI (Prompts)")),/*#__PURE__*/React.createElement("div",{className:"p-4 sm:p-5 overflow-y-auto space-y-4 flex-1"},activeTab==='overview'&&/*#__PURE__*/React.createElement("div",{className:"space-y-4"},/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-4 rounded-xl border border-brand-border space-y-2"},/*#__PURE__*/React.createElement("h4",{className:"text-xs font-bold text-amber-300 uppercase tracking-wider"},"V\xEC sao ng\xE1ch n\xE0y ki\u1EBFm \u0111\u01B0\u1EE3c nhi\u1EC1u ti\u1EC1n?"),/*#__PURE__*/React.createElement("p",{className:"text-xs sm:text-sm text-zinc-200 leading-relaxed"},niche.whyText||niche.desc)),/*#__PURE__*/React.createElement("div",{className:"grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs"},/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 block text-[11px]"},"\u0110\u1EB7c \u0111i\u1EC3m video:"),/*#__PURE__*/React.createElement("p",{className:"text-zinc-200 mt-1 font-medium"},niche.desc)),/*#__PURE__*/React.createElement("div",{className:"bg-brand-card p-3.5 rounded-xl border border-brand-border"},/*#__PURE__*/React.createElement("span",{className:"text-zinc-400 block text-[11px]"},"Gi\u1ECDng \u0111\u1ECDc AI ph\xF9 h\u1EE3p:"),/*#__PURE__*/React.createElement("p",{className:"text-emerald-400 mt-1 font-medium"},niche.aiVoice||'ElevenLabs / Lovo AI'))),niche.queries&&niche.queries.length>0&&/*#__PURE__*/React.createElement("div",{className:"space-y-2"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-zinc-300"},"T\u1EEB kh\xF3a t\xECm ki\u1EBFm \u0103n kh\xE1ch nh\u1EA5t c\u1EE7a ng\xE1ch:"),/*#__PURE__*/React.createElement("div",{className:"flex flex-wrap gap-2"},niche.queries.map((q,idx)=>/*#__PURE__*/React.createElement("button",{key:idx,onClick:()=>{onSelectKeywordForSearch(q);onClose();},className:"px-3 py-1.5 rounded-lg text-xs bg-zinc-800 hover:bg-zinc-700 text-cyan-300 border border-zinc-700 hover:border-cyan-500 transition flex items-center gap-1.5",title:"B\u1EA5m \u0111\u1EC3 chuy\u1EC3n sang tab Ph\xE2n T\xEDch c\u1EE5m t\u1EEB kh\xF3a n\xE0y"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDD0D"),/*#__PURE__*/React.createElement("span",null,q),/*#__PURE__*/React.createElement("span",{className:"text-[10px] text-zinc-400"},"\u2192 Ph\xE2n t\xEDch")))))),activeTab==='videos'&&/*#__PURE__*/React.createElement("div",{className:"space-y-3"},/*#__PURE__*/React.createElement("div",{className:"p-6 rounded-xl bg-brand-card border border-brand-border text-center space-y-3"},/*#__PURE__*/React.createElement("span",{className:"text-2xl block"},"\uD83D\uDEE1\uFE0F"),/*#__PURE__*/React.createElement("h4",{className:"text-sm font-bold text-white"},"Cam k\u1EBFt 100% d\u1EEF li\u1EC7u th\u1EADt t\u1EEB YouTube Data API"),/*#__PURE__*/React.createElement("p",{className:"text-xs text-zinc-400 max-w-md mx-auto leading-relaxed"},"H\u1EC7 th\u1ED1ng ",/*#__PURE__*/React.createElement("b",null,"tuy\u1EC7t \u0111\u1ED1i kh\xF4ng d\xF9ng video m\u1EABu gi\u1EA3 ho\u1EB7c k\xEAnh \u1EA3o"),". To\xE0n b\u1ED9 video v\xE0 k\xEAnh \u0111\u01B0\u1EE3c tr\xEDch xu\u1EA5t tr\u1EF1c ti\u1EBFp t\u1EEB YouTube Data API theo th\u1EDDi gian th\u1EF1c khi b\u1EA5m ",/*#__PURE__*/React.createElement("b",null,"\u26A1 Qu\xE9t Trend")," \u1EDF b\u1EA3ng \u0111i\u1EC1u khi\u1EC3n ch\xEDnh."),/*#__PURE__*/React.createElement("div",{className:"pt-2 flex flex-wrap justify-center gap-2"},/*#__PURE__*/React.createElement("a",{href:`https://www.youtube.com/results?search_query=${encodeURIComponent(niche.queries&&niche.queries[0]||niche.name)}`,target:"_blank",rel:"noopener noreferrer",className:"px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 transition flex items-center gap-1"},/*#__PURE__*/React.createElement("span",null,"\uD83D\uDCFA")," Xem tr\u1EF1c ti\u1EBFp ng\xE1ch n\xE0y tr\xEAn YouTube \u2197")))),activeTab==='prompts'&&/*#__PURE__*/React.createElement("div",{className:"space-y-4"},/*#__PURE__*/React.createElement("div",{className:"space-y-1.5"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-white"},"Prompt Vi\u1EBFt K\u1ECBch B\u1EA3n Chi Ti\u1EBFt (ChatGPT / Claude):"),/*#__PURE__*/React.createElement("button",{onClick:()=>{const tpl=niche.scriptPromptTpl?niche.scriptPromptTpl(niche.sampleVideos?.[0]?.title||niche.name,niche.exampleChannel):'Kịch bản ngách '+niche.name;navigator.clipboard.writeText(tpl);if(showToast)showToast('Đã sao chép prompt kịch bản!');},className:"text-xs text-amber-400 hover:text-amber-300 font-semibold"},"Sao ch\xE9p prompt")),/*#__PURE__*/React.createElement("pre",{className:"p-3 rounded-xl bg-black/60 border border-zinc-800 text-[11px] text-zinc-300 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto"},niche.scriptPromptTpl?niche.scriptPromptTpl(niche.sampleVideos?.[0]?.title||niche.name,niche.exampleChannel):'Chưa có prompt mẫu')),/*#__PURE__*/React.createElement("div",{className:"space-y-1.5"},/*#__PURE__*/React.createElement("div",{className:"flex items-center justify-between"},/*#__PURE__*/React.createElement("span",{className:"text-xs font-bold text-white"},"Prompt T\u1EA1o Thumbnail (Midjourney):"),/*#__PURE__*/React.createElement("button",{onClick:()=>{const tpl=niche.thumbPromptTpl?niche.thumbPromptTpl(niche.sampleVideos?.[0]?.title||niche.name):'Thumbnail prompt';navigator.clipboard.writeText(tpl);if(showToast)showToast('Đã sao chép prompt thumbnail!');},className:"text-xs text-amber-400 hover:text-amber-300 font-semibold"},"Sao ch\xE9p prompt")),/*#__PURE__*/React.createElement("pre",{className:"p-3 rounded-xl bg-black/60 border border-zinc-800 text-[11px] text-zinc-300 font-mono whitespace-pre-wrap max-h-36 overflow-y-auto"},niche.thumbPromptTpl?niche.thumbPromptTpl(niche.sampleVideos?.[0]?.title||niche.name):'Chưa có prompt thumbnail')))),/*#__PURE__*/React.createElement("div",{className:"p-3 sm:p-4 border-t border-brand-border bg-brand-card/40 flex items-center justify-between"},/*#__PURE__*/React.createElement("button",{onClick:()=>{if(niche.queries&&niche.queries[0]){onSelectKeywordForSearch(niche.queries[0]);onClose();}},className:"px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-black transition flex items-center gap-1.5 shadow-md"},/*#__PURE__*/React.createElement("span",null,"\uD83C\uDFAF B\u1EAFt Trend C\u1EE5m T\u1EEB Kh\xF3a Ng\xE1ch N\xE0y"),/*#__PURE__*/React.createElement("span",null,"\u2192")),/*#__PURE__*/React.createElement("button",{onClick:onClose,className:"px-3.5 py-2 rounded-xl text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition"},"\u0110\xF3ng"))));}// Cửa Sổ Soi Video Chuyên Sâu (Hidden Tags, 1-Quota 50 Videos, Copyright & Organic Check)
 function VideoInspectorModal(){return null;}

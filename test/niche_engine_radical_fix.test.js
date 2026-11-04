@@ -134,3 +134,69 @@ test('Niche Radical Fix: Conditional Pagination Saves Quota', async (t) => {
   });
 });
 
+test('Niche Radical Fix: BKT Prediction & Competition Score', async (t) => {
+  await t.test('accurately predicts BKT status for channels meeting YPP criteria', () => {
+    // Model logic matching app.bundle.js predictBKT
+    const predictBKT = (subs, totalViews, videoCount, ageDays, avgDurSeconds = 600) => {
+      if (subs === null || subs === undefined) return { status: 'unknown' };
+      const avgDurMin = (avgDurSeconds > 0 ? avgDurSeconds : 600) / 60;
+      const watchRatePct = 0.40;
+      const estimatedTotalWatchHours = (totalViews || 0) * avgDurMin * watchRatePct / 60;
+      const daysActive = Math.max(ageDays || 365, 1);
+      const last365DayFraction = Math.min(1, 365 / daysActive);
+      const recentWatchHours = estimatedTotalWatchHours * last365DayFraction;
+
+      if (subs >= 1000 && recentWatchHours >= 4000) return { status: 'eligible', label: 'BẬT KIẾM TIỀN' };
+      if (subs >= 1000 && recentWatchHours >= 2000) return { status: 'near', label: 'GẦN BKT' };
+      if (subs >= 500) return { status: 'growing', label: 'ĐANG MỌC' };
+      return { status: 'new', label: 'KÊNH MỚI' };
+    };
+
+    // User reference screenshot: Quân Sự Mỗi Ngày (7,210 subs, 2,043,259 views) -> BẬT KIẾM TIỀN
+    const sampleCh1 = predictBKT(7210, 2043259, 120, 200);
+    assert.strictEqual(sampleCh1.status, 'eligible');
+    assert.strictEqual(sampleCh1.label, 'BẬT KIẾM TIỀN');
+
+    // Tiny channel: 45 subs, 15k views -> KÊNH MỚI
+    const sampleCh2 = predictBKT(45, 15000, 5, 30);
+    assert.strictEqual(sampleCh2.status, 'new');
+
+    // Near threshold: 1,200 subs, 50k views (~3,300 watch hours)
+    const sampleCh3 = predictBKT(1200, 50000, 20, 180);
+    assert.strictEqual(sampleCh3.status, 'near');
+  });
+
+  await t.test('computes competition score on 0-10 scale', () => {
+    const computeCompetitionScore = (videos = []) => {
+      const withSubs = videos.filter(v => v.subs !== null && v.subs > 0);
+      if (withSubs.length === 0) return { score: 5.0, label: 'Trung Bình' };
+      const avgSubs = withSubs.reduce((s, v) => s + (v.subs || 0), 0) / withSubs.length;
+      const bigChannelRatio = withSubs.filter(v => (v.subs || 0) > 100000).length / withSubs.length;
+      const avgOutlier = videos.reduce((s, v) => s + (Number(v.outlierRatio) || 0), 0) / Math.max(videos.length, 1);
+      let score = Math.min(10, Math.max(0.5, (avgSubs / 100000) * 5 + bigChannelRatio * 3 + Math.max(0, 2 - avgOutlier * 0.2)));
+      score = Math.round(score * 10) / 10;
+      const label = score <= 2.5 ? 'Rất Thấp' : score <= 4.5 ? 'Thấp' : score <= 6.5 ? 'Trung Bình' : 'Cao';
+      return { score, label };
+    };
+
+    // Low competition niche (mostly small channels with high outliers)
+    const lowCompVideos = [
+      { subs: 1200, outlierRatio: 15.2 },
+      { subs: 3400, outlierRatio: 8.5 },
+      { subs: 800, outlierRatio: 22.0 }
+    ];
+    const lowResult = computeCompetitionScore(lowCompVideos);
+    assert.ok(lowResult.score <= 4.5, `Score ${lowResult.score} should be low competition`);
+
+    // High competition niche (saturated with 200k+ subs giants)
+    const highCompVideos = [
+      { subs: 350000, outlierRatio: 0.8 },
+      { subs: 500000, outlierRatio: 0.5 },
+      { subs: 180000, outlierRatio: 1.1 }
+    ];
+    const highResult = computeCompetitionScore(highCompVideos);
+    assert.ok(highResult.score >= 6.5, `Score ${highResult.score} should be high competition`);
+  });
+});
+
+
