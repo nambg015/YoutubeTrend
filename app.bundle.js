@@ -4071,37 +4071,141 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
   let totalQuotaPointsSpent = 0;
   let totalUploadExpansionsDone = 0;
 
+  // ============================================================
+  // ALGORITHM RADAR v2: Multi-Category Keyword-Free Discovery
+  // Cost: ~30-50 quota units (vs 2200+ for keyword scan)
+  // Finds ANY viral small channel regardless of topic/SEO status
+  // ============================================================
+  const RADAR_CATEGORIES = {
+    US: [
+      { id: '27', name: 'Education' },
+      { id: '28', name: 'Science & Technology' },
+      { id: '25', name: 'News & Politics' },
+      { id: '22', name: 'People & Blogs' },
+      { id: '23', name: 'Comedy' },
+      { id: '19', name: 'Travel & Events' },
+      { id: '17', name: 'Sports' },
+      { id: '24', name: 'Entertainment' },
+      { id: '26', name: 'Howto & Style' },
+      { id: '15', name: 'Pets & Animals' },
+      { id: '2',  name: 'Autos & Vehicles' },
+      { id: '20', name: 'Gaming' },
+      { id: '1',  name: 'Film & Animation' },
+      { id: '29', name: 'Nonprofits & Activism' },
+    ],
+    VN: [
+      { id: '27', name: 'Giáo Dục' },
+      { id: '22', name: 'Blog & Cuộc Sống' },
+      { id: '25', name: 'Tin Tức & Thời Sự' },
+      { id: '24', name: 'Giải Trí' },
+      { id: '28', name: 'Khoa Học & Công Nghệ' },
+      { id: '19', name: 'Du Lịch & Khám Phá' },
+      { id: '17', name: 'Thể Thao' },
+      { id: '23', name: 'Hài Kịch' },
+      { id: '26', name: 'Mẹo & Phong Cách' },
+      { id: '2',  name: 'Xe & Phương Tiện' },
+      { id: '15', name: 'Thú Nuôi & Động Vật' },
+      { id: '1',  name: 'Phim & Hoạt Hình' },
+    ],
+    JP: [
+      { id: '27', name: '教育' }, { id: '28', name: '科学技術' },
+      { id: '22', name: 'ブログ' }, { id: '24', name: 'エンタメ' },
+      { id: '23', name: 'コメディ' }, { id: '19', name: '旅行' },
+      { id: '17', name: 'スポーツ' }, { id: '25', name: 'ニュース' },
+      { id: '26', name: 'ハウツー' }, { id: '2', name: '車' },
+    ],
+    KR: [
+      { id: '27', name: '교육' }, { id: '22', name: '블로그' },
+      { id: '24', name: '엔터테인먼트' }, { id: '28', name: '과학기술' },
+      { id: '23', name: '코미디' }, { id: '19', name: '여행' },
+      { id: '17', name: '스포츠' }, { id: '25', name: '뉴스' },
+    ],
+    GLOBAL: [
+      { id: '27', name: 'Education' }, { id: '28', name: 'Science & Technology' },
+      { id: '22', name: 'People & Blogs' }, { id: '25', name: 'News & Politics' },
+      { id: '23', name: 'Comedy' }, { id: '19', name: 'Travel & Events' },
+      { id: '24', name: 'Entertainment' }, { id: '17', name: 'Sports' },
+      { id: '26', name: 'Howto & Style' }, { id: '15', name: 'Pets & Animals' },
+      { id: '2',  name: 'Autos & Vehicles' }, { id: '1',  name: 'Film & Animation' },
+      { id: '20', name: 'Gaming' }, { id: '29', name: 'Nonprofits & Activism' },
+    ]
+  };
+
   try {
-    const popRegion = selectedMarket==='GLOBAL'?'US':selectedMarket;
-    const popRes = await yt('videos',{part:'snippet,statistics,contentDetails',chart:'mostPopular',regionCode:popRegion,maxResults:50},apiKey);
-    totalQuotaPointsSpent += 1;
-    const popItems = popRes.items||[];
+    const popRegion = selectedMarket==='GLOBAL'?'US':
+                      ['GB','CA','AU','IN'].includes(selectedMarket)?'US':selectedMarket;
+    const radarCategories = RADAR_CATEGORIES[selectedMarket] || RADAR_CATEGORIES.GLOBAL;
 
-    if(popItems.length > 0) {
-      const popChanIds = [...new Set(popItems.map(v=>v.snippet.channelId))];
-      const popChanRes = await yt('channels',{part:'statistics,snippet,contentDetails',id:popChanIds.join(',')},apiKey);
-      totalQuotaPointsSpent += 1;
-      const popChanMap = {};
-      (popChanRes.items||[]).forEach(ch => {
-        const subCount = ch.statistics.hiddenSubscriberCount ? null : Number(ch.statistics.subscriberCount);
-        popChanMap[ch.id] = {
-          id: ch.id,
-          name: ch.snippet.title,
-          subCount: subCount,
-          videoCount: Number(ch.statistics.videoCount||0),
-          country: ch.snippet.country||popRegion,
-          ageDays: Math.max(1, Math.round((Date.now()-new Date(ch.snippet.publishedAt).getTime())/864e5)),
-          uploadsId: ch.contentDetails?.relatedPlaylists?.uploads || ('UU' + ch.id.slice(2)),
-          thumb: ch.snippet.thumbnails?.default?.url||''
-        };
+    // Collect all items across categories with parallel fetches (batch 3 at a time)
+    const allRadarItems = [];
+    const categoryLabels = {}; // videoId -> categoryName for labeling later
+
+    setScanProgress({ current: 0, total: radarCategories.length, topic: '📡 Algorithm Radar đang quét...', foundVideos: 0, foundNiches: 0 });
+
+    for(let catBatch=0; catBatch<radarCategories.length; catBatch+=3){
+      const batch = radarCategories.slice(catBatch, catBatch+3);
+      const batchResults = await Promise.allSettled(batch.map(cat =>
+        yt('videos',{
+          part:'snippet,statistics,contentDetails',
+          chart:'mostPopular',
+          regionCode: popRegion,
+          videoCategoryId: cat.id,
+          maxResults: 50
+        }, apiKey)
+      ));
+      totalQuotaPointsSpent += batch.length; // 1 unit each
+
+      batchResults.forEach((res, bi) => {
+        if(res.status !== 'fulfilled') return;
+        const catName = batch[bi].name;
+        (res.value?.items || []).forEach(v => {
+          if(!categoryLabels[v.id]) categoryLabels[v.id] = catName;
+          allRadarItems.push({ ...v, _categoryName: catName });
+        });
       });
+    }
 
-      popItems.forEach(v => {
-        const ch = popChanMap[v.snippet.channelId];
+    // Deduplicate by video id
+    const seenVideoIds = new Set();
+    const uniqueRadarItems = allRadarItems.filter(v => {
+      if(seenVideoIds.has(v.id)) return false;
+      seenVideoIds.add(v.id);
+      return true;
+    });
+
+    if(uniqueRadarItems.length > 0) {
+      // Batch fetch channel stats for all unique channels
+      const radarChanIds = [...new Set(uniqueRadarItems.map(v=>v.snippet.channelId))];
+      const radarChanMap = {};
+
+      for(let b=0; b<radarChanIds.length; b+=50){
+        const chunk = radarChanIds.slice(b, b+50);
+        try {
+          const chRes = await yt('channels',{part:'statistics,snippet,contentDetails',id:chunk.join(',')},apiKey);
+          totalQuotaPointsSpent += 1;
+          (chRes.items||[]).forEach(ch => {
+            const subCount = ch.statistics.hiddenSubscriberCount ? null : Number(ch.statistics.subscriberCount);
+            radarChanMap[ch.id] = {
+              id: ch.id,
+              name: ch.snippet.title,
+              subCount: subCount,
+              videoCount: Number(ch.statistics.videoCount||0),
+              country: ch.snippet.country||popRegion,
+              ageDays: Math.max(1, Math.round((Date.now()-new Date(ch.snippet.publishedAt).getTime())/864e5)),
+              uploadsId: ch.contentDetails?.relatedPlaylists?.uploads || ('UU' + ch.id.slice(2)),
+              thumb: ch.snippet.thumbnails?.default?.url||''
+            };
+          });
+        } catch(e){ console.warn('Radar channels batch error:', e); }
+      }
+
+      // Filter for small breakout channels
+      uniqueRadarItems.forEach(v => {
+        const ch = radarChanMap[v.snippet.channelId];
         if(!ch) return;
-        if(subLimitFilter > 0 && ch.subCount !== null && ch.subCount > subLimitFilter) return;
 
-        const views = Number(v.statistics.viewCount||0);
+        // Sub filter with dynamic outlier exception
+        const views = Number(v.statistics?.viewCount||0);
         if(minViewsFilter > 0 && views < minViewsFilter) return;
 
         const pubTime = new Date(v.snippet.publishedAt).getTime();
@@ -4109,9 +4213,14 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
         if(pubTime < cutoffTimeMs || ageHours > tfHours) return;
 
         const outlierRatio = ch.subCount ? Number((views/Math.max(ch.subCount,100)).toFixed(1)) : Number((views/1000).toFixed(1));
+
+        // Dynamic outlier exception: allow up to 35k subs if ratio >= 4x
+        const isExceptionalOutlier = ch.subCount !== null && ch.subCount <= 35000 && outlierRatio >= 4.0 && views >= 20000;
+        if(subLimitFilter > 0 && ch.subCount !== null && ch.subCount > subLimitFilter && !isExceptionalOutlier) return;
+
         const vph = Math.round(views/Math.max(0.1,ageHours));
         const durSeconds = typeof parseDur==='function'?parseDur(v.contentDetails?.duration):1800;
-        const isLiveVid = v.snippet.liveBroadcastContent==='live'||v.snippet.liveBroadcastContent==='upcoming'||(v.snippet.title||'').toLowerCase().includes('#live')||(v.snippet.title||'').toLowerCase().includes('livestream');
+        const isLiveVid = v.snippet.liveBroadcastContent==='live'||v.snippet.liveBroadcastContent==='upcoming'||(v.snippet.title||'').toLowerCase().includes('#live');
         const isShortVid = !isLiveVid && (durSeconds<=60||(v.snippet.title||'').toLowerCase().includes('#shorts')||(v.snippet.title||'').toLowerCase().includes('#short'));
         const vFormat = isLiveVid ? 'live' : isShortVid ? 'short' : 'long';
 
@@ -4125,8 +4234,8 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
           published: v.snippet.publishedAt,
           ts: pubTime,
           views: views,
-          likes: v.statistics.likeCount!=null?Number(v.statistics.likeCount):null,
-          comments: v.statistics.commentCount!=null?Number(v.statistics.commentCount):null,
+          likes: v.statistics?.likeCount!=null?Number(v.statistics.likeCount):null,
+          comments: v.statistics?.commentCount!=null?Number(v.statistics.commentCount):null,
           dur: durSeconds,
           subs: ch.subCount,
           outlierRatio: outlierRatio,
@@ -4143,9 +4252,91 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
           licensedContent: !!v.contentDetails?.licensedContent,
           tags: v.snippet.tags||[],
           vph: vph,
-          discoverySource: 'popular_chart'
+          categoryName: v._categoryName || 'Unknown',
+          discoverySource: 'algorithm_radar'
         });
       });
+
+      // ================================================================
+      // TIER 2: Velocity Radar — UU playlist expansion for each small
+      // breakout channel found (1 quota each, finds non-SEO viral content)
+      // ================================================================
+      const radarSmallChannels = [...new Map(
+        chartBreakoutVideos
+          .filter(v => v.discoverySource==='algorithm_radar' && v.subs !== null && v.subs <= Math.max(subLimitFilter||10000, 15000))
+          .sort((a,b) => (Number(b.outlierRatio)||0)-(Number(a.outlierRatio)||0))
+          .map(v => [v.channelId, v])
+      ).values()].slice(0, 8); // Expand top 8 small channels
+
+      for(const radarCh of radarSmallChannels){
+        if(cancelScanRef?.current || quotaExhaustedStopped) break;
+        try {
+          const uploadsId = radarCh.uploadsId || ('UU' + radarCh.channelId.slice(2));
+          const plRes = await yt('playlistItems',{
+            part:'snippet,contentDetails',
+            playlistId: uploadsId,
+            maxResults: 30
+          }, apiKey);
+          totalQuotaPointsSpent += 1;
+          totalUploadExpansionsDone++;
+
+          const plVidIds = (plRes?.items||[]).map(it => it.contentDetails?.videoId || it.snippet?.resourceId?.videoId).filter(Boolean);
+          const unseenIds = plVidIds.filter(id => !chartBreakoutVideos.some(ev=>ev.id===id));
+          if(unseenIds.length === 0) continue;
+
+          const enrichRes = await yt('videos',{
+            part:'snippet,statistics,contentDetails',
+            id: unseenIds.slice(0,50).join(',')
+          }, apiKey);
+          totalQuotaPointsSpent += 1;
+
+          (enrichRes?.items||[]).forEach(ev => {
+            const evViews = Number(ev.statistics?.viewCount||0);
+            if(minViewsFilter > 0 && evViews < minViewsFilter) return;
+            const evPubTime = new Date(ev.snippet?.publishedAt).getTime();
+            const evAgeHours = (Date.now()-evPubTime)/36e5;
+            if(evPubTime < cutoffTimeMs || evAgeHours > tfHours) return;
+
+            const effectiveSubs = Math.max(radarCh.subs || 100, 100);
+            const evOutlier = Number((evViews/effectiveSubs).toFixed(1));
+            if(minOutlierFilter > 0 && evOutlier < minOutlierFilter) return;
+
+            const evVph = Math.round(evViews/Math.max(0.1,evAgeHours));
+            const evDur = typeof parseDur==='function'?parseDur(ev.contentDetails?.duration):1800;
+            const evIsLive = ev.snippet?.liveBroadcastContent==='live'||(ev.snippet?.title||'').toLowerCase().includes('#live');
+            const evIsShort = !evIsLive && (evDur<=60||(ev.snippet?.title||'').toLowerCase().includes('#shorts'));
+
+            chartBreakoutVideos.push({
+              id: ev.id,
+              title: ev.snippet.title,
+              channel: ev.snippet.channelTitle,
+              channelId: radarCh.channelId,
+              channelThumb: radarCh.channelThumb||'',
+              thumb: typeof getBestThumb==='function'?getBestThumb(ev.snippet.thumbnails):ev.snippet.thumbnails?.medium?.url||'',
+              published: ev.snippet.publishedAt,
+              ts: evPubTime,
+              views: evViews,
+              likes: ev.statistics?.likeCount!=null?Number(ev.statistics.likeCount):null,
+              comments: ev.statistics?.commentCount!=null?Number(ev.statistics.commentCount):null,
+              dur: evDur,
+              subs: radarCh.subs,
+              outlierRatio: evOutlier,
+              videoCount: radarCh.videoCount,
+              country: radarCh.country,
+              channelAgeDays: radarCh.channelAgeDays,
+              uploadsId: uploadsId,
+              isBreakout: evOutlier >= 3.0,
+              format: evIsLive ? 'live' : evIsShort ? 'short' : 'long',
+              isLive: evIsLive, isShort: evIsShort,
+              hasCaptions: ev.contentDetails?.caption==='true',
+              tags: ev.snippet.tags||[],
+              vph: evVph,
+              categoryName: radarCh.categoryName || 'Unknown',
+              discoverySource: 'velocity_radar'
+            });
+          });
+        } catch(velErr){ console.warn('Velocity radar error:', velErr); }
+      }
 
       // ENHANCED: Extract trending keywords from BOTH tags AND video titles
       const tagFreq = {};
@@ -4196,6 +4387,49 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
         if(uniqueTrendKeywords.length>=6) break; // Increased from 3 to 6 trending seeds
       }
       trendingKeywords = uniqueTrendKeywords;
+
+      // TIER 3: Neighborhood expansion — generate new seed queries from radar-found viral content
+      // This converts Algorithm Radar findings into keyword seeds for the main search loop
+      const radarViral = chartBreakoutVideos
+        .filter(v => (Number(v.outlierRatio)||0) >= 3.0 && (v.discoverySource==='algorithm_radar'||v.discoverySource==='velocity_radar'))
+        .slice(0, 10);
+
+      if(radarViral.length > 0){
+        const neighborhoodFreq = {};
+        radarViral.forEach(v => {
+          // Extract from tags (reliable intent signals)
+          (v.tags||[]).slice(0,10).forEach(tag => {
+            const clean = tag.trim().toLowerCase().replace(/[^a-z0-9\s]/g,' ').trim();
+            if(clean.length >= 4 && clean.length <= 30 && !/^\d+$/.test(clean)){
+              neighborhoodFreq[clean] = (neighborhoodFreq[clean]||0) + (Number(v.outlierRatio)||1);
+            }
+          });
+          // Extract 2-word phrases from title
+          const tw = (v.title||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>3);
+          for(let wi=0;wi<tw.length-1;wi++){
+            const ph=tw[wi]+' '+tw[wi+1];
+            if(ph.length>=6&&ph.length<=28) neighborhoodFreq[ph]=(neighborhoodFreq[ph]||0)+(Number(v.outlierRatio)||1)*0.5;
+          }
+        });
+
+        // Top neighborhood phrases become dynamic seeds (higher priority than static)
+        const neighborhoodSeeds = Object.entries(neighborhoodFreq)
+          .sort((a,b)=>b[1]-a[1])
+          .slice(0,5)
+          .map(([phrase], idx) => ({
+            id: 'neighborhood_'+phrase.replace(/\s+/g,'_').slice(0,25)+'_'+Date.now(),
+            label: '🕸️ '+(phrase.charAt(0).toUpperCase()+phrase.slice(1))+' (Radar → Search)',
+            q: '"'+phrase+'" -shorts',
+            rpm: selectedMarket==='VN'?'$8 - $20':'$22 - $45',
+            isNeighborhoodExpanded: true
+          }));
+
+        // Store neighborhood seeds to be injected into keyword search
+        try{
+          const nKey='yt_radar_neighborhood_seeds_'+selectedMarket;
+          localStorage.setItem(nKey, JSON.stringify({ seeds: neighborhoodSeeds, ts: Date.now() }));
+        }catch(e){}
+      }
     }
   } catch(popErr) {
     console.warn('Popular videos scan error:', popErr);
@@ -4227,7 +4461,21 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
       }
     } catch(e){}
 
-    const combinedPool = [...dynamicSnowballSeeds.slice(0, 4), ...basePool];
+    // Load neighborhood seeds from Algorithm Radar (Tier 3 bridge)
+    let neighborhoodRadarSeeds = [];
+    try {
+      const nKey = 'yt_radar_neighborhood_seeds_' + selectedMarket;
+      const nRaw = localStorage.getItem(nKey);
+      if(nRaw){
+        const nData = JSON.parse(nRaw);
+        // Only use if generated recently (within 2 hours)
+        if(nData && nData.ts && (Date.now()-nData.ts) < 7200000 && Array.isArray(nData.seeds)){
+          neighborhoodRadarSeeds = nData.seeds;
+        }
+      }
+    } catch(e){}
+
+    const combinedPool = [...neighborhoodRadarSeeds.slice(0,3), ...dynamicSnowballSeeds.slice(0, 4), ...basePool];
     const reqCount = batchSizeOverride || (scanBatchMode==='quick6'?6:scanBatchMode==='deepAll'||scanBatchMode==='deepPages'?combinedPool.length:12);
     let staticSeeds = [];
     if(reqCount < combinedPool.length){
@@ -4283,36 +4531,78 @@ const runDeepNicheDiscovery=React.useCallback(async (customQueryOverride, batchS
   const discoveredList = [];
   if(chartBreakoutVideos.length > 0){
     chartBreakoutVideos.sort((a,b)=>b.views-a.views);
-    const chartChannelsMap = {};
+
+    // Group by category for distinct niches per topic (not one big blob)
+    const categoryGroups = {};
     chartBreakoutVideos.forEach(v => {
-      if(!chartChannelsMap[v.channelId]){
-        chartChannelsMap[v.channelId] = {
-          id: v.channelId,
-          name: v.channel,
-          subs: v.subs,
-          url: 'https://www.youtube.com/channel/'+v.channelId,
-          videoCount: v.videoCount,
-          country: v.country
-        };
-      }
+      const cat = v.categoryName || 'Trending';
+      if(!categoryGroups[cat]) categoryGroups[cat] = [];
+      categoryGroups[cat].push(v);
     });
-    const maxViews = chartBreakoutVideos[0].views;
-    const maxOutlier = Math.max(...chartBreakoutVideos.map(v=>Number(v.outlierRatio)||0));
-    discoveredList.push({
-      id: 'niche_chart_trending_'+Date.now(),
-      name: `🔥 Kênh Nhỏ Lọt Top Thịnh Hành (${tfLabel} - ${todayStr})`,
-      category: 'Trending YouTube Outliers',
-      rpmRange: selectedMarket==='VN'?'$8 - $20':'$25 - $48',
-      avgRpm: selectedMarket==='VN'?14:35,
-      channelsCount: Object.keys(chartChannelsMap).length,
-      channels: Object.values(chartChannelsMap),
-      videos: chartBreakoutVideos,
-      topVideo: chartBreakoutVideos[0],
-      maxViews: maxViews,
-      maxOutlier: maxOutlier.toFixed(1),
-      scannedAt: Date.now(),
-      scannedDate: todayStr,
-      isTodayTrend: true
+
+    // Create one niche per category that has eligible small channels
+    Object.entries(categoryGroups).forEach(([catName, catVideos]) => {
+      const catChannelsMap = {};
+      catVideos.forEach(v => {
+        if(!catChannelsMap[v.channelId]){
+          catChannelsMap[v.channelId] = {
+            id: v.channelId,
+            name: v.channel,
+            subs: v.subs,
+            url: 'https://www.youtube.com/channel/'+v.channelId,
+            videoCount: v.videoCount,
+            country: v.country
+          };
+        }
+      });
+      if(Object.keys(catChannelsMap).length === 0) return;
+
+      const catMaxViews = catVideos[0].views;
+      const catMaxOutlier = Math.max(...catVideos.map(v=>Number(v.outlierRatio)||0));
+      const catEmoji = {
+        'Education':'📚','Giáo Dục':'📚','教育':'📚','교육':'📚',
+        'Science & Technology':'🔬','Khoa Học & Công Nghệ':'🔬','科学技術':'🔬',
+        'News & Politics':'📰','Tin Tức & Thời Sự':'📰','ニュース':'📰','뉴스':'📰',
+        'People & Blogs':'👤','Blog & Cuộc Sống':'👤','ブログ':'👤',
+        'Comedy':'😂','Hài Kịch':'😂','コメディ':'😂','코미디':'😂',
+        'Travel & Events':'✈️','Du Lịch & Khám Phá':'✈️','旅行':'✈️','여행':'✈️',
+        'Sports':'⚽','Thể Thao':'⚽','スポーツ':'⚽','스포츠':'⚽',
+        'Entertainment':'🎬','Giải Trí':'🎬','エンタメ':'🎬','엔터테인먼트':'🎬',
+        'Howto & Style':'💡','Mẹo & Phong Cách':'💡','ハウツー':'💡',
+        'Pets & Animals':'🐾','Thú Nuôi & Động Vật':'🐾',
+        'Autos & Vehicles':'🚗','Xe & Phương Tiện':'🚗','車':'🚗',
+        'Gaming':'🎮',
+        'Film & Animation':'🎥','Phim & Hoạt Hình':'🎥',
+        'Nonprofits & Activism':'🤝',
+      }[catName] || '🌐';
+
+      // Real-time update state
+      const catNiche = {
+        id: 'niche_radar_'+catName.replace(/[^a-zA-Z0-9]/g,'_')+'_'+Date.now(),
+        name: catEmoji+' '+catName+' — Kênh Nhỏ Bứt Phá ('+tfLabel+')',
+        category: '📡 Algorithm Radar: '+catName,
+        rpmRange: selectedMarket==='VN'?'$8 - $20':
+                  ['Science & Technology','Education','News & Politics'].includes(catName)?'$28 - $55':
+                  ['Howto & Style','Pets & Animals','Travel & Events'].includes(catName)?'$18 - $38':'$15 - $35',
+        avgRpm: 25,
+        channelsCount: Object.keys(catChannelsMap).length,
+        channels: Object.values(catChannelsMap),
+        videos: catVideos,
+        topVideo: catVideos[0],
+        maxViews: catMaxViews,
+        maxOutlier: catMaxOutlier.toFixed(1),
+        scannedAt: Date.now(),
+        scannedDate: todayStr,
+        isTodayTrend: true,
+        discoverySource: 'algorithm_radar'
+      };
+      discoveredList.push(catNiche);
+      setRealDiscoveredNiches(prev => {
+        const mKey = getMarketStorageKey(selectedMarket);
+        const updated = [catNiche, ...prev.filter(n=>n.id!==catNiche.id)];
+        try{ localStorage.setItem(mKey, JSON.stringify(updated)); }catch(e){}
+        return updated;
+      });
     });
   }
 
