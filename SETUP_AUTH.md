@@ -81,3 +81,8 @@ npm test
 ```
 Toàn bộ **87/87 test** đều pass 100%.
 
+
+## Quét ngách tự động hằng ngày (AI)
+GitHub repo → Settings → Secrets → Actions, thêm: `YT_API_KEYS` (nhiều key YouTube, cách nhau dấu phẩy) và `GEMINI_API_KEY`.
+Workflow `.github/workflows/daily-scan.yml` chạy 05:00 VN mỗi ngày, ghi `data/top_ngach.json`, Vercel tự deploy lại, tab Top Ngách tự hiển thị.
+Quota: mỗi ngách ≈ 104 units, mỗi key 10.000/ngày → 1.200 ngách cần ~13 key. Ít key hơn thì script tự giảm số ngách (ưu tiên ngách hôm qua có kết quả).
