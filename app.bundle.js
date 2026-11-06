@@ -3690,135 +3690,193 @@ const TN_SEEDS={
 EN:[['Aviation Disasters','plane crash cockpit recording'],['Police Interrogation','police interrogation footage'],['Dark Psychology','dark psychology manipulation'],['Ancient Civilizations','ancient civilization lost history'],['Deep Ocean','deep sea creatures discovery'],['Market Meltdowns','stock market crash explained'],['True Crime','true crime case documentary'],['Military Tech','military weapon technology explained'],['Space Mystery','space mystery nasa discovery'],['Prison Stories','prison inmate story'],['Billionaire Stories','billionaire story rags to riches'],['Cult & Conspiracy','cult documentary secrets'],['Survival','survival story wilderness rescue'],['Historical Wars','world war 2 untold story'],['Disasters','natural disaster caught on camera'],['Mega Projects','megaproject engineering documentary'],['Cold Cases','cold case solved'],['AI News','ai tool new revolution'],['Finance Tips','passive income side hustle'],['Health Myths','health doctor warning sleep'],['Animal Rescue','animal rescue incredible'],['Scams Exposed','scam exposed investigation'],['Luxury Real Estate','luxury mansion tour'],['Car Failures','car engine failure explained'],['Ship Wrecks','shipwreck titanic mystery'],['Medieval History','medieval history dark facts'],['Mythology','mythology gods explained'],['Cooking Hacks','easy recipe cheap dinner'],['Self Improvement','stoicism discipline motivation'],['Kids Stories','bedtime story for kids animated']],
 VN:[['Kể chuyện ma','truyện ma kinh dị'],['Tâm lý học','tâm lý học hành vi'],['Lịch sử Việt Nam','lịch sử việt nam bí ẩn'],['Vụ án','vụ án có thật'],['Kiếm tiền online','kiếm tiền online 2026'],['Đầu tư','đầu tư chứng khoán cho người mới'],['Sức khỏe','mẹo sức khỏe bác sĩ'],['Tin tức nóng','tin tức nóng hôm nay'],['Công nghệ AI','công cụ AI mới'],['Truyện cổ tích','truyện cổ tích đêm khuya'],['Nấu ăn','món ngon dễ làm'],['Bí ẩn thế giới','bí ẩn thế giới chưa có lời giải']]};
 const TN_L=['Thảm họa & Tai nạn','Vụ án có thật','Tâm lý học','Lịch sử bí ẩn','Kiếm tiền online','Sức khỏe','AI & Công nghệ','Bí ẩn chưa lời giải'];
-const TN_M={EN:['🇺🇸','Mỹ / Anh (EN)','US','en'],JP:['🇯🇵','Nhật Bản','JP','ja',['飛行機事故','未解決事件','心理学 人間関係','歴史 ミステリー','副業 稼ぐ','健康 医師','AI 最新','都市伝説']],KR:['🇰🇷','Hàn Quốc','KR','ko',['비행기 사고','미제 사건','심리학','역사 미스터리','부업 수익','건강 의사','AI 신기술','미스터리 실화']],DE:['🇩🇪','Đức','DE','de',['Flugzeugabsturz Doku','Kriminalfall ungelöst','Psychologie Manipulation','Geschichte Geheimnisse','online Geld verdienen','Gesundheit Arzt','KI neue Tools','Mysteriöse Fälle']],FR:['🇫🇷','Pháp','FR','fr',['crash avion','affaire criminelle','psychologie manipulation','histoire mystères','gagner argent internet','santé médecin','intelligence artificielle','mystères non résolus']],ES:['🇪🇸','Tây Ban Nha / Mỹ Latin','MX','es',['accidente aéreo','caso criminal real','psicología oscura','historia misterios','ganar dinero online','salud médico','inteligencia artificial nueva','misterios sin resolver']],BR:['🇧🇷','Brazil','BR','pt',['acidente aéreo','caso criminal real','psicologia sombria','história mistérios','ganhar dinheiro online','saúde médico','inteligência artificial nova','mistérios sem solução']],IN:['🇮🇳','Ấn Độ','IN','hi',['plane crash hindi','real crime story hindi','psychology facts hindi','history mystery hindi','paise kaise kamaye','health tips doctor hindi','AI tools hindi','mystery story hindi']],ID:['🇮🇩','Indonesia','ID','id',['kecelakaan pesawat','kasus kriminal nyata','psikologi gelap','sejarah misteri','cara cari uang online','kesehatan dokter','AI terbaru','misteri belum terpecahkan']],TH:['🇹🇭','Thái Lan','TH','th',['เครื่องบินตก','คดีฆาตกรรม','จิตวิทยา','ประวัติศาสตร์ ปริศนา','หาเงินออนไลน์','สุขภาพ หมอ','AI ใหม่','เรื่องลึกลับ']],RU:['🇷🇺','Nga','RU','ru',['авиакатастрофа','криминал реальный случай','психология манипуляции','история тайны','заработок онлайн','здоровье врач','нейросети новые','загадки без ответа']],VN:['🇻🇳','Việt Nam','VN','vi']};
-const TN_MIX=['JP','KR','DE','FR','ES','BR','IN','ID','TH','RU'];
-const tnSeeds=m=>{const sp=k=>k==='VN'||k==='EN'?TN_SEEDS[k].map(([n,q])=>[n,q,k]):TN_M[k][4].map((q,i)=>[TN_L[i],q,k]);
-  return m==='MIX'?['EN','VN',...TN_MIX].flatMap(sp):sp(m);};
+const TN_GL=['Gaming','Hài hước & Prank','Nấu ăn','Thú cưng','Thiếu nhi','DIY & Mẹo','Vlog & Du lịch','Thể thao'];
+const TN_GEN_EN=[['Gaming','gameplay funny moments'],['Roblox / Minecraft','roblox story'],['Hài hước & Prank','funny prank'],['Nấu ăn','easy recipe'],['Thú cưng','funny cats and dogs'],['Thiếu nhi','kids cartoon story'],['DIY & Mẹo','diy life hacks'],['Vlog & Du lịch','travel vlog'],['Thể thao','sports highlights'],['ASMR & Satisfying','satisfying asmr'],['Âm nhạc','song cover'],['Làm đẹp','makeup tutorial'],['Câu cá & Outdoor','fishing catch'],['Xe cộ','car restoration'],['Reaction','reaction video'],['Hoạt hình AI','ai animation story']];
+// [cờ, tên, regionCode, ngôn ngữ, 8 truy vấn ngách RPM (null = dùng bộ EN/VN), 8 truy vấn content phổ thông (null = bộ EN)]
+const TN_M={
+EN:['🇺🇸','Mỹ (EN)','US','en',null,null],
+GB:['🇬🇧','Anh (UK)','GB','en',null,null],
+CA:['🇨🇦','Canada','CA','en',null,null],
+AU:['🇦🇺','Úc','AU','en',null,null],
+CH:['🇨🇭','Thụy Sĩ','CH','de',['Flugzeugabsturz Doku','Kriminalfall ungelöst','Psychologie Manipulation','Geschichte Geheimnisse','online Geld verdienen','Gesundheit Arzt','KI neue Tools','Mysteriöse Fälle'],['Gaming lustige Momente','Prank Deutsch','einfaches Rezept','lustige Katzen Hunde','Kinder Zeichentrick','DIY Lifehacks','Reise Vlog','Fußball Highlights']],
+NO:['🇳🇴','Na Uy','NO','no',['flyulykke dokumentar','ekte krimsak','psykologi manipulasjon','historie mysterier','tjene penger på nett','helse lege','AI nye verktøy','uløste mysterier'],['gaming morsomme øyeblikk','prank norsk','enkel oppskrift','morsomme katter hunder','barne tegnefilm','DIY tips','reise vlogg','fotball høydepunkter']],
+DE:['🇩🇪','Đức','DE','de',['Flugzeugabsturz Doku','Kriminalfall ungelöst','Psychologie Manipulation','Geschichte Geheimnisse','online Geld verdienen','Gesundheit Arzt','KI neue Tools','Mysteriöse Fälle'],['Gaming lustige Momente','Prank Deutsch','einfaches Rezept','lustige Katzen Hunde','Kinder Zeichentrick','DIY Lifehacks','Reise Vlog','Fußball Highlights']],
+NL:['🇳🇱','Hà Lan','NL','nl',['vliegtuigcrash documentaire','misdaad waargebeurd','psychologie manipulatie','geschiedenis mysterie','online geld verdienen','gezondheid arts','AI nieuwe tools','onopgeloste mysteries'],['gaming grappige momenten','prank nederlands','makkelijk recept','grappige katten honden','tekenfilm kinderen','DIY tips','reis vlog','voetbal samenvatting']],
+SE:['🇸🇪','Thụy Điển','SE','sv',['flygolycka dokumentär','verkligt brottsfall','psykologi manipulation','historia mysterier','tjäna pengar online','hälsa läkare','AI nya verktyg','olösta mysterier'],['gaming roliga stunder','prank svenska','enkelt recept','roliga katter hundar','tecknat för barn','DIY tips','resevlogg','fotboll höjdpunkter']],
+JP:['🇯🇵','Nhật Bản','JP','ja',['飛行機事故','未解決事件','心理学 人間関係','歴史 ミステリー','副業 稼ぐ','健康 医師','AI 最新','都市伝説'],['ゲーム実況 面白い','ドッキリ','簡単レシピ','猫 犬 かわいい','子供向け アニメ','100均 DIY','旅行 vlog','スポーツ ハイライト']],
+KR:['🇰🇷','Hàn Quốc','KR','ko',['비행기 사고','미제 사건','심리학','역사 미스터리','부업 수익','건강 의사','AI 신기술','미스터리 실화'],['게임 웃긴 장면','몰래카메라','간단 레시피','고양이 강아지','어린이 만화','다이소 꿀팁','여행 브이로그','스포츠 하이라이트']],
+FR:['🇫🇷','Pháp','FR','fr',['crash avion','affaire criminelle','psychologie manipulation','histoire mystères','gagner argent internet','santé médecin','intelligence artificielle','mystères non résolus'],['gaming moments drôles','prank caméra cachée','recette facile','chats chiens drôles','dessin animé enfants','astuces DIY','vlog voyage','résumé match foot']],
+ES:['🇪🇸','Tây Ban Nha / Mỹ Latin','MX','es',['accidente aéreo','caso criminal real','psicología oscura','historia misterios','ganar dinero online','salud médico','inteligencia artificial nueva','misterios sin resolver'],['gameplay momentos graciosos','bromas pesadas','receta fácil','gatos perros graciosos','caricaturas para niños','manualidades fáciles','vlog de viaje','resumen partido fútbol']],
+BR:['🇧🇷','Brazil','BR','pt',['acidente aéreo','caso criminal real','psicologia sombria','história mistérios','ganhar dinheiro online','saúde médico','inteligência artificial nova','mistérios sem solução'],['gameplay momentos engraçados','pegadinha','receita fácil','gatos cachorros engraçados','desenho infantil','dicas faça você mesmo','vlog de viagem','melhores momentos futebol']],
+IN:['🇮🇳','Ấn Độ','IN','hi',['plane crash hindi','real crime story hindi','psychology facts hindi','history mystery hindi','paise kaise kamaye','health tips doctor hindi','AI tools hindi','mystery story hindi'],['gaming funny moments hindi','prank video hindi','recipe in hindi','funny animals hindi','cartoon for kids hindi','diy hacks hindi','travel vlog hindi','cricket highlights']],
+ID:['🇮🇩','Indonesia','ID','id',['kecelakaan pesawat','kasus kriminal nyata','psikologi gelap','sejarah misteri','cara cari uang online','kesehatan dokter','AI terbaru','misteri belum terpecahkan'],['game lucu momen','prank lucu','resep mudah','kucing lucu','kartun anak','tips diy','vlog jalan jalan','highlight sepak bola']],
+TH:['🇹🇭','Thái Lan','TH','th',['เครื่องบินตก','คดีฆาตกรรม','จิตวิทยา','ประวัติศาสตร์ ปริศนา','หาเงินออนไลน์','สุขภาพ หมอ','AI ใหม่','เรื่องลึกลับ'],['เกม ฮาๆ','แกล้ง ฮา','สูตรอาหาร ง่ายๆ','แมว ตลก','การ์ตูน เด็ก','DIY ทำเอง','เที่ยว vlog','ไฮไลท์ ฟุตบอล']],
+RU:['🇷🇺','Nga','RU','ru',['авиакатастрофа','криминал реальный случай','психология манипуляции','история тайны','заработок онлайн','здоровье врач','нейросети новые','загадки без ответа'],['смешные моменты игры','пранк','простой рецепт','смешные коты','мультики для детей','лайфхаки своими руками','влог путешествие','лучшие моменты футбол']],
+VN:['🇻🇳','Việt Nam','VN','vi',null,['game hài hước','troll vui nhộn','món ngon mỗi ngày','chó mèo hài hước','phim hoạt hình thiếu nhi','mẹo vặt cuộc sống','vlog du lịch','highlight bóng đá']]};
+// Quốc gia RPM cao (Tier 1 + Tây Âu/Bắc Âu + Nhật/Hàn) — dùng cho chế độ "Ngách RPM cao"
+const TN_RPM=['EN','GB','CA','AU','CH','NO','DE','NL','SE','JP','KR','FR'];
+const TN_ALL=Object.keys(TN_M);
+const TN_MIX=TN_ALL.filter(k=>k!=='EN'&&k!=='VN');// giữ tên cũ cho tương thích
+const TN_CAP=20000;// chỉ lưu kênh ≤ 20k sub (mức lọc cao nhất)
+const TN_FLAG=Object.fromEntries(Object.entries(TN_M).map(([k,m])=>[m[0],k]));
+const tnMk=v=>v.mk||TN_FLAG[String(v.niche||'').split(' ')[0]]||'EN';
+const tnInMarket=(mk,market)=>market==='ALL'?true:market==='RPM'?TN_RPM.includes(mk):mk===market;
+const tnRpmSeeds=k=>{const M=TN_M[k];if(M[4])return M[4].map((q,i)=>[TN_L[i],q]);return(k==='VN'?TN_SEEDS.VN:TN_SEEDS.EN);};
+const tnGenSeeds=k=>{const M=TN_M[k];if(M[5])return M[5].map((q,i)=>[TN_GL[i],q]);return TN_GEN_EN;};
+// RPM → chỉ ngách RPM của nước RPM cao • ALL → mọi nước, mọi loại content • 1 nước → mọi loại content của nước đó
+const tnSeeds=m=>{const ks=m==='RPM'?TN_RPM:m==='ALL'?TN_ALL:[m];
+  return ks.flatMap(k=>(m==='RPM'?tnRpmSeeds(k):[...tnRpmSeeds(k),...tnGenSeeds(k)]).map(([n,q])=>[n,q,k]));};
+const TN_CAT_RPM=['','25','28','24','27'],TN_CAT_ALL=['','20','23','24','22','17','26','25','10'];
 const TN_STOP=new Set('the and with this that from what how you your for are was were have has had not but all can will just they them their his her its our out who why when where which about into over than then more most new video videos official full live part episode shorts trailer song music lyrics hd 4k de la le les el los las en un una que por para con del und der die das ein mit von como não uma dos das'.split(' '));
 function tnPhrases(titles,lang){// cụm 2-3 từ lặp lại nhiều nhất = chủ đề đang nổ
   const df=new Map(),seg=(()=>{try{return new Intl.Segmenter(lang,{granularity:'word'});}catch(e){return null;}})();
   titles.forEach(t=>{const tx=t.toLowerCase().replace(/#\S+/g,' '),w=(seg?[...seg.segment(tx)].filter(x=>x.isWordLike).map(x=>x.segment):tx.match(/[\p{L}\p{N}]+/gu)||[]).filter(x=>!/^\d+$/.test(x)),cjk=/[\u3040-\u30ff\u4e00-\u9fff\uac00-\ud7af\u0e00-\u0e7f]/.test(t),seen=new Set();
     for(let n=2;n<=3;n++)for(let i=0;i+n<=w.length;i++){const g=w.slice(i,i+n);if(TN_STOP.has(g[0])||TN_STOP.has(g[n-1])||(!cjk&&g.some(x=>x.length<2)))continue;const k=g.join(cjk?'':' ');if(!seen.has(k)){seen.add(k);df.set(k,(df.get(k)||0)+1);}}});
   const out=[];for(const[k,c]of[...df].filter(([,c])=>c>=2).sort((a,b)=>b[1]*b[0].length-a[1]*a[0].length)){if(out.some(o=>o.k.includes(k)&&o.c>=c))continue;out.push({k,c});if(out.length>=8)break;}return out.map(o=>o.k);}
-async function tnTrend(k,key){const M=TN_M[k];let t=[],q=0;for(const c of['','25','28','24','27']){try{const r=await yt('videos',{part:'snippet',chart:'mostPopular',regionCode:M[2],maxResults:50,videoCategoryId:c},key);q++;(r.items||[]).forEach(v=>t.push(v.snippet.title));}catch(e){}}return{p:tnPhrases(t,M[3]),q};}
+async function tnTrend(k,key,cats){const M=TN_M[k];let t=[],q=0;for(const c of(cats||TN_CAT_RPM)){try{const r=await yt('videos',{part:'snippet',chart:'mostPopular',regionCode:M[2],maxResults:50,videoCategoryId:c},key);q++;(r.items||[]).forEach(v=>t.push(v.snippet.title));}catch(e){}}return{p:tnPhrases(t,M[3]),q};}
 const tnIso=s=>{const m=/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(s||'')||[];return(+m[1]||0)*3600+(+m[2]||0)*60+(+m[3]||0);};
 const tnN=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(n>=1e4?0:1)+'K':String(n);
 const tnAge=h=>h<24?Math.round(h)+'h':Math.round(h/24)+'d';
 const tnChunk=(a,n)=>{const r=[];for(let i=0;i<a.length;i+=n)r.push(a.slice(i,i+n));return r;};
-async function tnEnrich(ids,key,niche,mk){// videos + channels → pool items (subs<=100k)
+async function tnEnrich(ids,key,niche,mk){// videos + channels → pool items (subs<=TN_CAP, view > sub)
   const out=[];let q=0;
   for(const c of tnChunk([...new Set(ids)],50)){
     const vr=await yt('videos',{part:'snippet,statistics,contentDetails',id:c.join(',')},key);q++;
     const vs=(vr.items||[]).filter(v=>v.snippet&&v.snippet.liveBroadcastContent!=='live');
     const chIds=[...new Set(vs.map(v=>v.snippet.channelId))];const subs={};
     for(const cc of tnChunk(chIds,50)){const cr=await yt('channels',{part:'statistics',id:cc.join(',')},key);q++;(cr.items||[]).forEach(x=>{subs[x.id]=x.statistics.hiddenSubscriberCount?null:+x.statistics.subscriberCount;});}
-    vs.forEach(v=>{const s=subs[v.snippet.channelId];if(s==null||s>1e5)return;const views=+v.statistics.viewCount||0;if(views<1000)return;const t=Date.parse(v.snippet.publishedAt);
+    vs.forEach(v=>{const s=subs[v.snippet.channelId];if(s==null||s>TN_CAP)return;const views=+v.statistics.viewCount||0;if(views<500||views<s)return;const t=Date.parse(v.snippet.publishedAt);
       out.push({id:v.id,title:v.snippet.title,channel:v.snippet.channelTitle,channelId:v.snippet.channelId,thumb:'https://i.ytimg.com/vi/'+v.id+'/mqdefault.jpg',published:v.snippet.publishedAt,t,views,subs:s,dur:tnIso(v.contentDetails.duration),niche:niche(v),mk});});
   }
   return{out,q};
 }
+// Xếp "ưu tiên kênh nhỏ": cứ 5 vị trí thì 4 dành cho kênh sub nhỏ nhất (chia nấc, trong nấc xếp theo view), 1 dành cho video view nổ nhất
+function tnSmallFirst(arr,cap){const step=Math.max(100,cap/10),small=[...arr].sort((a,b)=>Math.floor(a.subs/step)-Math.floor(b.subs/step)||b.views-a.views),big=[...arr].sort((a,b)=>b.views-a.views),used=new Set(),out=[];let i=0,j=0;
+  while(out.length<arr.length){for(let s=0;s<4&&i<small.length;i++){const v=small[i];if(!used.has(v.id)){used.add(v.id);out.push(v);s++;}}
+    for(;j<big.length;j++){const v=big[j];if(!used.has(v.id)){used.add(v.id);out.push(v);j++;break;}}
+    if(i>=small.length&&j>=big.length)break;}
+  return out;}
 function TopNgachSection({apiKey,onSelectKeywordForSearch,onAddCompetitor,onToggleSave,isSaved,showToast,onOpenApiModal,isPro=false,onUpgradePrompt}){
   const h=React.createElement,ls=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d;}catch(e){return d;}};
-  const[f,setF]=useState(()=>ls('yt_tn8_filters',{market:'MIX',hours:168,maxSub:5000,minView:5000,minOut:20,type:'all',n:8}));
+  const DEF={market:'RPM',hours:168,maxSub:5000,minView:1000,minOut:2,type:'all',n:12,sort:'smart'};
+  const[f,setF]=useState(()=>{const s={...DEF,...ls('yt_tn9_filters',{})};if(s.market==='MIX')s.market='ALL';if(s.market!=='RPM'&&s.market!=='ALL'&&!TN_M[s.market])s.market='RPM';if(s.maxSub!==5000&&s.maxSub!==20000)s.maxSub=s.maxSub>5000?20000:5000;return s;});
   const[pool,setPool]=useState(()=>{const c=ls('yt_tn7_pool',null);return c&&c.items?c:{items:[],q:0,at:0};});
   const[show,setShow]=useState('');const[busy,setBusy]=useState('');const[kw,setKw]=useState('');const[active,setActive]=useState('');const[err,setErr]=useState('');
+  const[lim,setLim]=useState(60);
   const[daily,setDaily]=useState(null);
   useEffect(()=>{fetch('/data/top_ngach.json?d='+new Date().toISOString().slice(0,13)).then(r=>r.ok?r.json():null).then(j=>j&&j.items&&setDaily(j)).catch(()=>{});},[]);
-  const set=(k,v)=>setF(p=>{const n={...p,[k]:v};try{localStorage.setItem('yt_tn8_filters',JSON.stringify(n));}catch(e){}return n;});
+  const set=(k,v)=>setF(p=>{const n={...p,[k]:v};try{localStorage.setItem('yt_tn9_filters',JSON.stringify(n));}catch(e){}return n;});
+  useEffect(()=>{setLim(60);},[f,show,active]);
+  useEffect(()=>{setShow('');setActive('');},[f.market]);
   const now=Date.now();
   const src=useMemo(()=>{const m=new Map();((daily&&daily.items)||[]).forEach(v=>m.set(v.id,v));pool.items.forEach(v=>m.set(v.id,v));return[...m.values()];},[pool,daily]);
-  const all=useMemo(()=>src.map(v=>{const hrs=Math.max(1,(now-v.t)/36e5);return{...v,thumb:v.thumb||'https://i.ytimg.com/vi/'+v.id+'/mqdefault.jpg',hrs,vph:Math.round(v.views/hrs),out:v.views/Math.max(v.subs,1),format:v.dur<=60?'short':'long'};})
-    .filter(v=>v.subs<=f.maxSub&&v.views>=f.minView&&v.out>=f.minOut&&v.hrs<=f.hours&&(f.type==='all'||v.format===f.type)).sort((a,b)=>b.out-a.out),[src,f]);
-  const mkc=useMemo(()=>{const m={};all.forEach(v=>{if(v.mk)m[v.mk]=(m[v.mk]||0)+1;});return m;},[all]);
+  const all=useMemo(()=>{const a=src.map(v=>{const t=v.t||Date.parse(v.published),hrs=Math.max(1,(now-t)/36e5),mk=tnMk(v);return{...v,t,mk,published:v.published||new Date(t).toISOString(),thumb:v.thumb||'https://i.ytimg.com/vi/'+v.id+'/mqdefault.jpg',hrs,vph:Math.round(v.views/hrs),out:v.views/Math.max(v.subs,1),format:v.dur<=60?'short':'long'};})
+    .filter(v=>v.subs<=f.maxSub&&v.views>=f.minView&&v.out>=f.minOut&&v.hrs<=f.hours&&(f.type==='all'||v.format===f.type)&&tnInMarket(v.mk,f.market));
+    if(f.sort==='views')return a.sort((x,y)=>y.views-x.views);if(f.sort==='out')return a.sort((x,y)=>y.out-x.out);if(f.sort==='vph')return a.sort((x,y)=>y.vph-x.vph);if(f.sort==='new')return a.sort((x,y)=>y.t-x.t);
+    return tnSmallFirst(a,f.maxSub);},[src,f]);
+  const mkc=useMemo(()=>{const m={};all.forEach(v=>{m[v.mk]=(m[v.mk]||0)+1;});return m;},[all]);
   const vids=useMemo(()=>show?all.filter(v=>v.mk===show):all,[all,show]);
+  const chCount=useMemo(()=>new Set(vids.map(v=>v.channelId)).size,[vids]);
   const niches=useMemo(()=>{const m={};vids.forEach(v=>{const n=m[v.niche]=m[v.niche]||{name:v.niche,vids:[],ch:new Set(),max:0,top:0};n.vids.push(v);n.ch.add(v.channelId);n.max=Math.max(n.max,v.views);n.top=Math.max(n.top,v.out);});
     return Object.values(m).sort((a,b)=>(b.ch.size*Math.log10(1+b.top))-(a.ch.size*Math.log10(1+a.top)));},[vids]);
-  const shown=(active?vids.filter(v=>v.niche===active):vids);const list=isPro?shown:shown.slice(0,6);
-  const save=p=>{setPool(p);try{localStorage.setItem('yt_tn7_pool',JSON.stringify(p));}catch(e){}};
+  const nicheNames=useMemo(()=>new Set(niches.map(n=>n.name)),[niches]);
+  const insights=((daily&&daily.insights)||[]).filter(x=>nicheNames.has(x.niche));
+  const shown=(active?vids.filter(v=>v.niche===active):vids);const list=isPro?shown.slice(0,lim):shown.slice(0,6);
+  const save=p=>{setPool(p);try{localStorage.setItem('yt_tn7_pool',JSON.stringify(p));}catch(e){try{localStorage.setItem('yt_tn7_pool',JSON.stringify({...p,items:p.items.slice(0,2500)}));}catch(e2){}}};
   const scan=async(custom)=>{
     if(!apiKey&&!ytKeyManager.getActiveKey()){onOpenApiModal&&onOpenApiModal();return;}
     setErr('');let items=[],q=0,seen=new Set();
-    const mk=f.market==='MIX'?'EN':f.market;
+    const mk=f.market==='RPM'||f.market==='ALL'?'EN':f.market;
     let seeds;
     if(custom)seeds=custom.split(',').map(s=>s.trim()).filter(Boolean).map(s=>[s,s,mk]);
-    else{setBusy('🔎 Đang dò chủ đề đang trend hôm nay...');const ks=f.market==='MIX'?['EN','VN',...TN_MIX].sort(()=>Math.random()-.5).slice(0,5):[f.market];let tr=[];
-      for(const k of ks){const r=await tnTrend(k,apiKey);q+=r.q;tr.push(...r.p.map(p=>[p+' (Trend)',p,k]));}
-      tr=tr.sort(()=>Math.random()-.5).slice(0,Math.ceil(f.n*.6));seeds=[...tr,...tnSeeds(f.market).sort(()=>Math.random()-.5).slice(0,Math.max(2,f.n-tr.length))];}
+    else{setBusy('🔎 Đang dò chủ đề đang trend hôm nay...');
+      const base=f.market==='RPM'?TN_RPM:f.market==='ALL'?TN_ALL:[f.market],ks=[...base].sort(()=>Math.random()-.5).slice(0,f.market==='ALL'?6:5),cats=f.market==='RPM'?TN_CAT_RPM:TN_CAT_ALL;let tr=[];
+      for(const k of ks){try{const r=await tnTrend(k,apiKey,cats);q+=r.q;tr.push(...r.p.map(p=>[p+' (Trend)',p,k]));}catch(e){}}
+      tr=tr.sort(()=>Math.random()-.5).slice(0,Math.ceil(f.n*.5));
+      const pickSeeds=tnSeeds(f.market).sort(()=>Math.random()-.5),usedQ=new Set(),rest=[];for(const s of pickSeeds){const key=s[1].toLowerCase()+'|'+TN_M[s[2]][2];if(usedQ.has(key))continue;usedQ.add(key);rest.push(s);if(rest.length>=Math.max(2,f.n-tr.length))break;}
+      seeds=[...tr,...rest];}
     const after=new Date(now-f.hours*36e5).toISOString();
     try{
       let done=0;
       for(const grp of tnChunk(seeds,3)){
         await Promise.all(grp.map(async([nm,query,k])=>{const M=TN_M[k],name=M[0]+' '+nm;
-          const sr=await yt('search',{part:'snippet',type:'video',order:'viewCount',maxResults:50,q:query,publishedAfter:after,relevanceLanguage:M[3],regionCode:M[2]},apiKey);q+=100;
+          try{const sr=await yt('search',{part:'snippet',type:'video',order:'viewCount',maxResults:50,q:query,publishedAfter:after,relevanceLanguage:M[3],regionCode:M[2]},apiKey);q+=100;
           const ids=(sr.items||[]).map(i=>i.id.videoId).filter(id=>id&&!seen.has(id));ids.forEach(id=>seen.add(id));
-          const r=await tnEnrich(ids,apiKey,()=>name,k);q+=r.q;items.push(...r.out);
+          const r=await tnEnrich(ids,apiKey,()=>name,k);q+=r.q;items.push(...r.out);}catch(e){if(e&&e.code==='quotaExceeded')throw e;}
         }));
-        setBusy('Đã quét '+(done+=grp.length)+'/'+seeds.length+' ngách • '+items.length+' video nhỏ');
+        setBusy('Đã quét '+(done+=grp.length)+'/'+seeds.length+' ngách • '+items.length+' video kênh nhỏ');
       }
-      // Nhân kênh: lấy video mới của kênh sub thấp đã có hit (1 quota/kênh)
-      const hot=[...new Map(items.filter(v=>v.subs<=f.maxSub&&v.views/Math.max(v.subs,1)>=f.minOut).map(v=>[v.channelId,v])).values()].slice(0,25);
-      setBusy('Nhân '+hot.length+' kênh tiềm năng...');
-      for(const grp of tnChunk(hot,5)){
+      // Nhân kênh: lấy thêm video mới của mọi kênh nhỏ đã có hit (~3 quota/kênh) → ra nhiều content + kênh hơn hẳn
+      const hot=[...new Map(items.filter(v=>v.subs<=f.maxSub).sort((a,b)=>b.views/Math.max(b.subs,1)-a.views/Math.max(a.subs,1)).map(v=>[v.channelId,v])).values()].slice(0,80);
+      for(const grp of tnChunk(hot,8)){
+        setBusy('Nhân kênh nhỏ: '+hot.indexOf(grp[0])+'/'+hot.length+' • '+items.length+' video');
         await Promise.all(grp.map(async v=>{try{
-          const pl=await yt('playlistItems',{part:'contentDetails',playlistId:'UU'+v.channelId.slice(2),maxResults:15},apiKey);q++;
+          const pl=await yt('playlistItems',{part:'contentDetails',playlistId:'UU'+v.channelId.slice(2),maxResults:30},apiKey);q++;
           const ids=(pl.items||[]).map(i=>i.contentDetails.videoId).filter(id=>!seen.has(id));ids.forEach(id=>seen.add(id));
           const r=await tnEnrich(ids,apiKey,()=>v.niche,v.mk);q+=r.q;items.push(...r.out.filter(x=>x.t>=now-f.hours*36e5));}catch(e){}}));
       }
-      const keep=pool.items.filter(o=>!seen.has(o.id)&&o.t>=now-30*864e5),merged=[...items,...keep].sort((a,b)=>b.views/Math.max(b.subs,1)-a.views/Math.max(a.subs,1)).slice(0,3000);
+      const keep=pool.items.filter(o=>!seen.has(o.id)&&o.t>=now-30*864e5),merged=[...items,...keep].sort((a,b)=>b.views/Math.max(b.subs,1)-a.views/Math.max(a.subs,1)).slice(0,5000);
       save({items:merged,q:(pool.q||0)+q,at:now});
-      showToast&&showToast('Quét xong: '+items.length+' video nhỏ nổ view • ~'+q+' quota');
+      showToast&&showToast('Quét xong: '+items.length+' video kênh nhỏ • '+new Set(items.map(v=>v.channelId)).size+' kênh • ~'+q+' quota');
     }catch(e){setErr(e.msg||e.message||'Lỗi quét');}
     setBusy('');
   };
-  const csv=()=>{const rows=[['Tiêu đề','Kênh','Sub','View','Outlier','View/giờ','Tuổi','Ngách','Link']].concat(vids.map(v=>[v.title,v.channel,v.subs,v.views,v.out.toFixed(1),v.vph,tnAge(v.hrs),v.niche,'https://youtu.be/'+v.id]));
+  const csv=()=>{const rows=[['Tiêu đề','Kênh','Sub','View','Outlier','View/giờ','Tuổi','Quốc gia','Ngách','Link','Link kênh']].concat(shown.map(v=>[v.title,v.channel,v.subs,v.views,v.out.toFixed(1),v.vph,tnAge(v.hrs),TN_M[v.mk]?TN_M[v.mk][1]:v.mk,v.niche,'https://youtu.be/'+v.id,'https://www.youtube.com/channel/'+v.channelId]));
     const b=new Blob(['﻿'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='top-ngach-'+Date.now()+'.csv';a.click();};
   const sel=(k,opts)=>h('select',{value:f[k],onChange:e=>set(k,isNaN(+e.target.value)||e.target.value===''?e.target.value:+e.target.value),className:'bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-[11px] text-zinc-200 cursor-pointer'},opts.map(([v,l])=>h('option',{key:v,value:v},l)));
   const chip='px-2.5 py-1 rounded-lg text-[11px] border transition cursor-pointer ';
+  const mkOpt=k=>[k,TN_M[k][0]+' '+TN_M[k][1]+(TN_RPM.includes(k)?' 💰':'')];
   return h('section',{className:'space-y-3 animate-in fade-in duration-200'},
     h('div',{className:'bg-[#121316] border border-zinc-800 rounded-xl p-3 space-y-2'},
       h('div',{className:'flex flex-wrap items-center gap-2'},
         h('h2',{className:'w-full text-sm font-bold text-white'},'🔥 Top Ngách ',h('span',{className:'text-zinc-500 font-normal text-xs'},'video nổ view • kênh sub thấp')),
-        sel('market',[['MIX','🌍 Toàn cầu (tất cả nước)']].concat(Object.entries(TN_M).map(([k,m])=>[k,m[0]+' '+m[1]]))),
+        sel('market',[['RPM','💰 Ngách RPM cao (US, UK, CA, AU, CH, NO, DE, NL, SE, JP, KR, FR)'],['ALL','🌍 Toàn bộ quốc gia — tất cả content']].concat(TN_RPM.map(mkOpt),TN_ALL.filter(k=>!TN_RPM.includes(k)).map(mkOpt))),
+        sel('maxSub',[[5000,'Dưới 5k sub (ưu tiên 80% kênh nhỏ xếp trên cùng)'],[20000,'Dưới 20k sub (ưu tiên 80% kênh nhỏ xếp trên cùng)']]),
         sel('hours',[[24,'24h qua'],[72,'3 ngày'],[168,'7 ngày'],[720,'30 ngày']]),
-        sel('maxSub',[[1000,'< 1k sub'],[5000,'< 5k sub'],[10000,'< 10k sub'],[50000,'< 50k sub'],[100000,'< 100k sub']]),
-        sel('minView',[[1000,'> 1k view'],[5000,'> 5k view'],[20000,'> 20k view'],[100000,'> 100k view']]),
-        sel('minOut',[[5,'≥ 5× outlier'],[20,'≥ 20×'],[50,'≥ 50×'],[100,'≥ 100×']]),
+        sel('minView',[[0,'Mọi mức view'],[1000,'> 1k view'],[5000,'> 5k view'],[20000,'> 20k view'],[100000,'> 100k view'],[1000000,'> 1M view']]),
+        sel('minOut',[[1,'View ≥ Sub'],[2,'≥ 2× outlier'],[5,'≥ 5×'],[20,'≥ 20×'],[50,'≥ 50×'],[100,'≥ 100×']]),
         sel('type',[['all','Mọi định dạng'],['long','Video dài'],['short','Shorts']]),
-        sel('n',[[5,'5 ngách (~0.6k quota)'],[8,'8 ngách (~1k quota)'],[12,'12 ngách (~1.4k quota)'],[20,'20 ngách (~2.3k quota)'],[40,'40 ngách (~4.5k quota)']])),
+        sel('sort',[['smart','Xếp: ưu tiên kênh nhỏ'],['views','Xếp: view cao nhất'],['out','Xếp: outlier cao nhất'],['vph','Xếp: view/giờ'],['new','Xếp: mới nhất']]),
+        sel('n',[[5,'5 ngách (~0.8k quota)'],[8,'8 ngách (~1.2k quota)'],[12,'12 ngách (~1.7k quota)'],[20,'20 ngách (~2.6k quota)'],[40,'40 ngách (~4.8k quota)'],[60,'60 ngách (~7k quota)']])),
       h('div',{className:'flex flex-wrap gap-2'},
         h('input',{value:kw,onChange:e=>setKw(e.target.value),onKeyDown:e=>e.key==='Enter'&&kw.trim()&&!busy&&scan(kw),placeholder:'Tự nhập từ khóa (cách nhau bằng dấu phẩy) rồi Enter...',className:'flex-1 min-w-[220px] bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-zinc-100'}),
         h('button',{disabled:!!busy||!kw.trim(),onClick:()=>scan(kw),className:'px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 text-zinc-950 disabled:opacity-40 cursor-pointer'},'Quét từ khóa'),
         h('button',{disabled:!!busy,onClick:()=>scan(),className:'px-3 py-1.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-500 text-white disabled:opacity-40 cursor-pointer'},busy?'⏳ Đang quét...':'🚀 Quét trend + ngách'),
         h('button',{onClick:()=>{save({items:[],q:0,at:0});setActive('');},className:'px-3 py-1.5 rounded-lg text-xs bg-zinc-800 text-zinc-300 cursor-pointer'},'Xóa kết quả'),
-        vids.length>0&&h('button',{onClick:csv,className:'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 cursor-pointer'},'📥 CSV')),
+        shown.length>0&&h('button',{onClick:csv,className:'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 cursor-pointer'},'📥 CSV ('+shown.length+')')),
       h('div',{className:'text-[11px] text-zinc-500 flex flex-wrap gap-x-4'},
-        busy?h('span',{className:'text-amber-300'},busy):h('span',null,daily?'🤖 AI quét tự động: '+daily.scanned+' ngách ('+new Date(daily.updated).toLocaleString('vi-VN')+') • ':'',pool.at?'Cập nhật '+new Date(pool.at).toLocaleTimeString('vi-VN')+' • đã dùng ~'+pool.q+' quota hôm nay':'Chưa quét. Bấm "Quét ngách ngẫu nhiên" để bắt đầu (kết quả lưu cả ngày, đổi bộ lọc không tốn quota).'),
-        h('span',null,'Chỉ lấy kênh ẩn sub → loại. Outlier = view ÷ sub.')),
+        busy?h('span',{className:'text-amber-300'},busy):h('span',null,daily?'🤖 AI quét tự động: '+daily.scanned+' ngách ('+new Date(daily.updated).toLocaleString('vi-VN')+') • ':'',pool.at?'Bạn quét lúc '+new Date(pool.at).toLocaleTimeString('vi-VN')+' • đã dùng ~'+pool.q+' quota':'Chưa quét. Bấm "Quét trend + ngách" để lấy thêm (kết quả lưu lại, đổi bộ lọc không tốn quota).'),
+        h('span',{className:'text-zinc-300'},'Đang hiện '+vids.length.toLocaleString('vi-VN')+' video • '+chCount.toLocaleString('vi-VN')+' kênh • '+niches.length+' ngách'),
+        h('span',null,f.market==='RPM'?'Chế độ RPM: chỉ ngách của nước RPM cao.':f.market==='ALL'?'Chế độ Toàn bộ: mọi nước, mọi content, không xét RPM.':'','Outlier = view ÷ sub.')),
       err&&h('div',{className:'text-xs text-rose-300 bg-rose-950/40 border border-rose-500/30 rounded-lg px-3 py-2'},err)),
-    daily&&daily.insights&&daily.insights.length>0&&h('details',{className:'bg-[#121316] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-300'},
-      h('summary',{className:'cursor-pointer font-bold text-white'},'🧠 AI nhận định ngách nổ hôm nay ('+daily.insights.length+')'),
-      h('div',{className:'mt-2 space-y-2'},daily.insights.map((x,i)=>h('div',{key:i,onClick:()=>setActive(x.niche),className:'cursor-pointer hover:bg-zinc-800/60 rounded-lg p-1.5'},h('b',{className:'text-amber-300'},x.niche),h('span',{className:'text-zinc-500'},' • cạnh tranh '+x.risk),h('div',null,x.why),h('div',{className:'text-emerald-300'},'💡 '+x.idea))))),
+    insights.length>0&&h('details',{className:'bg-[#121316] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-300'},
+      h('summary',{className:'cursor-pointer font-bold text-white'},'🧠 AI nhận định ngách nổ hôm nay ('+insights.length+')'),
+      h('div',{className:'mt-2 space-y-2'},insights.map((x,i)=>h('div',{key:i,onClick:()=>setActive(x.niche),className:'cursor-pointer hover:bg-zinc-800/60 rounded-lg p-1.5'},h('b',{className:'text-amber-300'},x.niche),h('span',{className:'text-zinc-500'},' • cạnh tranh '+x.risk),h('div',null,x.why),h('div',{className:'text-emerald-300'},'💡 '+x.idea))))),
     Object.keys(mkc).length>1&&h('div',{className:'flex flex-wrap gap-1.5'},[['','🌍 Tất cả',all.length]].concat(Object.entries(mkc).sort((a,b)=>b[1]-a[1]).map(([k,c])=>[k,(TN_M[k]?TN_M[k][0]+' '+TN_M[k][1]:k),c])).map(([k,l,c])=>h('button',{key:k||'all',onClick:()=>{setShow(k);setActive('');},className:chip+(show===k?'bg-zinc-100 text-zinc-950 border-zinc-100 font-bold':'bg-zinc-900 text-zinc-300 border-zinc-700 hover:border-zinc-500')},l+' ',h('b',null,c)))),
     niches.length>0&&h('div',{className:'flex gap-2 overflow-x-auto pb-1'},
-      [['', 'Tất cả', vids.length, vids[0]&&vids[0].out]].concat(niches.map(n=>[n.name,n.name,n.vids.length,n.top])).map(([id,name,c,top],i)=>
+      [['', 'Tất cả', vids.length, vids.reduce((m,v)=>Math.max(m,v.out),0)]].concat(niches.map(n=>[n.name,n.name,n.vids.length,n.top])).map(([id,name,c,top],i)=>
         h('button',{key:id||'all',onClick:()=>setActive(id),className:'shrink-0 text-left rounded-xl border px-3 py-2 min-w-[150px] cursor-pointer '+(active===id?'bg-zinc-800 border-zinc-500':'bg-[#121316] border-zinc-800 hover:border-zinc-600')},
           h('div',{className:'text-xs font-bold text-white truncate max-w-[200px]'},(i&&i<=3?['🥇','🥈','🥉'][i-1]+' ':'')+name),
-          h('div',{className:'text-[10px] text-zinc-400 mt-0.5'},c+' video'+(id?' • '+niches.find(n=>n.name===id).ch.size+' kênh':'')+' • ',h('b',{className:'text-emerald-400'},'×'+Math.round(top)))))),
-    src.length>0&&vids.length===0&&h('div',{className:'text-center text-sm text-zinc-400 py-10'},'Không video nào qua bộ lọc. Thử nới "outlier", "view" hoặc "thời gian".'),
+          h('div',{className:'text-[10px] text-zinc-400 mt-0.5'},c+' video'+(id?' • '+niches.find(n=>n.name===id).ch.size+' kênh':' • '+chCount+' kênh')+' • ',h('b',{className:'text-emerald-400'},'×'+Math.round(top)))))),
+    src.length===0&&!busy&&h('div',{className:'text-center text-sm text-zinc-400 py-10'},'Chưa có dữ liệu. Bấm "🚀 Quét trend + ngách" để bắt đầu.'),
+    src.length>0&&vids.length===0&&h('div',{className:'text-center text-sm text-zinc-400 py-10'},'Không video nào qua bộ lọc. Thử chọn "🌍 Toàn bộ quốc gia", "Dưới 20k sub", hạ "outlier"/"view" hoặc tăng "thời gian".'),
     h('div',{className:'grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'},list.map(v=>h('div',{key:v.id,className:'bg-[#121316] border border-zinc-800 rounded-xl overflow-hidden flex flex-col'},
       h('a',{href:'https://www.youtube.com/watch?v='+v.id,target:'_blank',rel:'noopener noreferrer',className:'relative block'},
         h('img',{src:v.thumb,loading:'lazy',className:'w-full aspect-video object-cover bg-zinc-900'}),
-        h('span',{className:'absolute top-1.5 left-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/75 text-white'},tnN(v.subs)+' sub'),
+        h('span',{className:'absolute top-1.5 left-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/75 text-white'},(TN_M[v.mk]?TN_M[v.mk][0]+' ':'')+tnN(v.subs)+' sub'),
         h('span',{className:'absolute top-1.5 right-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-600 text-white'},'×'+Math.round(v.out)),
         h('span',{className:'absolute bottom-1.5 right-1.5 text-[10px] px-1.5 py-0.5 rounded bg-black/75 text-white'},v.format==='short'?'Shorts':Math.floor(v.dur/60)+':'+String(v.dur%60).padStart(2,'0'))),
       h('div',{className:'p-2.5 flex-1 flex flex-col gap-1.5'},
         h('div',{className:'text-xs font-semibold text-zinc-100 line-clamp-2'},v.title),
-        h('div',{className:'text-[11px] text-zinc-400 truncate'},v.channel+' • '+v.niche),
+        h('a',{href:'https://www.youtube.com/channel/'+v.channelId,target:'_blank',rel:'noopener noreferrer',className:'text-[11px] text-zinc-400 truncate hover:text-white'},v.channel+' • '+v.niche),
         h('div',{className:'flex justify-between text-[11px] text-zinc-300'},h('span',null,'👁 '+v.views.toLocaleString('vi-VN')),h('span',{className:'text-amber-300'},'⚡'+tnN(v.vph)+'/h'),h('span',{className:'text-zinc-500'},tnAge(v.hrs))),
         h('div',{className:'flex gap-1.5 mt-auto pt-1'},
           h('button',{onClick:()=>onToggleSave(v),className:chip+(isSaved(v.id)?'bg-amber-500/20 text-amber-300 border-amber-500/40':'bg-zinc-800 text-zinc-300 border-zinc-700')},isSaved(v.id)?'✓ Đã lưu':'Lưu'),
           h('button',{onClick:()=>onAddCompetitor(v),className:chip+'bg-purple-500/20 text-purple-300 border-purple-500/40'},'+ Kênh'),
           h('button',{onClick:()=>onSelectKeywordForSearch(v.title),className:chip+'bg-sky-500/20 text-sky-300 border-sky-500/40 ml-auto'},'Tìm tương tự')))))),
+    isPro&&shown.length>lim&&h('div',{className:'flex gap-2'},
+      h('button',{onClick:()=>setLim(l=>l+120),className:'flex-1 py-2.5 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white cursor-pointer'},'Hiện thêm 120 (còn '+(shown.length-lim).toLocaleString('vi-VN')+')'),
+      h('button',{onClick:()=>setLim(shown.length),className:'px-4 py-2.5 rounded-xl text-xs font-bold bg-zinc-100 text-zinc-950 cursor-pointer'},'Hiện tất cả '+shown.length.toLocaleString('vi-VN'))),
     !isPro&&shown.length>6&&h('button',{onClick:onUpgradePrompt,className:'w-full py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-amber-500 to-red-500 text-white cursor-pointer'},'🔒 Còn '+(shown.length-6)+' video nữa — Nâng cấp PRO để xem tất cả'));
 }
 // Cửa Sổ Chi Tiết Ngách (Clean & Focused Niche Intelligence Modal)
