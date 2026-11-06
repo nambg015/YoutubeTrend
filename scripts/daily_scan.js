@@ -56,15 +56,20 @@ async function trendQueries(mk, per) {
   const qs = Array.isArray(ai) && ai.length ? ai.map(String) : seeds;
   return qs.slice(0, per).map(q => ({ name: q.slice(0, 40) + ' (Trend hôm nay)', query: q, mk }));
 }
-async function enrich(ids, niche, mk) {
+const META = {}, PROF = {}; // META: thông tin kênh • PROF: 30 video gần nhất của kênh nhỏ (cả video flop) để client chấm 'kênh farm tiền'
+const CC = { US: 'EN', GB: 'GB', IE: 'GB', CA: 'CA', AU: 'AU', NZ: 'AU', CH: 'CH', NO: 'NO', DE: 'DE', AT: 'DE', NL: 'NL', BE: 'NL', SE: 'SE', DK: 'SE', FI: 'SE', JP: 'JP', KR: 'KR', FR: 'FR', ES: 'ES', MX: 'ES', AR: 'ES', CO: 'ES', CL: 'ES', PE: 'ES', BR: 'BR', PT: 'BR', IN: 'IN', ID: 'ID', TH: 'TH', RU: 'RU', VN: 'VN' };
+async function enrich(ids, niche, mk, raw) {
   const out = [];
   for (const c of chunk(ids, 50)) {
     const vs = ((await yt('videos', { part: 'snippet,statistics,contentDetails', id: c.join(',') })).items || []).filter(v => v.snippet.liveBroadcastContent !== 'live');
     const subs = {};
-    for (const cc of chunk([...new Set(vs.map(v => v.snippet.channelId))], 50))
-      ((await yt('channels', { part: 'statistics', id: cc.join(',') })).items || []).forEach(x => { subs[x.id] = x.statistics.hiddenSubscriberCount ? null : +x.statistics.subscriberCount; });
+    const chs = [...new Set(vs.map(v => v.snippet.channelId))];
+    chs.filter(id => META[id]).forEach(id => { subs[id] = META[id].s; });
+    for (const cc of chunk(chs.filter(id => !META[id]), 50))
+      ((await yt('channels', { part: 'snippet,statistics', id: cc.join(',') })).items || []).forEach(x => { const s = x.statistics.hiddenSubscriberCount ? null : +x.statistics.subscriberCount; subs[x.id] = s; META[x.id] = { s, n: x.snippet.title, c: x.snippet.country || '', cr: Date.parse(x.snippet.publishedAt) || 0, vc: +x.statistics.videoCount || 0 }; });
     for (const v of vs) {
       const s = subs[v.snippet.channelId], views = +v.statistics.viewCount || 0;
+      if (raw && s != null && s <= MAX_SUB) raw.push({ ch: v.snippet.channelId, views, dur: iso(v.contentDetails.duration), t: Date.parse(v.snippet.publishedAt) });
       if (s == null || s > MAX_SUB || views < 1000 || views / Math.max(s, 1) < MIN_OUT) continue;
       out.push({ id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle, channelId: v.snippet.channelId, t: Date.parse(v.snippet.publishedAt), views, subs: s, dur: iso(v.contentDetails.duration), niche, mk });
     }
@@ -95,11 +100,13 @@ const SEED = ['plane crash cockpit recording', 'true crime documentary', 'dark p
   if (list.size < 30) SEED.forEach(q => add(q, q, 'EN'));
   // 2) quét
   const items = new Map(), seen = new Set(), stat = new Map(), after = new Date(Date.now() - HOURS * 36e5).toISOString();
-  let done = 0, total = list.size;
+  let done = 0, total = list.size, dIdx = 0;
+  const DURS = ['long', 'medium', 'long', 'medium', '']; // ưu tiên video dài: 80% truy vấn chỉ lấy video ≥4 phút, 20% lấy mọi định dạng (có Shorts)
   const run = async arr => { for (const grp of chunk(arr, 6)) {
     if (dead.size >= KEYS.length) break;
     await Promise.all(grp.map(async n => {
-      const sr = await yt('search', { part: 'snippet', type: 'video', order: 'viewCount', maxResults: 50, q: n.query, publishedAfter: after, relevanceLanguage: M[n.mk][2], regionCode: M[n.mk][1] });
+      const dur = DURS[(dIdx++) % DURS.length], sp = { part: 'snippet', type: 'video', order: 'viewCount', maxResults: 50, q: n.query, publishedAfter: after, relevanceLanguage: M[n.mk][2], regionCode: M[n.mk][1] }; if (dur) sp.videoDuration = dur;
+      const sr = await yt('search', sp);
       const ids = (sr.items || []).map(i => i.id.videoId).filter(id => id && !seen.has(id)); ids.forEach(i => seen.add(i));
       const label = M[n.mk][0] + ' ' + n.name;
       const got = await enrich(ids, label, n.mk); got.forEach(v => items.set(v.id, v));
@@ -120,8 +127,10 @@ const SEED = ['plane crash cockpit recording', 'true crime documentary', 'dark p
   console.log('Nhân kênh nhỏ:', ch.length, 'kênh');
   for (const grp of chunk(ch, 8)) await Promise.all(grp.map(async v => {
     const pl = await yt('playlistItems', { part: 'contentDetails', playlistId: 'UU' + v.channelId.slice(2), maxResults: 30 });
-    const ids = (pl.items || []).map(i => i.contentDetails.videoId).filter(id => !seen.has(id)); ids.forEach(i => seen.add(i));
-    (await enrich(ids, v.niche, v.mk)).filter(x => x.t >= Date.now() - HOURS * 36e5).forEach(x => items.set(x.id, x));
+    const ids = (pl.items || []).map(i => i.contentDetails.videoId); const raw = [];
+    (await enrich(ids, v.niche, v.mk, raw)).filter(x => x.t >= Date.now() - HOURS * 36e5 && !seen.has(x.id)).forEach(x => { seen.add(x.id); items.set(x.id, x); });
+    const u = raw.filter(x => x.ch === v.channelId).map(x => [x.views, x.dur, x.t]), m = META[v.channelId] || {};
+    if (u.length) PROF[v.channelId] = { id: v.channelId, n: m.n || v.channel, s: m.s != null ? m.s : v.subs, mk: CC[m.c] || v.mk, c: m.c || '', cr: m.cr || 0, vc: m.vc || 0, niche: v.niche, u, at: Date.now() };
   }));
   const res = [...items.values()].sort((a, b) => b.views / Math.max(b.subs, 1) - a.views / Math.max(a.subs, 1)).slice(0, MAX_ITEMS);
   // 4) AI nhận định top ngách
@@ -129,6 +138,6 @@ const SEED = ['plane crash cockpit recording', 'true crime documentary', 'dark p
   const top = Object.entries(g).map(([n, a]) => ({ n, c: new Set(a.map(v => v.channelId)).size, o: Math.round(a[0].views / Math.max(a[0].subs, 1)), t: a.slice(0, 3).map(v => v.title) })).sort((a, b) => b.c * Math.log10(1 + b.o) - a.c * Math.log10(1 + a.o)).slice(0, 12);
   const insights = await gemini(`Dưới đây là các ngách YouTube có kênh sub thấp nổ view hôm nay (c=số kênh nhỏ, o=outlier cao nhất, t=tiêu đề mẫu). Với mỗi ngách viết bằng tiếng Việt: "why" (1 câu vì sao đang nổ), "idea" (1 ý tưởng video có thể làm ngay), "risk" (thấp/vừa/cao về mức cạnh tranh). Trả JSON array {"niche","why","idea","risk"}.\n${JSON.stringify(top)}`) || [];
   fs.mkdirSync('data', { recursive: true });
-  fs.writeFileSync(OUT, JSON.stringify({ updated: Date.now(), hours: HOURS, scanned: done, quota: units, items: res, niches: [...stat.values()], insights }));
-  console.log(`Xong: ${res.length} video • ${done} ngách • ${units} units • ${dead.size}/${KEYS.length} key hết quota`);
+  fs.writeFileSync(OUT, JSON.stringify({ updated: Date.now(), hours: HOURS, scanned: done, quota: units, items: res, channels: Object.values(PROF), niches: [...stat.values()], insights }));
+  console.log(`Xong: ${Object.keys(PROF).length} kênh phân tích • ${res.length} video • ${done} ngách • ${units} units • ${dead.size}/${KEYS.length} key hết quota`);
 })().catch(e => { console.error(e); process.exit(1); });
