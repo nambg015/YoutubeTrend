@@ -1,11 +1,14 @@
 // Quét hằng ngày: AI (Gemini) sinh ngách → quét YouTube (xoay vòng nhiều key) → lọc view nổ / sub thấp → data/top_ngach.json
-// ENV: YT_API_KEYS="k1,k2,..."  GEMINI_API_KEY  [MARKETS=EN,VN,JP,...] [HOURS=72] [MAX_NICHES=1200] [MIN_OUTLIER=5]
+// ENV: YT_API_KEYS="k1,k2,..."  GEMINI_API_KEY  [MARKETS=EN,VN,JP,...] [HOURS=168] [MAX_NICHES=1500] [MIN_OUTLIER=2] [MAX_SUB=20000] [MAX_ITEMS=12000]
 const fs = require('fs'), OUT = 'data/top_ngach.json';
 const KEYS = (process.env.YT_API_KEYS || process.env.YT_API_KEY || '').split(',').map(s => s.trim()).filter(Boolean);
 const GEM = process.env.GEMINI_API_KEY, MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-const HOURS = +process.env.HOURS || 72, MIN_OUT = +process.env.MIN_OUTLIER || 5, MAX = +process.env.MAX_NICHES || 1200;
-const M = { EN: ['🌍', 'US', 'en', 'English (global)'], VN: ['🇻🇳', 'VN', 'vi', 'Vietnamese'], JP: ['🇯🇵', 'JP', 'ja', 'Japanese'], KR: ['🇰🇷', 'KR', 'ko', 'Korean'], DE: ['🇩🇪', 'DE', 'de', 'German'], FR: ['🇫🇷', 'FR', 'fr', 'French'], ES: ['🇪🇸', 'MX', 'es', 'Spanish'], BR: ['🇧🇷', 'BR', 'pt', 'Portuguese'], IN: ['🇮🇳', 'IN', 'hi', 'Hindi'], ID: ['🇮🇩', 'ID', 'id', 'Indonesian'], TH: ['🇹🇭', 'TH', 'th', 'Thai'], RU: ['🇷🇺', 'RU', 'ru', 'Russian'] };
+const HOURS = +process.env.HOURS || 168, MIN_OUT = +process.env.MIN_OUTLIER || 2, MAX = +process.env.MAX_NICHES || 1500;
+const MAX_SUB = +process.env.MAX_SUB || 20000, MAX_ITEMS = +process.env.MAX_ITEMS || 12000;
+const M = { EN: ['🇺🇸', 'US', 'en', 'English (US)'], GB: ['🇬🇧', 'GB', 'en', 'English (UK)'], CA: ['🇨🇦', 'CA', 'en', 'English (Canada)'], AU: ['🇦🇺', 'AU', 'en', 'English (Australia)'], CH: ['🇨🇭', 'CH', 'de', 'Swiss German'], NO: ['🇳🇴', 'NO', 'no', 'Norwegian'], NL: ['🇳🇱', 'NL', 'nl', 'Dutch'], SE: ['🇸🇪', 'SE', 'sv', 'Swedish'], VN: ['🇻🇳', 'VN', 'vi', 'Vietnamese'], JP: ['🇯🇵', 'JP', 'ja', 'Japanese'], KR: ['🇰🇷', 'KR', 'ko', 'Korean'], DE: ['🇩🇪', 'DE', 'de', 'German'], FR: ['🇫🇷', 'FR', 'fr', 'French'], ES: ['🇪🇸', 'MX', 'es', 'Spanish'], BR: ['🇧🇷', 'BR', 'pt', 'Portuguese'], IN: ['🇮🇳', 'IN', 'hi', 'Hindi'], ID: ['🇮🇩', 'ID', 'id', 'Indonesian'], TH: ['🇹🇭', 'TH', 'th', 'Thai'], RU: ['🇷🇺', 'RU', 'ru', 'Russian'] };
 const MARKETS = (process.env.MARKETS || Object.keys(M).join(',')).split(',').filter(k => M[k]);
+// Nước RPM cao: AI đề xuất ngách RPM cao + content phổ thông; các nước khác: mọi loại content (không xét RPM)
+const RPM = new Set(['EN', 'GB', 'CA', 'AU', 'CH', 'NO', 'DE', 'NL', 'SE', 'JP', 'KR', 'FR']);
 const dead = new Set(); let units = 0, ki = 0;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const chunk = (a, n) => { const r = []; for (let i = 0; i < a.length; i += n) r.push(a.slice(i, i + n)); return r; };
@@ -47,9 +50,9 @@ async function gtrends(geo) { try { const x = await (await fetch('https://trends
 // Dò trend hôm nay của 1 thị trường: mostPopular (8 danh mục) + Google Trends → AI biến thành truy vấn cụ thể theo sự kiện
 async function trendQueries(mk, per) {
   const [, reg, lang, lname] = M[mk], titles = [];
-  for (const c of ['', '25', '28', '24', '27', '22', '17', '20']) ((await yt('videos', { part: 'snippet', chart: 'mostPopular', regionCode: reg, maxResults: 50, videoCategoryId: c })).items || []).forEach(v => titles.push(v.snippet.title));
+  for (const c of ['', '25', '28', '24', '27', '22', '17', '20', '23', '26', '10']) ((await yt('videos', { part: 'snippet', chart: 'mostPopular', regionCode: reg, maxResults: 50, videoCategoryId: c })).items || []).forEach(v => titles.push(v.snippet.title));
   const gt = await gtrends(reg), ph = phrases(titles, lang, 2, 50), seeds = [...new Set([...gt.slice(0, 20), ...ph])];
-  const ai = await gemini(`Today is ${new Date().toISOString().slice(0, 10)}. These are what is trending right now in ${lname} market (Google Trends headlines + recurring phrases from YouTube's most popular videos):\n${JSON.stringify(seeds)}\nTurn them into ${per} DISTINCT YouTube search queries in ${lname} that small channels would cover to ride these events: specific events/people/incidents, with several angles each (breaking news, what happened, explained, timeline, documentary, reaction, analysis). Skip pure entertainment/sports scores/celebrity gossip unless huge. Return JSON array of strings.`);
+  const ai = await gemini(`Today is ${new Date().toISOString().slice(0, 10)}. These are what is trending right now in ${lname} market (Google Trends headlines + recurring phrases from YouTube's most popular videos):\n${JSON.stringify(seeds)}\nTurn them into ${per} DISTINCT YouTube search queries in ${lname} that small channels would cover to ride these events: specific events/people/incidents, with several angles each (breaking news, what happened, explained, timeline, documentary, reaction, analysis). Include ALL content types (news, gaming, entertainment, sports, kids, music covers, how-to...) as long as small channels can ride them. Return JSON array of strings.`);
   const qs = Array.isArray(ai) && ai.length ? ai.map(String) : seeds;
   return qs.slice(0, per).map(q => ({ name: q.slice(0, 40) + ' (Trend hôm nay)', query: q, mk }));
 }
@@ -62,8 +65,8 @@ async function enrich(ids, niche, mk) {
       ((await yt('channels', { part: 'statistics', id: cc.join(',') })).items || []).forEach(x => { subs[x.id] = x.statistics.hiddenSubscriberCount ? null : +x.statistics.subscriberCount; });
     for (const v of vs) {
       const s = subs[v.snippet.channelId], views = +v.statistics.viewCount || 0;
-      if (s == null || s > 1e5 || views < 1000 || views / Math.max(s, 1) < MIN_OUT) continue;
-      out.push({ id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle, channelId: v.snippet.channelId, published: v.snippet.publishedAt, t: Date.parse(v.snippet.publishedAt), views, subs: s, dur: iso(v.contentDetails.duration), niche, mk });
+      if (s == null || s > MAX_SUB || views < 1000 || views / Math.max(s, 1) < MIN_OUT) continue;
+      out.push({ id: v.id, title: v.snippet.title, channel: v.snippet.channelTitle, channelId: v.snippet.channelId, t: Date.parse(v.snippet.publishedAt), views, subs: s, dur: iso(v.contentDetails.duration), niche, mk });
     }
   }
   return out;
@@ -73,7 +76,7 @@ const SEED = ['plane crash cockpit recording', 'true crime documentary', 'dark p
 (async () => {
   if (!KEYS.length) throw new Error('Thiếu YT_API_KEYS');
   const prev = fs.existsSync(OUT) ? JSON.parse(fs.readFileSync(OUT, 'utf8')) : {};
-  const budget = Math.min(MAX, Math.floor(KEYS.length * 9000 / 104));
+  const budget = Math.min(MAX, Math.floor(KEYS.length * 8500 / 104));
   console.log(`Key: ${KEYS.length} • ngân sách ~${budget} ngách`);
   // 1) ngách: TREND hôm nay (45%) → ngách hôm qua có hit → AI evergreen; chừa 15% cho vòng Snowball
   const B1 = Math.floor(budget * .85), list = new Map(), add = (name, query, mk) => { const k = mk + '|' + query.toLowerCase(); if (!list.has(k) && list.size < B1) list.set(k, { name, query, mk }); };
@@ -83,7 +86,10 @@ const SEED = ['plane crash cockpit recording', 'true crime documentary', 'dark p
   const per = Math.ceil((B1 - list.size) / MARKETS.length);
   for (const g of chunk(MARKETS, 4)) await Promise.all(g.map(async mk => {
     const hot = (prev.niches || []).filter(n => n.mk === mk && n.hits > 0).slice(0, 8).map(n => n.query).join('; ');
-    const r = await gemini(`You are a YouTube niche researcher. Today is ${new Date().toISOString().slice(0, 10)}. Generate ${Math.min(per, 150)} DISTINCT, specific YouTube search queries in ${M[mk][3]} for niches likely to be going viral on small/new channels (faceless-friendly, high RPM, evergreen+seasonal: disasters, crime, history, psychology, finance, AI, health, mystery, stories, tech, etc.). Mix broad and long-tail. Hot niches already found (avoid duplicates, explore neighbours): ${hot || 'none'}. Return JSON array of {"name":"short Vietnamese label","query":"search query"}.`);
+    const focus = RPM.has(mk)
+      ? 'about 60% high-RPM faceless niches (finance, AI, tech, health, crime, history, psychology, disasters, mystery, documentaries, stories) and 40% any other popular content (gaming, comedy, kids, pets, cooking, DIY, sports, music covers, vlogs, reactions, animation)'
+      : 'ANY content type regardless of RPM — gaming, comedy/pranks, kids, pets, cooking, DIY, beauty, sports, music covers, vlogs, reactions, animation, news, stories, mystery, crime, history, finance, tech';
+    const r = await gemini(`You are a YouTube niche researcher. Today is ${new Date().toISOString().slice(0, 10)}. Generate ${Math.min(per, 150)} DISTINCT, specific YouTube search queries in ${M[mk][3]} for niches likely to be going viral on small/new channels (high views, low subscribers). Cover ${focus}. Mix broad and long-tail. Hot niches already found (avoid duplicates, explore neighbours): ${hot || 'none'}. Return JSON array of {"name":"short Vietnamese label","query":"search query"}.`);
     (Array.isArray(r) ? r : []).forEach(x => x?.query && add(x.name || x.query, String(x.query), mk));
   }));
   if (list.size < 30) SEED.forEach(q => add(q, q, 'EN'));
@@ -95,7 +101,7 @@ const SEED = ['plane crash cockpit recording', 'true crime documentary', 'dark p
     await Promise.all(grp.map(async n => {
       const sr = await yt('search', { part: 'snippet', type: 'video', order: 'viewCount', maxResults: 50, q: n.query, publishedAfter: after, relevanceLanguage: M[n.mk][2], regionCode: M[n.mk][1] });
       const ids = (sr.items || []).map(i => i.id.videoId).filter(id => id && !seen.has(id)); ids.forEach(i => seen.add(i));
-      const label = (n.mk === 'EN' ? '' : M[n.mk][0] + ' ') + n.name;
+      const label = M[n.mk][0] + ' ' + n.name;
       const got = await enrich(ids, label, n.mk); got.forEach(v => items.set(v.id, v));
       stat.set(n.mk + '|' + n.query, { name: n.name, query: n.query, mk: n.mk, hits: got.length, top: Math.max(0, ...got.map(v => v.views / Math.max(v.subs, 1))) });
     }));
@@ -105,21 +111,22 @@ const SEED = ['plane crash cockpit recording', 'true crime documentary', 'dark p
   // Snowball: lấy cụm từ lặp lại trong tiêu đề các video đã nổ → quét tiếp đúng chủ đề đó
   const sn = [], B2 = budget - list.size;
   for (const mk of MARKETS) {
-    const ts = [...items.values()].filter(v => v.mk === mk).sort((a, b) => b.views / b.subs - a.views / a.subs).slice(0, 300).map(v => v.title);
+    const ts = [...items.values()].filter(v => v.mk === mk).sort((a, b) => b.views / Math.max(b.subs, 1) - a.views / Math.max(a.subs, 1)).slice(0, 300).map(v => v.title);
     phrases(ts, M[mk][2], 2, Math.ceil(B2 / MARKETS.length)).forEach(p => { if (!list.has(mk + '|' + p)) sn.push({ name: p.slice(0, 40) + ' (Snowball)', query: p, mk }); });
   }
   total += Math.min(sn.length, B2); console.log('Vòng 2 Snowball:', Math.min(sn.length, B2), 'ngách'); await run(sn.slice(0, B2));
   // 3) nhân kênh nhỏ có video nổ (1 unit/kênh)
-  const ch = [...new Map([...items.values()].sort((a, b) => b.views / b.subs - a.views / a.subs).map(v => [v.channelId, v])).values()].slice(0, Math.min(300, KEYS.length * 25));
+  const ch = [...new Map([...items.values()].sort((a, b) => b.views / Math.max(b.subs, 1) - a.views / Math.max(a.subs, 1)).map(v => [v.channelId, v])).values()].slice(0, Math.min(1500, KEYS.length * 80));
+  console.log('Nhân kênh nhỏ:', ch.length, 'kênh');
   for (const grp of chunk(ch, 8)) await Promise.all(grp.map(async v => {
-    const pl = await yt('playlistItems', { part: 'contentDetails', playlistId: 'UU' + v.channelId.slice(2), maxResults: 15 });
+    const pl = await yt('playlistItems', { part: 'contentDetails', playlistId: 'UU' + v.channelId.slice(2), maxResults: 30 });
     const ids = (pl.items || []).map(i => i.contentDetails.videoId).filter(id => !seen.has(id)); ids.forEach(i => seen.add(i));
     (await enrich(ids, v.niche, v.mk)).filter(x => x.t >= Date.now() - HOURS * 36e5).forEach(x => items.set(x.id, x));
   }));
-  const res = [...items.values()].sort((a, b) => b.views / b.subs - a.views / a.subs).slice(0, 6000).map(({ mk, ...v }) => v);
+  const res = [...items.values()].sort((a, b) => b.views / Math.max(b.subs, 1) - a.views / Math.max(a.subs, 1)).slice(0, MAX_ITEMS);
   // 4) AI nhận định top ngách
   const g = {}; res.forEach(v => (g[v.niche] = g[v.niche] || []).push(v));
-  const top = Object.entries(g).map(([n, a]) => ({ n, c: new Set(a.map(v => v.channelId)).size, o: Math.round(a[0].views / a[0].subs), t: a.slice(0, 3).map(v => v.title) })).sort((a, b) => b.c * Math.log10(1 + b.o) - a.c * Math.log10(1 + a.o)).slice(0, 12);
+  const top = Object.entries(g).map(([n, a]) => ({ n, c: new Set(a.map(v => v.channelId)).size, o: Math.round(a[0].views / Math.max(a[0].subs, 1)), t: a.slice(0, 3).map(v => v.title) })).sort((a, b) => b.c * Math.log10(1 + b.o) - a.c * Math.log10(1 + a.o)).slice(0, 12);
   const insights = await gemini(`Dưới đây là các ngách YouTube có kênh sub thấp nổ view hôm nay (c=số kênh nhỏ, o=outlier cao nhất, t=tiêu đề mẫu). Với mỗi ngách viết bằng tiếng Việt: "why" (1 câu vì sao đang nổ), "idea" (1 ý tưởng video có thể làm ngay), "risk" (thấp/vừa/cao về mức cạnh tranh). Trả JSON array {"niche","why","idea","risk"}.\n${JSON.stringify(top)}`) || [];
   fs.mkdirSync('data', { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify({ updated: Date.now(), hours: HOURS, scanned: done, quota: units, items: res, niches: [...stat.values()], insights }));
