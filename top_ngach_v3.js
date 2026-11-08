@@ -384,7 +384,7 @@
   var dur = function (s) { s = Math.round(s || 0); var hh = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60), ss = s % 60; return (hh ? hh + ':' + String(mm).padStart(2, '0') : mm) + ':' + String(ss).padStart(2, '0'); };
   var age = function (hrs) { return hrs < 24 ? Math.round(hrs) + ' giờ' : Math.round(hrs / 24) + ' ngày'; };
   var cx = function () { return Array.prototype.filter.call(arguments, Boolean).join(' '); };
-  var TONE = { emerald: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40', sky: 'bg-sky-500/15 text-sky-300 border-sky-500/40', amber: 'bg-amber-500/15 text-amber-300 border-amber-500/40', zinc: 'bg-zinc-800 text-zinc-400 border-zinc-700' };
+  var TONE = { emerald: 'bg-emerald-500/30 text-emerald-100 border-emerald-400/60', sky: 'bg-sky-600/30 text-sky-100 border-sky-400/60', amber: 'bg-amber-500/30 text-amber-100 border-amber-400/60', zinc: 'bg-zinc-800 text-zinc-400 border-zinc-700' };
   var DEF = { mode: 'rpm', country: '', maxSub: 5000, fmt: 'long', hours: 168, minView: 1000, minOut: 2, text: '', vSort: 'smart', cSort: 'smart', verdict: 'good', perCh: 2, niche: '' };
   function toApp(v) { return { id: v.id, title: v.title, channel: v.chName, channelId: v.ch, subs: v.subs, views: v.views, dur: v.dur, thumb: thumb(v.id), published: new Date(v.t).toISOString(), vph: v.vph }; }
   function csvDownload(name, rows) {
@@ -458,7 +458,7 @@
         h('div', null, label('Outlier (view÷sub)'), select('minOut', [[1, '≥ 1×'], [2, '≥ 2×'], [5, '≥ 5×'], [10, '≥ 10×'], [50, '≥ 50×']]))),
       h('div', { className: 'rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 space-y-2' }, label('Quét dữ liệu mới'),
         E.LEVELS.map(function (l, i) {
-          return h('button', { key: l[0], disabled: !!busy, onClick: function () { return run({ budget: l[2] }); }, className: cx('w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs font-bold transition cursor-pointer disabled:opacity-40', i === 0 ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100') },
+          return h('button', { key: l[0], disabled: !!busy, onClick: function () { return run({ budget: l[2] }); }, className: cx('w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs font-bold transition cursor-pointer disabled:opacity-40', i === 0 ? 'bg-[#2f5f78] hover:bg-[#3a7190] text-[#e8f2f7]' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100') },
             h('span', null, (i === 0 ? '' : i === 1 ? '' : '') + l[1]), h('span', { className: 'text-[10px] font-semibold opacity-80' }, '≈' + N(l[2]) + ' quota'));
         }),
         h('div', { className: 'flex gap-1.5 pt-1' },

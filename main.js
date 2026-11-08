@@ -19,7 +19,7 @@
     return h('div', { className: 'min-h-screen flex items-center justify-center px-4' },
       h('div', { className: 'w-full max-w-[340px]' },
         h('div', { className: 'mb-8' }, h('div', { className: 'text-[22px] font-semibold tracking-tight text-white' }, 'YouTrend'), h('div', { className: 'text-[13px] text-zinc-400 mt-1' }, 'Đăng nhập để tiếp tục.')),
-        h('button', { onClick: function () { go('g'); }, disabled: !!busy, className: 'w-full h-10 rounded-md bg-emerald-400 text-emerald-950 text-[13px] font-medium hover:bg-emerald-300 transition disabled:opacity-50 cursor-pointer' }, busy === 'g' ? 'Đang mở Google…' : 'Đăng nhập với Google'),
+        h('button', { onClick: function () { go('g'); }, disabled: !!busy, className: 'w-full h-10 rounded-md bg-[#4a9a8a] text-[#f1faf7] text-[13px] font-medium hover:bg-[#56a494] transition disabled:opacity-50 cursor-pointer' }, busy === 'g' ? 'Đang mở Google…' : 'Đăng nhập với Google'),
         h('div', { className: 'flex items-center gap-3 my-5 text-[11px] text-zinc-500' }, h('span', { className: 'flex-1 h-px bg-zinc-800' }), 'hoặc', h('span', { className: 'flex-1 h-px bg-zinc-800' })),
         h('form', { onSubmit: function (e) { e.preventDefault(); if (id && pw) go('p'); }, className: 'space-y-2' },
           h(Input, { value: id, onChange: function (e) { setId(e.target.value); }, placeholder: 'Tên đăng nhập', autoComplete: 'username', className: 'h-10' }),
@@ -60,10 +60,10 @@
     return h('div', { className: 'min-h-screen' },
       h('header', { className: 'sticky top-0 z-40 bg-[#080b11]/70 backdrop-blur-xl border-b border-white/[0.07]' },
         h('div', { className: 'max-w-[1400px] mx-auto px-4 sm:px-6 h-14 flex items-center gap-6' },
-          h('button', { onClick: function () { goto('explore'); }, className: 'text-[15px] font-semibold tracking-tight cursor-pointer shrink-0 bg-gradient-to-r from-emerald-300 to-sky-300 bg-clip-text text-transparent' }, 'YouTrend'),
+          h('button', { onClick: function () { goto('explore'); }, className: 'text-[15px] font-semibold tracking-tight cursor-pointer shrink-0 bg-gradient-to-r from-[#9fd3c6] to-[#a9c8e0] bg-clip-text text-transparent' }, 'YouTrend'),
           h('nav', { className: 'flex-1 min-w-0 flex items-center gap-5 h-full overflow-x-auto no-scrollbar' }, NAV.map(function (n) {
             var on = route === n[0];
-            return h('a', { key: n[0], href: '#' + n[0], onClick: function (e) { e.preventDefault(); goto(n[0]); }, className: cx('relative h-full flex items-center text-[13px] whitespace-nowrap transition', on ? 'text-white' : 'text-zinc-400 hover:text-zinc-200') }, n[1], on && h('span', { className: 'absolute left-0 right-0 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-emerald-400 to-sky-400' }));
+            return h('a', { key: n[0], href: '#' + n[0], onClick: function (e) { e.preventDefault(); goto(n[0]); }, className: cx('relative h-full flex items-center text-[13px] whitespace-nowrap transition', on ? 'text-white' : 'text-zinc-400 hover:text-zinc-200') }, n[1], on && h('span', { className: 'absolute left-0 right-0 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-[#5fa898] to-[#7aa6c8]' }));
           })),
           h('div', { className: 'hidden sm:flex items-center gap-2 shrink-0' }, h(QuotaChip, { onClick: function () { goto('settings'); } }),
             h('button', { onClick: function () { goto('settings'); }, title: user ? user.email : '', className: 'h-8 w-8 rounded-full bg-emerald-500/15 text-emerald-200 border border-emerald-500/30 text-[12px] font-semibold cursor-pointer' }, (label || '?').charAt(0).toUpperCase())))),
