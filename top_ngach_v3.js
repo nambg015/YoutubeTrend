@@ -249,7 +249,7 @@
       if (units + cost(path) > budget) { var e = new Error('BUDGET'); e.code = 'BUDGET'; throw e; }
       units += cost(path); return yt(path, p);
     }
-    var after = new Date(now - Math.max(24, f.hours) * HOUR).toISOString();
+    var after = new Date(now - Math.max(2, f.hours) * HOUR).toISOString();
     // 1) Lên danh sách nguồn (seed) — trộn 5 kiểu để ra đa dạng content + kênh
     var seenK = new Set(), totalPlan = 0;
     for (var round = 0; round < (o.profileOnly ? 1 : 4) && !stop; round++) {
@@ -452,7 +452,7 @@
       h('div', null, label('Quy mô kênh'), h('div', { className: 'grid grid-cols-2 gap-1.5' }, [[5000, 'Dưới 5K sub'], [20000, 'Dưới 20K sub']].map(function (o) { return h('button', { key: o[0], onClick: function () { set('maxSub', o[0]); }, className: pill(f.maxSub === o[0]) }, o[1]); })),
         h('div', { className: 'text-[10px] text-zinc-500 mt-1' }, 'Ưu tiên 80% kênh nhỏ nhất xếp trên cùng')),
       h('div', null, label('Định dạng'), h('div', { className: 'grid grid-cols-2 gap-1.5' }, [['long', '🎬 Video dài'], ['short', '📱 Shorts']].map(function (o) { return h('button', { key: o[0], onClick: function () { set('fmt', o[0]); }, className: pill(f.fmt === o[0]) }, o[1]); }))),
-      h('div', null, label('Thời gian đăng'), h('div', { className: 'grid grid-cols-4 gap-1' }, [[24, '24h'], [72, '3 ngày'], [168, '7 ngày'], [720, '30 ngày']].map(function (o) { return h('button', { key: o[0], onClick: function () { set('hours', o[0]); }, className: pill(f.hours === o[0]) + ' px-1' }, o[1]); }))),
+      h('div', null, label('Thời gian đăng'), h('div', { className: 'grid grid-cols-3 gap-1' }, [[2, '2 giờ'], [12, '12 giờ'], [24, '24 giờ'], [72, '3 ngày'], [168, '7 ngày'], [720, '30 ngày']].map(function (o) { return h('button', { key: o[0], onClick: function () { set('hours', o[0]); }, className: pill(f.hours === o[0]) + ' px-1' }, o[1]); }))),
       h('div', { className: 'grid grid-cols-2 gap-2' },
         h('div', null, label('View tối thiểu'), select('minView', [[0, 'Bất kỳ'], [1000, '1K+'], [5000, '5K+'], [20000, '20K+'], [100000, '100K+'], [1000000, '1M+']])),
         h('div', null, label('Outlier (view÷sub)'), select('minOut', [[1, '≥ 1×'], [2, '≥ 2×'], [5, '≥ 5×'], [10, '≥ 10×'], [50, '≥ 50×']]))),
@@ -543,31 +543,39 @@
 
     // ---------- Tab Kênh ----------
     var stat = function (l, v, tone) { return h('div', { className: 'min-w-0' }, h('div', { className: 'text-[9px] uppercase text-zinc-500 truncate' }, l), h('div', { className: 'text-[11px] font-bold truncate ' + (tone || 'text-zinc-100') }, v)); };
-    var chView = !D.channels.length ? empty('Chưa có kênh nào qua bộ lọc') : h('div', { className: 'space-y-2' },
+    var chView = !D.channels.length ? empty('Chưa có kênh nào qua bộ lọc') : h('div', { className: 'space-y-3' },
       h('div', { className: 'text-[11px] text-zinc-500 leading-relaxed' }, 'Cách so sánh: lấy 30 video ' + (f.fmt === 'short' ? 'Shorts' : 'dài') + ' gần nhất (60 ngày) của từng kênh, kể cả video flop. 💰 Farm tiền = ít nhất 3 video có view ≥ sub, tối thiểu 50% video đạt và view trung vị cũng ≥ sub → ra view đều tay. 🌱 Đang lên = 2 video đạt. ⚠️ Ăn may = chỉ 1 video nổ. Doanh thu chỉ là ước tính theo RPM nước + danh mục.'),
-      cut(D.channels).map(function (c, i) {
-        var a = c.a, ok = a.n > 0;
-        return h('div', { key: c.id, className: cx('rounded-xl border bg-zinc-950/70 p-3 grid gap-3 items-center lg:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)_auto]', a.v === 'farm' ? 'border-emerald-600/50' : 'border-zinc-800') },
-          h('div', { className: 'flex items-center gap-3 min-w-0' },
-            h('div', { className: 'text-xs font-black text-zinc-500 w-7 text-right shrink-0' }, i + 1),
-            h('div', { className: 'min-w-0 space-y-1' },
-              h('a', { href: 'https://www.youtube.com/channel/' + c.id, target: '_blank', rel: 'noopener noreferrer', className: 'block text-sm font-extrabold text-white hover:text-emerald-300 truncate' }, flag(c.mk) + ' ' + c.name),
-              h('div', { className: 'flex flex-wrap items-center gap-1.5 text-[10px] text-zinc-400' }, badge(a), h('span', { className: 'font-bold text-zinc-200' }, N(c.subs) + ' sub'), h('span', { className: 'truncate max-w-[160px]' }, c.niche), c.cr && Date.now() - c.cr < 180 * 864e5 ? h('span', { className: 'text-amber-300 font-bold' }, '🆕 ' + Math.round((Date.now() - c.cr) / 864e5) + ' ngày tuổi') : null),
-              ok && h('div', { className: 'flex items-center gap-2' }, h('div', { className: 'w-24' }, bar(a.score, a.v === 'farm' ? 'bg-emerald-500' : 'bg-sky-500')), h('span', { className: 'text-[10px] text-zinc-400' }, 'điểm ' + a.score)))),
-          ok ? h('div', { className: 'grid grid-cols-3 sm:grid-cols-6 gap-2' },
-            stat('Video đạt', a.hits + '/' + a.n + ' (' + Math.round(a.hr * 100) + '%)', a.hr >= 0.5 ? 'text-emerald-400' : ''),
-            stat('View trung vị', N(a.med) + ' • ×' + (a.medOut >= 10 ? Math.round(a.medOut) : a.medOut.toFixed(1)), a.medOut >= 1 ? 'text-emerald-400' : ''),
-            stat('So với ngách', c.peer ? '×' + c.peer.toFixed(1) : '—', c.peer >= 1.5 ? 'text-amber-300' : ''),
-            stat('View 30 ngày', N(a.v30)),
-            stat('Độ dài • tần suất', (f.fmt === 'short' ? Math.round(a.avgDur) + 's' : Math.round(a.avgDur / 60) + 'p') + ' • ' + a.cad.toFixed(1) + '/tuần', a.mid ? 'text-amber-300' : ''),
-            stat('Ước tính 30 ngày', a.eligible ? '$' + N(Math.round(a.rev[0])) + '–' + N(Math.round(a.rev[1])) : 'Chưa đủ 1K sub', a.eligible ? 'text-emerald-300' : 'text-zinc-500'))
-            : h('div', { className: 'text-[11px] text-zinc-500' }, a.v === 'unk' ? 'Mới thấy ' + c.vids.length + ' video nổ (tốt nhất ×' + Math.round(c.bestOut) + '). Bấm "🔬 Phân tích" ở trên để so sánh toàn bộ video của kênh.' : 'Không có video ' + (f.fmt === 'short' ? 'Shorts' : 'dài') + ' trong 60 ngày.'),
-          h('div', { className: 'flex items-center gap-2 justify-end' },
-            h('div', { className: 'flex gap-1' }, c.vids.slice(0, 3).map(function (v) { return h('a', { key: v.id, href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer', title: v.title + ' — ' + N(v.views) + ' view', className: 'relative block w-20' }, h('img', { src: thumb(v.id), loading: 'lazy', className: 'w-20 aspect-video object-cover rounded bg-zinc-900' }), h('span', { className: 'absolute bottom-0 left-0 text-[8px] font-bold px-1 rounded bg-black/80 text-white' }, N(v.views))); })),
-            h('div', { className: 'flex flex-col gap-1' },
-              p.onAddCompetitor && h('button', { onClick: function () { p.onAddCompetitor(c.best ? toApp(c.best) : { channel: c.name, channelId: c.id, subs: c.subs }); }, className: 'px-2 py-1 rounded-md text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30 cursor-pointer whitespace-nowrap' }, '+ Theo dõi'),
-              p.onSelectKeywordForSearch && c.best && h('button', { onClick: function () { p.onSelectKeywordForSearch(c.best.title); }, className: 'px-2 py-1 rounded-md text-[10px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 cursor-pointer whitespace-nowrap' }, 'Tương tự'))));
-      }),
+      h('div', { className: 'grid gap-3 md:grid-cols-2 2xl:grid-cols-3' }, cut(D.channels).map(function (c, i) {
+        var a = c.a, ok = a.n > 0, farm = a.v === 'farm', ageD = c.cr ? Math.round((Date.now() - c.cr) / 864e5) : null;
+        var cell = function (l, v, tone) { return h('div', { className: 'rounded-lg bg-zinc-900/80 px-2 py-1.5 min-w-0' }, h('div', { className: 'text-[9px] uppercase tracking-wide text-zinc-500 truncate' }, l), h('div', { className: 'text-xs font-black truncate ' + (tone || 'text-zinc-100') }, v)); };
+        return h('div', { key: c.id, className: cx('rounded-2xl border p-3.5 flex flex-col gap-2.5 transition', farm ? 'border-emerald-600/50 bg-gradient-to-b from-emerald-500/[0.07] to-zinc-950' : 'border-zinc-800 bg-gradient-to-b from-zinc-900/80 to-zinc-950 hover:border-zinc-600') },
+          h('div', { className: 'flex items-start gap-3' },
+            h('div', { className: cx('w-9 h-9 shrink-0 rounded-xl flex items-center justify-center text-sm font-black', i < 3 ? 'bg-emerald-500 text-black' : 'bg-zinc-800 text-zinc-300') }, '#' + (i + 1)),
+            h('div', { className: 'min-w-0 flex-1' },
+              h('a', { href: 'https://www.youtube.com/channel/' + c.id, target: '_blank', rel: 'noopener noreferrer', title: c.name, className: 'block text-sm font-extrabold text-white hover:text-emerald-300 truncate' }, flag(c.mk) + ' ' + c.name),
+              h('div', { className: 'text-[10px] text-zinc-400 truncate', title: c.niche }, N(c.subs) + ' sub • ' + c.niche)),
+            ok ? h('div', { className: 'text-right shrink-0' }, h('div', { className: 'text-lg font-black leading-none ' + (farm ? 'text-emerald-400' : 'text-sky-400') }, a.score), h('div', { className: 'text-[9px] text-zinc-500' }, 'điểm')) : null),
+          h('div', { className: 'flex flex-wrap items-center gap-1.5' }, badge(a), ageD != null && ageD < 180 ? h('span', { className: 'text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-300' }, '🆕 ' + ageD + ' ngày tuổi') : null, a.mid ? h('span', { className: 'text-[10px] font-bold px-2 py-0.5 rounded-full border border-zinc-700 bg-zinc-900 text-zinc-300' }, 'mid-roll') : null),
+          ok ? bar(a.score, farm ? 'bg-emerald-500' : 'bg-sky-500') : null,
+          ok ? h('div', { className: 'grid grid-cols-3 gap-1.5' },
+            cell('Video đạt', a.hits + '/' + a.n + ' (' + Math.round(a.hr * 100) + '%)', a.hr >= 0.5 ? 'text-emerald-400' : ''),
+            cell('View trung vị', N(a.med) + ' • ×' + (a.medOut >= 10 ? Math.round(a.medOut) : a.medOut.toFixed(1)), a.medOut >= 1 ? 'text-emerald-400' : ''),
+            cell('So với ngách', c.peer ? '×' + c.peer.toFixed(1) : '—', c.peer >= 1.5 ? 'text-amber-300' : ''),
+            cell('View 30 ngày', N(a.v30)),
+            cell('Độ dài • tần suất', (f.fmt === 'short' ? Math.round(a.avgDur) + 's' : Math.round(a.avgDur / 60) + 'p') + ' • ' + a.cad.toFixed(1) + '/tuần'),
+            cell('Ước tính 30 ngày', a.eligible ? '$' + N(Math.round(a.rev[0])) + '–' + N(Math.round(a.rev[1])) : 'Chưa đủ 1K sub', a.eligible ? 'text-emerald-300' : 'text-zinc-500'))
+            : h('div', { className: 'text-[11px] text-zinc-400 bg-zinc-900/70 rounded-lg px-2.5 py-2' }, a.v === 'unk' ? 'Mới thấy ' + c.vids.length + ' video nổ (tốt nhất ×' + Math.round(c.bestOut) + '). Bấm "🔬 Phân tích" ở trên để so sánh toàn bộ video của kênh.' : 'Không có video ' + (f.fmt === 'short' ? 'Shorts' : 'dài') + ' trong 60 ngày.'),
+          c.vids.length > 0 && h('div', { className: 'grid grid-cols-3 gap-1.5' }, c.vids.slice(0, 3).map(function (v) {
+            return h('a', { key: v.id, href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer', title: v.title + ' — ' + N(v.views) + ' view', className: 'relative block' },
+              h('img', { src: thumb(v.id), loading: 'lazy', className: 'w-full aspect-video object-cover rounded-md bg-zinc-900' }),
+              h('span', { className: 'absolute bottom-0.5 left-0.5 text-[9px] font-bold px-1 rounded bg-black/80 text-white' }, N(v.views)),
+              h('span', { className: 'absolute top-0.5 right-0.5 text-[9px] font-bold px-1 rounded bg-emerald-600 text-white' }, '×' + Math.round(v.out)));
+          })),
+          h('div', { className: 'flex gap-1.5 mt-auto' },
+            h('a', { href: 'https://www.youtube.com/channel/' + c.id + '/videos', target: '_blank', rel: 'noopener noreferrer', className: 'flex-1 text-center py-1.5 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white' }, 'Mở kênh ↗'),
+            p.onAddCompetitor && h('button', { onClick: function () { p.onAddCompetitor(c.best ? toApp(c.best) : { channel: c.name, channelId: c.id, subs: c.subs }); }, className: 'px-3 py-1.5 rounded-lg text-[11px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30 cursor-pointer' }, '+ Theo dõi'),
+            p.onSelectKeywordForSearch && c.best && h('button', { onClick: function () { p.onSelectKeywordForSearch(c.best.title); }, className: 'px-3 py-1.5 rounded-lg text-[11px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 cursor-pointer' }, 'Tương tự')));
+      })),
       more(D.channels.length), lock(D.channels.length));
 
     // ---------- Tab Video ----------
