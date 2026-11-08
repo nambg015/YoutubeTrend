@@ -1,0 +1,59 @@
+// /api/research — tab "Tạo tài nguyên". action: search | structure | news | enrich
+const auth = require('./_lib/auth');
+const { applyCors } = auth;
+const { consumeDaily } = require('./_lib/store');
+const R = require('./_lib/research');
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+
+module.exports = async (req, res) => {
+  applyCors(req, res, 'X-Gemini-Key');
+  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+  if (req.method !== 'POST') return res.status(405).json({ success: false, message: 'Method Not Allowed' });
+
+  const claims = await auth.requirePhoneVerified(req, res);
+  if (!claims) return;
+
+  let body = req.body;
+  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
+  body = body || {};
+  const action = body.action;
+  const prompt = String(body.prompt || '').slice(0, 4000);
+  const key = req.headers['x-gemini-key'] || GEMINI_API_KEY;
+
+  // Mỗi hồ sơ tính 1 lượt (đếm ở bước search — kể cả khi AI lỗi và chuyển sang chế độ miễn phí)
+  const bucket = action === 'search' ? 'research' : action === 'news' || action === 'enrich' || action === 'structure' ? 'research_aux' : '';
+  if (bucket) {
+    const limit = bucket === 'research' ? (Number(process.env.RESEARCH_DAILY_LIMIT) || 20) : 200;
+    try {
+      const q = await consumeDaily(claims.uid || claims.sub, bucket, limit);
+      if (!q.allowed) return res.status(429).json({ success: false, code: 'QUOTA_EXCEEDED', message: 'Bạn đã dùng hết ' + q.limit + ' lượt tạo tài nguyên hôm nay. Quay lại vào ngày mai nhé!' });
+    } catch (e) {
+      return res.status(503).json({ success: false, code: 'QUOTA_UNAVAILABLE', message: 'Hệ thống đếm hạn mức đang lỗi, thử lại sau.' });
+    }
+  }
+
+  try {
+    if (action === 'search') {
+      if (prompt.length < 8) return res.status(400).json({ success: false, message: 'Mô tả vụ việc quá ngắn.' });
+      const r = await R.doSearch(key, prompt, String(body.context || '').slice(0, 3000), Number(body.hours) || 0);
+      return res.json({ success: true, model: process.env.GEMINI_MODEL || 'gemini-2.5-flash', ...r });
+    }
+    if (action === 'structure') {
+      const d = await R.doStructure(key, prompt, String(body.report || '').slice(0, 30000), Array.isArray(body.sources) ? body.sources.slice(0, 60) : [], body.lang === 'en' ? 'en' : 'vi');
+      return res.json({ success: true, dossier: d });
+    }
+    if (action === 'news') {
+      const qs = (Array.isArray(body.queries) ? body.queries : [prompt]).map(String).filter(Boolean);
+      return res.json({ success: true, items: await R.doNews(qs, Number(body.hours) || 0) });
+    }
+    if (action === 'enrich') {
+      const r = await R.doEnrich(Array.isArray(body.urls) ? body.urls.map(String) : [], Array.isArray(body.imageQueries) ? body.imageQueries.map(String) : []);
+      return res.json({ success: true, ...r });
+    }
+    return res.status(400).json({ success: false, message: 'action không hợp lệ' });
+  } catch (e) {
+    const code = e.code || 'ERROR';
+    return res.status(code === 'NO_API_KEY' ? 501 : code === 'GEMINI_LIMIT' ? 429 : 502).json({ success: false, code, message: code === 'NO_API_KEY' ? 'Máy chủ chưa cấu hình GEMINI_API_KEY.' : e.message });
+  }
+};
