@@ -14,7 +14,7 @@
     var list = all.filter(function (v) { return !q || (v.title + ' ' + v.channel + ' ' + (v.note || '')).toLowerCase().indexOf(q.toLowerCase()) >= 0; });
     var cols = [
       { k: 'th', t: '', r: function (v) { return h(Thumb, { id: v.id, className: 'w-28' }); } },
-      { k: 'title', t: 'Video', cls: 'min-w-[260px]', v: function (v) { return v.title; }, r: function (v) { return h('div', null, h('a', { href: U.vurl(v.id), target: '_blank', rel: 'noopener noreferrer', className: 'text-[12px] text-zinc-100 hover:text-white line-clamp-2' }, v.title), h('button', { onClick: function () { v.channelId && p.goto('channels', { analyze: v.channelId }); }, className: 'text-[11px] text-zinc-500 hover:text-white cursor-pointer' }, v.channel + (v.subs != null ? ' · ' + N(v.subs) + ' sub' : '')), v.note && h('div', { className: 'text-[11px] text-zinc-400 mt-0.5' }, 'Ghi chú: ' + v.note)); } },
+      { k: 'title', t: 'Video', cls: 'min-w-[260px]', v: function (v) { return v.title; }, r: function (v) { return h('div', null, h('a', { href: U.vurl(v.id), target: '_blank', rel: 'noopener noreferrer', className: 'text-[12px] text-zinc-100 hover:text-white line-clamp-2' }, v.title), h('button', { onClick: function () { v.channelId && p.goto('channels', { analyze: v.channelId }); }, className: 'text-[11px] text-zinc-400 hover:text-white cursor-pointer' }, v.channel + (v.subs != null ? ' · ' + N(v.subs) + ' sub' : '')), v.note && h('div', { className: 'text-[11px] text-zinc-400 mt-0.5' }, 'Ghi chú: ' + v.note)); } },
       { k: 'views', t: 'View (lúc lưu)', right: true, v: function (v) { return v.views || 0; }, r: function (v) { return N(v.views); } },
       { k: 'dur', t: 'Dài', right: true, v: function (v) { return v.dur || 0; }, r: function (v) { return v.dur ? U.dur(v.dur) : '–'; } },
       { k: 'savedAt', t: 'Lưu lúc', right: true, v: function (v) { return v.savedAt || 0; }, r: function (v) { return v.savedAt ? U.date(v.savedAt) : '–'; } },
@@ -41,16 +41,16 @@
     function move(id, d) { var a = store.ideas().map(function (x) { if (x.id !== id) return x; var i = COLS.findIndex(function (c) { return c[0] === x.status; }); var n = COLS[Math.max(0, Math.min(COLS.length - 1, (i < 0 ? 0 : i) + d))][0]; return Object.assign({}, x, { status: n, updatedAt: Date.now() }); }); store.saveIdeas(a); }
     function del(id) { if (window.confirm('Xoá ý tưởng này?')) store.saveIdeas(store.ideas().filter(function (x) { return x.id !== id; })); }
     return h('div', { className: 'space-y-3' },
-      h('div', { className: 'flex flex-wrap items-center gap-2' }, h(Btn, { primary: true, onClick: function () { setEdit({}); } }, 'Thêm ý tưởng'), h('span', { className: 'text-[12px] text-zinc-500' }, ideas.length + ' ý tưởng'), h('span', { className: 'flex-1' }),
+      h('div', { className: 'flex flex-wrap items-center gap-2' }, h(Btn, { primary: true, onClick: function () { setEdit({}); } }, 'Thêm ý tưởng'), h('span', { className: 'text-[12px] text-zinc-400' }, ideas.length + ' ý tưởng'), h('span', { className: 'flex-1' }),
         ideas.length > 0 && h(Btn, { small: true, onClick: function () { U.csv('ke-hoach-video', [['Tiêu đề', 'Chủ đề', 'Góc khai thác', 'Ghi chú', 'Trạng thái']].concat(ideas.map(function (x) { var c = COLS.find(function (c2) { return c2[0] === x.status; }); return [x.title, x.topic || '', x.angle || '', x.whyTry || '', c ? c[1] : x.status]; }))); } }, 'Xuất CSV')),
       h('div', { className: 'grid gap-3 md:grid-cols-2 xl:grid-cols-4' }, COLS.map(function (col, ci) {
         var items = ideas.filter(function (x) { return (x.status || 'todo') === col[0] || (ci === 0 && !COLS.some(function (c) { return c[0] === x.status; })); });
         return h('div', { key: col[0], className: cx(K.C.card, 'p-3 min-h-[200px]') },
-          h('div', { className: 'flex justify-between text-[12px] mb-2' }, h('span', { className: 'text-zinc-200' }, col[1]), h('span', { className: 'text-zinc-600' }, items.length)),
+          h('div', { className: 'flex justify-between text-[12px] mb-2' }, h('span', { className: 'text-zinc-200' }, col[1]), h('span', { className: 'text-zinc-500' }, items.length)),
           h('div', { className: 'space-y-2' }, items.map(function (x) {
             return h('div', { key: x.id, className: 'rounded-md border border-zinc-800 p-2.5 space-y-1.5' },
               h('button', { onClick: function () { setEdit(x); }, className: 'text-left text-[12px] text-zinc-100 hover:text-white leading-snug cursor-pointer' }, x.title),
-              (x.topic || x.angle) && h('div', { className: 'text-[11px] text-zinc-500 line-clamp-3' }, [x.topic, x.angle].filter(Boolean).join(' — ')),
+              (x.topic || x.angle) && h('div', { className: 'text-[11px] text-zinc-400 line-clamp-3' }, [x.topic, x.angle].filter(Boolean).join(' — ')),
               h('div', { className: 'flex gap-1 pt-1' }, ci > 0 && h(Btn, { small: true, onClick: function () { move(x.id, -1); } }, '←'), ci < COLS.length - 1 && h(Btn, { small: true, onClick: function () { move(x.id, 1); } }, COLS[ci + 1][1] + ' →'), h('span', { className: 'flex-1' }), h(Btn, { small: true, onClick: function () { del(x.id); } }, 'Xoá')));
           })));
       })),
@@ -78,19 +78,20 @@
     if (open) {
       var blk = function (t, v) { return v ? h('div', { className: 'space-y-1' }, h('div', { className: K.C.label }, t), h('div', { className: 'text-[13px] text-zinc-300 leading-relaxed whitespace-pre-line' }, v)) : null; };
       return h('div', { className: 'max-w-3xl space-y-5' }, h(Btn, { small: true, onClick: function () { setOpen(null); } }, '← Danh sách bài'),
-        h('div', null, h('h2', { className: 'text-xl text-white' }, open.title), h('div', { className: 'text-[12px] text-zinc-500 mt-1' }, [open.level, open.readTime].filter(Boolean).join(' · '))),
+        h('div', null, h('h2', { className: 'text-xl text-white' }, open.title), h('div', { className: 'text-[12px] text-zinc-400 mt-1' }, [open.level, open.readTime].filter(Boolean).join(' · '))),
         blk('Tóm tắt', open.summary), blk('Hiểu đơn giản', open.simple), blk('Ví dụ', open.example), blk('Cách làm', open.howTo), blk('Sai lầm hay gặp', open.mistake), blk('Bài tập', open.exercise));
     }
     return h('div', { className: 'grid gap-5 md:grid-cols-[200px_1fr]' },
       h('div', { className: 'space-y-1' }, h(Input, { value: q, onChange: function (e) { setQ(e.target.value); }, placeholder: 'Tìm bài', className: 'mb-2' }), cats.map(function (c) { return h('button', { key: c.id, onClick: function () { setCat(c.id); setQ(''); }, className: cx('block w-full text-left px-2.5 py-1.5 rounded text-[13px] cursor-pointer', cat === c.id && !q ? 'bg-zinc-900 text-white' : 'text-zinc-400 hover:text-white') }, c.name); })),
-      h('div', { className: 'divide-y divide-zinc-900' }, list.map(function (a) { return h('button', { key: a.id, onClick: function () { setOpen(a); }, className: 'block w-full text-left py-3 cursor-pointer group' }, h('div', { className: 'text-[13px] text-zinc-100 group-hover:text-white' }, a.title), h('div', { className: 'text-[12px] text-zinc-500 mt-0.5 line-clamp-2' }, a.summary)); })));
+      h('div', { className: 'divide-y divide-zinc-900' }, list.map(function (a) { return h('button', { key: a.id, onClick: function () { setOpen(a); }, className: 'block w-full text-left py-3 cursor-pointer group' }, h('div', { className: 'text-[13px] text-zinc-100 group-hover:text-white' }, a.title), h('div', { className: 'text-[12px] text-zinc-400 mt-0.5 line-clamp-2' }, a.summary)); })));
   }
 
   function Library(p) {
     K.useBus('saved'); K.useBus('ideas');
     var s = useState(p.params && p.params.sub || 'saved'), sub = s[0], setSub = s[1];
     return h('div', { className: 'space-y-5' },
-      h('div', null, h('h1', { className: 'text-xl font-medium text-white tracking-tight' }, 'Thư viện'), h('p', { className: 'text-[13px] text-zinc-500 mt-1' }, 'Video đã lưu, kế hoạch sản xuất và cẩm nang.')),
+      h('div', null, h('h1', { className: 'text-xl font-medium text-white tracking-tight' }, 'Thư viện'), h('p', { className: 'text-[13px] text-zinc-400 mt-1' }, 'Video đã lưu, kế hoạch sản xuất và cẩm nang.')),
+      h(K.Help, { id: 'library', title: 'Cách dùng Thư viện', steps: ['Video đã lưu: mọi video bạn bấm Lưu ở các mục khác đều nằm đây; thêm ghi chú hoặc biến thành ý tưởng.', 'Kế hoạch video: kéo ý tưởng qua các cột Ý tưởng → Kịch bản → Dựng → Đã đăng bằng nút mũi tên.', 'Cẩm nang: các bài hướng dẫn làm YouTube, đọc khi cần.'] }),
       h(Tabs, { value: sub, onChange: setSub, items: [['saved', 'Video đã lưu', store.saved().length], ['plan', 'Kế hoạch video', store.ideas().length], ['guide', 'Cẩm nang']] }),
       sub === 'saved' ? h(Saved, { goto: p.goto }) : sub === 'plan' ? h(Planner) : h(Guide));
   }
@@ -107,10 +108,10 @@
       h('div', { className: 'grid grid-cols-3 gap-4 mb-4' }, h(Stat, { label: 'Key dùng được', value: S.ok + ' / ' + S.total }), h(Stat, { label: 'Quota còn hôm nay', value: N(S.left) }), h(Stat, { label: 'Đã dùng hôm nay', value: N(S.used) })),
       pool.length ? h(Table, { rows: pool, rowKey: function (p) { return p.id; }, cols: [
         { k: 'name', t: 'Tên', r: function (p) { return h('span', { className: 'text-zinc-200' }, p.name); } },
-        { k: 'key', t: 'Key', r: function (p) { return h('span', { className: 'font-mono text-zinc-500' }, p.key.slice(0, 8) + '…' + p.key.slice(-4)); } },
-        { k: 'st', t: 'Trạng thái', r: function (p) { return h('span', { className: p.status === 'active' ? 'text-emerald-300' : p.status === 'quota_exceeded' ? 'text-rose-300' : 'text-zinc-500' }, ST[p.status] || p.status); } },
+        { k: 'key', t: 'Key', r: function (p) { return h('span', { className: 'font-mono text-zinc-400' }, p.key.slice(0, 8) + '…' + p.key.slice(-4)); } },
+        { k: 'st', t: 'Trạng thái', r: function (p) { return h('span', { className: p.status === 'active' ? 'text-emerald-300' : p.status === 'quota_exceeded' ? 'text-rose-300' : 'text-zinc-400' }, ST[p.status] || p.status); } },
         { k: 'u', t: 'Đã dùng', right: true, r: function (p) { return N(use[p.key] || 0) + ' / 10K'; } },
-        { k: 't', t: 'Kiểm tra', r: function (p) { return h('span', { className: 'text-zinc-500' }, test[p.id] || ''); } },
+        { k: 't', t: 'Kiểm tra', r: function (p) { return h('span', { className: 'text-zinc-400' }, test[p.id] || ''); } },
         { k: 'a', t: '', r: function (p) { return h('div', { className: 'flex gap-1 justify-end' }, h(Btn, { small: true, onClick: function () { check(p); } }, 'Thử'), p.status !== 'active' && h(Btn, { small: true, onClick: function () { Y.keys.setActive(p.id); } }, 'Dùng'), p.status === 'quota_exceeded' && h(Btn, { small: true, onClick: function () { Y.keys.resetStatus(p.id); } }, 'Đặt lại'), h(Btn, { small: true, onClick: function () { if (window.confirm('Xoá key ' + p.name + '?')) Y.keys.removeKey(p.id); } }, 'Xoá')); } }
       ] }) : h(Note, null, 'Chưa có key. Lấy key ở console.cloud.google.com → APIs & Services → bật "YouTube Data API v3" → Credentials → Create API key.'),
       h('div', { className: 'grid gap-2 md:grid-cols-[180px_1fr_auto] mt-4' }, h(Input, { value: name, onChange: function (e) { setName(e.target.value); }, placeholder: 'Tên (tuỳ chọn)' }), h(Input, { value: key, onChange: function (e) { setKey(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Enter') add(); }, placeholder: 'Dán key (nhiều key: cách nhau dấu phẩy hoặc xuống dòng)' }), h(Btn, { primary: true, onClick: add, disabled: !key.trim() }, 'Thêm key')));
@@ -126,8 +127,8 @@
         h(Btn, { primary: true, disabled: !key.trim(), onClick: function () { Y.claude.save({ key: key.trim() }); setKey(''); setMsg('Đã lưu key trên trình duyệt này.'); } }, 'Lưu key'),
         h(Btn, { disabled: !c.key || busy, onClick: test }, busy ? 'Đang thử…' : 'Thử kết nối')),
       h('div', { className: 'flex flex-wrap items-center gap-3 mt-3 text-[12px]' },
-        h('span', { className: c.key ? 'text-emerald-300' : 'text-zinc-500' }, c.key ? 'Đã có key' : 'Chưa có key'),
-        c.key && h('button', { onClick: function () { if (window.confirm('Xoá Claude API key khỏi trình duyệt này?')) Y.claude.save({ key: '' }); }, className: 'text-zinc-500 hover:text-rose-300 cursor-pointer' }, 'Xoá key'),
+        h('span', { className: c.key ? 'text-emerald-300' : 'text-zinc-400' }, c.key ? 'Đã có key' : 'Chưa có key'),
+        c.key && h('button', { onClick: function () { if (window.confirm('Xoá Claude API key khỏi trình duyệt này?')) Y.claude.save({ key: '' }); }, className: 'text-zinc-400 hover:text-rose-300 cursor-pointer' }, 'Xoá key'),
         h('a', { href: 'https://console.anthropic.com/settings/keys', target: '_blank', rel: 'noopener noreferrer', className: 'text-sky-300 hover:underline' }, 'Lấy key ở console.anthropic.com'),
         msg && h('span', { className: 'text-zinc-300' }, msg)));
   }
@@ -176,6 +177,7 @@
   function Settings(p) {
     return h('div', { className: 'space-y-5 max-w-5xl' },
       h('div', null, h('h1', { className: 'text-xl font-medium text-white tracking-tight' }, 'Cài đặt')),
+      h(K.Help, { id: 'settings', title: 'Thiết lập lần đầu', steps: ['Thêm YouTube API key: vào console.cloud.google.com, bật YouTube Data API v3, tạo API key rồi dán vào ô bên dưới. Nên có nhiều key để quét được nhiều hơn.', 'Gemini (cho Tạo tài nguyên và Nhận định AI) đặt trên Vercel, ô Máy chủ & AI cho biết đã có chưa.', 'Claude API key là tuỳ chọn: chỉ cần khi muốn Claude viết kịch bản ngay trong web.', 'Thỉnh thoảng bấm Tải file sao lưu để giữ dữ liệu khi đổi máy.'] }),
       h(KeysPanel), h(ClaudePanel), h(ServerPanel, { me: p.me }), h(AccountPanel, { onLogout: p.onLogout }), h(DataPanel));
   }
 

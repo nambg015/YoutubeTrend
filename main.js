@@ -18,15 +18,15 @@
     async function go(fn) { setErr(''); setBusy(fn === 'g' ? 'g' : 'p'); try { if (fn === 'g') await Y.auth.signInGoogle(); else await Y.auth.signIn(id, pw); } catch (e) { setErr(e.message); setBusy(''); } }
     return h('div', { className: 'min-h-screen flex items-center justify-center px-4' },
       h('div', { className: 'w-full max-w-[340px]' },
-        h('div', { className: 'mb-8' }, h('div', { className: 'text-[22px] font-semibold tracking-tight text-white' }, 'YouTrend'), h('div', { className: 'text-[13px] text-zinc-500 mt-1' }, 'Đăng nhập để tiếp tục.')),
+        h('div', { className: 'mb-8' }, h('div', { className: 'text-[22px] font-semibold tracking-tight text-white' }, 'YouTrend'), h('div', { className: 'text-[13px] text-zinc-400 mt-1' }, 'Đăng nhập để tiếp tục.')),
         h('button', { onClick: function () { go('g'); }, disabled: !!busy, className: 'w-full h-10 rounded-md bg-emerald-400 text-emerald-950 text-[13px] font-medium hover:bg-emerald-300 transition disabled:opacity-50 cursor-pointer' }, busy === 'g' ? 'Đang mở Google…' : 'Đăng nhập với Google'),
-        h('div', { className: 'flex items-center gap-3 my-5 text-[11px] text-zinc-600' }, h('span', { className: 'flex-1 h-px bg-zinc-800' }), 'hoặc', h('span', { className: 'flex-1 h-px bg-zinc-800' })),
+        h('div', { className: 'flex items-center gap-3 my-5 text-[11px] text-zinc-500' }, h('span', { className: 'flex-1 h-px bg-zinc-800' }), 'hoặc', h('span', { className: 'flex-1 h-px bg-zinc-800' })),
         h('form', { onSubmit: function (e) { e.preventDefault(); if (id && pw) go('p'); }, className: 'space-y-2' },
           h(Input, { value: id, onChange: function (e) { setId(e.target.value); }, placeholder: 'Tên đăng nhập', autoComplete: 'username', className: 'h-10' }),
           h(Input, { type: 'password', value: pw, onChange: function (e) { setPw(e.target.value); }, placeholder: 'Mật khẩu', autoComplete: 'current-password', className: 'h-10' }),
           h('button', { type: 'submit', disabled: !!busy || !id || !pw, className: 'w-full h-10 rounded-md border border-zinc-700 text-[13px] text-zinc-200 hover:border-zinc-500 hover:text-white transition disabled:opacity-40 cursor-pointer' }, busy === 'p' ? 'Đang đăng nhập…' : 'Đăng nhập')),
         err && h('div', { className: 'mt-4 text-[12px] text-red-300 leading-relaxed' }, err),
-        h('div', { className: 'mt-10 text-[11px] text-zinc-700' }, 'Web nội bộ. Chỉ tài khoản quản trị được truy cập.')));
+        h('div', { className: 'mt-10 text-[11px] text-zinc-500' }, 'Web nội bộ. Chỉ tài khoản quản trị được truy cập.')));
   }
 
   // ---------- KHUNG ----------
@@ -49,12 +49,12 @@
     else if (route === 'channels') page = h(P.channels, { goto: goto, params: params });
     else if (route === 'library') page = h(P.library, { goto: goto, params: params });
     else if (route === 'settings') page = h(P.settings, { goto: goto, me: p.me, onLogout: p.onLogout });
-    else if (route === 'niche') page = window.TopNgachV3 ? h(K.Mono, null, h(window.TopNgachV3, Object.assign({}, common, {
+    else if (route === 'niche') page = window.TopNgachV3 ? h('div', { className: 'space-y-4' }, h(K.Help, { id: 'niche', title: 'Cách dùng Top Ngách', steps: ['Chọn chế độ: Ngách RPM cao (chỉ nước trả tiền cao) hoặc Toàn cầu (mọi nước, mọi loại content).', 'Bấm Quét nhanh ở cột trái. Kết quả được cộng dồn, càng quét nhiều lần càng ra nhiều kênh lạ.', 'Tab Ngách đề xuất: ngách nào đang có nhiều kênh nhỏ kiếm được view. Bấm Xem kênh để xem danh sách.', 'Kênh farm tiền = kênh nhỏ có ít nhất 3 video vượt số sub, ra view đều chứ không ăn may. Bấm Phân tích nếu kênh còn ghi Chưa phân tích.'], terms: [['Outlier', 'view chia cho sub; ×20 nghĩa là video có view gấp 20 lần số người đăng ký'], ['Điểm farm', '0–100, càng cao càng chứng tỏ kênh ra view đều đặn']] }), h(K.Mono, null, h(window.TopNgachV3, Object.assign({}, common, {
       isPro: true, onUpgradePrompt: function () { },
       onSelectKeywordForSearch: function (kw) { goto('explore', { q: kw }); },
       onAddCompetitor: function (v) { K.followChannel(v.channelId, v.channel); },
       onToggleSave: function (v) { store.toggleSave(v); }, isSaved: function (id) { return store.isSaved(id); }
-    }))) : h(K.Missing, { name: 'Top Ngách', file: 'top_ngach_v3.js' });
+    })))) : h(K.Missing, { name: 'Top Ngách', file: 'top_ngach_v3.js' });
     else if (route === 'resource') page = P.studio ? h(P.studio, { goto: goto, params: params, common: common }) : h(K.Missing, { name: 'Tạo tài nguyên', file: 'page_studio.js' });
     var user = Y.auth.currentUser(), label = user ? (user.email || '').replace('@youtrend.user', '') : '';
     return h('div', { className: 'min-h-screen' },
@@ -63,7 +63,7 @@
           h('button', { onClick: function () { goto('explore'); }, className: 'text-[15px] font-semibold tracking-tight cursor-pointer shrink-0 bg-gradient-to-r from-emerald-300 to-sky-300 bg-clip-text text-transparent' }, 'YouTrend'),
           h('nav', { className: 'flex-1 min-w-0 flex items-center gap-5 h-full overflow-x-auto no-scrollbar' }, NAV.map(function (n) {
             var on = route === n[0];
-            return h('a', { key: n[0], href: '#' + n[0], onClick: function (e) { e.preventDefault(); goto(n[0]); }, className: cx('relative h-full flex items-center text-[13px] whitespace-nowrap transition', on ? 'text-white' : 'text-zinc-500 hover:text-zinc-200') }, n[1], on && h('span', { className: 'absolute left-0 right-0 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-emerald-400 to-sky-400' }));
+            return h('a', { key: n[0], href: '#' + n[0], onClick: function (e) { e.preventDefault(); goto(n[0]); }, className: cx('relative h-full flex items-center text-[13px] whitespace-nowrap transition', on ? 'text-white' : 'text-zinc-400 hover:text-zinc-200') }, n[1], on && h('span', { className: 'absolute left-0 right-0 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-emerald-400 to-sky-400' }));
           })),
           h('div', { className: 'hidden sm:flex items-center gap-2 shrink-0' }, h(QuotaChip, { onClick: function () { goto('settings'); } }),
             h('button', { onClick: function () { goto('settings'); }, title: user ? user.email : '', className: 'h-8 w-8 rounded-full bg-emerald-500/15 text-emerald-200 border border-emerald-500/30 text-[12px] font-semibold cursor-pointer' }, (label || '?').charAt(0).toUpperCase())))),
@@ -76,7 +76,7 @@
     EB.prototype = Object.create(React.Component.prototype);
     EB.getDerivedStateFromError = function (err) { return { err: err }; };
     EB.prototype.componentDidCatch = function (err, info) { console.error(err, info); };
-    EB.prototype.render = function () { if (this.state.err) return h('div', { className: 'py-16 text-center space-y-3' }, h('div', { className: 'text-[13px] text-zinc-300' }, 'Mục này gặp lỗi khi hiển thị.'), h('div', { className: 'text-[12px] text-zinc-600 font-mono' }, String(this.state.err && this.state.err.message || this.state.err)), h(Btn, { onClick: function () { location.reload(); } }, 'Tải lại trang')); return this.props.children; };
+    EB.prototype.render = function () { if (this.state.err) return h('div', { className: 'py-16 text-center space-y-3' }, h('div', { className: 'text-[13px] text-zinc-300' }, 'Mục này gặp lỗi khi hiển thị.'), h('div', { className: 'text-[12px] text-zinc-500 font-mono' }, String(this.state.err && this.state.err.message || this.state.err)), h(Btn, { onClick: function () { location.reload(); } }, 'Tải lại trang')); return this.props.children; };
     return EB;
   })();
 

@@ -321,7 +321,7 @@
 
   // ---------- lớp đơn sắc cho module nhúng (Spy, Trend v2, Studio) ----------
   (function softCss() {
-    var css = '.mono{filter:saturate(.95)}'
+    var css = '.mono{filter:saturate(.95)}.mono [class*="bg-[#121316]"],.mono [class*="bg-zinc-950"],.mono [class*="bg-[#0b1018]"]{background-color:rgba(10,15,23,.94)!important}.mono [class*="text-zinc-500"]{color:#a1a1aa!important}.mono [class*="text-zinc-600"]{color:#8b8b94!important}.mono [class*="border-zinc-800"]{border-color:rgba(255,255,255,.11)!important}'
       + '.mono [class*="bg-gradient-"]:not([class*="h-1"]):not([class*="h-1.5"]):not([class*="h-2"]){background-image:none!important;background-color:rgba(255,255,255,.025)!important}'
       + '.mono [class*="shadow-"]{box-shadow:none!important}.mono [class*="animate-pulse"],.mono [class*="animate-bounce"],.mono [class*="animate-ping"]{animation:none!important}'
       + '.mono [class*="backdrop-blur"]{backdrop-filter:none!important}';
