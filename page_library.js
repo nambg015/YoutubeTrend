@@ -115,6 +115,22 @@
       ] }) : h(Note, null, 'Chưa có key. Lấy key ở console.cloud.google.com → APIs & Services → bật "YouTube Data API v3" → Credentials → Create API key.'),
       h('div', { className: 'grid gap-2 md:grid-cols-[180px_1fr_auto] mt-4' }, h(Input, { value: name, onChange: function (e) { setName(e.target.value); }, placeholder: 'Tên (tuỳ chọn)' }), h(Input, { value: key, onChange: function (e) { setKey(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Enter') add(); }, placeholder: 'Dán key (nhiều key: cách nhau dấu phẩy hoặc xuống dòng)' }), h(Btn, { primary: true, onClick: add, disabled: !key.trim() }, 'Thêm key')));
   }
+  function ClaudePanel() {
+    K.useBus('claude');
+    var c = Y.claude.cfg(), s0 = useState(''), key = s0[0], setKey = s0[1], s1 = useState(''), msg = s1[0], setMsg = s1[1], s2 = useState(false), busy = s2[0], setBusy = s2[1];
+    async function test() { setBusy(true); setMsg(''); try { var r = await Y.claude.stream({ prompt: 'Trả lời đúng 1 từ: OK', maxTokens: 10 }); setMsg('Kết nối được: ' + (r.text || 'OK').trim()); } catch (e) { setMsg(e.message); } setBusy(false); }
+    return h(Section, { title: 'Claude', sub: 'Dùng ở Tạo tài nguyên → Dự án & Claude. Có 2 cách: copy prompt sang claude.ai (tài khoản Claude nào cũng được, không cần key), hoặc dán Claude API key để viết ngay trong web (trả phí theo lượng dùng tại console.anthropic.com).' },
+      h('div', { className: 'grid gap-2 md:grid-cols-[1fr_260px_auto_auto]' },
+        h(Input, { type: 'password', value: key, onChange: function (e) { setKey(e.target.value); }, placeholder: c.key ? 'Đã lưu key ' + c.key.slice(0, 10) + '…' + c.key.slice(-4) + ' — dán key mới để thay' : 'Dán Claude API key (sk-ant-…)' }),
+        h(Select, { value: c.model, onChange: function (v) { Y.claude.save({ model: v }); }, options: Y.claude.models }),
+        h(Btn, { primary: true, disabled: !key.trim(), onClick: function () { Y.claude.save({ key: key.trim() }); setKey(''); setMsg('Đã lưu key trên trình duyệt này.'); } }, 'Lưu key'),
+        h(Btn, { disabled: !c.key || busy, onClick: test }, busy ? 'Đang thử…' : 'Thử kết nối')),
+      h('div', { className: 'flex flex-wrap items-center gap-3 mt-3 text-[12px]' },
+        h('span', { className: c.key ? 'text-emerald-300' : 'text-zinc-500' }, c.key ? 'Đã có key' : 'Chưa có key'),
+        c.key && h('button', { onClick: function () { if (window.confirm('Xoá Claude API key khỏi trình duyệt này?')) Y.claude.save({ key: '' }); }, className: 'text-zinc-500 hover:text-rose-300 cursor-pointer' }, 'Xoá key'),
+        h('a', { href: 'https://console.anthropic.com/settings/keys', target: '_blank', rel: 'noopener noreferrer', className: 'text-sky-300 hover:underline' }, 'Lấy key ở console.anthropic.com'),
+        msg && h('span', { className: 'text-zinc-300' }, msg)));
+  }
   function ServerPanel(p) {
     var me = p.me || {};
     return h(Section, { title: 'Máy chủ & AI' },
@@ -160,7 +176,7 @@
   function Settings(p) {
     return h('div', { className: 'space-y-5 max-w-5xl' },
       h('div', null, h('h1', { className: 'text-xl font-medium text-white tracking-tight' }, 'Cài đặt')),
-      h(KeysPanel), h(ServerPanel, { me: p.me }), h(AccountPanel, { onLogout: p.onLogout }), h(DataPanel));
+      h(KeysPanel), h(ClaudePanel), h(ServerPanel, { me: p.me }), h(AccountPanel, { onLogout: p.onLogout }), h(DataPanel));
   }
 
   window.YT4Pages = window.YT4Pages || {};

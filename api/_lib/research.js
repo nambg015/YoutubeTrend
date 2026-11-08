@@ -59,6 +59,7 @@ Write a factual research report in English with these sections:
 6. People, organizations, places, and specific objects/identifiers involved (e.g. aircraft model + registration/tail number, ship name, case number, company ticker).
 7. Official primary sources that exist for this story (agency reports, dockets, court filings, press briefings, recordings, data trackers).
 8. What is still unknown, disputed or unconfirmed.
+9. Claims circulating in media or social posts that are NOT officially confirmed yet (who reports them, where).
 Only state what sources support. Clearly mark rumors or unconfirmed claims.`;
 }
 
@@ -99,6 +100,7 @@ Return ONLY JSON with this exact shape:
  "official_sources": [{"name": "...", "url": "only if you are confident it exists, else empty", "what": "what the creator gets there"}],
  "angles": [{"hook": "a strong video title/hook idea", "why": "why viewers care"}],
  "unverified": ["claims that are rumors / not confirmed / disputed"],
+ "reported_claims": [{"claim": "a claim reported by some outlets/social posts but not officially confirmed", "reported_by": "who reports it", "src": [1], "phrasing_en": "ready-to-read English narration line that hedges it, e.g. Some reports suggest ..., but this has not been officially confirmed."}],
  "sensitivity": "notes about victims, graphic content, legal or privacy care the creator should take"
 }
 Rules: 8-12 youtube_queries covering every type that fits THIS story (press briefings, news reports, on-scene footage, audio recordings, expert analysis, background on the people/objects involved). 6-10 image_queries. Latest and timeline newest information must reflect the report precisely.`;
@@ -112,11 +114,11 @@ function parseJson(t) {
 }
 
 async function doSearch(key, prompt, ctx, hours) {
-  const r = await gemini(key, { contents: [{ parts: [{ text: searchPrompt(prompt, ctx, hours) }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.2 } }, 26000);
+  const r = await gemini(key, { contents: [{ parts: [{ text: searchPrompt(prompt, ctx, hours) }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.2 } }, 52000);
   return annotate(r.text, r.meta);
 }
 async function doStructure(key, prompt, report, sources, lang) {
-  const r = await gemini(key, { contents: [{ parts: [{ text: structurePrompt(prompt, report, sources || [], lang) }] }], generationConfig: { temperature: 0.2, responseMimeType: 'application/json' } }, 26000);
+  const r = await gemini(key, { contents: [{ parts: [{ text: structurePrompt(prompt, report, sources || [], lang) }] }], generationConfig: { temperature: 0.2, responseMimeType: 'application/json' } }, 50000);
   return parseJson(r.text);
 }
 
@@ -167,22 +169,62 @@ function meta(html, names) {
   }
   return '';
 }
+const NEWS = /(^|\.)(apnews|reuters|bbc|nytimes|cnn|nbcnews|abcnews|go|cbsnews|foxnews|washingtonpost|wsj|theguardian|usatoday|npr|latimes|nypost|axios|politico|bloomberg|cnbc|time|newsweek|aljazeera|dw|france24|skynews|independent|telegraph|dailymail|thehill|wpbf|wptv|wsvn|local10|nbcmiami|cbs12|wflx|palmbeachpost|miamiherald|sun-sentinel|vnexpress|tuoitre|thanhnien|vietnamnet|dantri|zingnews|znews|vtv|nhk|asahi|yomiuri|kyodonews|yonhap|scmp|straitstimes|abc|cbc|globalnews|news|aviationherald|avherald|flightglobal|simpleflying|aerotime|thepointsguy|aviation-safety)\./i;
+const SOCIAL = /(^|\.)(x|twitter|facebook|fb|instagram|tiktok|reddit|youtube|youtu|threads|t|telegram|weibo|rumble|bitchute)\.(com|me|be|net|org)$/i;
+function level(host) {
+  host = String(host || '').toLowerCase().replace(/^www\./, '');
+  if (/\.gov(\.[a-z]{2})?$|\.mil$|(^|\.)(ntsb|faa|nasa|noaa|fema|fbi|justice|police|sheriff|whitehouse|un|who|easa|icao)\./.test(host)) return 'official';
+  if (SOCIAL.test(host)) return 'social';
+  if (NEWS.test(host + '.')) return 'news';
+  return 'other';
+}
+const BAD_IMG = /logo|icon|sprite|avatar|favicon|placeholder|blank|pixel|1x1|spacer|badge|button|banner-ad|advert|doubleclick|tracking|gravatar|emoji|\.svg(\?|$)|\.gif(\?|$)|data:/i;
+function pickSrc(tag) {
+  const g = n => { const m = new RegExp('\\s' + n + '\\s*=\\s*["\']([^"\']+)["\']', 'i').exec(tag); return m ? m[1] : ''; };
+  const ss = g('srcset') || g('data-srcset');
+  if (ss) { const best = ss.split(',').map(x => x.trim().split(/\s+/)).map(([u, w]) => [u, parseInt(w) || 0]).sort((a, b) => b[1] - a[1])[0]; if (best && best[0]) return { src: best[0], alt: g('alt'), w: +g('width') || 0 }; }
+  return { src: g('data-src') || g('data-lazy-src') || g('data-original') || g('src'), alt: g('alt'), w: +g('width') || 0 };
+}
+function mediaFrom(html, base) {
+  const imgs = [], seen = new Set(), vids = [], vseen = new Set();
+  const abs = u => { try { return new URL(decode(u), base).href; } catch (e) { return ''; } };
+  const body = html.replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ');
+  (body.match(/<img\b[^>]*>/gi) || []).forEach(tag => {
+    const p = pickSrc(tag); const u = abs(p.src); if (!u || BAD_IMG.test(u) || seen.has(u) || (p.w && p.w < 300)) return;
+    seen.add(u); imgs.push({ url: u, alt: decode(p.alt).slice(0, 160) });
+  });
+  const addV = (kind, url, id) => { const k = kind + ':' + (id || url); if (vseen.has(k)) return; vseen.add(k); vids.push({ kind, url, id: id || '' }); };
+  (html.match(/<iframe\b[^>]*>/gi) || []).forEach(tag => {
+    const m = /src\s*=\s*["']([^"']+)["']/i.exec(tag); if (!m) return; const u = abs(m[1]);
+    let y = /(?:youtube(?:-nocookie)?\.com\/embed\/|youtu\.be\/)([\w-]{11})/.exec(u); if (y) return addV('youtube', 'https://www.youtube.com/watch?v=' + y[1], y[1]);
+    if (/player\.vimeo\.com\/video\/(\d+)/.test(u)) return addV('vimeo', u.replace('player.vimeo.com/video', 'vimeo.com'));
+    if (/(twitter|x)\.com|tiktok\.com|facebook\.com\/plugins\/video|instagram\.com|dailymotion|jwplayer|brightcove|cnn\.com\/videos|nbcnews|cbsnews|anvato|vidible|ooyala/i.test(u)) addV('embed', u);
+  });
+  (html.match(/https?:\/\/(?:twitter|x)\.com\/[\w]+\/status\/\d+/gi) || []).slice(0, 6).forEach(u => addV('x', u));
+  (html.match(/https?:\/\/(?:www\.)?tiktok\.com\/@[\w.]+\/video\/\d+/gi) || []).slice(0, 4).forEach(u => addV('tiktok', u));
+  (html.match(/<(?:video|source)\b[^>]*src\s*=\s*["']([^"']+\.(?:mp4|m3u8|webm)[^"']*)["']/gi) || []).forEach(tag => { const m = /src\s*=\s*["']([^"']+)["']/i.exec(tag); if (m) addV('file', abs(m[1])); });
+  const ogv = meta(html, ['og:video:secure_url', 'og:video:url', 'og:video', 'twitter:player']); if (ogv) { const u = abs(ogv); const y = /(?:embed\/|v=|youtu\.be\/)([\w-]{11})/.exec(u); y ? addV('youtube', 'https://www.youtube.com/watch?v=' + y[1], y[1]) : addV('embed', u); }
+  return { images: imgs.slice(0, 14), videos: vids.slice(0, 10) };
+}
 async function openPage(u0) {
   let u = safeUrl(u0); if (!u) return null;
   for (let hop = 0; hop < 5; hop++) {
-    const r = await fetch(u.href, { redirect: 'manual', headers: { 'User-Agent': UA, Accept: 'text/html' }, signal: AbortSignal.timeout(7000) });
+    const r = await fetch(u.href, { redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36', Accept: 'text/html', 'Accept-Language': 'en-US,en;q=0.9,vi;q=0.8' }, signal: AbortSignal.timeout(9000) });
     if (r.status >= 300 && r.status < 400 && r.headers.get('location')) { u = safeUrl(new URL(r.headers.get('location'), u).href); if (!u) return null; continue; }
-    if (!r.ok || !/html/i.test(r.headers.get('content-type') || '')) return { url: u.href, site: u.hostname.replace(/^www\./, '') };
+    const site = u.hostname.replace(/^www\./, '');
+    if (!r.ok || !/html/i.test(r.headers.get('content-type') || '')) return { url: u.href, site, level: level(site), images: [], videos: [] };
     const reader = r.body.getReader(); let html = '', got = 0;
-    while (got < 400000) { const { done, value } = await reader.read(); if (done) break; got += value.length; html += Buffer.from(value).toString('utf8'); if (/<\/head>/i.test(html)) break; }
+    while (got < 900000) { const { done, value } = await reader.read(); if (done) break; got += value.length; html += Buffer.from(value).toString('utf8'); }
     try { reader.cancel(); } catch (e) { }
     const img = meta(html, ['og:image', 'twitter:image', 'twitter:image:src']);
     const titleTag = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+    const md = mediaFrom(html, u.href), og = img ? new URL(img, u).href : '';
+    if (og && !md.images.some(x => x.url === og)) md.images.unshift({ url: og, alt: 'Ảnh đại diện bài viết' });
     return {
-      url: u.href, site: meta(html, ['og:site_name']) || u.hostname.replace(/^www\./, ''),
+      url: u.href, site: meta(html, ['og:site_name']) || site, level: level(site),
       title: meta(html, ['og:title', 'twitter:title']) || (titleTag ? decode(titleTag[1]) : ''),
       description: meta(html, ['og:description', 'description']).slice(0, 300),
-      image: img ? new URL(img, u).href : '',
+      image: og, images: md.images, videos: md.videos,
       published: meta(html, ['article:published_time', 'og:published_time', 'datePublished', 'pubdate', 'date'])
     };
   }
@@ -205,7 +247,7 @@ async function commons(queries) {
   return out.slice(0, 30);
 }
 async function doEnrich(urls, imageQueries) {
-  const list = [...new Set((urls || []).filter(Boolean))].slice(0, 14);
+  const list = [...new Set((urls || []).filter(Boolean))].slice(0, 16);
   const pages = await Promise.all(list.map(u => openPage(u).then(p => p && Object.assign({ from: u }, p)).catch(() => null)));
   return { pages: pages.filter(Boolean), commons: await commons(imageQueries || []) };
 }
@@ -239,4 +281,4 @@ async function doInsight(key, kind, data) {
   return parseJson(r.text);
 }
 
-module.exports = { doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };

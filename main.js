@@ -55,7 +55,7 @@
       onAddCompetitor: function (v) { K.followChannel(v.channelId, v.channel); },
       onToggleSave: function (v) { store.toggleSave(v); }, isSaved: function (id) { return store.isSaved(id); }
     }))) : h(K.Missing, { name: 'Top Ngách', file: 'top_ngach_v3.js' });
-    else if (route === 'resource') page = window.ResourceStudio ? h(K.Mono, null, h(window.ResourceStudio, common)) : h(K.Missing, { name: 'Tạo tài nguyên', file: 'resource_v1.js' });
+    else if (route === 'resource') page = P.studio ? h(P.studio, { goto: goto, params: params, common: common }) : h(K.Missing, { name: 'Tạo tài nguyên', file: 'page_studio.js' });
     var user = Y.auth.currentUser(), label = user ? (user.email || '').replace('@youtrend.user', '') : '';
     return h('div', { className: 'min-h-screen' },
       h('header', { className: 'sticky top-0 z-40 bg-[#080b11]/70 backdrop-blur-xl border-b border-white/[0.07]' },

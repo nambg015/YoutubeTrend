@@ -239,6 +239,45 @@
     addIdea: function (i) { var a = this.ideas(); a.unshift(Object.assign({ id: 'idea_' + Date.now().toString(36), status: 'todo', createdAt: new Date().toISOString() }, i)); this.saveIdeas(a); }
   };
 
+  // ---------- Dự án (gom các phiên Tạo tài nguyên) + kết quả sản xuất ----------
+  store.projects = function () { var a = st.json('yt4_projects', []); return Array.isArray(a) ? a : []; };
+  store.saveProject = function (pj) { var a = store.projects(); if (!pj.id) { pj = Object.assign({ id: 'pj_' + Date.now().toString(36), createdAt: Date.now() }, pj); a.unshift(pj); } else a = a.map(function (x) { return x.id === pj.id ? Object.assign({}, x, pj) : x; }); st.put('yt4_projects', a); emit('projects'); return pj; };
+  store.removeProject = function (id) { st.put('yt4_projects', store.projects().filter(function (x) { return x.id !== id; })); var l = store.links(); Object.keys(l).forEach(function (k) { if (l[k] === id) delete l[k]; }); st.put('yt4_session_project', l); emit('projects'); };
+  store.links = function () { return st.json('yt4_session_project', {}) || {}; };
+  store.linkSession = function (sid, pid) { var l = store.links(); if (pid) l[sid] = pid; else delete l[sid]; st.put('yt4_session_project', l); emit('projects'); };
+  store.productions = function (sid) { var a = st.json('yt4_productions', []); a = Array.isArray(a) ? a : []; return sid ? a.filter(function (x) { return x.sid === sid; }) : a; };
+  store.saveProduction = function (pr) { var a = store.productions().filter(function (x) { return x.id !== pr.id; }); a.unshift(pr); while (a.length > 40) a.pop(); try { st.put('yt4_productions', a); } catch (e) { st.put('yt4_productions', a.slice(0, 15)); } emit('productions'); };
+  store.removeProduction = function (id) { st.put('yt4_productions', store.productions().filter(function (x) { return x.id !== id; })); emit('productions'); };
+
+  // ---------- Claude API (gọi thẳng từ trình duyệt, key lưu trên máy này) ----------
+  var CLAUDE_MODELS = [['claude-sonnet-5-5', 'Claude Sonnet 5.5 (cân bằng, khuyên dùng)'], ['claude-opus-5-5', 'Claude Opus 5.5 (mạnh nhất, đắt hơn)'], ['claude-haiku-5-5', 'Claude Haiku 5.5 (nhanh, rẻ)'], ['claude-fable-5-1', 'Claude Fable 5.1']];
+  var claude = {
+    models: CLAUDE_MODELS,
+    cfg: function () { return Object.assign({ key: '', model: 'claude-sonnet-5-5', maxTokens: 16000 }, st.json('yt4_claude', {})); },
+    save: function (c) { st.put('yt4_claude', Object.assign(this.cfg(), c)); emit('claude'); },
+    ready: function () { return !!this.cfg().key; },
+    // stream: onText(chunk, fullText); trả về toàn bộ văn bản
+    stream: async function (o) {
+      var c = this.cfg(); if (!c.key) throw new Error('Chưa có Claude API key (Cài đặt → Claude).');
+      var r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal: o.signal,
+        headers: { 'content-type': 'application/json', 'x-api-key': c.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: o.model || c.model, max_tokens: o.maxTokens || c.maxTokens || 16000, stream: true, system: o.system || undefined, messages: [{ role: 'user', content: o.prompt }] }) });
+      if (!r.ok) { var j = await r.json().catch(function () { return {}; }); var m = (j.error && j.error.message) || ('HTTP ' + r.status); if (r.status === 401) m = 'Claude API key không hợp lệ.'; if (r.status === 429) m = 'Claude đang giới hạn tốc độ / hết hạn mức: ' + m; throw new Error(m); }
+      var rd = r.body.getReader(), dec = new TextDecoder(), buf = '', full = '', stop = '';
+      while (true) {
+        var x = await rd.read(); if (x.done) break; buf += dec.decode(x.value, { stream: true });
+        var parts = buf.split('\n'); buf = parts.pop();
+        parts.forEach(function (line) {
+          if (line.indexOf('data:') !== 0) return; var d; try { d = JSON.parse(line.slice(5)); } catch (e) { return; }
+          if (d.type === 'content_block_delta' && d.delta && d.delta.text) { full += d.delta.text; o.onText && o.onText(d.delta.text, full); }
+          else if (d.type === 'message_delta' && d.delta && d.delta.stop_reason) stop = d.delta.stop_reason;
+          else if (d.type === 'error') throw new Error((d.error && d.error.message) || 'Lỗi Claude');
+        });
+      }
+      return { text: full, stop: stop };
+    }
+  };
+
   // Tra kênh từ link/@handle/ID/link video
   async function resolveChannel(raw) {
     var p = U.parseChannel(raw); if (!p) throw new Error('Nhập link kênh, @handle hoặc ID kênh');
@@ -303,5 +342,5 @@
     el.__monoObs = mo;
   }
 
-  W.YT4 = { st: st, yt: yt, keys: ytKeyManager, auth: ytAuth, api: api, U: U, store: store, on: on, emit: emit, resolveChannel: resolveChannel, uploads: uploads, videoDetails: videoDetails, channelStats: channelStats, watchMono: watchMono, stripEmoji: strip };
+  W.YT4 = { claude: claude, st: st, yt: yt, keys: ytKeyManager, auth: ytAuth, api: api, U: U, store: store, on: on, emit: emit, resolveChannel: resolveChannel, uploads: uploads, videoDetails: videoDetails, channelStats: channelStats, watchMono: watchMono, stripEmoji: strip };
 })();
