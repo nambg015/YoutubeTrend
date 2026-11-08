@@ -17,7 +17,7 @@
     smOn: 'inline-flex items-center justify-center h-7 px-2.5 rounded border border-emerald-500/40 bg-emerald-500/10 text-[11px] text-emerald-200 cursor-pointer whitespace-nowrap',
     input: 'h-9 px-3 rounded-md bg-black/40 border border-zinc-800 text-[13px] text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/60 outline-none transition w-full',
     select: 'h-9 px-2.5 rounded-md bg-black border border-zinc-800 text-[13px] text-zinc-200 focus:border-zinc-500 outline-none cursor-pointer w-full',
-    card: 'rounded-xl border border-white/[0.06] bg-white/[0.02]',
+    card: 'rounded-xl border border-white/[0.08] bg-[#0b1018]/75 backdrop-blur-md shadow-[0_8px_30px_rgba(0,0,0,.25)]',
     label: 'block text-[11px] uppercase tracking-wider text-zinc-500 mb-1.5',
     link: 'text-zinc-200 hover:text-white underline decoration-zinc-700 underline-offset-2 hover:decoration-zinc-400'
   };
@@ -26,8 +26,9 @@
   function Input(p) { return h('input', Object.assign({}, p, { className: cx(C.input, p.className) })); }
   function Select(p) { return h('select', { value: p.value, onChange: function (e) { p.onChange(e.target.value); }, className: cx(C.select, p.className) }, p.options.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); })); }
   function Seg(p) { return h('div', { className: 'inline-flex flex-wrap rounded-md border border-zinc-800 p-0.5' }, p.options.map(function (o) { var on = String(p.value) === String(o[0]); return h('button', { key: o[0], type: 'button', onClick: function () { p.onChange(o[0]); }, className: cx('h-7 px-3 rounded text-[12px] whitespace-nowrap transition cursor-pointer', on ? 'bg-emerald-500/15 text-emerald-200' : 'text-zinc-400 hover:text-white') }, o[1]); })); }
-  function Tabs(p) { return h('div', { className: cx('flex gap-6 border-b border-zinc-800/80 overflow-x-auto no-scrollbar', p.className) }, p.items.map(function (t) { var on = p.value === t[0]; return h('button', { key: t[0], type: 'button', onClick: function () { p.onChange(t[0]); }, className: cx('relative h-10 text-[13px] whitespace-nowrap cursor-pointer transition', on ? 'text-white' : 'text-zinc-500 hover:text-zinc-200') }, t[1], t[2] != null ? h('span', { className: 'ml-1.5 text-[11px] text-zinc-600' }, t[2]) : null, on && h('span', { className: 'absolute left-0 right-0 -bottom-px h-0.5 rounded-full bg-emerald-400' })); })); }
-  function Stat(p) { return h('div', { className: cx('min-w-0', p.className) }, h('div', { className: 'text-[11px] text-zinc-500 truncate' }, p.label), h('div', { className: cx('mt-0.5 font-medium tracking-tight truncate', p.big ? 'text-2xl text-white' : 'text-[15px] text-zinc-100') }, p.value), p.sub && h('div', { className: 'text-[11px] text-zinc-600 truncate' }, p.sub)); }
+  function Tabs(p) { return h('div', { className: cx('flex gap-6 border-b border-zinc-800/80 overflow-x-auto no-scrollbar', p.className) }, p.items.map(function (t) { var on = p.value === t[0]; return h('button', { key: t[0], type: 'button', onClick: function () { p.onChange(t[0]); }, className: cx('relative h-10 text-[13px] whitespace-nowrap cursor-pointer transition', on ? 'text-white' : 'text-zinc-500 hover:text-zinc-200') }, t[1], t[2] != null ? h('span', { className: 'ml-1.5 text-[11px] text-zinc-600' }, t[2]) : null, on && h('span', { className: 'absolute left-0 right-0 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-emerald-400 to-sky-400' })); })); }
+  var TONE = { emerald: 'text-emerald-300', sky: 'text-sky-300', amber: 'text-amber-200', violet: 'text-violet-300', rose: 'text-rose-300' };
+  function Stat(p) { return h('div', { className: cx('min-w-0', p.className) }, h('div', { className: 'text-[11px] text-zinc-500 truncate' }, p.label), h('div', { className: cx('mt-0.5 font-medium tracking-tight truncate', p.big ? 'text-2xl' : 'text-[15px]', TONE[p.tone] || (p.big ? 'text-white' : 'text-zinc-100')) }, p.value), p.sub && h('div', { className: 'text-[11px] text-zinc-600 truncate' }, p.sub)); }
   function Empty(p) { return h('div', { className: 'py-16 text-center' }, h('div', { className: 'text-[13px] text-zinc-300' }, p.title), p.sub && h('div', { className: 'mt-1 text-[12px] text-zinc-600 max-w-md mx-auto' }, p.sub), p.children && h('div', { className: 'mt-4' }, p.children)); }
   function Note(p) { return h('div', { className: cx('rounded-md border px-3 py-2 text-[12px]', p.error ? 'border-rose-500/30 bg-rose-500/5 text-rose-200' : 'border-sky-500/20 bg-sky-500/5 text-sky-100/80', p.className) }, p.children); }
   function Busy(p) { return h('div', { className: 'flex items-center gap-2 text-[12px] text-zinc-400' }, h('span', { className: 'inline-block w-3 h-3 rounded-full border border-zinc-600 border-t-emerald-400 animate-spin' }), p.children); }
@@ -146,5 +147,47 @@
         h('div', { className: 'grid gap-4 lg:grid-cols-2' }, list('Rủi ro', res.risks), list('Kế hoạch 2 tuần', res.plan))));
   }
 
-  window.YT4UI = { C: C, Btn: Btn, Field: Field, Input: Input, Select: Select, Seg: Seg, Tabs: Tabs, Stat: Stat, Empty: Empty, Note: Note, Busy: Busy, Bar: Bar, Section: Section, Modal: Modal, Table: Table, More: More, Thumb: Thumb, useBus: useBus, useLS: useLS, Toaster: Toaster, toast: toast, Mono: Mono, Missing: Missing, followChannel: followChannel, titlePatterns: titlePatterns, PatternView: PatternView, InsightBox: InsightBox, words: words, STOP: STOP, cx: cx };
+  // ---------- Danh sách video: dạng thẻ (mặc định) hoặc bảng ----------
+  function fmtX(x) { return x == null ? '' : '×' + (x >= 10 ? Math.round(x) : x.toFixed(1)); }
+  function VideoCard(p) {
+    var v = p.v, ratio = p.ratio ? p.ratio(v) : null, sv = store.isSaved(v.id), sub = v.subs;
+    var hot = ratio != null && ratio >= (p.hotAt || 5);
+    return h('div', { className: cx('group rounded-xl overflow-hidden border bg-[#0b1018]/80 backdrop-blur-md flex flex-col transition hover:-translate-y-0.5', hot ? 'border-emerald-500/40 hover:border-emerald-400/70' : 'border-white/[0.08] hover:border-sky-400/40') },
+      h('a', { href: U.vurl(v.id), target: '_blank', rel: 'noopener noreferrer', className: 'relative block bg-zinc-900' },
+        h('img', { src: U.thumb(v.id), loading: 'lazy', className: 'w-full aspect-video object-cover group-hover:brightness-110 transition' }),
+        sub != null && h('span', { className: 'absolute top-2 left-2 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-black/75 text-white backdrop-blur' }, N(sub) + ' sub'),
+        ratio != null && h('span', { className: cx('absolute top-2 right-2 text-[11px] font-semibold px-1.5 py-0.5 rounded-md', hot ? 'bg-emerald-400 text-emerald-950' : ratio >= 2 ? 'bg-sky-400/90 text-sky-950' : 'bg-black/75 text-zinc-200') }, fmtX(ratio)),
+        v.dur > 0 && h('span', { className: 'absolute bottom-2 right-2 text-[10px] px-1.5 py-0.5 rounded-md bg-black/75 text-white' }, v.dur <= 180 ? 'Shorts ' + U.dur(v.dur) : U.dur(v.dur))),
+      h('div', { className: 'p-3 flex-1 flex flex-col gap-2' },
+        h('a', { href: U.vurl(v.id), target: '_blank', rel: 'noopener noreferrer', title: v.title, className: 'text-[13px] leading-snug text-zinc-100 hover:text-white line-clamp-2' }, v.title),
+        h('button', { onClick: function () { p.onChannel && v.channelId && p.onChannel(v.channelId); }, className: 'text-left text-[11px] text-zinc-500 hover:text-sky-300 truncate cursor-pointer' }, v.channel || ''),
+        h('div', { className: 'grid grid-cols-3 gap-1 text-[11px] mt-auto' },
+          h('div', null, h('div', { className: 'text-zinc-600' }, 'View'), h('div', { className: 'text-sky-300 font-medium' }, N(v.views))),
+          h('div', null, h('div', { className: 'text-zinc-600' }, v.vph != null ? 'View/giờ' : p.ratioLabel || ''), h('div', { className: 'text-amber-200 font-medium' }, v.vph != null ? N(v.vph) : fmtX(ratio))),
+          h('div', { className: 'text-right' }, h('div', { className: 'text-zinc-600' }, 'Đăng'), h('div', { className: 'text-zinc-300' }, v.t ? U.ago(v.t) : v.savedAt ? U.date(v.savedAt) : '–'))),
+        v.note && h('div', { className: 'text-[11px] text-violet-200/80 line-clamp-2' }, 'Ghi chú: ' + v.note),
+        h('div', { className: 'flex gap-1.5 pt-1' }, p.actions ? p.actions(v) : [
+          h(Btn, { key: 's', small: true, on: sv, onClick: function () { store.toggleSave(v); } }, sv ? 'Đã lưu' : 'Lưu'),
+          v.channelId && h(Btn, { key: 'f', small: true, onClick: function () { followChannel(v.channelId, v.channel); } }, 'Theo dõi'),
+          p.onChannel && v.channelId && h(Btn, { key: 'c', small: true, onClick: function () { p.onChannel(v.channelId); } }, 'Kênh')
+        ])));
+  }
+  // p: rows, cols (bảng), sorts [[key,label,fn]], ratio(v), ratioLabel, onChannel, actions, tools (nút thêm bên phải)
+  function VideoList(p) {
+    useBus('saved');
+    var s0 = useState(st.get('yt4_view') || 'card'), view = s0[0], setView = s0[1];
+    var s1 = useState(p.defSort || (p.sorts && p.sorts[0][0])), sort = s1[0], setSort = s1[1], s2 = useState(p.step || 24), lim = s2[0], setLim = s2[1];
+    useEffect(function () { setLim(p.step || 24); }, [p.rows]);
+    var rows = useMemo(function () { var S = (p.sorts || []).find(function (x) { return x[0] === sort; }); return S ? p.rows.slice().sort(function (a, b) { return S[2](b) - S[2](a); }) : p.rows; }, [p.rows, sort]);
+    return h('div', { className: 'space-y-3' },
+      h('div', { className: 'flex flex-wrap items-center gap-2' }, p.left,
+        h('span', { className: 'flex-1' }),
+        view === 'card' && p.sorts && h('div', { className: 'w-44' }, h(Select, { value: sort, onChange: setSort, className: 'h-8 text-[12px]', options: p.sorts.map(function (x) { return [x[0], 'Xếp: ' + x[1]]; }) })),
+        h(Seg, { value: view, onChange: function (v) { setView(v); st.set('yt4_view', v); }, options: [['card', 'Thẻ'], ['table', 'Bảng']] }), p.tools),
+      !rows.length ? h(Empty, { title: p.empty || 'Không có video' })
+        : view === 'card' ? h(Frag, null, h('div', { className: 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4' }, rows.slice(0, lim).map(function (v) { return h(VideoCard, { key: v.id, v: v, ratio: p.ratio, ratioLabel: p.ratioLabel, hotAt: p.hotAt, onChannel: p.onChannel, actions: p.actions }); })), h(More, { total: rows.length, lim: lim, setLim: setLim, step: p.step || 24 }))
+          : h(Frag, null, h(Table, { cols: p.cols, rows: rows, rowKey: function (v) { return v.id; }, limit: lim }), h(More, { total: rows.length, lim: lim, setLim: setLim, step: p.step || 24 })));
+  }
+
+  window.YT4UI = { VideoList: VideoList, VideoCard: VideoCard, C: C, Btn: Btn, Field: Field, Input: Input, Select: Select, Seg: Seg, Tabs: Tabs, Stat: Stat, Empty: Empty, Note: Note, Busy: Busy, Bar: Bar, Section: Section, Modal: Modal, Table: Table, More: More, Thumb: Thumb, useBus: useBus, useLS: useLS, Toaster: Toaster, toast: toast, Mono: Mono, Missing: Missing, followChannel: followChannel, titlePatterns: titlePatterns, PatternView: PatternView, InsightBox: InsightBox, words: words, STOP: STOP, cx: cx };
 })();

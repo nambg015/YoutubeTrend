@@ -58,12 +58,12 @@
     else if (route === 'resource') page = window.ResourceStudio ? h(K.Mono, null, h(window.ResourceStudio, common)) : h(K.Missing, { name: 'Tạo tài nguyên', file: 'resource_v1.js' });
     var user = Y.auth.currentUser(), label = user ? (user.email || '').replace('@youtrend.user', '') : '';
     return h('div', { className: 'min-h-screen' },
-      h('header', { className: 'sticky top-0 z-40 bg-[#0b0e12]/85 backdrop-blur border-b border-white/[0.06]' },
+      h('header', { className: 'sticky top-0 z-40 bg-[#080b11]/70 backdrop-blur-xl border-b border-white/[0.07]' },
         h('div', { className: 'max-w-[1400px] mx-auto px-4 sm:px-6 h-14 flex items-center gap-6' },
-          h('button', { onClick: function () { goto('explore'); }, className: 'text-[15px] font-semibold tracking-tight text-white cursor-pointer shrink-0' }, 'YouTrend'),
+          h('button', { onClick: function () { goto('explore'); }, className: 'text-[15px] font-semibold tracking-tight cursor-pointer shrink-0 bg-gradient-to-r from-emerald-300 to-sky-300 bg-clip-text text-transparent' }, 'YouTrend'),
           h('nav', { className: 'flex-1 min-w-0 flex items-center gap-5 h-full overflow-x-auto no-scrollbar' }, NAV.map(function (n) {
             var on = route === n[0];
-            return h('a', { key: n[0], href: '#' + n[0], onClick: function (e) { e.preventDefault(); goto(n[0]); }, className: cx('relative h-full flex items-center text-[13px] whitespace-nowrap transition', on ? 'text-white' : 'text-zinc-500 hover:text-zinc-200') }, n[1], on && h('span', { className: 'absolute left-0 right-0 bottom-0 h-0.5 rounded-full bg-emerald-400' }));
+            return h('a', { key: n[0], href: '#' + n[0], onClick: function (e) { e.preventDefault(); goto(n[0]); }, className: cx('relative h-full flex items-center text-[13px] whitespace-nowrap transition', on ? 'text-white' : 'text-zinc-500 hover:text-zinc-200') }, n[1], on && h('span', { className: 'absolute left-0 right-0 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-emerald-400 to-sky-400' }));
           })),
           h('div', { className: 'hidden sm:flex items-center gap-2 shrink-0' }, h(QuotaChip, { onClick: function () { goto('settings'); } }),
             h('button', { onClick: function () { goto('settings'); }, title: user ? user.email : '', className: 'h-8 w-8 rounded-full bg-emerald-500/15 text-emerald-200 border border-emerald-500/30 text-[12px] font-semibold cursor-pointer' }, (label || '?').charAt(0).toUpperCase())))),

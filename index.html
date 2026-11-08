@@ -15,8 +15,9 @@
     colors: { brand: { red: '#e5e5e5', darkRed: '#a3a3a3', dark: '#0a0a0a', surface: '#0f0f0f', card: '#111111', border: '#262626', hover: '#171717' } } } } };
 </script>
 <style>
-  html, body { background: #0b0e12; color: #e4e4e7; overflow-x: hidden; }
-  body { background-image: radial-gradient(900px 500px at 85% -10%, rgba(16,185,129,.07), transparent 60%), radial-gradient(700px 400px at -10% 10%, rgba(56,189,248,.05), transparent 60%); background-attachment: fixed; }
+  html { background: #0b0e12; } body { background: transparent; } html, body { color: #e4e4e7; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(7,10,16,.55), rgba(7,10,16,.80)), url('./bg_4k.jpg') center / cover no-repeat, #0b0e12; }
+  #root { position: relative; }
   body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; font-feature-settings: 'cv11', 'ss01'; }
   ::selection { background: rgba(52,211,153,.35); color: #fff; }
   ::-webkit-scrollbar { width: 8px; height: 8px; } ::-webkit-scrollbar-track { background: transparent; }
@@ -43,17 +44,17 @@
     appId: "1:65560942545:web:0b640f38042dd36a2cb2f0"
   };
 </script>
-<script src="./wiki_data.js?v=20261108v4" defer></script>
-<script src="./core.js?v=20261108v4" defer></script>
-<script src="./spy_v3_bundle.js?v=20261108v4" defer></script>
-<script src="./trend_v2_bundle.js?v=20261108v4" defer></script>
-<script src="./studio_chart_bundle.js?v=20261108v4" defer></script>
-<script src="./top_ngach_v3.js?v=20261108v4" defer></script>
-<script src="./resource_v1.js?v=20261108v4" defer></script>
-<script src="./app.js?v=20261108v4" defer></script>
-<script src="./page_explore.js?v=20261108v4" defer></script>
-<script src="./page_channels.js?v=20261108v4" defer></script>
-<script src="./page_library.js?v=20261108v4" defer></script>
-<script src="./main.js?v=20261108v4" defer></script>
+<script src="./wiki_data.js?v=20261108v4b" defer></script>
+<script src="./core.js?v=20261108v4b" defer></script>
+<script src="./spy_v3_bundle.js?v=20261108v4b" defer></script>
+<script src="./trend_v2_bundle.js?v=20261108v4b" defer></script>
+<script src="./studio_chart_bundle.js?v=20261108v4b" defer></script>
+<script src="./top_ngach_v3.js?v=20261108v4b" defer></script>
+<script src="./resource_v1.js?v=20261108v4b" defer></script>
+<script src="./app.js?v=20261108v4b" defer></script>
+<script src="./page_explore.js?v=20261108v4b" defer></script>
+<script src="./page_channels.js?v=20261108v4b" defer></script>
+<script src="./page_library.js?v=20261108v4b" defer></script>
+<script src="./main.js?v=20261108v4b" defer></script>
 </body>
 </html>

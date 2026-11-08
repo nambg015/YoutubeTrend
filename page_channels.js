@@ -85,7 +85,7 @@
           h(Btn, { onClick: function () { p.goto('explore', { q: (R.vids.slice().sort(function (a, b) { return (b.rel || 0) - (a.rel || 0); })[0] || {}).title || R.title }); } }, 'Tìm ngách tương tự'),
           h(Btn, { onClick: function () { setR(null); } }, 'Kênh khác'))),
       h('div', { className: 'grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4' },
-        h(Stat, { label: 'Người đăng ký', value: R.subs == null ? 'Ẩn' : N(R.subs) }), h(Stat, { label: 'Tổng view', value: N(R.views) }), h(Stat, { label: 'Số video', value: N(R.videoCount) }),
+        h(Stat, { label: 'Người đăng ký', value: R.subs == null ? 'Ẩn' : N(R.subs), tone: 'emerald' }), h(Stat, { label: 'Tổng view', value: N(R.views), tone: 'sky' }), h(Stat, { label: 'Số video', value: N(R.videoCount) }),
         h(Stat, { label: 'Đánh giá', value: h('span', { className: fm.v === 'farm' ? 'text-emerald-300' : fm.v === 'rise' ? 'text-sky-300' : fm.v === 'fluke' ? 'text-amber-200' : 'text-zinc-300' }, VERD[fm.v] || '–'), sub: fm.score != null ? 'điểm ' + fm.score + '/100' : '' }),
         h(Stat, { label: 'View 30 ngày (video mới)', value: F ? N((R.long ? R.long.v30 : 0) + (R.short ? R.short.v30 : 0)) : '–' }),
         h(Stat, { label: 'Doanh thu ước tính 30 ngày', value: R.long && (R.subs || 0) >= 1000 ? '$' + N(R.long.v30 * R.rpm[0] / 1000) + '–' + N(R.long.v30 * R.rpm[1] / 1000) : (R.subs || 0) < 1000 ? 'Chưa đủ 1K sub' : '–', sub: 'video dài, RPM ~$' + R.rpm[0].toFixed(1) + '–' + R.rpm[1].toFixed(1) })),
@@ -113,9 +113,10 @@
     ];
     var body;
     if (tab === 'vid') body = h('div', { className: 'space-y-3' },
-      h('div', { className: 'flex flex-wrap items-center gap-2' }, h(Seg, { value: fmt, onChange: setFmt, options: [['all', 'Tất cả'], ['long', 'Video dài'], ['short', 'Shorts']] }), h('span', { className: 'flex-1' }),
-        h(Btn, { small: true, onClick: function () { U.csv('kenh-' + R.title, [['Tiêu đề', 'Link', 'View', 'So với trung vị', 'View÷sub', 'View/giờ', 'Tương tác %', 'Thời lượng', 'Ngày đăng']].concat(list.map(function (v) { return [v.title, U.vurl(v.id), v.views, v.rel ? v.rel.toFixed(2) : '', v.out ? v.out.toFixed(2) : '', Math.round(v.vph), (v.eng * 100).toFixed(2), U.dur(v.dur), U.date(v.t)]; }))); } }, 'Xuất CSV')),
-      h(Table, { cols: cols, rows: list, rowKey: function (v) { return v.id; }, sort: { k: 't', d: -1 }, limit: lim }), h(More, { total: list.length, lim: lim, setLim: setLim, step: 40 }));
+      h(K.VideoList, { rows: list, cols: cols, ratio: function (v) { return v.rel; }, ratioLabel: 'So với TB kênh', hotAt: 2, defSort: 't',
+        sorts: [['t', 'Mới nhất', function (v) { return v.t; }], ['rel', 'Vượt trung vị kênh', function (v) { return v.rel || 0; }], ['views', 'View cao nhất', function (v) { return v.views; }], ['vph', 'View/giờ', function (v) { return v.vph; }]],
+        left: h(Seg, { value: fmt, onChange: setFmt, options: [['all', 'Tất cả'], ['long', 'Video dài'], ['short', 'Shorts']] }),
+        tools: h(Btn, { small: true, onClick: function () { U.csv('kenh-' + R.title, [['Tiêu đề', 'Link', 'View', 'So với trung vị', 'View÷sub', 'View/giờ', 'Tương tác %', 'Thời lượng', 'Ngày đăng']].concat(list.map(function (v) { return [v.title, U.vurl(v.id), v.views, v.rel ? v.rel.toFixed(2) : '', v.out ? v.out.toFixed(2) : '', Math.round(v.vph), (v.eng * 100).toFixed(2), U.dur(v.dur), U.date(v.t)]; }))); } }, 'Xuất CSV') }));
     else if (tab === 'title') body = h(K.PatternView, { data: K.titlePatterns(R.vids.filter(function (v) { return v.rel != null && Date.now() - v.t > 2 * 864e5; }), function (v) { return v.rel; }), metric: 'mức vượt trung vị kênh' });
     else if (tab === 'time') {
       var max = Math.max.apply(null, WD.map(function (d) { return R.weekdays[d] || 0; }).concat([1]));
@@ -199,7 +200,7 @@
           h('span', { className: 'flex-1' }), feed.at ? h('span', { className: 'text-[11px] text-zinc-600' }, 'Cập nhật ' + U.ago(feed.at) + ' trước') : null),
         view === 'list' ? h(Table, { cols: chCols, rows: chans, rowKey: function (c) { return c.id; } })
           : !feed.at ? h(Empty, { title: 'Bấm "Cập nhật tất cả" để lấy video mới', sub: 'Mỗi kênh tốn khoảng 2 quota.' })
-            : h(Table, { cols: feedCols, rows: items, rowKey: function (v) { return v.id; } })));
+            : h(K.VideoList, { rows: items, cols: feedCols, ratio: function (v) { return v.rel; }, ratioLabel: 'So với TB kênh', hotAt: 2, defSort: 't', onChannel: p.analyze, sorts: [['t', 'Mới nhất', function (v) { return v.t; }], ['rel', 'Vượt trung vị kênh', function (v) { return v.rel || 0; }], ['views', 'View cao nhất', function (v) { return v.views; }]] })));
   }
 
   function Channels(p) {

@@ -146,7 +146,7 @@
             [['Nhu cầu', S.demand], ['Cửa cho kênh nhỏ', S.opening], ['Mức nổ view/sub', S.outlier], ['Độ bão hoà', S.saturation]].map(function (x) { return h('div', { key: x[0] }, h('div', { className: 'flex justify-between text-[11px] text-zinc-500 mb-0.5' }, h('span', null, x[0]), h('span', null, Math.round(x[1] * 100))), h(Bar, { value: x[1] * 100 })); }))),
         h('div', { className: 'space-y-4' },
           h('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-4' },
-            h(Stat, { label: 'View trung vị', value: N(S.medV) }), h(Stat, { label: 'View / giờ trung vị', value: N(S.medVph) }), h(Stat, { label: 'Outlier trung vị', value: '×' + (S.medOut >= 10 ? Math.round(S.medOut) : S.medOut.toFixed(1)) }), h(Stat, { label: 'RPM ước tính', value: '$' + S.rpm[0].toFixed(1) + '–' + S.rpm[1].toFixed(1), sub: CATN[S.topCat] || '' }),
+            h(Stat, { label: 'View trung vị', value: N(S.medV), tone: 'sky' }), h(Stat, { label: 'View / giờ trung vị', value: N(S.medVph), tone: 'amber' }), h(Stat, { label: 'Outlier trung vị', value: '×' + (S.medOut >= 10 ? Math.round(S.medOut) : S.medOut.toFixed(1)), tone: 'emerald' }), h(Stat, { tone: 'violet', label: 'RPM ước tính', value: '$' + S.rpm[0].toFixed(1) + '–' + S.rpm[1].toFixed(1), sub: CATN[S.topCat] || '' }),
             h(Stat, { label: 'Video phân tích', value: R.vids.length }), h(Stat, { label: 'Kênh khác nhau', value: S.nCh }), h(Stat, { label: 'Kênh nhỏ thắng', value: S.smallHit + ' / ' + S.small, sub: 'dưới 10K sub, view ≥ 2× sub' }), h(Stat, { label: 'Kênh trên 1M sub', value: Math.round(S.bigPct * 100) + '%' })),
           h('ul', { className: 'space-y-1 border-t border-zinc-900 pt-3' }, S.why.map(function (w, i) { return h('li', { key: i, className: 'text-[12px] text-zinc-400' }, w); })))),
       h('div', { className: 'mt-4 pt-3 border-t border-zinc-900 flex flex-wrap items-center gap-2 text-[11px] text-zinc-600' },
@@ -178,10 +178,12 @@
     var kwBtn = function (k, extra) { return h('button', { key: k, onClick: function () { setO(function (x) { return Object.assign({}, x, { q: k }); }); run(k); }, className: 'px-2 py-1 rounded border border-zinc-800 text-[12px] text-zinc-300 hover:border-zinc-500 hover:text-white cursor-pointer', title: 'Phân tích từ khoá này' }, k, extra ? h('span', { className: 'ml-1.5 text-zinc-600' }, extra) : null); };
 
     var body;
-    if (tab === 'vid') body = h('div', { className: 'space-y-3' },
-      h('div', { className: 'flex flex-wrap items-center gap-2' }, h('span', { className: 'text-[12px] text-zinc-500' }, 'Quy mô kênh'), h(Seg, { value: vf.size, onChange: function (v) { setVf({ size: v }); }, options: [['all', 'Tất cả'], ['10000', 'Dưới 10K'], ['50000', 'Dưới 50K'], ['200000', 'Dưới 200K']] }), h('span', { className: 'flex-1' }),
-        h(Btn, { small: true, onClick: function () { U.csv('video-' + R.q, [['Tiêu đề', 'Link', 'Kênh', 'Sub', 'View', 'View/giờ', 'View÷sub', 'Tương tác %', 'Thời lượng', 'Ngày đăng']].concat(vids.map(function (v) { return [v.title, U.vurl(v.id), v.channel, v.subs, v.views, Math.round(v.vph), v.out ? v.out.toFixed(2) : '', (v.eng * 100).toFixed(2), U.dur(v.dur), U.date(v.t)]; }))); } }, 'Xuất CSV')),
-      h(Table, { cols: vidCols, rows: vids, rowKey: function (v) { return v.id; }, sort: { k: 'out', d: -1 }, limit: lim }), h(More, { total: vids.length, lim: lim, setLim: setLim, step: 40 }));
+    if (tab === 'vid') body = h(K.VideoList, {
+      rows: vids, cols: vidCols, ratio: function (v) { return v.out; }, ratioLabel: 'View ÷ sub', onChannel: function (id) { p.goto('channels', { analyze: id }); },
+      sorts: [['out', 'View ÷ sub', function (v) { return v.out || 0; }], ['views', 'View cao nhất', function (v) { return v.views; }], ['vph', 'View/giờ', function (v) { return v.vph; }], ['t', 'Mới nhất', function (v) { return v.t; }], ['eng', 'Tương tác', function (v) { return v.eng; }]],
+      left: h(Frag, null, h('span', { className: 'text-[12px] text-zinc-500' }, 'Quy mô kênh'), h(Seg, { value: vf.size, onChange: function (v) { setVf({ size: v }); }, options: [['all', 'Tất cả'], ['10000', 'Dưới 10K'], ['50000', 'Dưới 50K'], ['200000', 'Dưới 200K']] })),
+      tools: h(Btn, { small: true, onClick: function () { U.csv('video-' + R.q, [['Tiêu đề', 'Link', 'Kênh', 'Sub', 'View', 'View/giờ', 'View÷sub', 'Tương tác %', 'Thời lượng', 'Ngày đăng']].concat(vids.map(function (v) { return [v.title, U.vurl(v.id), v.channel, v.subs, v.views, Math.round(v.vph), v.out ? v.out.toFixed(2) : '', (v.eng * 100).toFixed(2), U.dur(v.dur), U.date(v.t)]; }))); } }, 'Xuất CSV')
+    });
     else if (tab === 'ch') body = h(Table, { cols: chCols, rows: chans, rowKey: function (c) { return c.id; }, sort: { k: 'medOut', d: -1 } });
     else if (tab === 'kw') body = h('div', { className: 'space-y-4' },
       kwList('Gợi ý tìm kiếm YouTube', 'Người dùng đang gõ những cụm này (gợi ý a–z + câu hỏi, miễn phí). Bấm để phân tích.', R.suggestions.slice(0, 120), function (x) { return kwBtn(x.k); }),
