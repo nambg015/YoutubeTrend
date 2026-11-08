@@ -210,4 +210,33 @@ async function doEnrich(urls, imageQueries) {
   return { pages: pages.filter(Boolean), commons: await commons(imageQueries || []) };
 }
 
-module.exports = { doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+
+// ---------- Nhận định AI cho Khám phá / Phân tích kênh (không tìm web, chỉ đọc số liệu đã đo) ----------
+function insightPrompt(kind, data) {
+  const head = kind === 'channel'
+    ? 'You are a senior YouTube strategist. Analyze this channel using ONLY the measured data below (real YouTube API numbers). Explain why the winners won, what pattern to copy, and how a NEW small channel could compete.'
+    : 'You are a senior YouTube niche strategist. Analyze this keyword/niche using ONLY the measured data below (real YouTube API numbers for the top videos). Judge demand vs competition for a NEW small channel and give concrete next steps.';
+  return head + `
+Write every field in Vietnamese (tiếng Việt), concise, specific, no fluff. Keep video titles/keywords in original language.
+DATA (JSON):
+${JSON.stringify(data).slice(0, 24000)}
+
+Return ONLY JSON:
+{
+ "verdict": "nen_lam | can_nhac | bao_hoa",
+ "verdict_text": "1-2 sentences",
+ "why": ["3-5 reasons grounded in the numbers"],
+ "patterns": ["3-6 content/title/format patterns the winners share"],
+ "angles": [{"title": "a concrete video title idea in the niche's original language", "why": "why it can win"}],
+ "keywords": ["6-10 long-tail keywords to target, original language"],
+ "risks": ["2-4 risks or things to avoid"],
+ "plan": ["3-5 step action plan for the next 2 weeks"]
+}
+Give 6-8 angles.`;
+}
+async function doInsight(key, kind, data) {
+  const r = await gemini(key, { contents: [{ parts: [{ text: insightPrompt(kind, data) }] }], generationConfig: { temperature: 0.4, responseMimeType: 'application/json' } }, 26000);
+  return parseJson(r.text);
+}
+
+module.exports = { doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };

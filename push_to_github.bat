@@ -1,11 +1,12 @@
 @echo off
-echo ================================================
-echo Đang đẩy toàn bộ mã nguồn SPY v3 lên GitHub...
-echo ================================================
-git add api/ test/ spy_v3_bundle.js trend_v2_bundle.js app.bundle.js index.html vercel.json .vercelignore package.json SETUP_AUTH.md
-git commit -m "feat(auth): Firebase auth + phone linking, server-side token check, quota, payment hardening"
+chcp 65001 >nul
+cd /d "%~dp0"
+echo ==== Xoa file cu khong con dung ====
+for %%F in (app.bundle.js bg_blue_4k.jpg bg_trend.jpg bg_trend.png SETUP_AUTH.md .github\workflows\daily_scan.js) do if exist "%%F" git rm -q --ignore-unmatch "%%F"
+echo ==== Day len GitHub ====
+git add -A
+git commit -m "YouTrend v4: web rieng admin, gop 6 muc, giao dien toi gian mau nhe"
 git push origin main
-echo ================================================
-echo Hoan tat! Kiem tra tren repo GitHub.
-echo ================================================
+echo.
+echo Xong! Vercel se tu deploy trong khoang 1 phut.
 pause

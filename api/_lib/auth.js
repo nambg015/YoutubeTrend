@@ -77,8 +77,28 @@ function bearer(req) {
   return m ? m[1].trim() : '';
 }
 
-// Dùng trong API: trả về payload nếu hợp lệ + đã có SĐT, nếu không thì tự trả lỗi và trả null.
-async function requirePhoneVerified(req, res, opts = {}) {
+// ===== CHỈ ADMIN =====
+// Web dùng riêng cho chủ: chỉ các tài khoản trong ADMIN_EMAILS / ADMIN_UIDS được gọi API.
+// - Gmail admin phải là email đã xác minh (đăng nhập Google) → không ai giả được bằng cách tạo tài khoản mật khẩu trùng email.
+// - Tài khoản "tên đăng nhập" của web có dạng <tên>@youtrend.user (đăng nhập bằng mật khẩu).
+const DEFAULT_ADMINS = 'tranminh1135@gmail.com,adminh@youtrend.user';
+function adminList() {
+  return {
+    emails: (process.env.ADMIN_EMAILS || DEFAULT_ADMINS).split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
+    uids: (process.env.ADMIN_UIDS || '').split(',').map(s => s.trim()).filter(Boolean)
+  };
+}
+function isAdmin(claims) {
+  if (!claims) return false;
+  const L = adminList();
+  if (L.uids.includes(claims.sub)) return true;
+  const email = String(claims.email || '').toLowerCase();
+  if (!email || !L.emails.includes(email)) return false;
+  const provider = (claims.firebase && claims.firebase.sign_in_provider) || '';
+  if (email.endsWith('@youtrend.user')) return provider === 'password' || provider === '';
+  return claims.email_verified === true;
+}
+async function requireAdmin(req, res, opts = {}) {
   let claims;
   try {
     claims = await verifyIdToken(bearer(req), opts);
@@ -86,25 +106,15 @@ async function requirePhoneVerified(req, res, opts = {}) {
     res.status(401).json({ success: false, code: e.code || 'UNAUTHORIZED', message: e.message || 'Chưa đăng nhập' });
     return null;
   }
-  // Tắt yêu cầu SĐT (REQUIRE_PHONE=false) -> cho qua, chỉ cần đã đăng nhập.
-  if ((process.env.REQUIRE_PHONE || '').trim().toLowerCase() === 'false') return claims;
-  // SĐT được xác minh bởi server (api/phone-otp) và lưu ở KV; token Firebase cũ có phone_number vẫn được chấp nhận.
-  if (!claims.phone_number) {
-    try {
-      const lookup = opts.phoneLookup || (uid => store.get('user_phone:' + uid));
-      const phone = await lookup(claims.sub);
-      if (phone) claims.phone_number = phone;
-    } catch (e) {
-      res.status(503).json({ success: false, code: 'STORE_UNAVAILABLE', message: 'Hệ thống đang bận, vui lòng thử lại sau.' });
-      return null;
-    }
-  }
-  if (!claims.phone_number) {
-    res.status(403).json({ success: false, code: 'PHONE_REQUIRED', message: 'Tài khoản chưa xác minh số điện thoại' });
+  if (!isAdmin(claims)) {
+    res.status(403).json({ success: false, code: 'NOT_ADMIN', message: 'Tài khoản này không có quyền dùng web.' });
     return null;
   }
+  claims.uid = claims.sub;
   return claims;
 }
+// Giữ tên cũ để các API cũ (trend-v2-ai, extract-clues, research) tự động chỉ cho admin.
+const requirePhoneVerified = requireAdmin;
 
 // CORS: chỉ phản hồi cho đúng domain của mình (gọi cùng domain thì không cần CORS).
 function applyCors(req, res, extraHeaders = '') {
@@ -117,4 +127,4 @@ function applyCors(req, res, extraHeaders = '') {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization' + (extraHeaders ? ', ' + extraHeaders : ''));
 }
 
-module.exports = { verifyIdToken, requirePhoneVerified, applyCors, bearer, ALLOWED_ORIGINS };
+module.exports = { verifyIdToken, requireAdmin, requirePhoneVerified, isAdmin, adminList, applyCors, bearer, ALLOWED_ORIGINS };

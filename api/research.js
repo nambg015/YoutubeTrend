@@ -22,9 +22,9 @@ module.exports = async (req, res) => {
   const key = req.headers['x-gemini-key'] || GEMINI_API_KEY;
 
   // Mỗi hồ sơ tính 1 lượt (đếm ở bước search — kể cả khi AI lỗi và chuyển sang chế độ miễn phí)
-  const bucket = action === 'search' ? 'research' : action === 'news' || action === 'enrich' || action === 'structure' ? 'research_aux' : '';
+  const bucket = action === 'search' ? 'research' : action === 'insight' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' ? 'research_aux' : '';
   if (bucket) {
-    const limit = bucket === 'research' ? (Number(process.env.RESEARCH_DAILY_LIMIT) || 20) : 200;
+    const limit = bucket === 'research' ? (Number(process.env.RESEARCH_DAILY_LIMIT) || 100) : bucket === 'insight' ? (Number(process.env.INSIGHT_DAILY_LIMIT) || 150) : 300;
     try {
       const q = await consumeDaily(claims.uid || claims.sub, bucket, limit);
       if (!q.allowed) return res.status(429).json({ success: false, code: 'QUOTA_EXCEEDED', message: 'Bạn đã dùng hết ' + q.limit + ' lượt tạo tài nguyên hôm nay. Quay lại vào ngày mai nhé!' });
@@ -42,6 +42,9 @@ module.exports = async (req, res) => {
     if (action === 'structure') {
       const d = await R.doStructure(key, prompt, String(body.report || '').slice(0, 30000), Array.isArray(body.sources) ? body.sources.slice(0, 60) : [], body.lang === 'en' ? 'en' : 'vi');
       return res.json({ success: true, dossier: d });
+    }
+    if (action === 'insight') {
+      return res.json({ success: true, insight: await R.doInsight(key, body.kind === 'channel' ? 'channel' : 'keyword', body.data || {}) });
     }
     if (action === 'news') {
       const qs = (Array.isArray(body.queries) ? body.queries : [prompt]).map(String).filter(Boolean);
