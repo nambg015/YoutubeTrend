@@ -160,7 +160,7 @@
   function SessionCard(p) {
     var r = p.r, c = counts(r), D = r.dossier || {}, thumbs = (r.videos || []).filter(function (v) { return v.related; }).slice(0, 3);
     return h('div', { className: cx(K.C.card, 'overflow-hidden flex flex-col hover:border-sky-400/30 transition') },
-      h('div', { className: 'grid grid-cols-3 gap-px bg-[#111215]/60' }, [0, 1, 2].map(function (i) { var v = thumbs[i], cap = !v && (r.captures || [])[i]; return h('div', { key: i, className: 'aspect-video bg-zinc-900/80' }, v ? h('img', { src: U.thumb(v.id), loading: 'lazy', className: 'w-full h-full object-cover' }) : cap ? h('img', { src: cap.dataUrl, className: 'w-full h-full object-cover' }) : null); })),
+      h('div', { className: 'grid grid-cols-3 gap-px bg-[#0f0f0f]/60' }, [0, 1, 2].map(function (i) { var v = thumbs[i], cap = !v && (r.captures || [])[i]; return h('div', { key: i, className: 'aspect-video bg-zinc-900/80' }, v ? h('img', { src: U.thumb(v.id), loading: 'lazy', className: 'w-full h-full object-cover' }) : cap ? h('img', { src: cap.dataUrl, className: 'w-full h-full object-cover' }) : null); })),
       h('div', { className: 'p-3 flex-1 flex flex-col gap-2' },
         h('div', { className: 'flex items-center gap-1.5 text-[10px]' }, h('span', { className: cx('px-1.5 py-0.5 rounded', r.mode === 'ai' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-200') }, r.mode === 'ai' ? 'AI + Google' : 'Miễn phí'), D.category && h('span', { className: 'px-1.5 py-0.5 rounded bg-cham-800 text-zinc-400' }, D.category), h('span', { className: 'text-zinc-400 ml-auto' }, U.date(r.at))),
         h('div', { className: 'text-[10.5px] text-zinc-100 leading-snug line-clamp-2', title: D.title || r.prompt }, D.title || r.prompt.slice(0, 120)),
@@ -169,7 +169,7 @@
         h('div', { className: 'flex flex-wrap gap-1.5 mt-auto pt-1' },
           h(Btn, { small: true, on: true, onClick: function () { p.produce(r.id); } }, 'Sản xuất'),
           h(Btn, { small: true, onClick: function () { p.open(r.id); } }, 'Mở hồ sơ'),
-          p.projects.length > 0 && h('select', { value: store.links()[r.id] || '', onChange: function (e) { store.linkSession(r.id, e.target.value); }, className: 'h-7 px-1.5 rounded border border-zinc-800 bg-[#111215]/60 text-[11px] text-zinc-400 cursor-pointer max-w-[130px]' }, [['', 'Chưa gắn']].concat(p.projects.map(function (x) { return [x.id, x.name]; })).map(function (x) { return h('option', { key: x[0], value: x[0] }, x[1]); })),
+          p.projects.length > 0 && h('select', { value: store.links()[r.id] || '', onChange: function (e) { store.linkSession(r.id, e.target.value); }, className: 'h-7 px-1.5 rounded border border-zinc-800 bg-[#0f0f0f]/60 text-[11px] text-zinc-400 cursor-pointer max-w-[130px]' }, [['', 'Chưa gắn']].concat(p.projects.map(function (x) { return [x.id, x.name]; })).map(function (x) { return h('option', { key: x[0], value: x[0] }, x[1]); })),
           h('button', { onClick: function () { if (window.confirm('Xoá phiên này (cả ảnh đã chụp)?')) window.ResourceStore.remove(r.id); }, className: 'ml-auto text-[11px] text-zinc-500 hover:text-rose-300 cursor-pointer' }, 'Xoá'))));
   }
   function Projects(p) {

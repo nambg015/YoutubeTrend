@@ -321,8 +321,8 @@
 
   // ---------- lớp đơn sắc cho module nhúng (Spy, Trend v2, Studio) ----------
   (function softCss() {
-    var css = '.mono [class*="bg-[#121316]"],.mono [class*="bg-zinc-950"],.mono [class*="bg-[#0b1018]"],.mono [class*="bg-brand-card"],.mono [class*="bg-brand-surface"]{background-color:rgba(30,31,36,.94)!important}.mono [class*="text-zinc-500"]{color:#9ba3b4!important}.mono [class*="text-zinc-600"]{color:#808a9c!important}.mono [class*="border-zinc-800"]{border-color:rgba(255,255,255,.08)!important}.mono .text-white{color:#eceef3!important}'
-      + '.mono [class*="bg-gradient-"]:not([class*="h-1"]):not([class*="h-1.5"]):not([class*="h-2"]){background-image:none!important;background-color:rgba(30,31,36,.94)!important}'
+    var css = '.mono [class*="bg-[#121316]"],.mono [class*="bg-zinc-950"],.mono [class*="bg-[#0b1018]"],.mono [class*="bg-brand-card"],.mono [class*="bg-brand-surface"]{background-color:#212121!important}.mono [class*="text-zinc-500"]{color:#9ba3b4!important}.mono [class*="text-zinc-600"]{color:#808a9c!important}.mono [class*="border-zinc-800"]{border-color:#303030!important}.mono .text-white{color:#f1f1f1!important}'
+      + '.mono [class*="bg-gradient-"]:not([class*="h-1"]):not([class*="h-1.5"]):not([class*="h-2"]){background-image:none!important;background-color:#212121!important}'
       + '.mono [class*="shadow-"]{box-shadow:0 8px 24px -12px rgba(0,0,0,.6)!important}.mono [class*="animate-pulse"],.mono [class*="animate-bounce"],.mono [class*="animate-ping"]{animation:none!important}'
       + '.mono [class*="backdrop-blur"]{backdrop-filter:none!important}.mono .font-black{font-weight:700!important}.mono p.font-mono,.mono span.font-mono:not([class*="tabular"]){font-family:inherit!important}.mono .tracking-widest.uppercase:not(button){display:none!important}';
     var el = document.createElement('style'); el.textContent = css; (document.head || document.documentElement).appendChild(el);

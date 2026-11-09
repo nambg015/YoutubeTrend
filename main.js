@@ -7,12 +7,12 @@
   var Y = window.YT4, U = Y.U, N = U.fmtN, store = Y.store, K = window.YT4UI, cx = K.cx, P = window.YT4Pages || {};
   var Btn = K.Btn, Input = K.Input, Note = K.Note;
 
-  var NAV = [['explore', 'Khám phá'], ['niche', 'Top Ngách'], ['channels', 'Kênh'], ['resource', 'Tạo tài nguyên'], ['library', 'Thư viện'], ['settings', 'Cài đặt']];
+  var NAV = [['explore', 'Khám phá'], ['niche', 'Top Ngách'], ['channels', 'Kênh'], ['resource', 'Tạo tài nguyên', 'Tài nguyên'], ['library', 'Thư viện'], ['settings', 'Cài đặt']];
   var OLD = { search: 'explore', keywords: 'explore', niche: 'explore', rpm: 'niche', competitors: 'channels', spy: 'channels', studio_chart: 'channels', wiki: 'library' };
   function readRoute() { var hsh = (location.hash || '').replace(/^#\/?/, '').split('/')[0]; if (NAV.some(function (n) { return n[0] === hsh; })) return hsh; var q = new URLSearchParams(location.search).get('tab'); return OLD[q] || 'explore'; }
 
   // ---------- ĐĂNG NHẬP ----------
-  function Mark(p) { return h('span', { className: 'inline-flex items-center gap-2.5' }, h('span', { 'aria-hidden': true, className: cx('grid place-items-center rounded-md bg-[#e3b55a] text-[#231a08] font-display font-bold', p.big ? 'w-10 h-9 text-[13px]' : 'w-7 h-7 text-[10.5px]') }, 'YT'), h('span', { className: cx('font-display font-bold tracking-[-0.06em] text-cham-50', p.big ? 'text-[22px]' : 'text-[16.5px]') }, 'YouTrend')); }
+  function Mark(p) { return h('span', { className: 'inline-flex items-center gap-2' }, h('span', { 'aria-hidden': true, className: cx('grid place-items-center rounded-lg bg-[#3ea6ff] text-[#0f0f0f] font-bold tracking-tight', p.big ? 'w-10 h-10 text-[15px]' : 'w-7 h-7 text-[11.5px]') }, 'YT'), h('span', { className: cx('font-bold tracking-[-0.04em] text-[#f1f1f1]', p.big ? 'text-[24px]' : 'text-[19px]') }, 'YouTrend')); }
   function Login(p) {
     var s0 = useState(''), id = s0[0], setId = s0[1], s1 = useState(''), pw = s1[0], setPw = s1[1], s2 = useState(''), busy = s2[0], setBusy = s2[1], s3 = useState(p.message || ''), err = s3[0], setErr = s3[1];
     useEffect(function () { setErr(p.message || ''); }, [p.message]);
@@ -34,8 +34,8 @@
   // ---------- KHUNG ----------
   function QuotaChip(p) {
     K.useBus('keys'); K.useBus('quota');
-    var S = Y.keys.stats(), tone = !S.total ? 'border-dashed border-white/20 text-cham-300' : !S.ok ? 'border-dieu-400/40 bg-dieu-500/15 text-dieu-200' : 'border-ngoc-400/35 bg-ngoc-400/15 text-ngoc-200 hover:border-ngoc-300/60';
-    return h('button', { onClick: p.onClick, title: 'Quota YouTube còn lại hôm nay. Bấm để quản lý API key.', className: cx('h-7 px-3 rounded-md border text-[10.5px] font-semibold tabular-nums transition cursor-pointer whitespace-nowrap', tone) },
+    var S = Y.keys.stats(), tone = !S.total ? 'border-dashed border-[#3f3f3f] text-[#aaaaaa]' : !S.ok ? 'border-transparent bg-[#3a1d1d] text-[#ff8a80]' : 'border-transparent bg-[#272727] text-[#f1f1f1] hover:bg-[#3f3f3f]';
+    return h('button', { onClick: p.onClick, title: 'Quota YouTube còn lại hôm nay. Bấm để quản lý API key.', className: cx('h-9 px-4 rounded-full border text-[12.5px] font-medium tabular-nums transition cursor-pointer whitespace-nowrap', tone) },
       !S.total ? 'Chưa có key' : !S.ok ? 'Hết quota' : h(Frag, null, h('span', { className: 'sm:hidden' }, N(S.left)), h('span', { className: 'hidden sm:inline' }, 'Quota ' + N(S.left) + ' · ' + S.ok + '/' + S.total + ' key')));
   }
   function Shell(p) {
@@ -59,18 +59,23 @@
     })))) : h(K.Missing, { name: 'Top Ngách', file: 'top_ngach_v3.js' });
     else if (route === 'resource') page = P.studio ? h(P.studio, { goto: goto, params: params, common: common }) : h(K.Missing, { name: 'Tạo tài nguyên', file: 'page_studio.js' });
     var user = Y.auth.currentUser(), label = user ? (user.email || '').replace('@youtrend.user', '') : '';
+    var navItem = function (n, mobile) {
+      var on = route === n[0];
+      return h('a', { key: n[0], href: '#' + n[0], onClick: function (e) { e.preventDefault(); goto(n[0]); }, 'aria-current': on ? 'page' : null, title: n[1],
+        className: cx('flex flex-col items-center justify-center gap-1 rounded-xl transition text-center', mobile ? 'h-14 px-1' : 'w-16 py-3.5', on ? 'bg-[#272727] text-[#f1f1f1]' : 'text-[#aaaaaa] hover:bg-[#272727] hover:text-[#f1f1f1]') },
+        h(K.Icon, { name: n[0], size: 22, stroke: on ? 2.2 : 1.6 }), h('span', { className: cx('leading-tight', mobile ? 'text-[9.5px]' : 'text-[10px]', on && 'font-medium') }, n[2] || n[1]));
+    };
     return h('div', { className: 'min-h-screen' },
-      h('header', { className: 'sticky top-0 z-40 bg-[#17181b]/[0.92] backdrop-blur-[10px] border-b border-white/[0.08]' },
-        h('div', { className: 'max-w-[1600px] mx-auto px-4 sm:px-6 h-12 flex items-center gap-4' },
-          h('button', { onClick: function () { goto('explore'); }, 'aria-label': 'YouTrend, về Khám phá', className: 'cursor-pointer shrink-0' }, h(Mark)),
-          h('nav', { 'aria-label': 'Mục chính', className: 'flex-1 min-w-0 flex items-center gap-1 overflow-x-auto no-scrollbar' }, NAV.map(function (n) {
-            var on = route === n[0];
-            return h('a', { key: n[0], href: '#' + n[0], onClick: function (e) { e.preventDefault(); goto(n[0]); }, 'aria-current': on ? 'page' : null, ref: on ? function (el) { if (el && el.scrollIntoView && window.innerWidth < 768) el.scrollIntoView({ block: 'nearest', inline: 'center' }); } : null, className: cx('h-7 flex items-center px-3 rounded-md text-[10.5px] font-medium whitespace-nowrap transition', on ? 'bg-white/[0.1] text-cham-50 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]' : 'text-cham-400 hover:text-hoe-300') }, n[1]);
-          })),
-          h('div', { className: 'flex items-center gap-2 shrink-0' }, h(QuotaChip, { onClick: function () { goto('settings'); } }),
-            h('button', { onClick: function () { goto('settings'); }, title: user ? user.email : '', 'aria-label': 'Tài khoản và cài đặt', className: 'h-7 w-8 rounded-md bg-hoaca-500/20 text-hoaca-200 border border-hoaca-400/40 text-[10.5px] font-semibold cursor-pointer hover:border-hoaca-300' }, (label || '?').charAt(0).toUpperCase())))),
-      noKey && route !== 'settings' && h('div', { className: 'border-b border-hoe-400/25 bg-hoe-400/10' }, h('div', { className: 'max-w-[1600px] mx-auto px-4 sm:px-6 py-2 flex items-center gap-3 text-[10.5px] text-hoe-100' }, 'Chưa có YouTube API key nên các mục tìm kiếm chưa chạy được.', h('button', { onClick: function () { goto('settings'); }, className: K.C.sm }, 'Thêm key'))),
-      h('main', { className: 'max-w-[1600px] mx-auto px-4 sm:px-6 py-5 pb-16' }, h(ErrorBoundary, { key: route }, page)),
+      h('header', { className: 'fixed top-0 inset-x-0 z-40 h-14 bg-[#0f0f0f] flex items-center gap-4 pl-4 lg:pl-6 pr-4' },
+        h('button', { onClick: function () { goto('explore'); }, 'aria-label': 'YouTrend, về Khám phá', className: 'cursor-pointer shrink-0' }, h(Mark)),
+        h('span', { className: 'flex-1' }),
+        h('div', { className: 'flex items-center gap-2 shrink-0' }, h(QuotaChip, { onClick: function () { goto('settings'); } }),
+          h('button', { onClick: function () { goto('settings'); }, title: user ? user.email : '', 'aria-label': 'Tài khoản và cài đặt', className: 'h-8 w-8 rounded-full bg-[#5e35b1] text-white text-[13px] font-medium cursor-pointer hover:brightness-110' }, (label || '?').charAt(0).toUpperCase()))),
+      h('nav', { 'aria-label': 'Mục chính', className: 'hidden lg:flex fixed left-0 top-14 bottom-0 z-30 w-[72px] flex-col items-center gap-1 pt-1 bg-[#0f0f0f]' }, NAV.map(function (n) { return navItem(n); })),
+      h('nav', { 'aria-label': 'Mục chính', className: 'lg:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-6 bg-[#0f0f0f] border-t border-[#272727]' }, NAV.map(function (n) { return navItem(n, true); })),
+      h('div', { className: 'pt-14 lg:pl-[72px]' },
+        noKey && route !== 'settings' && h('div', { className: 'mx-4 sm:mx-6 mt-3 rounded-xl bg-[#272727] px-4 py-2.5 flex items-center gap-3 text-[12px] text-[#f1f1f1]' }, 'Chưa có YouTube API key nên các mục tìm kiếm chưa chạy được.', h('button', { onClick: function () { goto('settings'); }, className: K.C.sm }, 'Thêm key')),
+        h('main', { className: 'max-w-[1760px] mx-auto px-4 sm:px-6 py-5 pb-24 lg:pb-12' }, h(ErrorBoundary, { key: route }, page))),
       h(K.Toaster));
   }
   var ErrorBoundary = (function () {

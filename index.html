@@ -3,46 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#17181b">
+<meta name="theme-color" content="#0f0f0f">
 <meta name="robots" content="noindex, nofollow">
 <title>YouTrend</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-<script src="./theme.js?v=20261110c3"></script>
+<script src="./theme.js?v=20261110y1"></script>
 <style>
-  /* ===== Phong cách CutLab "obsidian": nền ảnh mờ + ánh sáng loang, thẻ đen than, chữ trắng ===== */
-  :root {
-    --ground: #18191c; --card: #1e1f24; --card-hover: #24252b; --cell: rgba(255,255,255,.045); --line: rgba(255,255,255,.08); --line-2: rgba(255,255,255,.16);
-    --text: #eceef3; --muted: #9aa2b2; --accent: #e3b55a; --jade: #4fc1a8; --orange: #ff7a29; --purple: #a855f7;
-    color-scheme: dark;
-  }
-  html { background: var(--ground); } body { background: transparent; } html, body { color: var(--text); overflow-x: hidden; }
-  body::before { content: ''; position: fixed; inset: -12px; z-index: -2; background: url('./bg_wave_4k.jpg') center / cover no-repeat, var(--ground); filter: blur(4px); transform: scale(1.02); }
-  body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background:
-      linear-gradient(180deg, rgba(24,25,29,.62), rgba(22,23,26,.8)); }
+  /* ===== Phong cách YouTube tối: nền phẳng #0f0f0f, thẻ #212121, chữ #f1f1f1 / #aaa, xanh #3ea6ff ===== */
+  :root { --ground: #0f0f0f; --card: #212121; --card-hover: #272727; --line: #303030; --text: #f1f1f1; --muted: #aaaaaa; --accent: #3ea6ff; color-scheme: dark; }
+  html, body { background: var(--ground); color: var(--text); overflow-x: hidden; }
   #root { position: relative; }
-  body { font-family: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 12px; line-height: 1.5; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-  h1, h2, h3 { text-wrap: balance; letter-spacing: -0.025em; }
-  .font-display { font-family: "Space Grotesk", "Be Vietnam Pro", system-ui, sans-serif; }
-  ::selection { background: rgba(81,147,95,.45); color: #fff; }
+  body { font-family: Roboto, "Be Vietnam Pro", Arial, sans-serif; font-size: 12.5px; line-height: 1.5; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  h1, h2, h3 { text-wrap: balance; letter-spacing: -0.01em; }
+  .font-display { font-family: Roboto, "Be Vietnam Pro", Arial, sans-serif; }
+  ::selection { background: rgba(62,166,255,.4); color: #fff; }
   * { caret-color: var(--accent); }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
   a { text-underline-offset: 3px; }
   ::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; } ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.24); background-clip: padding-box; }
-  html { scrollbar-color: rgba(255,255,255,.16) transparent; }
+  ::-webkit-scrollbar-thumb { background: #3f3f3f; border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; } ::-webkit-scrollbar-thumb:hover { background: #717171; background-clip: padding-box; }
+  html { scrollbar-color: #3f3f3f transparent; }
   .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { scrollbar-width: none; }
   input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
-  select option { background: #1e1f24; color: #eceef3; }
+  select option { background: #212121; color: #f1f1f1; }
   .tabular-nums, .num { font-variant-numeric: tabular-nums; }
   /* thẻ obsidian */
-  .yt-card { background: rgba(30,31,36,.94); border: 1px solid rgba(255,255,255,.09); border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.3); transition: border-color .2s, background-color .2s, transform .2s; }
-  .yt-cell { background: var(--cell); border: 1px solid rgba(255,255,255,.05); border-radius: 7px; }
+  .yt-card { background: #212121; border: 1px solid transparent; border-radius: 12px; transition: background-color .15s, border-color .15s; } .yt-card:hover { background-color: #272727; }
+  .yt-cell { background: #181818; border-radius: 8px; }
   /* con dấu "đáng làm" (kênh farm) */
-  .seal { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; width: 38px; height: 38px; background: #7cc6b3; color: #0f2a24; border-radius: 8px; box-shadow: 0 4px 12px -6px rgba(0,0,0,.6); line-height: 1; }
-  .seal b { font-family: "Space Grotesk", sans-serif; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+  .seal { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; width: 40px; height: 40px; background: #2ba640; color: #fff; border-radius: 8px; line-height: 1; }
+  .seal b { font-family: Roboto, sans-serif; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
   .seal span { margin-top: 1px; font-size: 7.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
   .seal.sm { width: 26px; height: 26px; border-radius: 8px; }
   .seal.sm b { font-size: 11px; }
@@ -67,18 +60,18 @@
     appId: "1:65560942545:web:0b640f38042dd36a2cb2f0"
   };
 </script>
-<script src="./wiki_data.js?v=20261110c3" defer></script>
-<script src="./core.js?v=20261110c3" defer></script>
-<script src="./spy_v3_bundle.js?v=20261110c3" defer></script>
-<script src="./trend_v2_bundle.js?v=20261110c3" defer></script>
-<script src="./studio_chart_bundle.js?v=20261110c3" defer></script>
-<script src="./top_ngach_v3.js?v=20261110c3" defer></script>
-<script src="./resource_v1.js?v=20261110c3" defer></script>
-<script src="./app.js?v=20261110c3" defer></script>
-<script src="./page_explore.js?v=20261110c3" defer></script>
-<script src="./page_channels.js?v=20261110c3" defer></script>
-<script src="./page_studio.js?v=20261110c3" defer></script>
-<script src="./page_library.js?v=20261110c3" defer></script>
-<script src="./main.js?v=20261110c3" defer></script>
+<script src="./wiki_data.js?v=20261110y1" defer></script>
+<script src="./core.js?v=20261110y1" defer></script>
+<script src="./spy_v3_bundle.js?v=20261110y1" defer></script>
+<script src="./trend_v2_bundle.js?v=20261110y1" defer></script>
+<script src="./studio_chart_bundle.js?v=20261110y1" defer></script>
+<script src="./top_ngach_v3.js?v=20261110y1" defer></script>
+<script src="./resource_v1.js?v=20261110y1" defer></script>
+<script src="./app.js?v=20261110y1" defer></script>
+<script src="./page_explore.js?v=20261110y1" defer></script>
+<script src="./page_channels.js?v=20261110y1" defer></script>
+<script src="./page_studio.js?v=20261110y1" defer></script>
+<script src="./page_library.js?v=20261110y1" defer></script>
+<script src="./main.js?v=20261110y1" defer></script>
 </body>
 </html>
