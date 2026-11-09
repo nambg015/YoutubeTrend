@@ -433,14 +433,15 @@
     function clearAll() { if (!window.confirm('Xoá toàn bộ dữ liệu Top Ngách bạn đã quét trên máy này?')) return; var s = E.emptyStore(); idbSet('store', s); setLocal(s); }
 
     // ---------- mảnh giao diện (Đông Hồ: chàm · điệp · son · hoè) ----------
-    var VL = { farm: ['Farm tiền', 'ngoc'], rise: ['Đang lên', 'hoe'], fluke: ['Ăn may', 'cham'], cold: ['View thấp', 'cham'], none: ['Không có video đúng định dạng', 'cham'], unk: ['Chưa phân tích', 'nhat'] };
-    var CHIP = { ngoc: 'bg-[#2ba640]/20 text-[#6fcf85] border-transparent', hoe: 'bg-[#f2b52c]/15 text-[#f5c451] border-transparent', nhat: 'bg-[#3ea6ff]/15 text-[#7cc3ff] border-transparent', tim: 'bg-[#272727] text-[#aaaaaa] border-transparent', cham: 'bg-[#272727] text-[#aaaaaa] border-transparent' };
-    var B = { btn: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full border border-transparent bg-[#272727] text-[12.5px] font-medium text-cham-100 hover:bg-[#3f3f3f] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap', sm: 'inline-flex items-center justify-center h-7 px-3 rounded-full border border-transparent bg-[#272727] text-[12px] font-medium text-cham-200 hover:bg-[#3f3f3f] transition disabled:opacity-40 cursor-pointer whitespace-nowrap', pri: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full bg-[#3ea6ff] text-[#0f0f0f] text-[12.5px] font-medium hover:bg-[#65b8ff] active:bg-[#2b8fe0] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap', field: 'h-8 rounded-lg bg-[#121212] border border-[#303030] px-3 text-[10.5px] text-cham-50 placeholder:text-cham-500 hover:border-[#3f3f3f] focus:border-[#3ea6ff] outline-none transition' };
+    var VL = { farm: ['Farm tiền', 'ngoc'], rise: ['Đang lên', 'hoe'], fluke: ['Ăn may', 'do'], cold: ['View thấp', 'cham'], none: ['Không có video đúng định dạng', 'cham'], unk: ['Chưa phân tích', 'nhat'] };
+    var CHIP = { ngoc: 'bg-[#2ba640]/20 text-[#6fcf85] border-transparent', hoe: 'bg-[#f2b52c]/15 text-[#f5c451] border-transparent', nhat: 'bg-[#3ea6ff]/15 text-[#7cc3ff] border-transparent', tim: 'bg-[#a970ff]/18 text-[#c9a7ff] border-transparent', do: 'bg-[#ff4e45]/15 text-[#ff8a83] border-transparent', teal: 'bg-[#22c3b5]/15 text-[#5fdccf] border-transparent', cham: 'bg-[#272727] text-[#aaaaaa] border-transparent' };
+    var B = { btn: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full border border-transparent bg-[#323232] text-[12.5px] font-medium text-cham-100 hover:bg-[#424242] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap', sm: 'inline-flex items-center justify-center h-7 px-3 rounded-full border border-transparent bg-[#323232] text-[12px] font-medium text-cham-200 hover:bg-[#424242] transition disabled:opacity-40 cursor-pointer whitespace-nowrap', pri: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full bg-[#3ea6ff] text-[#0f0f0f] text-[12.5px] font-medium hover:bg-[#65b8ff] active:bg-[#2b8fe0] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap', field: 'h-9 rounded-lg bg-[#121212] border border-[#303030] px-3 text-[12px] text-cham-50 placeholder:text-cham-500 hover:border-[#3f3f3f] focus:border-[#3ea6ff] outline-none transition' };
     var ic = function (n) { var I = window.YT4UI && window.YT4UI.Icon; return I ? h(I, { name: n, size: 13 }) : null; };
+    var SCAN = ['bg-[#f5c451] text-[#2a1d00] hover:bg-[#f8d27a]', 'bg-[#2ba640] text-white hover:bg-[#33b84a]', 'bg-gradient-to-r from-[#8b5cf6] to-[#22c3b5] text-white hover:brightness-110'];
     var fx = function (x) { return '×' + (x >= 10 ? Math.round(x) : x.toFixed(1)); };
     var code = function (mk) { return M[mk] ? M[mk][2] : mk || ''; };
-    var pill = function (on) { return cx('h-7 px-2 rounded-lg text-[10.5px] font-medium border whitespace-nowrap transition cursor-pointer', on ? 'bg-[#f1f1f1] text-[#0f0f0f] border-[#f1f1f1] font-medium' : 'bg-[#272727] text-[#f1f1f1] border-transparent hover:bg-[#3f3f3f]'); };
-    var label = function (t, id) { return h('div', { id: id, className: 'text-[10.5px] font-medium text-cham-300 mb-1.5' }, t); };
+    var pill = function (on) { return cx('h-9 px-2 rounded-lg text-[12px] font-medium border whitespace-nowrap transition cursor-pointer', on ? 'bg-[#f1f1f1] text-[#0f0f0f] border-[#f1f1f1] font-medium' : 'bg-[#323232] text-[#f1f1f1] border-transparent hover:bg-[#424242]'); };
+    var label = function (t, id) { return h('div', { id: id, className: 'h-4 flex items-center text-[11.5px] font-medium text-cham-300 mb-1.5' }, t); };
     var select = function (k, opts, aria) { return h('select', { value: f[k], 'aria-label': aria, onChange: function (e) { var v = e.target.value; set(k, isNaN(+v) || v === '' ? v : +v); }, className: cx(B.field, 'w-full cursor-pointer') }, opts.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); })); };
     var badge = function (a) { var v = VL[a.v] || VL.unk; return h('span', { className: 'inline-flex items-center h-6 px-2 rounded-md border text-[11px] font-semibold whitespace-nowrap ' + CHIP[v[1]] }, v[0]); };
     var tag = function (t, tone) { return h('span', { className: 'inline-flex items-center h-6 px-2 rounded-md border text-[11px] font-medium whitespace-nowrap ' + CHIP[tone || 'cham'] }, t); };
@@ -456,7 +457,7 @@
             h('div', { role: 'radiogroup', className: 'grid grid-cols-2 lg:grid-cols-1 gap-2' },
               [['rpm', 'Ngách RPM cao', '12 nước trả tiền cao: US, UK, CA, AU, CH, NO, DE, NL, SE, JP, KR, FR'], ['all', 'Toàn cầu, mọi content', 'Mọi nước, mọi loại content, không xét RPM']].map(function (m) {
                 var on = f.mode === m[0];
-                return h('button', { key: m[0], role: 'radio', 'aria-checked': on, onClick: function () { set('mode', m[0]); }, className: cx('text-left rounded-lg border px-3 py-2.5 transition cursor-pointer', on ? 'bg-[#272727] border-[#f1f1f1]' : 'bg-[#181818] border-transparent hover:bg-[#272727]') },
+                return h('button', { key: m[0], role: 'radio', 'aria-checked': on, onClick: function () { set('mode', m[0]); }, className: cx('text-left rounded-lg border px-3 py-2.5 min-h-[76px] transition cursor-pointer', on ? 'bg-[#272727] border-[#f1f1f1]' : 'bg-[#181818] border-transparent hover:bg-[#272727]') },
                   h('div', { className: cx('text-[10.5px] font-semibold', on ? 'text-[#f1f1f1]' : 'text-cham-200') }, m[1]), h('div', { className: cx('text-[10.5px] mt-0.5 leading-snug', 'text-cham-300') }, m[2]));
               }))),
           h('div', { key: 'c' }, label('Quốc gia'), select('country', mkOpts, 'Quốc gia'))
@@ -472,12 +473,12 @@
         group([
           h('div', { key: 'q', className: 'space-y-2' }, label('Quét dữ liệu mới'),
             E.LEVELS.map(function (l, i) {
-              return h('button', { key: l[0], disabled: !!busy, onClick: function () { return run({ budget: l[2] }); }, className: cx(i === 0 ? B.pri : B.btn, 'w-full justify-between', i === 0 ? '' : 'h-8') },
-                h('span', null, l[1]), h('span', { className: cx('text-[10.5px] font-medium tabular-nums', i === 0 ? 'text-[#0f0f0f]/70' : 'text-cham-400') }, '≈' + N(l[2]) + ' quota'));
+              return h('button', { key: l[0], disabled: !!busy, onClick: function () { return run({ budget: l[2] }); }, className: cx('w-full h-9 px-3 rounded-lg inline-flex items-center justify-between text-[12.5px] font-medium transition cursor-pointer disabled:opacity-40', SCAN[i]) },
+                h('span', null, l[1]), h('span', { className: 'text-[11px] font-normal tabular-nums opacity-75' }, '≈' + N(l[2]) + ' quota'));
             }),
-            h('div', { className: 'flex gap-1.5 pt-1' },
-              h('input', { value: kw, 'aria-label': 'Từ khoá riêng', onChange: function (e) { setKw(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Enter' && kw.trim()) return runKw(); }, placeholder: 'Từ khoá riêng, cách nhau dấu phẩy', className: cx(B.field, 'flex-1 min-w-0') }),
-              h('button', { disabled: !!busy || !kw.trim(), onClick: runKw, className: B.sm + ' h-8' }, 'Quét')))
+            h('div', { className: 'grid grid-cols-[minmax(0,1fr)_64px] gap-2' },
+              h('input', { value: kw, 'aria-label': 'Từ khoá riêng', onChange: function (e) { setKw(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Enter' && kw.trim()) return runKw(); }, placeholder: 'Từ khoá riêng, cách nhau dấu phẩy', className: cx(B.field, 'w-full min-w-0') }),
+              h('button', { disabled: !!busy || !kw.trim(), onClick: runKw, className: 'h-9 rounded-lg bg-[#323232] text-[12px] font-medium text-[#f1f1f1] hover:bg-[#424242] transition disabled:opacity-40 cursor-pointer' }, 'Quét')))
         ]),
         group([
           h('dl', { key: 'd', className: 'text-[10.5px] space-y-1.5' },
@@ -499,7 +500,7 @@
       err && h('div', { role: 'alert', className: 'rounded-lg border border-dieu-500/50 bg-dieu-950 px-3.5 py-2.5 text-[10.5px] text-dieu-100' }, err),
       h('div', { className: 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px bg-[#303030] rounded-xl overflow-hidden' },
         kpi(st.channels, 'kênh nhỏ qua lọc'), kpi(st.farm, 'kênh farm tiền', 'text-[#4bc167]'), kpi(st.rise, 'kênh đang lên', 'text-[#f5c451]'),
-        kpi(st.videosShown, 'video nổ', 'text-[#3ea6ff]'), kpi(D.niches.length, 'ngách'), kpi(st.markets, 'quốc gia')),
+        kpi(st.videosShown, 'video nổ', 'text-[#ff6b63]'), kpi(D.niches.length, 'ngách', 'text-[#c9a7ff]'), kpi(st.markets, 'quốc gia', 'text-[#5fdccf]')),
       D.needProfile > 0 && h('div', { className: 'rounded-lg border border-hoe-600/50 bg-hoe-950 px-3.5 py-2.5 text-[10.5px] text-hoe-100 flex flex-wrap items-center justify-between gap-3' },
         h('span', null, N(D.needProfile) + ' kênh có video nổ nhưng chưa được so toàn bộ video, nên chưa biết farm thật hay ăn may.'),
         h('button', { disabled: !!busy, onClick: function () { return run({ profileOnly: true, budget: Math.min(2500, Math.ceil(D.needProfile * 1.7) + 20), maxProfiles: 400 }); }, className: 'inline-flex items-center h-7 px-3 rounded-lg bg-hoe-400 text-hoe-950 text-[10.5px] font-semibold hover:bg-hoe-300 transition disabled:opacity-40 cursor-pointer whitespace-nowrap' }, 'Phân tích ' + Math.min(D.needProfile, 400) + ' kênh (≈' + N(Math.ceil(Math.min(D.needProfile, 400) * 1.7)) + ' quota)')),
@@ -509,7 +510,7 @@
     var sel = function (val, on, opts, aria) { return h('select', { value: val, 'aria-label': aria, onChange: on, className: cx(B.field, 'h-7 text-[10.5px] cursor-pointer') }, opts.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); })); };
     var toolbar = h('div', { className: 'space-y-3' },
       h('div', { role: 'tablist', className: 'flex max-w-full gap-2 overflow-x-auto no-scrollbar' },
-        tabs.map(function (t) { var on = tab === t[0]; return h('button', { key: t[0], role: 'tab', 'aria-selected': on, onClick: function () { setTab(t[0]); }, className: cx('h-7 px-3.5 rounded-lg text-[11px] whitespace-nowrap transition cursor-pointer', on ? 'bg-[#f1f1f1] text-[#0f0f0f] font-medium' : 'text-[#f1f1f1] font-medium bg-[#272727] hover:bg-[#3f3f3f]') }, t[1], h('span', { className: cx('ml-1.5 text-[10.5px] tabular-nums', on ? 'text-cham-600' : 'text-cham-500') }, N(t[2]))); })),
+        tabs.map(function (t) { var on = tab === t[0]; return h('button', { key: t[0], role: 'tab', 'aria-selected': on, onClick: function () { setTab(t[0]); }, className: cx('h-7 px-3.5 rounded-lg text-[11px] whitespace-nowrap transition cursor-pointer', on ? 'bg-[#f1f1f1] text-[#0f0f0f] font-medium' : 'text-[#f1f1f1] font-medium bg-[#272727] hover:bg-[#424242]') }, t[1], h('span', { className: cx('ml-1.5 text-[10.5px] tabular-nums', on ? 'text-cham-600' : 'text-cham-500') }, N(t[2]))); })),
       h('div', { className: 'flex flex-wrap items-center gap-2' },
         h('input', { value: f.text, 'aria-label': 'Lọc theo tiêu đề, kênh hoặc ngách', onChange: function (e) { set('text', e.target.value); }, placeholder: 'Lọc theo tiêu đề, kênh, ngách', className: cx(B.field, 'h-7 text-[10.5px] w-full sm:w-64') }),
         tab === 'ch' && sel(f.verdict, function (e) { set('verdict', e.target.value); }, [['good', 'Farm + đang lên + chờ phân tích'], ['farm', 'Chỉ farm tiền'], ['rise', 'Chỉ đang lên'], ['unk', 'Chỉ chưa phân tích'], ['fluke', 'Chỉ ăn may'], ['all', 'Tất cả']], 'Lọc theo đánh giá'),
@@ -535,7 +536,7 @@
       return h('a', { key: x.id, href: 'https://www.youtube.com/watch?v=' + x.id, target: '_blank', rel: 'noopener noreferrer', title: x.title, className: 'relative block rounded-md overflow-hidden bg-cham-950' },
         h('img', { src: thumb(x.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover' }),
         h('span', { className: 'absolute bottom-1 left-1 text-[10.5px] font-semibold px-1 rounded bg-black/80 text-cham-50 tabular-nums' }, top(x)),
-        h('span', { className: 'absolute top-1 right-1 text-[10.5px] font-bold px-1 rounded bg-black/80 text-[#f1f1f1] tabular-nums' }, corner(x)));
+        h('span', { className: 'absolute top-1 right-1 text-[10.5px] font-bold px-1 rounded tabular-nums ' + (x.out >= 20 ? 'bg-[#ff4e45] text-white' : x.out >= 5 ? 'bg-[#f5c451] text-[#2a1d00]' : 'bg-black/80 text-[#f1f1f1]') }, corner(x)));
     })); };
     var cell = function (l, v, tone) { return h('div', { className: 'yt-cell px-2 py-1.5 min-w-0' }, h('dt', { className: 'text-[11px] text-cham-400 truncate' }, l), h('dd', { className: 'text-[10.5px] font-semibold truncate tabular-nums ' + (tone || 'text-cham-50') }, v)); };
 
@@ -545,12 +546,12 @@
         var cat = CATS[g.topCat], th = g.chans.filter(function (c) { return c.best; }).slice(0, 3);
         return h('article', { key: g.name, className: 'yt-card p-3 flex flex-col gap-2 transition hover:border-cham-600' },
           h('div', { className: 'flex items-start gap-3' },
-            h('span', { className: cx('shrink-0 h-7 min-w-7 px-1.5 rounded-md flex items-center justify-center text-[10.5px] font-bold tabular-nums', i < 3 ? 'bg-[#f1f1f1] text-[#0f0f0f]' : 'bg-[#272727] text-[#aaaaaa]') }, i + 1),
+            h('span', { className: cx('shrink-0 h-7 min-w-7 px-1.5 rounded-md flex items-center justify-center text-[10.5px] font-bold tabular-nums', ['bg-[#f5c451] text-[#2a1d00]', 'bg-[#d6dbe2] text-[#1b1f24]', 'bg-[#e0915a] text-[#2a1405]'][i] || 'bg-[#272727] text-[#aaaaaa]') }, i + 1),
             h('div', { className: 'min-w-0 flex-1' },
               h('h3', { className: 'text-[12px] font-semibold text-cham-50 truncate', title: g.name }, g.name),
               h('div', { className: 'text-[10.5px] text-cham-300 truncate' }, (cat ? cat[1] + ' · ' : '') + g.topMk.slice(0, 5).map(code).join(' '))),
             h('div', { className: 'text-right shrink-0' }, h('div', { className: 'font-display text-[16.5px] leading-6 font-bold text-cham-50 tabular-nums' }, g.score), h('div', { className: 'text-[11px] text-cham-400' }, 'điểm cơ hội'))),
-          bar(g.score),
+          bar(g.score, g.score >= 70 ? 'bg-[#4bc167]' : g.score >= 50 ? 'bg-[#f5c451]' : 'bg-[#3ea6ff]'),
           h('dl', { className: 'grid grid-cols-4 gap-1.5' },
             cell('Kênh nhỏ', N(g.chans.length)), cell('Farm', g.farm, g.farm ? 'text-ngoc-300' : ''), cell('Đang lên', g.rise, g.rise ? 'text-hoe-300' : ''), cell('View÷sub', fx(g.medOut))),
           h('div', { className: 'flex justify-between gap-2 text-[10.5px] text-cham-300 tabular-nums' }, h('span', null, 'RPM tới ~$' + g.rpmHi.toFixed(1)), h('span', null, 'View 30 ngày ' + N(g.v30))),
@@ -574,7 +575,7 @@
               h('div', { className: 'text-[10.5px] text-cham-300 truncate tabular-nums', title: c.niche }, N(c.subs) + ' sub · ' + code(c.mk) + ' · ' + c.niche)),
             ok && farm ? h('span', { className: 'seal stamp', title: 'Điểm farm ' + a.score + '/100' }, h('b', null, a.score), h('span', null, 'Farm'))
               : ok ? h('div', { className: 'text-right shrink-0' }, h('div', { className: 'font-display text-[16.5px] leading-6 font-bold tabular-nums text-cham-50' }, a.score), h('div', { className: 'text-[11px] text-cham-400' }, 'điểm farm')) : null),
-          h('div', { className: 'flex flex-wrap items-center gap-1.5' }, badge(a), ageD != null && ageD < 180 ? tag(ageD + ' ngày tuổi', 'tim') : null, a.mid ? tag('Có mid-roll') : null),
+          h('div', { className: 'flex flex-wrap items-center gap-1.5' }, badge(a), ageD != null && ageD < 180 ? tag(ageD + ' ngày tuổi', 'tim') : null, a.mid ? tag('Có mid-roll', 'teal') : null),
           ok ? h('dl', { className: 'grid grid-cols-3 gap-1.5' },
             cell('Video đạt', a.hits + '/' + a.n + ' · ' + Math.round(a.hr * 100) + '%', a.hr >= 0.5 ? 'text-la-300' : ''),
             cell('View trung vị', N(a.med) + ' · ' + fx(a.medOut), a.medOut >= 1 ? 'text-la-300' : ''),
@@ -595,11 +596,11 @@
     var vidView = !D.videos.length ? empty('Chưa có video nào qua bộ lọc') : h('div', { className: 'space-y-3' },
       h('div', { className: 'grid gap-3 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]' }, cut(D.videos).map(function (v) {
         var saved = p.isSaved && p.isSaved(v.id), farm = v.a.v === 'farm', chip = 'absolute text-[11px] font-semibold px-1.5 py-0.5 rounded-md tabular-nums';
-        return h('article', { key: v.id, className: 'group flex flex-col gap-2.5' },
+        return h('article', { key: v.id, className: 'group flex flex-col gap-2.5 rounded-xl bg-[#181818]/95 p-2 hover:bg-[#212121] transition' },
           h('a', { href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer', className: 'relative block rounded-xl overflow-hidden bg-[#272727]' },
             h('img', { src: thumb(v.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover' }),
             h('span', { className: cx(chip, 'top-2 left-2 bg-black/80 text-cham-50') }, code(v.mk) + ' · ' + N(v.subs) + ' sub'),
-            h('span', { className: cx(chip, 'top-2 right-2 font-bold', v.out >= 5 ? 'bg-black/80 text-[#f1f1f1]' : 'bg-hoe-400 text-hoe-950'), title: 'View chia sub' }, fx(v.out)),
+            h('span', { className: cx(chip, 'top-2 right-2 font-bold', v.out >= 20 ? 'bg-[#ff4e45] text-white' : v.out >= 5 ? 'bg-[#f5c451] text-[#2a1d00]' : 'bg-black/80 text-[#f1f1f1]'), title: 'View chia sub' }, fx(v.out)),
             farm && h('span', { className: cx(chip, 'bottom-2 left-2 bg-ngoc-900 text-ngoc-100 border border-ngoc-600/70') }, 'Kênh farm'),
             h('span', { className: cx(chip, 'bottom-2 right-2 bg-black/80 text-cham-50 font-medium') }, dur(v.dur))),
           h('div', { className: 'flex-1 flex flex-col gap-1 px-0.5' },

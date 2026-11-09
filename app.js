@@ -11,9 +11,9 @@
 
   // ===================== THÀNH PHẦN GIAO DIỆN =====================
   var C = {
-    btn: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full border border-transparent bg-[#272727] text-[12.5px] font-medium text-cham-100 hover:bg-[#3f3f3f] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap',
+    btn: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full border border-transparent bg-[#323232] text-[12.5px] font-medium text-cham-100 hover:bg-[#424242] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap',
     pri: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full bg-[#3ea6ff] text-[#0f0f0f] text-[12.5px] font-medium hover:bg-[#65b8ff] active:bg-[#2b8fe0] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap',
-    sm: 'inline-flex items-center justify-center h-7 px-3 rounded-full border border-transparent bg-[#272727] text-[12px] text-cham-200 hover:bg-[#3f3f3f] transition disabled:opacity-40 cursor-pointer whitespace-nowrap',
+    sm: 'inline-flex items-center justify-center h-7 px-3 rounded-full border border-transparent bg-[#323232] text-[12px] text-cham-200 hover:bg-[#424242] transition disabled:opacity-40 cursor-pointer whitespace-nowrap',
     smOn: 'inline-flex items-center justify-center h-7 px-3 rounded-full border border-ngoc-400/40 bg-ngoc-400/15 text-[12px] text-ngoc-200 cursor-pointer whitespace-nowrap',
     input: 'h-8 px-3 rounded-lg bg-[#121212] border border-[#303030] text-[10.5px] text-cham-50 placeholder:text-cham-500 hover:border-[#3f3f3f] focus:border-[#3ea6ff] outline-none transition w-full',
     select: 'h-8 px-2.5 rounded-lg bg-[#121212] border border-[#303030] text-[10.5px] text-cham-100 hover:border-[#3f3f3f] focus:border-[#3ea6ff] outline-none cursor-pointer w-full',
@@ -32,8 +32,8 @@
   function Field(p) { return h('label', { className: cx('block min-w-0', p.className) }, p.label && h('span', { className: C.label }, p.label), p.children); }
   function Input(p) { return h('input', Object.assign({}, p, { className: cx(C.input, p.className) })); }
   function Select(p) { return h('select', { value: p.value, onChange: function (e) { p.onChange(e.target.value); }, className: cx(C.select, p.className) }, p.options.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); })); }
-  function Seg(p) { return h('div', { className: 'inline-flex flex-wrap gap-1.5' }, p.options.map(function (o) { var on = String(p.value) === String(o[0]); return h('button', { key: o[0], type: 'button', 'aria-pressed': on, onClick: function () { p.onChange(o[0]); }, className: cx('h-7 px-3.5 rounded-lg text-[10.5px] font-medium whitespace-nowrap transition cursor-pointer', on ? 'bg-[#f1f1f1] text-[#0f0f0f] font-medium' : 'text-[#f1f1f1] bg-transparent hover:bg-[#3f3f3f]') }, o[1]); })); }
-  function Tabs(p) { return h('div', { role: 'tablist', className: cx('flex max-w-full gap-2 overflow-x-auto no-scrollbar', p.className) }, p.items.map(function (t) { var on = p.value === t[0]; return h('button', { key: t[0], type: 'button', role: 'tab', 'aria-selected': on, onClick: function () { p.onChange(t[0]); }, className: cx('h-7 px-3.5 rounded-lg text-[10.5px] whitespace-nowrap cursor-pointer transition', on ? 'bg-[#f1f1f1] text-[#0f0f0f] font-medium' : 'text-[#f1f1f1] font-medium bg-[#272727] hover:bg-[#3f3f3f]') }, t[1], t[2] != null ? h('span', { className: cx('ml-1.5 text-[11px] tabular-nums', on ? 'text-cham-600' : 'text-cham-500') }, t[2]) : null); })); }
+  function Seg(p) { return h('div', { className: 'inline-flex flex-wrap gap-1.5' }, p.options.map(function (o) { var on = String(p.value) === String(o[0]); return h('button', { key: o[0], type: 'button', 'aria-pressed': on, onClick: function () { p.onChange(o[0]); }, className: cx('h-7 px-3.5 rounded-lg text-[10.5px] font-medium whitespace-nowrap transition cursor-pointer', on ? 'bg-[#f1f1f1] text-[#0f0f0f] font-medium' : 'text-[#f1f1f1] bg-transparent hover:bg-[#424242]') }, o[1]); })); }
+  function Tabs(p) { return h('div', { role: 'tablist', className: cx('flex max-w-full gap-2 overflow-x-auto no-scrollbar', p.className) }, p.items.map(function (t) { var on = p.value === t[0]; return h('button', { key: t[0], type: 'button', role: 'tab', 'aria-selected': on, onClick: function () { p.onChange(t[0]); }, className: cx('h-7 px-3.5 rounded-lg text-[10.5px] whitespace-nowrap cursor-pointer transition', on ? 'bg-[#f1f1f1] text-[#0f0f0f] font-medium' : 'text-[#f1f1f1] font-medium bg-[#272727] hover:bg-[#424242]') }, t[1], t[2] != null ? h('span', { className: cx('ml-1.5 text-[11px] tabular-nums', on ? 'text-cham-600' : 'text-cham-500') }, t[2]) : null); })); }
   var TONE = { emerald: 'text-la-300', sky: 'text-nhat-300', amber: 'text-hoe-300', violet: 'text-hoaca-300', rose: 'text-dieu-300', son: 'text-ngoc-300' };
   function Stat(p) { return h('div', { className: cx('min-w-0', p.className) }, h('div', { className: 'text-[10.5px] text-cham-400 truncate' }, p.label), h('div', { className: cx('mt-0.5 font-semibold tracking-tight truncate tabular-nums', p.big ? 'text-[20.5px] leading-8' : 'text-[12px]', TONE[p.tone] || 'text-cham-50') }, p.value), p.sub && h('div', { className: 'text-[11px] text-cham-400 truncate' }, p.sub)); }
   function Empty(p) { return h('div', { className: 'py-14 px-6 text-center rounded-xl border border-dashed border-cham-700 bg-cham-950/60' }, h('div', { className: 'text-[11px] font-medium text-cham-100' }, p.title), p.sub && h('div', { className: 'mt-1.5 text-[10.5px] text-cham-400 max-w-md mx-auto leading-relaxed' }, p.sub), p.children && h('div', { className: 'mt-4' }, p.children)); }
@@ -160,7 +160,7 @@
     var v = p.v, ratio = p.ratio ? p.ratio(v) : null, sv = store.isSaved(v.id), sub = v.subs;
     var hot = ratio != null && ratio >= (p.hotAt || 5);
     var chip = 'absolute text-[11px] font-semibold px-1.5 py-0.5 rounded-md tabular-nums';
-    return h('article', { className: 'group flex flex-col gap-2.5' },
+    return h('article', { className: 'group flex flex-col gap-2.5 rounded-xl bg-[#181818]/95 p-2 hover:bg-[#212121] transition' },
       h('a', { href: U.vurl(v.id), target: '_blank', rel: 'noopener noreferrer', className: 'relative block rounded-xl overflow-hidden bg-[#272727]' },
         h('img', { src: U.thumb(v.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover' }),
         sub != null && h('span', { className: cx(chip, 'top-2 left-2 bg-black/80 text-cham-50') }, N(sub) + ' sub'),
@@ -201,7 +201,7 @@
   // ---------- Hướng dẫn nhanh: hiện lần đầu, bấm "Đã hiểu" để ẩn, nút "Hướng dẫn" để xem lại ----------
   function Help(p) {
     var key = 'yt4_help_open_' + p.id, s = useState(st.get(key) === '1'), open = s[0], set = s[1];
-    if (!open) return h('div', { className: 'flex justify-end -mb-2' }, h('button', { onClick: function () { set(true); st.set(key, '1'); }, className: 'text-[10.5px] font-medium text-nhat-300 hover:text-nhat-100 underline decoration-nhat-700 underline-offset-2 cursor-pointer' }, 'Hướng dẫn'));
+    if (!open) return h('div', { className: 'relative h-0 z-10' }, h('button', { onClick: function () { set(true); st.set(key, '1'); }, className: 'absolute right-0 top-0 h-8 px-3 rounded-full bg-[#323232] text-[12px] font-medium text-[#f1f1f1] hover:bg-[#424242] cursor-pointer' }, 'Hướng dẫn'));
     return h('div', { className: 'yt-card border-nhat-600/50 p-4' },
       h('div', { className: 'flex items-start justify-between gap-3' },
         h('h2', { className: 'text-[11px] font-semibold text-cham-50' }, p.title || 'Cách dùng'),

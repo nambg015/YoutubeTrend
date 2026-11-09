@@ -7,7 +7,7 @@
   var Y = window.YT4, U = Y.U, N = U.fmtN, store = Y.store, K = window.YT4UI, cx = K.cx, P = window.YT4Pages || {};
   var Btn = K.Btn, Input = K.Input, Note = K.Note;
 
-  var NAV = [['explore', 'Khám phá'], ['niche', 'Top Ngách'], ['channels', 'Kênh'], ['resource', 'Tạo tài nguyên', 'Tài nguyên'], ['library', 'Thư viện'], ['settings', 'Cài đặt']];
+  var NAV = [['explore', 'Khám phá', 0, '#3ea6ff'], ['niche', 'Top Ngách', 0, '#ff4e45'], ['channels', 'Kênh', 0, '#a970ff'], ['resource', 'Tạo tài nguyên', 'Tài nguyên', '#f5c451'], ['library', 'Thư viện', 0, '#4bc167'], ['settings', 'Cài đặt', 0, '#aaaaaa']];
   var OLD = { search: 'explore', keywords: 'explore', niche: 'explore', rpm: 'niche', competitors: 'channels', spy: 'channels', studio_chart: 'channels', wiki: 'library' };
   function readRoute() { var hsh = (location.hash || '').replace(/^#\/?/, '').split('/')[0]; if (NAV.some(function (n) { return n[0] === hsh; })) return hsh; var q = new URLSearchParams(location.search).get('tab'); return OLD[q] || 'explore'; }
 
@@ -34,7 +34,7 @@
   // ---------- KHUNG ----------
   function QuotaChip(p) {
     K.useBus('keys'); K.useBus('quota');
-    var S = Y.keys.stats(), tone = !S.total ? 'border-dashed border-[#3f3f3f] text-[#aaaaaa]' : !S.ok ? 'border-transparent bg-[#3a1d1d] text-[#ff8a80]' : 'border-transparent bg-[#272727] text-[#f1f1f1] hover:bg-[#3f3f3f]';
+    var S = Y.keys.stats(), tone = !S.total ? 'border-dashed border-[#3f3f3f] text-[#aaaaaa]' : !S.ok ? 'border-transparent bg-[#3a1d1d] text-[#ff8a80]' : 'border-transparent bg-[#323232] text-[#f1f1f1] hover:bg-[#424242]';
     return h('button', { onClick: p.onClick, title: 'Quota YouTube còn lại hôm nay. Bấm để quản lý API key.', className: cx('h-9 px-4 rounded-full border text-[12.5px] font-medium tabular-nums transition cursor-pointer whitespace-nowrap', tone) },
       !S.total ? 'Chưa có key' : !S.ok ? 'Hết quota' : h(Frag, null, h('span', { className: 'sm:hidden' }, N(S.left)), h('span', { className: 'hidden sm:inline' }, 'Quota ' + N(S.left) + ' · ' + S.ok + '/' + S.total + ' key')));
   }
@@ -62,16 +62,16 @@
     var navItem = function (n, mobile) {
       var on = route === n[0];
       return h('a', { key: n[0], href: '#' + n[0], onClick: function (e) { e.preventDefault(); goto(n[0]); }, 'aria-current': on ? 'page' : null, title: n[1],
-        className: cx('flex flex-col items-center justify-center gap-1 rounded-xl transition text-center', mobile ? 'h-14 px-1' : 'w-16 py-3.5', on ? 'bg-[#272727] text-[#f1f1f1]' : 'text-[#aaaaaa] hover:bg-[#272727] hover:text-[#f1f1f1]') },
-        h(K.Icon, { name: n[0], size: 22, stroke: on ? 2.2 : 1.6 }), h('span', { className: cx('leading-tight', mobile ? 'text-[9.5px]' : 'text-[10px]', on && 'font-medium') }, n[2] || n[1]));
+        className: cx('flex flex-col items-center justify-center gap-1 rounded-xl transition text-center', mobile ? 'h-14 px-1' : 'w-16 py-3.5', on ? 'bg-[#323232] text-[#f1f1f1]' : 'text-[#aaaaaa] hover:bg-[#272727] hover:text-[#f1f1f1]'), style: on ? { boxShadow: 'inset 0 -2px 0 ' + n[3] } : null },
+        h('span', { style: { color: n[3] } }, h(K.Icon, { name: n[0], size: 22, stroke: on ? 2.2 : 1.7 })), h('span', { className: cx('leading-tight', mobile ? 'text-[9.5px]' : 'text-[10px]', on && 'font-medium') }, n[2] || n[1]));
     };
     return h('div', { className: 'min-h-screen' },
-      h('header', { className: 'fixed top-0 inset-x-0 z-40 h-14 bg-[#0f0f0f] flex items-center gap-4 pl-4 lg:pl-6 pr-4' },
+      h('header', { className: 'fixed top-0 inset-x-0 z-40 h-14 bg-[#0f0f0f]/90 backdrop-blur-md flex items-center gap-4 pl-4 lg:pl-6 pr-4' },
         h('button', { onClick: function () { goto('explore'); }, 'aria-label': 'YouTrend, về Khám phá', className: 'cursor-pointer shrink-0' }, h(Mark)),
         h('span', { className: 'flex-1' }),
         h('div', { className: 'flex items-center gap-2 shrink-0' }, h(QuotaChip, { onClick: function () { goto('settings'); } }),
           h('button', { onClick: function () { goto('settings'); }, title: user ? user.email : '', 'aria-label': 'Tài khoản và cài đặt', className: 'h-8 w-8 rounded-full bg-[#5e35b1] text-white text-[13px] font-medium cursor-pointer hover:brightness-110' }, (label || '?').charAt(0).toUpperCase()))),
-      h('nav', { 'aria-label': 'Mục chính', className: 'hidden lg:flex fixed left-0 top-14 bottom-0 z-30 w-[72px] flex-col items-center gap-1 pt-1 bg-[#0f0f0f]' }, NAV.map(function (n) { return navItem(n); })),
+      h('nav', { 'aria-label': 'Mục chính', className: 'hidden lg:flex fixed left-0 top-14 bottom-0 z-30 w-[72px] flex-col items-center gap-1 pt-1 bg-[#0f0f0f]/85 backdrop-blur-md' }, NAV.map(function (n) { return navItem(n); })),
       h('nav', { 'aria-label': 'Mục chính', className: 'lg:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-6 bg-[#0f0f0f] border-t border-[#272727]' }, NAV.map(function (n) { return navItem(n, true); })),
       h('div', { className: 'pt-14 lg:pl-[72px]' },
         noKey && route !== 'settings' && h('div', { className: 'mx-4 sm:mx-6 mt-3 rounded-xl bg-[#272727] px-4 py-2.5 flex items-center gap-3 text-[12px] text-[#f1f1f1]' }, 'Chưa có YouTube API key nên các mục tìm kiếm chưa chạy được.', h('button', { onClick: function () { goto('settings'); }, className: K.C.sm }, 'Thêm key')),
