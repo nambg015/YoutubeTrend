@@ -1,0 +1,1172 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-09T17:57:08+00:00",
+  "title": "Design System: YouTrend",
+  "extensions": {
+    "colorMeta": {
+      "amber-signal": {
+        "role": "primary",
+        "displayName": "Amber Signal",
+        "canonical": "#fbbf24",
+        "tonalRamp": [
+          "#2a1003",
+          "#451a03",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fcd34d",
+          "#fde68a",
+          "#fef3c7",
+          "#fffbeb"
+        ],
+        "scaleStep": "theme.js hoe-400"
+      },
+      "amber-hover": {
+        "role": "primary",
+        "displayName": "Amber Hover",
+        "canonical": "#fcd34d",
+        "tonalRamp": [
+          "#2a1003",
+          "#451a03",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fcd34d",
+          "#fde68a",
+          "#fef3c7",
+          "#fffbeb"
+        ],
+        "scaleStep": "theme.js hoe-300"
+      },
+      "amber-press": {
+        "role": "primary",
+        "displayName": "Amber Press",
+        "canonical": "#f59e0b",
+        "tonalRamp": [
+          "#2a1003",
+          "#451a03",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fcd34d",
+          "#fde68a",
+          "#fef3c7",
+          "#fffbeb"
+        ],
+        "scaleStep": "theme.js hoe-500"
+      },
+      "amber-ink": {
+        "role": "primary",
+        "displayName": "Amber Ink",
+        "canonical": "#1a1205",
+        "tonalRamp": [
+          "#2a1003",
+          "#451a03",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fcd34d",
+          "#fde68a",
+          "#fef3c7",
+          "#fffbeb"
+        ]
+      },
+      "farm-jade": {
+        "role": "secondary",
+        "displayName": "Farm Jade",
+        "canonical": "#4fc1a8",
+        "tonalRamp": [
+          "#0d2723",
+          "#173f39",
+          "#1d534a",
+          "#22695d",
+          "#288574",
+          "#34a690",
+          "#4fc1a8",
+          "#74d6bf",
+          "#a3e8d6",
+          "#cff4ea",
+          "#ecfbf7"
+        ],
+        "scaleStep": "theme.js ngoc-400"
+      },
+      "jade-text": {
+        "role": "secondary",
+        "displayName": "Jade Text",
+        "canonical": "#74d6bf",
+        "tonalRamp": [
+          "#0d2723",
+          "#173f39",
+          "#1d534a",
+          "#22695d",
+          "#288574",
+          "#34a690",
+          "#4fc1a8",
+          "#74d6bf",
+          "#a3e8d6",
+          "#cff4ea",
+          "#ecfbf7"
+        ],
+        "scaleStep": "theme.js ngoc-300"
+      },
+      "jade-pale": {
+        "role": "secondary",
+        "displayName": "Jade Pale",
+        "canonical": "#a3e8d6",
+        "tonalRamp": [
+          "#0d2723",
+          "#173f39",
+          "#1d534a",
+          "#22695d",
+          "#288574",
+          "#34a690",
+          "#4fc1a8",
+          "#74d6bf",
+          "#a3e8d6",
+          "#cff4ea",
+          "#ecfbf7"
+        ],
+        "scaleStep": "theme.js ngoc-200"
+      },
+      "seal-jade-light": {
+        "role": "secondary",
+        "displayName": "Seal Jade Light",
+        "canonical": "#5fd3b8",
+        "tonalRamp": [
+          "#0d2723",
+          "#173f39",
+          "#1d534a",
+          "#22695d",
+          "#288574",
+          "#34a690",
+          "#4fc1a8",
+          "#74d6bf",
+          "#a3e8d6",
+          "#cff4ea",
+          "#ecfbf7"
+        ]
+      },
+      "seal-jade-deep": {
+        "role": "secondary",
+        "displayName": "Seal Jade Deep",
+        "canonical": "#2f9e86",
+        "tonalRamp": [
+          "#0d2723",
+          "#173f39",
+          "#1d534a",
+          "#22695d",
+          "#288574",
+          "#34a690",
+          "#4fc1a8",
+          "#74d6bf",
+          "#a3e8d6",
+          "#cff4ea",
+          "#ecfbf7"
+        ]
+      },
+      "seal-ink": {
+        "role": "secondary",
+        "displayName": "Seal Ink",
+        "canonical": "#04201a",
+        "tonalRamp": [
+          "#0d2723",
+          "#173f39",
+          "#1d534a",
+          "#22695d",
+          "#288574",
+          "#34a690",
+          "#4fc1a8",
+          "#74d6bf",
+          "#a3e8d6",
+          "#cff4ea",
+          "#ecfbf7"
+        ]
+      },
+      "age-purple": {
+        "role": "tertiary",
+        "displayName": "Age Purple",
+        "canonical": "#a855f7",
+        "tonalRamp": [
+          "#22053d",
+          "#3b0764",
+          "#6b21a8",
+          "#7e22ce",
+          "#9333ea",
+          "#a855f7",
+          "#c084fc",
+          "#d8b4fe",
+          "#e9d5ff",
+          "#f3e8ff",
+          "#faf5ff"
+        ],
+        "scaleStep": "theme.js hoaca-500"
+      },
+      "purple-text": {
+        "role": "tertiary",
+        "displayName": "Purple Text",
+        "canonical": "#d8b4fe",
+        "tonalRamp": [
+          "#22053d",
+          "#3b0764",
+          "#6b21a8",
+          "#7e22ce",
+          "#9333ea",
+          "#a855f7",
+          "#c084fc",
+          "#d8b4fe",
+          "#e9d5ff",
+          "#f3e8ff",
+          "#faf5ff"
+        ],
+        "scaleStep": "theme.js hoaca-300"
+      },
+      "info-sky": {
+        "role": "tertiary",
+        "displayName": "Info Sky",
+        "canonical": "#8ec2da",
+        "tonalRamp": [
+          "#14232b",
+          "#203641",
+          "#2c4a59",
+          "#385f73",
+          "#45768f",
+          "#5590b0",
+          "#6eabc9",
+          "#8ec2da",
+          "#b4d8e8",
+          "#d6ebf3",
+          "#edf6fa"
+        ],
+        "scaleStep": "theme.js nhat-300"
+      },
+      "sky-mist": {
+        "role": "tertiary",
+        "displayName": "Sky Mist",
+        "canonical": "#d6ebf3",
+        "tonalRamp": [
+          "#14232b",
+          "#203641",
+          "#2c4a59",
+          "#385f73",
+          "#45768f",
+          "#5590b0",
+          "#6eabc9",
+          "#8ec2da",
+          "#b4d8e8",
+          "#d6ebf3",
+          "#edf6fa"
+        ],
+        "scaleStep": "theme.js nhat-100"
+      },
+      "sky-wash": {
+        "role": "tertiary",
+        "displayName": "Sky Wash",
+        "canonical": "#14232b",
+        "tonalRamp": [
+          "#14232b",
+          "#203641",
+          "#2c4a59",
+          "#385f73",
+          "#45768f",
+          "#5590b0",
+          "#6eabc9",
+          "#8ec2da",
+          "#b4d8e8",
+          "#d6ebf3",
+          "#edf6fa"
+        ],
+        "scaleStep": "theme.js nhat-950"
+      },
+      "positive-leaf": {
+        "role": "tertiary",
+        "displayName": "Positive Leaf",
+        "canonical": "#8fc699",
+        "tonalRamp": [
+          "#0f1d14",
+          "#1a3021",
+          "#26472f",
+          "#315c3c",
+          "#3f764c",
+          "#51935f",
+          "#6cae79",
+          "#8fc699",
+          "#b2dab8",
+          "#d6ecd9",
+          "#eef7ef"
+        ],
+        "scaleStep": "theme.js la-300"
+      },
+      "amber-cream": {
+        "role": "tertiary",
+        "displayName": "Amber Cream",
+        "canonical": "#fef3c7",
+        "tonalRamp": [
+          "#2a1003",
+          "#451a03",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fcd34d",
+          "#fde68a",
+          "#fef3c7",
+          "#fffbeb"
+        ],
+        "scaleStep": "theme.js hoe-100"
+      },
+      "amber-wash": {
+        "role": "tertiary",
+        "displayName": "Amber Wash",
+        "canonical": "#451a03",
+        "tonalRamp": [
+          "#2a1003",
+          "#451a03",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fcd34d",
+          "#fde68a",
+          "#fef3c7",
+          "#fffbeb"
+        ],
+        "scaleStep": "theme.js hoe-950"
+      },
+      "crimson-error": {
+        "role": "tertiary",
+        "displayName": "Crimson Error",
+        "canonical": "#cb465c",
+        "tonalRamp": [
+          "#290d13",
+          "#42161f",
+          "#62202d",
+          "#832a3b",
+          "#a8354a",
+          "#cb465c",
+          "#e46476",
+          "#ee8b98",
+          "#f5b2ba",
+          "#fad6da",
+          "#fdeef0"
+        ],
+        "scaleStep": "theme.js dieu-500"
+      },
+      "crimson-text": {
+        "role": "tertiary",
+        "displayName": "Crimson Text",
+        "canonical": "#ee8b98",
+        "tonalRamp": [
+          "#290d13",
+          "#42161f",
+          "#62202d",
+          "#832a3b",
+          "#a8354a",
+          "#cb465c",
+          "#e46476",
+          "#ee8b98",
+          "#f5b2ba",
+          "#fad6da",
+          "#fdeef0"
+        ],
+        "scaleStep": "theme.js dieu-300"
+      },
+      "crimson-blush": {
+        "role": "tertiary",
+        "displayName": "Crimson Blush",
+        "canonical": "#fad6da",
+        "tonalRamp": [
+          "#290d13",
+          "#42161f",
+          "#62202d",
+          "#832a3b",
+          "#a8354a",
+          "#cb465c",
+          "#e46476",
+          "#ee8b98",
+          "#f5b2ba",
+          "#fad6da",
+          "#fdeef0"
+        ],
+        "scaleStep": "theme.js dieu-100"
+      },
+      "crimson-wash": {
+        "role": "tertiary",
+        "displayName": "Crimson Wash",
+        "canonical": "#290d13",
+        "tonalRamp": [
+          "#290d13",
+          "#42161f",
+          "#62202d",
+          "#832a3b",
+          "#a8354a",
+          "#cb465c",
+          "#e46476",
+          "#ee8b98",
+          "#f5b2ba",
+          "#fad6da",
+          "#fdeef0"
+        ],
+        "scaleStep": "theme.js dieu-950"
+      },
+      "jade-tint": {
+        "role": "secondary",
+        "displayName": "Jade Tint (15%)",
+        "canonical": "rgba(79, 193, 168, 0.15)",
+        "tonalRamp": [
+          "#0d2723",
+          "#173f39",
+          "#1d534a",
+          "#22695d",
+          "#288574",
+          "#34a690",
+          "#4fc1a8",
+          "#74d6bf",
+          "#a3e8d6",
+          "#cff4ea",
+          "#ecfbf7"
+        ]
+      },
+      "amber-tint": {
+        "role": "primary",
+        "displayName": "Amber Tint (12%)",
+        "canonical": "rgba(251, 191, 36, 0.12)",
+        "tonalRamp": [
+          "#2a1003",
+          "#451a03",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fcd34d",
+          "#fde68a",
+          "#fef3c7",
+          "#fffbeb"
+        ]
+      },
+      "sky-tint": {
+        "role": "tertiary",
+        "displayName": "Sky Tint (12%)",
+        "canonical": "rgba(110, 171, 201, 0.12)",
+        "tonalRamp": [
+          "#14232b",
+          "#203641",
+          "#2c4a59",
+          "#385f73",
+          "#45768f",
+          "#5590b0",
+          "#6eabc9",
+          "#8ec2da",
+          "#b4d8e8",
+          "#d6ebf3",
+          "#edf6fa"
+        ]
+      },
+      "purple-tint": {
+        "role": "tertiary",
+        "displayName": "Purple Tint (15%)",
+        "canonical": "rgba(168, 85, 247, 0.15)",
+        "tonalRamp": [
+          "#22053d",
+          "#3b0764",
+          "#6b21a8",
+          "#7e22ce",
+          "#9333ea",
+          "#a855f7",
+          "#c084fc",
+          "#d8b4fe",
+          "#e9d5ff",
+          "#f3e8ff",
+          "#faf5ff"
+        ]
+      },
+      "neutral-tint": {
+        "role": "neutral",
+        "displayName": "Neutral Tint (5% white)",
+        "canonical": "rgba(255, 255, 255, 0.05)",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ]
+      },
+      "obsidian-ground": {
+        "role": "neutral",
+        "displayName": "Obsidian Ground",
+        "canonical": "#0b0c10",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ]
+      },
+      "obsidian-card": {
+        "role": "neutral",
+        "displayName": "Obsidian Card (94%)",
+        "canonical": "rgba(20, 22, 32, 0.94)",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ]
+      },
+      "card-solid": {
+        "role": "neutral",
+        "displayName": "Card Solid",
+        "canonical": "#141620",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ]
+      },
+      "card-hover": {
+        "role": "neutral",
+        "displayName": "Card Hover",
+        "canonical": "#191c28",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ]
+      },
+      "well": {
+        "role": "neutral",
+        "displayName": "Well",
+        "canonical": "#101219",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ],
+        "scaleStep": "theme.js cham-950"
+      },
+      "cell-wash": {
+        "role": "neutral",
+        "displayName": "Cell Wash",
+        "canonical": "rgba(255, 255, 255, 0.045)",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "rgba(255, 255, 255, 0.08)",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ]
+      },
+      "hairline-strong": {
+        "role": "neutral",
+        "displayName": "Hairline Strong",
+        "canonical": "rgba(255, 255, 255, 0.16)",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ]
+      },
+      "text-white": {
+        "role": "neutral",
+        "displayName": "Text White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ],
+        "scaleStep": "theme.js cham-50"
+      },
+      "text-soft": {
+        "role": "neutral",
+        "displayName": "Text Soft",
+        "canonical": "#f1f3f7",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ],
+        "scaleStep": "theme.js cham-100"
+      },
+      "text-quiet": {
+        "role": "neutral",
+        "displayName": "Text Quiet",
+        "canonical": "#d5dae3",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ],
+        "scaleStep": "theme.js cham-200"
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Text Secondary",
+        "canonical": "#b4bccb",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ],
+        "scaleStep": "theme.js cham-300"
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Text Muted",
+        "canonical": "#9ba3b4",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ],
+        "scaleStep": "theme.js cham-400"
+      },
+      "text-faint": {
+        "role": "neutral",
+        "displayName": "Text Faint",
+        "canonical": "#808a9c",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ],
+        "scaleStep": "theme.js cham-500"
+      },
+      "rule-slate": {
+        "role": "neutral",
+        "displayName": "Rule Slate",
+        "canonical": "#2e3240",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ],
+        "scaleStep": "theme.js cham-700"
+      },
+      "rank-slate": {
+        "role": "neutral",
+        "displayName": "Rank Slate",
+        "canonical": "#22252f",
+        "tonalRamp": [
+          "#101219",
+          "#191b25",
+          "#22252f",
+          "#2e3240",
+          "#4b5263",
+          "#808a9c",
+          "#9ba3b4",
+          "#b4bccb",
+          "#d5dae3",
+          "#f1f3f7",
+          "#ffffff"
+        ],
+        "scaleStep": "theme.js cham-800"
+      },
+      "glow-amber": {
+        "role": "primary",
+        "displayName": "Glow Amber (atmosphere)",
+        "canonical": "rgba(255, 160, 40, 0.16)",
+        "tonalRamp": [
+          "#2a1003",
+          "#451a03",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fcd34d",
+          "#fde68a",
+          "#fef3c7",
+          "#fffbeb"
+        ]
+      },
+      "glow-purple": {
+        "role": "tertiary",
+        "displayName": "Glow Purple (atmosphere)",
+        "canonical": "rgba(168, 85, 247, 0.18)",
+        "tonalRamp": [
+          "#22053d",
+          "#3b0764",
+          "#6b21a8",
+          "#7e22ce",
+          "#9333ea",
+          "#a855f7",
+          "#c084fc",
+          "#d8b4fe",
+          "#e9d5ff",
+          "#f3e8ff",
+          "#faf5ff"
+        ]
+      },
+      "glow-indigo": {
+        "role": "tertiary",
+        "displayName": "Glow Indigo (atmosphere)",
+        "canonical": "rgba(79, 70, 229, 0.12)",
+        "tonalRamp": [
+          "#14232b",
+          "#203641",
+          "#2c4a59",
+          "#385f73",
+          "#45768f",
+          "#5590b0",
+          "#6eabc9",
+          "#8ec2da",
+          "#b4d8e8",
+          "#d6ebf3",
+          "#edf6fa"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles only, one per section."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "\"YouTrend\" beside the amber YT tile; 28px on login."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "KPI values, opportunity and farm scores."
+      },
+      "seal-figure": {
+        "displayName": "Seal Figure",
+        "purpose": "The score inside the jade seal."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles: niche and channel names."
+      },
+      "section-title": {
+        "displayName": "Section Title",
+        "purpose": "Section and Help headings; modals step to 16px."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Base reading text; notes cap at 110ch."
+      },
+      "nav": {
+        "displayName": "Nav",
+        "purpose": "Header nav, tabs, video card titles."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Buttons, inputs, selects, notes; 600 on primary buttons."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, stat labels, small pills, meta lines."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Chips, thumbnail overlays, stat-cell labels. Floor for reusable text."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-lift",
+        "value": "0 12px 36px rgba(0,0,0,.45)",
+        "purpose": "Every card and the KPI strip; separates obsidian from the blurred ground."
+      },
+      {
+        "name": "amber-glow",
+        "value": "0 8px 22px -8px rgba(251,191,36,.6)",
+        "purpose": "Primary amber buttons."
+      },
+      {
+        "name": "brand-tile-glow",
+        "value": "0 6px 18px -6px rgba(251,191,36,.7)",
+        "purpose": "The YT brand tile."
+      },
+      {
+        "name": "seal-glow",
+        "value": "0 8px 22px -6px rgba(79,193,168,.55), inset 0 1px 0 rgba(255,255,255,.35)",
+        "purpose": "The jade farm seal."
+      },
+      {
+        "name": "selected-pill",
+        "value": "0 2px 8px -2px rgba(0,0,0,.6)",
+        "purpose": "The white active tab."
+      },
+      {
+        "name": "active-nav-ring",
+        "value": "inset 0 0 0 1px rgba(255,255,255,.12)",
+        "purpose": "Current header nav item."
+      },
+      {
+        "name": "focus-ring",
+        "value": "outline: 2px solid #fbbf24; outline-offset: 3px; border-radius: 10px",
+        "purpose": "Global :focus-visible on every control."
+      },
+      {
+        "name": "header-glass",
+        "value": "background: rgba(11,12,16,.86); backdrop-filter: blur(14px)",
+        "purpose": "Sticky header over the ground."
+      },
+      {
+        "name": "ground-stack",
+        "value": "url(bg_4k.jpg) blur(8px) brightness(.9) scale(1.04); radial-gradient(440px 440px at 4% 6%, rgba(255,160,40,.16), transparent 70%), radial-gradient(420px 420px at 96% 4%, rgba(168,85,247,.18), transparent 70%), radial-gradient(520px 380px at 46% 18%, rgba(79,70,229,.12), transparent 70%), linear-gradient(180deg, rgba(12,13,20,.55), rgba(12,13,20,.78))",
+        "purpose": "Fixed page atmosphere behind everything."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "Stamp and rise entrances."
+      },
+      {
+        "name": "stamp",
+        "value": ".45s: scale(1.3), opacity 0 -> scale(1), opacity 1",
+        "purpose": "Seal stamping onto a farm channel card; reduced-motion gated."
+      },
+      {
+        "name": "rise",
+        "value": ".4s: translateY(8px), opacity 0 -> none, opacity 1",
+        "purpose": "Content entrance; reduced-motion gated."
+      },
+      {
+        "name": "state-transition",
+        "value": "150ms cubic-bezier(.4,0,.2,1) (Tailwind transition); cards .2s on border, background, transform",
+        "purpose": "Hover and selection changes."
+      },
+      {
+        "name": "card-hover-lift",
+        "value": "translateY(-2px)",
+        "purpose": "Shared video cards on hover."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "Page padding 16 -> 32px, full quota label, KPI 3 columns."
+      },
+      {
+        "name": "md",
+        "value": "768px",
+        "purpose": "Help steps go multi-column."
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "Top Ngách sidebar becomes a 280px sticky column."
+      },
+      {
+        "name": "xl",
+        "value": "1280px",
+        "purpose": "KPI strip goes 6 across."
+      },
+      {
+        "name": "container",
+        "value": "1680px",
+        "purpose": "Max content width."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single amber command per panel (Quét nhanh, Đăng nhập với Google).",
+      "html": "<button class=\"ds-btn-primary\">Quét nhanh <span class=\"ds-btn-hint\">≈1.5K quota</span></button>",
+      "css": ":host{--ground:#0b0c10;--card:#141620;--line:rgba(255,255,255,.08);--text:#fff;--muted:#9ba3b4;--accent:#fbbf24;--jade:#4fc1a8;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:var(--text)}.ds-btn-primary{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 16px;border:0;border-radius:12px;background:#fbbf24;color:#1a1205;font:600 13px/1 'Be Vietnam Pro',sans-serif;box-shadow:0 8px 22px -8px rgba(251,191,36,.6);cursor:pointer;transition:background-color .15s}.ds-btn-primary:hover{background:#fcd34d}.ds-btn-primary:active{background:#f59e0b}.ds-btn-primary:focus-visible{outline:2px solid #fbbf24;outline-offset:3px}.ds-btn-hint{font-size:11.5px;font-weight:500;opacity:.75;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Recessive glass button for card actions (Mở kênh, Theo dõi, Tương tự).",
+      "html": "<button class=\"ds-btn\">Mở kênh <svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 17 17 7M9 7h8v8\"/></svg></button>",
+      "css": ":host{--ground:#0b0c10;--card:#141620;--line:rgba(255,255,255,.08);--text:#fff;--muted:#9ba3b4;--accent:#fbbf24;--jade:#4fc1a8;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:var(--text)}.ds-btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f1f3f7;font:500 13px/1 'Be Vietnam Pro',sans-serif;cursor:pointer;transition:background-color .15s,border-color .15s,color .15s}.ds-btn:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}"
+    },
+    {
+      "name": "Pill Tabs",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "Section tabs on a dark track; the active tab is solid white.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button class=\"ds-tab\" role=\"tab\">Ngách đề xuất <span>7</span></button><button class=\"ds-tab is-on\" role=\"tab\" aria-selected=\"true\">Kênh farm tiền <span>10</span></button><button class=\"ds-tab\" role=\"tab\">Video nổ <span>22</span></button></div>",
+      "css": ":host{--ground:#0b0c10;--card:#141620;--line:rgba(255,255,255,.08);--text:#fff;--muted:#9ba3b4;--accent:#fbbf24;--jade:#4fc1a8;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:var(--text)}.ds-tabs{display:inline-flex;gap:4px;padding:4px;border-radius:9999px;background:rgba(16,18,25,.9);border:1px solid rgba(255,255,255,.1)}.ds-tab{height:36px;padding:0 16px;border:0;border-radius:9999px;background:transparent;color:#b4bccb;font:500 14px/1 'Be Vietnam Pro',sans-serif;cursor:pointer;transition:background-color .15s,color .15s}.ds-tab span{margin-left:6px;font-size:12px;color:#808a9c;font-variant-numeric:tabular-nums}.ds-tab:hover{color:#fff;background:rgba(255,255,255,.06)}.ds-tab.is-on{background:#fff;color:#101219;font-weight:600;box-shadow:0 2px 8px -2px rgba(0,0,0,.6)}.ds-tab.is-on span{color:#4b5263}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}"
+    },
+    {
+      "name": "Filter Pills",
+      "kind": "chip",
+      "refersTo": "filter-pill-selected",
+      "description": "Sidebar choice pills (Quy mô kênh, Định dạng, Thời gian đăng); selected = white.",
+      "html": "<div class=\"ds-pills\"><button class=\"ds-pill is-on\" aria-pressed=\"true\">Dưới 5K sub</button><button class=\"ds-pill\" aria-pressed=\"false\">Dưới 20K sub</button></div>",
+      "css": ":host{--ground:#0b0c10;--card:#141620;--line:rgba(255,255,255,.08);--text:#fff;--muted:#9ba3b4;--accent:#fbbf24;--jade:#4fc1a8;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:var(--text)}.ds-pills{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:240px}.ds-pill{height:32px;padding:0 8px;border-radius:9999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#d5dae3;font:500 12px/1 'Be Vietnam Pro',sans-serif;cursor:pointer;transition:border-color .15s,color .15s}.ds-pill:hover{border-color:rgba(255,255,255,.25);color:#fff}.ds-pill.is-on{background:#fff;border-color:#fff;color:#101219;font-weight:600}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Recessed Well field with amber focus border.",
+      "html": "<label class=\"ds-field\"><span>Tên đăng nhập</span><input class=\"ds-input\" placeholder=\"Lọc theo tiêu đề, kênh, ngách\"></label>",
+      "css": ":host{--ground:#0b0c10;--card:#141620;--line:rgba(255,255,255,.08);--text:#fff;--muted:#9ba3b4;--accent:#fbbf24;--jade:#4fc1a8;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:var(--text)}.ds-field{display:block;width:300px}.ds-field span{display:block;margin-bottom:6px;font:500 12px/1.4 'Be Vietnam Pro',sans-serif;color:#b4bccb}.ds-input{width:100%;box-sizing:border-box;height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#101219;color:#fff;font:400 13px 'Be Vietnam Pro',sans-serif;outline:none;caret-color:#fbbf24;transition:border-color .15s}.ds-input::placeholder{color:#808a9c}.ds-input:hover{border-color:rgba(255,255,255,.2)}.ds-input:focus{border-color:#fbbf24}"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Glass header: amber YT tile + wordmark, pill nav, quota chip, account circle.",
+      "html": "<header class=\"ds-nav\"><span class=\"ds-mark\"><b>YT</b>YouTrend</span><nav><a href=\"#\">Khám phá</a><a href=\"#\" aria-current=\"page\">Top Ngách</a><a href=\"#\">Kênh</a><a href=\"#\">Thư viện</a></nav><span class=\"ds-quota\">Quota 8.7K · 1/1 key</span><span class=\"ds-avatar\">T</span></header>",
+      "css": ":host{--ground:#0b0c10;--card:#141620;--line:rgba(255,255,255,.08);--text:#fff;--muted:#9ba3b4;--accent:#fbbf24;--jade:#4fc1a8;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:var(--text)}.ds-nav{display:flex;align-items:center;gap:24px;height:64px;padding:0 24px;background:rgba(11,12,16,.86);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.08)}.ds-mark{display:inline-flex;align-items:center;gap:10px;font:700 21px 'Space Grotesk',sans-serif;letter-spacing:-.06em;color:#fff}.ds-mark b{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#fbbf24;color:#1a1205;font-size:12px;letter-spacing:0;box-shadow:0 6px 18px -6px rgba(251,191,36,.7)}.ds-nav nav{display:flex;gap:4px;flex:1}.ds-nav a{display:flex;align-items:center;height:36px;padding:0 14px;border-radius:9999px;color:#9ba3b4;font:500 13.5px 'Be Vietnam Pro',sans-serif;text-decoration:none;transition:color .15s}.ds-nav a:hover{color:#fcd34d}.ds-nav a[aria-current=page]{background:rgba(255,255,255,.1);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}.ds-nav a:focus-visible{outline:2px solid #fbbf24;outline-offset:3px}.ds-quota{display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:9999px;border:1px solid rgba(79,193,168,.35);background:rgba(79,193,168,.15);color:#a3e8d6;font:600 12px 'Be Vietnam Pro',sans-serif;font-variant-numeric:tabular-nums}.ds-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:9999px;background:rgba(168,85,247,.2);border:1px solid rgba(192,132,252,.4);color:#e9d5ff;font:600 12px 'Be Vietnam Pro',sans-serif}"
+    },
+    {
+      "name": "Status Chips",
+      "kind": "chip",
+      "refersTo": "chip-farm",
+      "description": "Tinted verdict and tag chips, one hue per meaning.",
+      "html": "<div class=\"ds-chips\"><span class=\"ds-chip ds-jade\">Farm tiền</span><span class=\"ds-chip ds-amber\">Đang lên</span><span class=\"ds-chip ds-sky\">Chưa phân tích</span><span class=\"ds-chip ds-purple\">42 ngày tuổi</span><span class=\"ds-chip\">Có mid-roll</span></div>",
+      "css": ":host{--ground:#0b0c10;--card:#141620;--line:rgba(255,255,255,.08);--text:#fff;--muted:#9ba3b4;--accent:#fbbf24;--jade:#4fc1a8;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:var(--text)}.ds-chips{display:flex;flex-wrap:wrap;gap:6px}.ds-chip{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:9999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#b4bccb;font:600 11px 'Be Vietnam Pro',sans-serif;white-space:nowrap}.ds-jade{background:rgba(79,193,168,.15);border-color:rgba(79,193,168,.35);color:#a3e8d6}.ds-amber{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.3);color:#fcd34d}.ds-sky{background:rgba(110,171,201,.12);border-color:rgba(110,171,201,.3);color:#b4d8e8}.ds-purple{background:rgba(168,85,247,.15);border-color:rgba(192,132,252,.3);color:#e9d5ff}"
+    },
+    {
+      "name": "Channel Card with Seal",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Obsidian channel card; farm channels get a jade border and the stamped seal.",
+      "html": "<article class=\"ds-card ds-farm\"><div class=\"ds-head\"><span class=\"ds-rank\">1</span><div class=\"ds-name\"><h3>Channel UC01406</h3><p>1.3K sub · US · Chuyện nhà tù</p></div><span class=\"ds-seal\"><b>85</b><i>Farm</i></span></div><dl class=\"ds-cells\"><div><dt>Video đạt</dt><dd class=\"ds-good\">29/29 (100%)</dd></div><div><dt>View trung vị</dt><dd class=\"ds-good\">4.7K · ×3.6</dd></div><div><dt>So với ngách</dt><dd>×1.0</dd></div></dl><div class=\"ds-actions\"><button>Mở kênh</button><button>Theo dõi</button></div></article>",
+      "css": ":host{--ground:#0b0c10;--card:#141620;--line:rgba(255,255,255,.08);--text:#fff;--muted:#9ba3b4;--accent:#fbbf24;--jade:#4fc1a8;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:var(--text)}.ds-card{width:420px;box-sizing:border-box;padding:16px;display:flex;flex-direction:column;gap:12px;background:rgba(20,22,32,.94);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 12px 36px rgba(0,0,0,.45);transition:border-color .2s}.ds-card:hover{border-color:#4b5263}.ds-farm{border-color:rgba(40,133,116,.6)}.ds-farm:hover{border-color:#34a690}.ds-head{display:flex;align-items:flex-start;gap:12px}.ds-rank{display:grid;place-items:center;min-width:28px;height:28px;border-radius:6px;background:#22252f;color:#d5dae3;font:700 12px 'Be Vietnam Pro',sans-serif}.ds-name{flex:1;min-width:0}.ds-name h3{margin:0;font:600 15px 'Be Vietnam Pro',sans-serif;color:#fff}.ds-name p{margin:2px 0 0;font:400 12px 'Be Vietnam Pro',sans-serif;color:#b4bccb}.ds-seal{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:54px;height:54px;border-radius:14px;background:linear-gradient(145deg,#5fd3b8,#2f9e86);color:#04201a;line-height:1;box-shadow:0 8px 22px -6px rgba(79,193,168,.55),inset 0 1px 0 rgba(255,255,255,.35);animation:ds-stamp .45s cubic-bezier(.16,1,.3,1) both}.ds-seal b{font:700 20px 'Space Grotesk',sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums}.ds-seal i{margin-top:3px;font:800 8.5px 'Be Vietnam Pro',sans-serif;font-style:normal;letter-spacing:.14em;text-transform:uppercase}@keyframes ds-stamp{from{transform:scale(1.3);opacity:0}to{transform:scale(1);opacity:1}}@media (prefers-reduced-motion:reduce){.ds-seal{animation:none}}.ds-cells{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0}.ds-cells div{padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.05)}.ds-cells dt{font:400 11px 'Be Vietnam Pro',sans-serif;color:#9ba3b4}.ds-cells dd{margin:0;font:600 13px 'Be Vietnam Pro',sans-serif;color:#fff;font-variant-numeric:tabular-nums}.ds-cells .ds-good{color:#8fc699}.ds-actions{display:flex;gap:6px}.ds-actions button{flex:0 0 auto;height:36px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f1f3f7;font:500 13px 'Be Vietnam Pro',sans-serif;cursor:pointer}.ds-actions button:first-child{flex:1}.ds-actions button:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}"
+    },
+    {
+      "name": "KPI Strip",
+      "kind": "custom",
+      "refersTo": "kpi-cell",
+      "description": "Six joined obsidian cells, one hue per figure, Space Grotesk numbers.",
+      "html": "<div class=\"ds-kpi\"><div><b>12</b><span>kênh nhỏ qua lọc</span></div><div><b class=\"j\">10</b><span>kênh farm tiền</span></div><div><b class=\"a\">0</b><span>kênh đang lên</span></div><div><b class=\"s\">22</b><span>video nổ</span></div><div><b class=\"p\">7</b><span>ngách</span></div><div><b class=\"g\">5</b><span>quốc gia</span></div></div>",
+      "css": ":host{--ground:#0b0c10;--card:#141620;--line:rgba(255,255,255,.08);--text:#fff;--muted:#9ba3b4;--accent:#fbbf24;--jade:#4fc1a8;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:var(--text)}.ds-kpi{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden;box-shadow:0 12px 36px rgba(0,0,0,.45)}.ds-kpi div{padding:12px 16px;background:rgba(20,22,32,.94)}.ds-kpi b{display:block;font:700 26px/32px 'Space Grotesk',sans-serif;letter-spacing:-.025em;font-variant-numeric:tabular-nums;color:#fff}.ds-kpi span{font:400 12px 'Be Vietnam Pro',sans-serif;color:#9ba3b4}.ds-kpi .j{color:#74d6bf}.ds-kpi .a{color:#fcd34d}.ds-kpi .s{color:#8ec2da}.ds-kpi .p{color:#d8b4fe}.ds-kpi .g{color:#d5dae3}"
+    },
+    {
+      "name": "Obsidian Ground",
+      "kind": "custom",
+      "refersTo": "obsidian-ground",
+      "description": "The page atmosphere: blurred radar photo, three glows, dark veil, with a card floating on it.",
+      "html": "<div class=\"ds-ground\"><div class=\"ds-ground-card\">Thẻ obsidian nổi trên nền radar mờ</div></div>",
+      "css": ":host{--ground:#0b0c10;--card:#141620;--line:rgba(255,255,255,.08);--text:#fff;--muted:#9ba3b4;--accent:#fbbf24;--jade:#4fc1a8;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:var(--text)}.ds-ground{position:relative;display:grid;place-items:center;width:520px;height:260px;border-radius:16px;overflow:hidden;background:radial-gradient(440px 440px at 4% 6%,rgba(255,160,40,.16),transparent 70%),radial-gradient(420px 420px at 96% 4%,rgba(168,85,247,.18),transparent 70%),radial-gradient(520px 380px at 46% 18%,rgba(79,70,229,.12),transparent 70%),linear-gradient(180deg,rgba(12,13,20,.55),rgba(12,13,20,.78)),linear-gradient(135deg,#13233a,#0c1a1a 60%,#0b0c10)}.ds-ground-card{padding:16px 20px;background:rgba(20,22,32,.94);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 12px 36px rgba(0,0,0,.45);font:500 13px 'Be Vietnam Pro',sans-serif;color:#fff}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Obsidian Radar Desk",
+    "overview": "YouTrend is a private night desk for one creator who scans hundreds of small channels a session and decides, by eye, which ones are worth cloning. The system wears the user's own CutLab \"obsidian\" language: the radar 4K photograph sits blurred behind everything under a dark veil, with soft amber, purple and indigo light pooling at the top of the screen. On that ground float near-black cards with hairline borders and deep soft shadows, carrying pure white type. It reads like a quiet control room where the screens glow and the instruments are labelled.\n\nDensity is high but legible. Cards hold a lot (verdict chip, six stat cells, three thumbnails, three actions), so the system leans on strict roles rather than decoration: white means \"selected\", amber means \"act\" or \"rising\", jade means \"this channel farms money\", and every number is set in Space Grotesk with tabular figures so columns of figures can be scanned without reading. Colour is used generously, as the user asked (\"not all one colour, mix colours\"), but every hue has a job.\n\nThe user rejected flat grey dashboards, washed-out light text, cards that melt into the background, and vermilion or indigo as the working accent (they preferred pale jade and yellow). The radar photo and card-based lists are confirmed brand commitments and are not optional.",
+    "keyCharacteristics": [
+      "Blurred radar photograph + three radial glows + dark veil as a fixed ground on every screen.",
+      "Near-black translucent cards (16px corners, 1px white-8% border, 0 12px 36px shadow) that clearly lift off the ground.",
+      "Pure white text; muted cool grey for meta; nothing lighter than the muted step on dark cards.",
+      "Pill controls for every choice; solid white pill = selected.",
+      "Amber is the one action colour and the brand tile; jade is reserved for the farm verdict.",
+      "Space Grotesk for numbers, scores, page titles and the wordmark; Be Vietnam Pro for everything else."
+    ],
+    "rules": [
+      {
+        "name": "The Every Hue Has A Job Rule",
+        "body": "Amber acts and rises, jade farms, purple marks age and identity, sky informs, leaf confirms, crimson errs. A hue never appears without its meaning, and a meaning never borrows another hue.",
+        "section": "colors"
+      },
+      {
+        "name": "The White Means Selected Rule",
+        "body": "The selected tab, filter pill, segmented option and mode card are solid white with Well-coloured ink. Amber never marks selection; it marks action.",
+        "section": "colors"
+      },
+      {
+        "name": "The Jade Seal Rule",
+        "body": "The jade seal appears only on a channel whose verdict is \"Farm tiền\" (or a video at 5× view÷sub or more). It is the payoff of the scan; spending it elsewhere cheapens it.",
+        "section": "colors"
+      },
+      {
+        "name": "The Numbers Speak Grotesk Rule",
+        "body": "Space Grotesk is for figures, scores, page titles and the wordmark, nothing else. Body copy, labels and buttons stay in Be Vietnam Pro.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Figure Rule",
+        "body": "Every number that can sit next to another number (views, subs, quota, counts in tabs, ratios) uses tabular figures so columns align across cards.",
+        "section": "typography"
+      },
+      {
+        "name": "The Cards Not Rows Rule",
+        "body": "Channel and video lists render as cards by default (a confirmed user commitment). A table view exists only behind the Thẻ / Bảng toggle.",
+        "section": "layout"
+      },
+      {
+        "name": "The Lifted Obsidian Rule",
+        "body": "Every card visibly separates from the ground through its near-opaque fill, hairline border and card-lift shadow. A card that blends into the photo is a regression.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Two Glows Rule",
+        "body": "Coloured shadows belong only to the two signal objects: amber under the primary action and brand tile, jade under the seal. Everything else casts neutral black.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Pill For Choice Rule",
+        "body": "If it selects or filters, it is a pill; if it executes, it is a 12px rectangle; if it contains, it is a 16px card.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** keep the blurred radar photograph (`bg_4k.jpg`, blur 8px, brightness 0.9) with its three glows and veil behind every screen, including login.",
+      "**Do** put every card on Obsidian Card with a 1px Hairline border, 16px corners and the 0 12px 36px card-lift shadow.",
+      "**Do** mark selection with a solid white pill and Well-coloured text; reserve Amber Signal for the one primary action per panel.",
+      "**Do** give each KPI or highlighted figure its hue by meaning (jade farm, amber rising, sky videos, purple niches), and leave neutral figures white.",
+      "**Do** set every number in tabular figures, and every score, KPI and page title in Space Grotesk 700.",
+      "**Do** use tinted chips (12–15% fill, 30–35% border, pale text) for status, and solid fills only for the rank tile and thumbnail ratio chips.",
+      "**Do** gate the stamp and rise animations behind prefers-reduced-motion: no-preference.",
+      "**Do** draw icons as inline 2px-stroke SVG at 13–14px."
+    ],
+    "donts": [
+      "**Don't** make all surfaces one colour or let the page collapse into a grey dashboard; the user asked for mixed colours with clear jobs.",
+      "**Don't** use vermilion or indigo for controls, text or chips; indigo lives only as the 12% atmosphere glow, and legacy indigo and blue classes resolve to sky.",
+      "**Don't** put white text on amber, or use amber to show a selected state.",
+      "**Don't** set meta or label text lighter than Text Muted on a card; Text Faint is for placeholders and tab counts only.",
+      "**Don't** let cards blend into the background with low-opacity fills or missing borders.",
+      "**Don't** replace card lists with tables by default or remove the radar background; both are confirmed commitments.",
+      "**Don't** spend the jade seal on anything other than a farm verdict or a 5×-plus video.",
+      "**Don't** add uppercase letter-spaced kicker labels above headings, or emoji as icons; the only tracked uppercase text in the system is inside the seal."
+    ]
+  }
+}

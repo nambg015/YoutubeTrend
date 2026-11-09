@@ -14,7 +14,7 @@
     var list = all.filter(function (v) { return !q || (v.title + ' ' + v.channel + ' ' + (v.note || '')).toLowerCase().indexOf(q.toLowerCase()) >= 0; });
     var cols = [
       { k: 'th', t: '', r: function (v) { return h(Thumb, { id: v.id, className: 'w-28' }); } },
-      { k: 'title', t: 'Video', cls: 'min-w-[260px]', v: function (v) { return v.title; }, r: function (v) { return h('div', null, h('a', { href: U.vurl(v.id), target: '_blank', rel: 'noopener noreferrer', className: 'text-[12px] text-zinc-100 hover:text-white line-clamp-2' }, v.title), h('button', { onClick: function () { v.channelId && p.goto('channels', { analyze: v.channelId }); }, className: 'text-[11px] text-zinc-400 hover:text-white cursor-pointer' }, v.channel + (v.subs != null ? ' · ' + N(v.subs) + ' sub' : '')), v.note && h('div', { className: 'text-[11px] text-zinc-400 mt-0.5' }, 'Ghi chú: ' + v.note)); } },
+      { k: 'title', t: 'Video', cls: 'min-w-[260px]', v: function (v) { return v.title; }, r: function (v) { return h('div', null, h('a', { href: U.vurl(v.id), target: '_blank', rel: 'noopener noreferrer', className: 'text-[12px] text-zinc-100 hover:text-cham-50 line-clamp-2' }, v.title), h('button', { onClick: function () { v.channelId && p.goto('channels', { analyze: v.channelId }); }, className: 'text-[11px] text-zinc-400 hover:text-cham-50 cursor-pointer' }, v.channel + (v.subs != null ? ' · ' + N(v.subs) + ' sub' : '')), v.note && h('div', { className: 'text-[11px] text-zinc-400 mt-0.5' }, 'Ghi chú: ' + v.note)); } },
       { k: 'views', t: 'View (lúc lưu)', right: true, v: function (v) { return v.views || 0; }, r: function (v) { return N(v.views); } },
       { k: 'dur', t: 'Dài', right: true, v: function (v) { return v.dur || 0; }, r: function (v) { return v.dur ? U.dur(v.dur) : '–'; } },
       { k: 'savedAt', t: 'Lưu lúc', right: true, v: function (v) { return v.savedAt || 0; }, r: function (v) { return v.savedAt ? U.date(v.savedAt) : '–'; } },
@@ -49,9 +49,9 @@
           h('div', { className: 'flex justify-between text-[12px] mb-2' }, h('span', { className: 'text-zinc-200' }, col[1]), h('span', { className: 'text-zinc-500' }, items.length)),
           h('div', { className: 'space-y-2' }, items.map(function (x) {
             return h('div', { key: x.id, className: 'rounded-md border border-zinc-800 p-2.5 space-y-1.5' },
-              h('button', { onClick: function () { setEdit(x); }, className: 'text-left text-[12px] text-zinc-100 hover:text-white leading-snug cursor-pointer' }, x.title),
+              h('button', { onClick: function () { setEdit(x); }, className: 'text-left text-[12px] text-zinc-100 hover:text-cham-50 leading-snug cursor-pointer' }, x.title),
               (x.topic || x.angle) && h('div', { className: 'text-[11px] text-zinc-400 line-clamp-3' }, [x.topic, x.angle].filter(Boolean).join(' — ')),
-              h('div', { className: 'flex gap-1 pt-1' }, ci > 0 && h(Btn, { small: true, onClick: function () { move(x.id, -1); } }, '←'), ci < COLS.length - 1 && h(Btn, { small: true, onClick: function () { move(x.id, 1); } }, COLS[ci + 1][1] + ' →'), h('span', { className: 'flex-1' }), h(Btn, { small: true, onClick: function () { del(x.id); } }, 'Xoá')));
+              h('div', { className: 'flex gap-1 pt-1' }, ci > 0 && h(Btn, { small: true, onClick: function () { move(x.id, -1); }, title: 'Chuyển sang cột trước' }, h(K.Icon, { name: 'left' })), ci < COLS.length - 1 && h(Btn, { small: true, onClick: function () { move(x.id, 1); } }, COLS[ci + 1][1] + ' →'), h('span', { className: 'flex-1' }), h(Btn, { small: true, onClick: function () { del(x.id); } }, 'Xoá')));
           })));
       })),
       edit && h(IdeaModal, { idea: edit, onClose: function () { setEdit(null); } }));
@@ -77,20 +77,20 @@
     var list = arts.filter(function (a) { return q ? (a.title + ' ' + a.summary).toLowerCase().indexOf(q.toLowerCase()) >= 0 : a.category === cat; });
     if (open) {
       var blk = function (t, v) { return v ? h('div', { className: 'space-y-1' }, h('div', { className: K.C.label }, t), h('div', { className: 'text-[13px] text-zinc-300 leading-relaxed whitespace-pre-line' }, v)) : null; };
-      return h('div', { className: 'max-w-3xl space-y-5' }, h(Btn, { small: true, onClick: function () { setOpen(null); } }, '← Danh sách bài'),
-        h('div', null, h('h2', { className: 'text-xl text-white' }, open.title), h('div', { className: 'text-[12px] text-zinc-400 mt-1' }, [open.level, open.readTime].filter(Boolean).join(' · '))),
+      return h('div', { className: 'max-w-3xl space-y-5' }, h(Btn, { small: true, onClick: function () { setOpen(null); } }, K.Icon && h(K.Icon, { name: 'left' }), 'Danh sách bài'),
+        h('div', null, h('h2', { className: 'text-xl text-cham-50' }, open.title), h('div', { className: 'text-[12px] text-zinc-400 mt-1' }, [open.level, open.readTime].filter(Boolean).join(' · '))),
         blk('Tóm tắt', open.summary), blk('Hiểu đơn giản', open.simple), blk('Ví dụ', open.example), blk('Cách làm', open.howTo), blk('Sai lầm hay gặp', open.mistake), blk('Bài tập', open.exercise));
     }
     return h('div', { className: 'grid gap-5 md:grid-cols-[200px_1fr]' },
-      h('div', { className: 'space-y-1' }, h(Input, { value: q, onChange: function (e) { setQ(e.target.value); }, placeholder: 'Tìm bài', className: 'mb-2' }), cats.map(function (c) { return h('button', { key: c.id, onClick: function () { setCat(c.id); setQ(''); }, className: cx('block w-full text-left px-2.5 py-1.5 rounded text-[13px] cursor-pointer', cat === c.id && !q ? 'bg-zinc-900 text-white' : 'text-zinc-400 hover:text-white') }, c.name); })),
-      h('div', { className: 'divide-y divide-zinc-900' }, list.map(function (a) { return h('button', { key: a.id, onClick: function () { setOpen(a); }, className: 'block w-full text-left py-3 cursor-pointer group' }, h('div', { className: 'text-[13px] text-zinc-100 group-hover:text-white' }, a.title), h('div', { className: 'text-[12px] text-zinc-400 mt-0.5 line-clamp-2' }, a.summary)); })));
+      h('div', { className: 'space-y-1' }, h(Input, { value: q, onChange: function (e) { setQ(e.target.value); }, placeholder: 'Tìm bài', className: 'mb-2' }), cats.map(function (c) { return h('button', { key: c.id, onClick: function () { setCat(c.id); setQ(''); }, className: cx('block w-full text-left px-2.5 py-1.5 rounded text-[13px] cursor-pointer', cat === c.id && !q ? 'bg-zinc-900 text-cham-50' : 'text-zinc-400 hover:text-cham-50') }, c.name); })),
+      h('div', { className: 'divide-y divide-zinc-900' }, list.map(function (a) { return h('button', { key: a.id, onClick: function () { setOpen(a); }, className: 'block w-full text-left py-3 cursor-pointer group' }, h('div', { className: 'text-[13px] text-zinc-100 group-hover:text-cham-50' }, a.title), h('div', { className: 'text-[12px] text-zinc-400 mt-0.5 line-clamp-2' }, a.summary)); })));
   }
 
   function Library(p) {
     K.useBus('saved'); K.useBus('ideas');
     var s = useState(p.params && p.params.sub || 'saved'), sub = s[0], setSub = s[1];
     return h('div', { className: 'space-y-5' },
-      h('div', null, h('h1', { className: 'text-xl font-medium text-white tracking-tight' }, 'Thư viện'), h('p', { className: 'text-[13px] text-zinc-400 mt-1' }, 'Video đã lưu, kế hoạch sản xuất và cẩm nang.')),
+      h('div', null, h('h1', { className: 'font-display text-[30px] leading-9 font-bold text-cham-50 tracking-tight' }, 'Thư viện'), h('p', { className: 'text-[14px] text-cham-400 mt-1.5' }, 'Video đã lưu, kế hoạch sản xuất và cẩm nang.')),
       h(K.Help, { id: 'library', title: 'Cách dùng Thư viện', steps: ['Video đã lưu: mọi video bạn bấm Lưu ở các mục khác đều nằm đây; thêm ghi chú hoặc biến thành ý tưởng.', 'Kế hoạch video: kéo ý tưởng qua các cột Ý tưởng → Kịch bản → Dựng → Đã đăng bằng nút mũi tên.', 'Cẩm nang: các bài hướng dẫn làm YouTube, đọc khi cần.'] }),
       h(Tabs, { value: sub, onChange: setSub, items: [['saved', 'Video đã lưu', store.saved().length], ['plan', 'Kế hoạch video', store.ideas().length], ['guide', 'Cẩm nang']] }),
       sub === 'saved' ? h(Saved, { goto: p.goto }) : sub === 'plan' ? h(Planner) : h(Guide));
@@ -176,7 +176,7 @@
   }
   function Settings(p) {
     return h('div', { className: 'space-y-5 max-w-5xl' },
-      h('div', null, h('h1', { className: 'text-xl font-medium text-white tracking-tight' }, 'Cài đặt')),
+      h('div', null, h('h1', { className: 'font-display text-[30px] leading-9 font-bold text-cham-50 tracking-tight' }, 'Cài đặt'), h('p', { className: 'text-[14px] text-cham-400 mt-1.5' }, 'API key YouTube, Claude, tài khoản và sao lưu dữ liệu.')),
       h(K.Help, { id: 'settings', title: 'Thiết lập lần đầu', steps: ['Thêm YouTube API key: vào console.cloud.google.com, bật YouTube Data API v3, tạo API key rồi dán vào ô bên dưới. Nên có nhiều key để quét được nhiều hơn.', 'Gemini (cho Tạo tài nguyên và Nhận định AI) đặt trên Vercel, ô Máy chủ & AI cho biết đã có chưa.', 'Claude API key là tuỳ chọn: chỉ cần khi muốn Claude viết kịch bản ngay trong web.', 'Thỉnh thoảng bấm Tải file sao lưu để giữ dữ liệu khi đổi máy.'] }),
       h(KeysPanel), h(ClaudePanel), h(ServerPanel, { me: p.me }), h(AccountPanel, { onLogout: p.onLogout }), h(DataPanel));
   }
