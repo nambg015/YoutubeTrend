@@ -286,8 +286,8 @@
       setShots(function (a) { return [shot].concat(a); }); await p.onShot(shot);
     }
     var can = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
-    return h('div', { className: 'fixed inset-0 z-[80] bg-[#0b0c10]/85 flex items-start justify-center p-3 overflow-y-auto', onMouseDown: function (e) { if (e.target === e.currentTarget) p.onClose(); } },
-      h('div', { className: 'w-full max-w-5xl mt-6 rounded-2xl border border-zinc-800 bg-[#141620] p-4 space-y-3' },
+    return h('div', { className: 'fixed inset-0 z-[80] bg-[#111215]/85 flex items-start justify-center p-3 overflow-y-auto', onMouseDown: function (e) { if (e.target === e.currentTarget) p.onClose(); } },
+      h('div', { className: 'w-full max-w-5xl mt-6 rounded-xl border border-zinc-800 bg-[#1e1f24] p-4 space-y-3' },
         h('div', { className: 'flex items-center gap-3' }, h('div', { className: 'text-sm font-bold text-cham-50 truncate flex-1' }, p.v.title), h('button', { onClick: p.onClose, className: 'text-xs text-zinc-400 hover:text-cham-50 cursor-pointer' }, 'Đóng')),
         h('div', { ref: box, className: 'relative w-full aspect-video rounded-xl overflow-hidden bg-black' }),
         h('video', { ref: vid, muted: true, playsInline: true, className: 'hidden' }),
@@ -399,13 +399,13 @@
     async function delHist(id) { var list = hist.filter(function (x) { return x.id !== id; }); setHist(list); await dbSet('history', list); if (R && R.id === id) setR(null); }
 
     // ---------- mảnh giao diện ----------
-    var lab = function (t) { return h('div', { className: 'text-[12px] font-medium text-cham-300 mb-1.5' }, t); };
+    var lab = function (t) { return h('div', { className: 'text-[10.5px] font-medium text-cham-300 mb-1.5' }, t); };
     var sel1 = function (k, opts) { return h('select', { value: opt[k], onChange: function (e) { var v = e.target.value; setO(k, isNaN(+v) ? v : +v); }, className: 'w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] text-zinc-200 cursor-pointer' }, opts.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); })); };
     var src = function (arr) { return (arr || []).length ? h('span', { className: 'ml-1 text-[10px] text-sky-400 font-bold' }, arr.map(function (n) { var s = R.sources[n - 1]; return s ? h('a', { key: n, href: s.real || s.uri, target: '_blank', rel: 'noopener noreferrer', title: s.realTitle || s.title, className: 'hover:underline mr-0.5' }, '[' + n + ']') : null; })) : null; };
     var card = function (title, body, extra) { return h('div', { className: 'yt-card p-3.5 space-y-2 ' + (extra || '') }, h('div', { className: 'text-xs font-semibold text-cham-50' }, title), body); };
 
     var form = h('div', { className: 'yt-card p-4 space-y-3' },
-      h('div', null, h('h2', { className: 'text-[16px] font-semibold text-cham-50' }, 'Hồ sơ tài nguyên làm video'),
+      h('div', null, h('h2', { className: 'text-[13px] font-semibold text-cham-50' }, 'Hồ sơ tài nguyên làm video'),
         h('div', { className: 'text-[11px] text-zinc-400' }, 'Dán thông tin vụ việc → tìm tin mới nhất có nguồn, timeline, trích dẫn, video họp báo/bản tin/hiện trường/ghi âm trên YouTube, ảnh thật kèm giấy phép, tài liệu gốc theo đúng loại sự kiện → xuất prompt + JSON.')),
       h('textarea', { value: prompt, onChange: function (e) { setPrompt(e.target.value); }, rows: 5, placeholder: 'Ví dụ: Vụ rơi máy bay Learjet 60 số hiệu N722BD ở Florida đầu tháng 11/2026. NTSB đã họp báo, tìm thấy động cơ và mảnh vỡ trên mái nhà. Cần tin mới nhất, ghi âm ATC, họp báo NTSB, ảnh thật của chiếc máy bay, đường bay...', className: 'w-full bg-zinc-950 border border-zinc-700 focus:border-amber-500 outline-none rounded-xl px-3 py-2.5 text-sm text-zinc-100 leading-relaxed' }),
       h('div', { className: 'grid gap-2 sm:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]' },
@@ -414,31 +414,31 @@
         h('div', null, lab('Ngôn ngữ hồ sơ'), sel1('lang', [['vi', 'Tiếng Việt'], ['en', 'English']])),
         h('div', null, lab('Độ sâu video'), sel1('nq', [[5, '5 truy vấn ≈ 0.5K quota'], [8, '8 truy vấn ≈ 0.8K quota'], [12, '12 truy vấn ≈ 1.2K quota']]))),
       h('div', { className: 'flex flex-wrap items-center gap-2' },
-        h('button', { disabled: busy, onClick: function () { return run(); }, className: 'px-5 py-2.5 rounded-xl text-sm font-bold bg-hoe-400 hover:bg-hoe-300 text-[#1a1205] disabled:opacity-40 cursor-pointer' }, busy ? 'Đang tạo hồ sơ...' : 'Tạo hồ sơ tài nguyên'),
+        h('button', { disabled: busy, onClick: function () { return run(); }, className: 'px-5 py-2.5 rounded-xl text-sm font-bold bg-[#e3b55a] hover:bg-[#ecc271] text-[#231a08] disabled:opacity-40 cursor-pointer' }, busy ? 'Đang tạo hồ sơ...' : 'Tạo hồ sơ tài nguyên'),
         h('span', { className: 'text-[10px] text-zinc-500' }, 'Mỗi hồ sơ: 1 lượt AI + ~' + (opt.nq * 100) + ' quota YouTube. AI lỗi/hết lượt sẽ tự chuyển chế độ miễn phí.')),
       err && h('div', { className: 'rounded-xl border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-xs text-rose-200' }, err),
       msg && h('div', { className: 'text-[11px] text-emerald-300' }, msg),
       prog && h('div', { className: 'grid gap-1.5 sm:grid-cols-5' }, STEPS.map(function (s) { var x = prog[s[0]] || ['wait', '']; return h('div', { key: s[0], className: cx('rounded-lg border px-2 py-1.5 text-[10px]', x[0] === 'ok' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200' : x[0] === 'run' ? 'border-amber-500/50 bg-amber-500/10 text-amber-200' : x[0] === 'skip' ? 'border-zinc-700 bg-zinc-900 text-zinc-400' : 'border-zinc-800 text-zinc-600') }, h('div', { className: 'font-bold' }, (x[0] === 'ok' ? '✓ ' : x[0] === 'run' ? '' : x[0] === 'skip' ? '↷ ' : '○ ') + s[1]), x[1] && h('div', { className: 'mt-0.5 opacity-80 line-clamp-2' }, x[1])); })));
 
-    var histBox = hist.length > 0 && h('div', { className: 'rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3 space-y-1.5' }, lab('Hồ sơ đã tạo (' + hist.length + ')'),
+    var histBox = hist.length > 0 && h('div', { className: 'rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 space-y-1.5' }, lab('Hồ sơ đã tạo (' + hist.length + ')'),
       hist.map(function (x) { return h('div', { key: x.id, className: cx('flex items-center gap-2 rounded-lg px-2 py-1.5 text-[11px]', R && R.id === x.id ? 'bg-zinc-800' : 'hover:bg-zinc-900') }, h('button', { onClick: function () { openHist(x); }, className: 'flex-1 min-w-0 text-left cursor-pointer' }, h('div', { className: 'font-bold text-zinc-100 truncate' }, (x.dossier && x.dossier.title) || x.prompt.slice(0, 60)), h('div', { className: 'text-[10px] text-zinc-500' }, new Date(x.at).toLocaleString('vi-VN') + ' • ' + x.videos.length + ' video')), h('button', { onClick: function () { delHist(x.id); }, title: 'Xoá', className: 'text-zinc-500 hover:text-rose-400 cursor-pointer' }, '✕')); }));
 
-    if (!R) return h('section', { className: 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px] animate-in fade-in duration-200' }, form, h('div', { className: 'space-y-3' }, histBox || h('div', { className: 'rounded-2xl border border-dashed border-zinc-800 p-4 text-[11px] text-zinc-500 leading-relaxed' }, 'Hồ sơ bạn tạo sẽ được lưu ở đây (trên trình duyệt này) để mở lại bất cứ lúc nào.')));
+    if (!R) return h('section', { className: 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px] animate-in fade-in duration-200' }, form, h('div', { className: 'space-y-3' }, histBox || h('div', { className: 'rounded-xl border border-dashed border-zinc-800 p-4 text-[11px] text-zinc-500 leading-relaxed' }, 'Hồ sơ bạn tạo sẽ được lưu ở đây (trên trình duyệt này) để mở lại bất cứ lúc nào.')));
 
     var D = R.dossier, E2 = D.entities || {};
     var rel = R.videos.filter(function (v) { return v.related; }), shownV = (showAll ? R.videos : rel).filter(function (v) { return !vType || v.type === vType; });
     var nSelV = Object.keys(sel.v).filter(function (k) { return sel.v[k]; }).length, nSelI = Object.keys(sel.i).filter(function (k) { return sel.i[k]; }).length;
     var head = h('div', { className: 'yt-card border-hoe-600/50 p-4 space-y-2' },
       h('div', { className: 'flex flex-wrap items-center gap-1.5 text-[10px]' },
-        h('span', { className: 'px-2 py-0.5 rounded-full font-bold ' + (R.mode === 'ai' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40' : 'bg-zinc-800 text-zinc-300 border border-zinc-700') }, R.mode === 'ai' ? 'Gemini + Google Search' : 'Chế độ miễn phí'),
-        D.category && h('span', { className: 'px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700 font-bold' }, D.category),
-        D.event_date && h('span', { className: 'px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700' }, '' + D.event_date),
-        D.status && h('span', { className: 'px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30' }, D.status),
+        h('span', { className: 'px-2 py-0.5 rounded-md font-bold ' + (R.mode === 'ai' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40' : 'bg-zinc-800 text-zinc-300 border border-zinc-700') }, R.mode === 'ai' ? 'Gemini + Google Search' : 'Chế độ miễn phí'),
+        D.category && h('span', { className: 'px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700 font-bold' }, D.category),
+        D.event_date && h('span', { className: 'px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700' }, '' + D.event_date),
+        D.status && h('span', { className: 'px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/30' }, D.status),
         h('span', { className: 'text-zinc-500' }, 'tạo ' + new Date(R.at).toLocaleString('vi-VN'))),
       R.mode !== 'ai' && R.aiError && h('div', { className: 'text-[11px] text-amber-200/90' }, 'Bước AI lỗi: ' + R.aiError + (/GEMINI_API_KEY|501/.test(R.aiError) ? ' — thêm GEMINI_API_KEY trên Vercel rồi Redeploy.' : ' — thử lại sau ít phút.')),
       h('h3', { className: 'text-lg sm:text-xl font-bold text-cham-50' }, D.title),
       h('div', { className: 'flex flex-wrap gap-2 pt-1' },
-        h('button', { onClick: function () { copy(promptText, 'prompt'); }, className: 'px-4 py-2 rounded-xl text-xs font-bold bg-hoe-400 hover:bg-hoe-300 text-[#1a1205] cursor-pointer' }, 'Copy prompt'),
+        h('button', { onClick: function () { copy(promptText, 'prompt'); }, className: 'px-4 py-2 rounded-xl text-xs font-bold bg-[#e3b55a] hover:bg-[#ecc271] text-[#231a08] cursor-pointer' }, 'Copy prompt'),
         h('button', { onClick: function () { download(slug(D.title) + '.json', JSON.stringify(E.buildJson(R, sel), null, 2), 'application/json'); }, className: 'px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 text-zinc-950 cursor-pointer' }, 'Tải JSON'),
         h('button', { onClick: function () { copy(JSON.stringify(E.buildJson(R, sel), null, 2), 'JSON'); }, className: 'px-3 py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-200 cursor-pointer' }, 'Copy JSON'),
         h('button', { onClick: function () { download(slug(D.title) + '.txt', promptText, 'text/plain;charset=utf-8'); }, className: 'px-3 py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-200 cursor-pointer' }, 'Tải .txt'),
@@ -476,10 +476,10 @@
           return h('div', { key: v.id, className: cx('rounded-xl border overflow-hidden flex flex-col bg-zinc-950/70', on ? 'border-amber-500/60' : 'border-zinc-800') },
             h('div', { className: 'relative' },
               h('a', { href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer' }, h('img', { src: 'https://i.ytimg.com/vi/' + v.id + '/mqdefault.jpg', loading: 'lazy', className: 'w-full aspect-video object-cover bg-zinc-900' })),
-              h('span', { className: 'absolute top-1.5 left-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#0b0c10]/85 text-cham-50' }, T[v.type][1]),
+              h('span', { className: 'absolute top-1.5 left-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#111215]/85 text-cham-50' }, T[v.type][1]),
               v.gov && h('span', { className: 'absolute top-1.5 right-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-600 text-cham-50' }, 'Chính thức'),
-              h('span', { className: 'absolute bottom-1.5 right-1.5 text-[10px] px-1.5 py-0.5 rounded bg-[#0b0c10]/85 text-cham-50' }, v.live === 'live' ? 'LIVE' : E.dur(v.dur)),
-              h('label', { className: 'absolute bottom-1.5 left-1.5 flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#0b0c10]/85 text-cham-50 cursor-pointer' }, h('input', { type: 'checkbox', checked: on, onChange: function () { toggle('v', v.id); } }), 'Chọn')),
+              h('span', { className: 'absolute bottom-1.5 right-1.5 text-[10px] px-1.5 py-0.5 rounded bg-[#111215]/85 text-cham-50' }, v.live === 'live' ? 'LIVE' : E.dur(v.dur)),
+              h('label', { className: 'absolute bottom-1.5 left-1.5 flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#111215]/85 text-cham-50 cursor-pointer' }, h('input', { type: 'checkbox', checked: on, onChange: function () { toggle('v', v.id); } }), 'Chọn')),
             h('div', { className: 'p-2.5 space-y-1.5 flex-1 flex flex-col' },
               h('a', { href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer', title: v.title, className: 'text-xs font-semibold text-zinc-100 line-clamp-2 hover:text-amber-300' }, v.title),
               h('div', { className: 'text-[10px] text-zinc-400 truncate' }, v.channel + ' • ' + N(v.views) + ' view • ' + new Date(v.t).toLocaleDateString('vi-VN')),
@@ -507,7 +507,7 @@
       R.images.length ? h('div', { className: 'grid gap-2.5 grid-cols-2 md:grid-cols-3 xl:grid-cols-4' }, R.images.map(function (x) {
         var on = !!sel.i[x.key];
         return h('div', { key: x.key, className: cx('rounded-xl border overflow-hidden bg-zinc-950/70 flex flex-col', on ? 'border-amber-500/60' : 'border-zinc-800') },
-          h('a', { href: x.page || x.url, target: '_blank', rel: 'noopener noreferrer', className: 'relative block' }, h('img', { src: x.thumb || x.url, loading: 'lazy', referrerPolicy: 'no-referrer', className: 'w-full aspect-video object-cover bg-zinc-900' }), h('span', { className: 'absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#0b0c10]/85 text-cham-50' }, x.kind)),
+          h('a', { href: x.page || x.url, target: '_blank', rel: 'noopener noreferrer', className: 'relative block' }, h('img', { src: x.thumb || x.url, loading: 'lazy', referrerPolicy: 'no-referrer', className: 'w-full aspect-video object-cover bg-zinc-900' }), h('span', { className: 'absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#111215]/85 text-cham-50' }, x.kind)),
           h('div', { className: 'p-2 space-y-1 flex-1 flex flex-col' },
             h('div', { className: 'text-[11px] text-zinc-200 line-clamp-2', title: x.title }, x.title),
             h('div', { className: 'text-[9px] text-zinc-500 line-clamp-2', title: x.license }, '© ' + x.license),

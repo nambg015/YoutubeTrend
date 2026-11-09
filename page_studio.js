@@ -81,7 +81,7 @@
       h('span', { className: 'text-[11px] text-zinc-400' }, 'Dự án'),
       creating ? h(Frag, null, h(Input, { value: nm, onChange: function (e) { setNm(e.target.value); }, placeholder: 'Tên dự án, ví dụ: Kênh tin máy bay', className: 'w-60 h-8', autoFocus: true }),
         h(Btn, { small: true, onClick: async function () { if (!nm.trim()) return; var pj = store.saveProject({ name: nm.trim() }); setCreating(false); setNm(''); await save(pj.id); } }, 'Tạo & lưu'), h(Btn, { small: true, onClick: function () { setCreating(false); } }, 'Huỷ'))
-        : h('div', { className: 'w-56' }, h(Select, { value: pid, className: 'h-8 text-[12px]', onChange: function (v) { if (v === '__new') { setCreating(true); return; } save(v); }, options: [['', '— Chưa gắn dự án —']].concat(projects.map(function (x) { return [x.id, x.name]; }), [['__new', '+ Tạo dự án mới…']]) })),
+        : h('div', { className: 'w-56' }, h(Select, { value: pid, className: 'h-8 text-[10.5px]', onChange: function (v) { if (v === '__new') { setCreating(true); return; } save(v); }, options: [['', '— Chưa gắn dự án —']].concat(projects.map(function (x) { return [x.id, x.name]; }), [['__new', '+ Tạo dự án mới…']]) })),
       h(Btn, { small: true, onClick: function () { save(); } }, 'Lưu thẻ phiên'),
       h(Btn, { small: true, on: true, onClick: async function () { await save(); p.produce(r.id); } }, 'Sản xuất video với Claude', h(K.Icon, { name: 'right' })));
   }
@@ -119,7 +119,7 @@
     var shown = cur ? (prods.find(function (x) { return x.id === cur; }) || { text: out }) : null;
     var text = busy ? out : shown ? shown.text : '';
     return h('div', { className: 'space-y-4' },
-      h('div', { className: 'flex flex-wrap items-center gap-3' }, h(Btn, { small: true, onClick: p.onBack }, h(K.Icon, { name: 'left' }), 'Dự án'), h('div', { className: 'text-[15px] text-cham-50 font-medium flex-1 min-w-0 truncate' }, (r.dossier && r.dossier.title) || r.prompt.slice(0, 80)), pj && h('span', { className: 'text-[12px] text-sky-300' }, pj.name)),
+      h('div', { className: 'flex flex-wrap items-center gap-3' }, h(Btn, { small: true, onClick: p.onBack }, h(K.Icon, { name: 'left' }), 'Dự án'), h('div', { className: 'text-[12px] text-cham-50 font-medium flex-1 min-w-0 truncate' }, (r.dossier && r.dossier.title) || r.prompt.slice(0, 80)), pj && h('span', { className: 'text-[10.5px] text-sky-300' }, pj.name)),
       h(Section, { title: 'Cấu hình sản xuất', sub: 'Prompt gồm yêu cầu sản xuất + toàn bộ hồ sơ tài nguyên đã chọn trong phiên (video, khung hình, ảnh chụp, ảnh báo, nguồn).' },
         h('div', { className: 'flex flex-wrap items-end gap-4' },
           h(Field, { label: 'Số video (mỗi video 1 góc)' }, h(Seg, { value: o.count, onChange: function (v) { set('count', +v); }, options: [[1, '1'], [3, '3'], [5, '5']] })),
@@ -140,8 +140,8 @@
           h(Btn, { small: true, onClick: function () { U.copy(shown.text).then(function () { K.toast('Đã copy'); }); } }, 'Copy'),
           h(Btn, { small: true, onClick: function () { U.download('kich-ban-' + r.id + '.md', new Blob([shown.text], { type: 'text/markdown' })); } }, 'Tải .md'),
           h(Btn, { small: true, onClick: function () { if (window.confirm('Xoá bản này?')) { store.removeProduction(shown.id); setCur(null); } } }, 'Xoá'))
-      }, h('pre', { className: 'whitespace-pre-wrap text-[12.5px] leading-relaxed text-zinc-200 font-sans max-h-[70vh] overflow-y-auto' }, text || '…')),
-      h('details', { className: cx(K.C.card, 'p-4') }, h('summary', { className: 'cursor-pointer text-[13px] text-zinc-300' }, 'Xem toàn bộ prompt'), h('pre', { className: 'mt-3 whitespace-pre-wrap text-[11px] text-zinc-400 max-h-[60vh] overflow-y-auto' }, prompt)));
+      }, h('pre', { className: 'whitespace-pre-wrap text-[10.5px] leading-relaxed text-zinc-200 font-sans max-h-[70vh] overflow-y-auto' }, text || '…')),
+      h('details', { className: cx(K.C.card, 'p-4') }, h('summary', { className: 'cursor-pointer text-[10.5px] text-zinc-300' }, 'Xem toàn bộ prompt'), h('pre', { className: 'mt-3 whitespace-pre-wrap text-[11px] text-zinc-400 max-h-[60vh] overflow-y-auto' }, prompt)));
   }
 
   // ---------- Danh sách dự án + thẻ phiên ----------
@@ -160,16 +160,16 @@
   function SessionCard(p) {
     var r = p.r, c = counts(r), D = r.dossier || {}, thumbs = (r.videos || []).filter(function (v) { return v.related; }).slice(0, 3);
     return h('div', { className: cx(K.C.card, 'overflow-hidden flex flex-col hover:border-sky-400/30 transition') },
-      h('div', { className: 'grid grid-cols-3 gap-px bg-[#0b0c10]/60' }, [0, 1, 2].map(function (i) { var v = thumbs[i], cap = !v && (r.captures || [])[i]; return h('div', { key: i, className: 'aspect-video bg-zinc-900/80' }, v ? h('img', { src: U.thumb(v.id), loading: 'lazy', className: 'w-full h-full object-cover' }) : cap ? h('img', { src: cap.dataUrl, className: 'w-full h-full object-cover' }) : null); })),
+      h('div', { className: 'grid grid-cols-3 gap-px bg-[#111215]/60' }, [0, 1, 2].map(function (i) { var v = thumbs[i], cap = !v && (r.captures || [])[i]; return h('div', { key: i, className: 'aspect-video bg-zinc-900/80' }, v ? h('img', { src: U.thumb(v.id), loading: 'lazy', className: 'w-full h-full object-cover' }) : cap ? h('img', { src: cap.dataUrl, className: 'w-full h-full object-cover' }) : null); })),
       h('div', { className: 'p-3 flex-1 flex flex-col gap-2' },
         h('div', { className: 'flex items-center gap-1.5 text-[10px]' }, h('span', { className: cx('px-1.5 py-0.5 rounded', r.mode === 'ai' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-200') }, r.mode === 'ai' ? 'AI + Google' : 'Miễn phí'), D.category && h('span', { className: 'px-1.5 py-0.5 rounded bg-cham-800 text-zinc-400' }, D.category), h('span', { className: 'text-zinc-400 ml-auto' }, U.date(r.at))),
-        h('div', { className: 'text-[13px] text-zinc-100 leading-snug line-clamp-2', title: D.title || r.prompt }, D.title || r.prompt.slice(0, 120)),
-        h('div', { className: 'grid grid-cols-5 gap-1 text-center text-[10px]' }, [['Video', c.v, 'text-sky-300'], ['Khung', c.f, 'text-violet-300'], ['Chụp', c.c, 'text-amber-200'], ['Ảnh', c.i, 'text-emerald-300'], ['Nguồn', c.s, 'text-zinc-200']].map(function (x) { return h('div', { key: x[0], className: 'rounded bg-cham-900 py-1' }, h('div', { className: cx('text-[13px] font-medium', x[2]) }, x[1]), h('div', { className: 'text-zinc-500' }, x[0])); })),
+        h('div', { className: 'text-[10.5px] text-zinc-100 leading-snug line-clamp-2', title: D.title || r.prompt }, D.title || r.prompt.slice(0, 120)),
+        h('div', { className: 'grid grid-cols-5 gap-1 text-center text-[10px]' }, [['Video', c.v, 'text-sky-300'], ['Khung', c.f, 'text-violet-300'], ['Chụp', c.c, 'text-amber-200'], ['Ảnh', c.i, 'text-emerald-300'], ['Nguồn', c.s, 'text-zinc-200']].map(function (x) { return h('div', { key: x[0], className: 'rounded bg-cham-900 py-1' }, h('div', { className: cx('text-[10.5px] font-medium', x[2]) }, x[1]), h('div', { className: 'text-zinc-500' }, x[0])); })),
         store.productions(r.id).length > 0 && h('div', { className: 'text-[11px] text-emerald-300/90' }, store.productions(r.id).length + ' bản kịch bản đã viết'),
         h('div', { className: 'flex flex-wrap gap-1.5 mt-auto pt-1' },
           h(Btn, { small: true, on: true, onClick: function () { p.produce(r.id); } }, 'Sản xuất'),
           h(Btn, { small: true, onClick: function () { p.open(r.id); } }, 'Mở hồ sơ'),
-          p.projects.length > 0 && h('select', { value: store.links()[r.id] || '', onChange: function (e) { store.linkSession(r.id, e.target.value); }, className: 'h-7 px-1.5 rounded border border-zinc-800 bg-[#0b0c10]/60 text-[11px] text-zinc-400 cursor-pointer max-w-[130px]' }, [['', 'Chưa gắn']].concat(p.projects.map(function (x) { return [x.id, x.name]; })).map(function (x) { return h('option', { key: x[0], value: x[0] }, x[1]); })),
+          p.projects.length > 0 && h('select', { value: store.links()[r.id] || '', onChange: function (e) { store.linkSession(r.id, e.target.value); }, className: 'h-7 px-1.5 rounded border border-zinc-800 bg-[#111215]/60 text-[11px] text-zinc-400 cursor-pointer max-w-[130px]' }, [['', 'Chưa gắn']].concat(p.projects.map(function (x) { return [x.id, x.name]; })).map(function (x) { return h('option', { key: x[0], value: x[0] }, x[1]); })),
           h('button', { onClick: function () { if (window.confirm('Xoá phiên này (cả ảnh đã chụp)?')) window.ResourceStore.remove(r.id); }, className: 'ml-auto text-[11px] text-zinc-500 hover:text-rose-300 cursor-pointer' }, 'Xoá'))));
   }
   function Projects(p) {
@@ -180,14 +180,14 @@
     var cnt = function (id) { return sessions.filter(function (r) { return id === 'all' ? true : id === 'none' ? !links[r.id] : links[r.id] === id; }).length; };
     var list = sessions.filter(function (r) { return pid === 'all' ? true : pid === 'none' ? !links[r.id] : links[r.id] === pid; });
     var cur = projects.find(function (x) { return x.id === pid; });
-    var navBtn = function (id, label, n) { var on = pid === id; return h('button', { key: id, onClick: function () { setPid(id); }, className: cx('w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] cursor-pointer transition', on ? 'bg-emerald-500/10 text-emerald-200 border border-emerald-500/25' : 'text-zinc-400 hover:text-cham-50 hover:bg-cham-900 border border-transparent') }, h('span', { className: 'truncate' }, label), h('span', { className: 'text-[11px] text-zinc-500' }, n)); };
+    var navBtn = function (id, label, n) { var on = pid === id; return h('button', { key: id, onClick: function () { setPid(id); }, className: cx('w-full flex items-center justify-between px-3 py-2 rounded-lg text-[10.5px] cursor-pointer transition', on ? 'bg-emerald-500/10 text-emerald-200 border border-emerald-500/25' : 'text-zinc-400 hover:text-cham-50 hover:bg-cham-900 border border-transparent') }, h('span', { className: 'truncate' }, label), h('span', { className: 'text-[11px] text-zinc-500' }, n)); };
     return h('div', { className: 'grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)]' },
       h('div', { className: 'space-y-1' }, h(Btn, { primary: true, className: 'w-full mb-3', onClick: function () { setEdit({}); } }, 'Tạo dự án'),
         navBtn('all', 'Tất cả phiên', cnt('all')), navBtn('none', 'Chưa gắn dự án', cnt('none')),
         projects.length > 0 && h('div', { className: K.C.label + ' pt-3' }, 'Dự án'), projects.map(function (x) { return navBtn(x.id, x.name, cnt(x.id)); })),
       h('div', { className: 'space-y-4 min-w-0' },
         cur && h('div', { className: cx(K.C.card, 'p-4 flex flex-wrap items-start gap-3') },
-          h('div', { className: 'flex-1 min-w-0' }, h('div', { className: 'text-[15px] text-cham-50 font-medium' }, cur.name), cur.desc && h('div', { className: 'text-[12px] text-zinc-400 mt-1 whitespace-pre-line' }, cur.desc), cur.refUrl && h('a', { href: cur.refUrl, target: '_blank', rel: 'noopener noreferrer', className: 'text-[11px] text-sky-300 hover:underline' }, 'Video mẫu')),
+          h('div', { className: 'flex-1 min-w-0' }, h('div', { className: 'text-[12px] text-cham-50 font-medium' }, cur.name), cur.desc && h('div', { className: 'text-[10.5px] text-zinc-400 mt-1 whitespace-pre-line' }, cur.desc), cur.refUrl && h('a', { href: cur.refUrl, target: '_blank', rel: 'noopener noreferrer', className: 'text-[11px] text-sky-300 hover:underline' }, 'Video mẫu')),
           h('div', { className: 'flex gap-2' }, cur.claudeUrl && h('a', { href: cur.claudeUrl, target: '_blank', rel: 'noopener noreferrer', className: K.C.btn }, 'Mở Project claude.ai'), h(Btn, { onClick: function () { setEdit(cur); } }, 'Sửa'))),
         !list.length ? h(Empty, { title: sessions.length ? 'Chưa có phiên nào trong mục này' : 'Chưa có phiên tìm tài nguyên nào', sub: 'Tạo hồ sơ ở tab "Tìm tài nguyên", rồi bấm "Lưu thẻ phiên" và chọn dự án.' }, h(Btn, { onClick: p.goSearch }, 'Tìm tài nguyên'))
           : h('div', { className: 'grid gap-3 md:grid-cols-2 2xl:grid-cols-3' }, list.map(function (r) { return h(SessionCard, { key: r.id, r: r, projects: projects, produce: p.produce, open: p.open }); }))),
@@ -203,7 +203,7 @@
     var r = prod && sessions && sessions.find(function (x) { return x.id === prod; });
     var pj = r && store.projects().find(function (x) { return x.id === store.links()[r.id]; });
     return h('div', { className: 'space-y-5' },
-      h('div', null, h('h1', { className: 'font-display text-[30px] leading-9 font-bold text-cham-50 tracking-tight' }, 'Tạo tài nguyên'), h('p', { className: 'text-[14px] text-cham-400 mt-1.5' }, 'Tìm tin, video, ảnh cho một chủ đề → lưu thành thẻ phiên trong dự án → để Claude viết kịch bản nhiều video ăn theo chủ đề.')),
+      h('div', null, h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Tạo tài nguyên'), h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, 'Tìm tin, video, ảnh cho một chủ đề → lưu thành thẻ phiên trong dự án → để Claude viết kịch bản nhiều video ăn theo chủ đề.')),
       h(K.Help, { id: 'studio', title: 'Cách làm video ăn theo một sự kiện', steps: ['Tìm tài nguyên: dán thông tin vụ việc (và link video mẫu nếu có), bấm Tạo hồ sơ. Web tìm tin mới nhất, video họp báo/bản tin, ảnh trong bài báo.', 'Ở tab Video bấm vào khung hình nhỏ để chọn, hoặc Xem & chụp để tự chụp cảnh cần. Bỏ chọn những gì không dùng.', 'Chọn Dự án (kênh của bạn) rồi bấm Lưu thẻ phiên. Mọi phiên nằm trong tab Dự án & Claude.', 'Bấm Sản xuất video với Claude: chọn số video, độ dài, rồi Copy prompt sang claude.ai hoặc để Claude viết ngay.'], terms: [['Chưa xác minh', 'tin chỉ một số nguồn đưa; khi đọc phải nói kiểu "some reports suggest… but not officially confirmed"'], ['F#, C#, V#, W#, I#', 'mã khung hình, ảnh chụp, video, video trong báo, hình ảnh — Claude dùng mã này để gắn hình vào từng cảnh']] }),
       h(Tabs, { value: sub, onChange: function (v) { setSub(v); if (v !== 'projects') setProd(null); }, items: [['search', 'Tìm tài nguyên'], ['projects', 'Dự án & Claude', sessions ? sessions.length : null]] }),
       h('div', { style: { display: sub === 'search' ? 'block' : 'none' } }, window.ResourceStudio ? h(K.Mono, null, h(window.ResourceStudio, Object.assign({}, p.common, { openId: open.id, openKey: open.k, extraHead: function (R, promptText, save) { return h(ProjectBar, { r: R, save: save, produce: produce }); } }))) : h(K.Missing, { name: 'Tạo tài nguyên', file: 'resource_v1.js' })),

@@ -9,7 +9,7 @@
 (function (root) {
   var S = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
   function scale(hex) { var o = {}; S.forEach(function (k, i) { o[k] = hex[i]; }); return o; }
-  var cham = scale(['#ffffff', '#f1f3f7', '#d5dae3', '#b4bccb', '#9ba3b4', '#808a9c', '#4b5263', '#2e3240', '#22252f', '#191b25', '#101219']);
+  var cham = scale(['#ecedf0', '#e2e3e7', '#cfd0d6', '#b3b5bd', '#9c9ea7', '#82848e', '#55575f', '#36373d', '#2a2b30', '#212226', '#18191c']);
   var ngoc = scale(['#ecfbf7', '#cff4ea', '#a3e8d6', '#74d6bf', '#4fc1a8', '#34a690', '#288574', '#22695d', '#1d534a', '#173f39', '#0d2723']);
   var son = scale(['#fff4ed', '#ffe6d5', '#ffc9a8', '#ffa26f', '#ff7a29', '#ff5e00', '#e05200', '#b84300', '#8f3600', '#4a1c00', '#2b1000']);
   var hoe = scale(['#fffbeb', '#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e', '#451a03', '#2a1003']);
@@ -25,7 +25,7 @@
     amber: hoe, yellow: hoe, orange: son,
     rose: dieu, red: dieu, pink: dieu,
     violet: hoaca, purple: hoaca, fuchsia: hoaca,
-    brand: { red: '#fbbf24', darkRed: '#f59e0b', dark: '#0b0c10', surface: '#141620', card: '#191c28', border: '#2e3240', hover: '#191c28' }
+    brand: { red: '#fbbf24', darkRed: '#f59e0b', dark: '#111215', surface: '#1e1f24', card: '#232429', border: '#36373d', hover: '#26272d' }
   };
   var font = ['"Be Vietnam Pro"', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'];
   var display = ['"Space Grotesk"', '"Be Vietnam Pro"', 'system-ui', 'sans-serif'];
