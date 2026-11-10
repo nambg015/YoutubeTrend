@@ -384,7 +384,7 @@
   var dur = function (s) { s = Math.round(s || 0); var hh = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60), ss = s % 60; return (hh ? hh + ':' + String(mm).padStart(2, '0') : mm) + ':' + String(ss).padStart(2, '0'); };
   var age = function (hrs) { return hrs < 24 ? Math.round(hrs) + ' giờ' : Math.round(hrs / 24) + ' ngày'; };
   var cx = function () { return Array.prototype.filter.call(arguments, Boolean).join(' '); };
-  var DEF = { mode: 'rpm', country: '', maxSub: 5000, fmt: 'long', hours: 168, minView: 1000, minOut: 2, text: '', vSort: 'smart', cSort: 'smart', verdict: 'good', perCh: 2, niche: '' };
+  var DEF = { mode: 'rpm', country: '', maxSub: 5000, fmt: 'long', hours: 168, minView: 1000, minOut: 2, text: '', vSort: 'smart', cSort: 'smart', nSort: 'out', verdict: 'good', perCh: 2, niche: '' };
   function toApp(v) { return { id: v.id, title: v.title, channel: v.chName, channelId: v.ch, subs: v.subs, views: v.views, dur: v.dur, thumb: thumb(v.id), published: new Date(v.t).toISOString(), vph: v.vph }; }
   function csvDownload(name, rows) {
     var b = new Blob(['﻿' + rows.map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n')], { type: 'text/csv' });
@@ -515,9 +515,10 @@
         h('input', { value: f.text, 'aria-label': 'Lọc theo tiêu đề, kênh hoặc ngách', onChange: function (e) { set('text', e.target.value); }, placeholder: 'Lọc theo tiêu đề, kênh, ngách', className: cx(B.field, 'h-7 text-[10.5px] w-full sm:w-64') }),
         tab === 'ch' && sel(f.verdict, function (e) { set('verdict', e.target.value); }, [['good', 'Farm + đang lên + chờ phân tích'], ['farm', 'Chỉ farm tiền'], ['rise', 'Chỉ đang lên'], ['unk', 'Chỉ chưa phân tích'], ['fluke', 'Chỉ ăn may'], ['all', 'Tất cả']], 'Lọc theo đánh giá'),
         tab === 'ch' && sel(f.cSort, function (e) { set('cSort', e.target.value); }, [['smart', 'Xếp: 80% kênh nhỏ trên cùng'], ['score', 'Xếp: điểm farm'], ['v30', 'Xếp: view 30 ngày'], ['out', 'Xếp: view ÷ sub'], ['new', 'Xếp: kênh mới nhất']], 'Sắp xếp kênh'),
+        tab === 'niche' && sel(f.nSort, function (e) { set('nSort', e.target.value); }, [['out', 'Xếp: view cao sub thấp trước'], ['score', 'Xếp: điểm cơ hội'], ['v30', 'Xếp: view 30 ngày'], ['farm', 'Xếp: nhiều kênh farm']], 'Sắp xếp ngách'),
         tab === 'vid' && sel(f.vSort, function (e) { set('vSort', e.target.value); }, [['smart', 'Xếp: 80% kênh nhỏ trên cùng'], ['farm', 'Xếp: kênh farm trước'], ['views', 'Xếp: view cao'], ['out', 'Xếp: view ÷ sub'], ['vph', 'Xếp: view/giờ'], ['new', 'Xếp: mới nhất']], 'Sắp xếp video'),
         tab === 'vid' && sel(f.perCh, function (e) { set('perCh', +e.target.value); }, [[1, 'Tối đa 1 video/kênh'], [2, 'Tối đa 2 video/kênh'], [5, 'Tối đa 5 video/kênh'], [0, 'Không giới hạn']], 'Số video mỗi kênh'),
-        f.niche && h('button', { onClick: function () { set('niche', ''); }, title: 'Bỏ lọc ngách', className: 'inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-transparent bg-[#f1f1f1] text-[#0f0f0f] text-[10.5px] font-medium text-cham-50 cursor-pointer hover:border-hoe-300' }, 'Ngách: ' + f.niche, ic('x')),
+        f.niche && h('button', { onClick: function () { set('niche', ''); }, title: 'Bỏ lọc ngách', className: 'inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-transparent bg-[#f1f1f1] text-[#0f0f0f] text-[12px] font-medium cursor-pointer hover:bg-white' }, 'Ngách: ' + f.niche, ic('x')),
         h('span', { className: 'flex-1' }),
         h('button', { onClick: exportCsv, className: B.sm }, 'Tải CSV')));
 
@@ -540,10 +541,22 @@
     })); };
     var cell = function (l, v, tone) { return h('div', { className: 'yt-cell px-2 py-1.5 min-w-0' }, h('dt', { className: 'text-[11px] text-cham-400 truncate' }, l), h('dd', { className: 'text-[10.5px] font-semibold truncate tabular-nums ' + (tone || 'text-cham-50') }, v)); };
 
+    var NS = D.niches.slice().sort(function (a, b) { return f.nSort === 'score' ? b.score - a.score : f.nSort === 'v30' ? b.v30 - a.v30 : f.nSort === 'farm' ? (b.farm - a.farm) || (b.score - a.score) : (b.medOut - a.medOut) || (b.score - a.score); });
+    var samples = function (list) { return h('div', { className: 'grid grid-cols-3 gap-1.5' }, list.map(function (x) {
+      var hot = x.out >= 20 ? 'bg-[#ff4e45] text-white' : x.out >= 5 ? 'bg-[#f5c451] text-[#2a1d00]' : 'bg-black/80 text-[#f1f1f1]';
+      return h('a', { key: x.id, href: 'https://www.youtube.com/watch?v=' + x.id, target: '_blank', rel: 'noopener noreferrer', title: x.title + ' · ' + N(x.views) + ' view · ' + N(x._subs) + ' sub', className: 'relative block rounded-md overflow-hidden bg-black' },
+        h('img', { src: thumb(x.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover' }),
+        h('span', { className: 'absolute top-1 left-1 text-[10px] font-semibold px-1 rounded bg-black/80 text-[#f1f1f1] tabular-nums' }, N(x._subs) + ' sub'),
+        h('span', { className: 'absolute top-1 right-1 text-[10px] font-bold px-1 rounded tabular-nums ' + hot }, '×' + Math.round(x.out)),
+        h('span', { className: 'absolute bottom-1 left-1 text-[10px] font-semibold px-1 rounded bg-black/80 text-[#f1f1f1] tabular-nums' }, N(x.views) + ' view'));
+    })); };
+
     // ---------- Tab Ngách ----------
     var nicheView = !D.niches.length ? empty('Chưa có ngách nào qua bộ lọc') : h('div', { className: 'space-y-3' },
-      h('div', { className: 'grid gap-3 grid-cols-[repeat(auto-fill,minmax(310px,1fr))]' }, cut(D.niches).map(function (g, i) {
-        var cat = CATS[g.topCat], th = g.chans.filter(function (c) { return c.best; }).slice(0, 3);
+      h('div', { className: 'grid gap-3 grid-cols-[repeat(auto-fill,minmax(310px,1fr))]' }, cut(NS).map(function (g, i) {
+        var cat = CATS[g.topCat], th = [];
+        g.chans.forEach(function (c) { (c.vids || []).forEach(function (v) { th.push(Object.assign({}, v, { _subs: c.subs, title: v.title + ' · ' + c.name })); }); });
+        th.sort(function (a, b) { return b.out - a.out; }); th = th.slice(0, 6);
         return h('article', { key: g.name, className: 'yt-card p-3 flex flex-col gap-2 transition hover:border-cham-600' },
           h('div', { className: 'flex items-start gap-3' },
             h('span', { className: cx('shrink-0 h-7 min-w-7 px-1.5 rounded-md flex items-center justify-center text-[10.5px] font-bold tabular-nums', ['bg-[#f5c451] text-[#2a1d00]', 'bg-[#d6dbe2] text-[#1b1f24]', 'bg-[#e0915a] text-[#2a1405]'][i] || 'bg-[#272727] text-[#aaaaaa]') }, i + 1),
@@ -555,7 +568,7 @@
           h('dl', { className: 'grid grid-cols-4 gap-1.5' },
             cell('Kênh nhỏ', N(g.chans.length)), cell('Farm', g.farm, g.farm ? 'text-ngoc-300' : ''), cell('Đang lên', g.rise, g.rise ? 'text-hoe-300' : ''), cell('View÷sub', fx(g.medOut))),
           h('div', { className: 'flex justify-between gap-2 text-[10.5px] text-cham-300 tabular-nums' }, h('span', null, 'RPM tới ~$' + g.rpmHi.toFixed(1)), h('span', null, 'View 30 ngày ' + N(g.v30))),
-          th.length > 0 && thumbs(th.map(function (c) { return Object.assign({}, c.best, { _subs: c.subs, title: c.best.title + ' · ' + c.name }); }), function (x) { return N(x._subs) + ' sub'; }, function (x) { return '×' + Math.round(x.out); }),
+          th.length > 0 && h('div', { className: 'space-y-1.5' }, h('div', { className: 'text-[11px] text-cham-400' }, 'Video mẫu view cao (' + th.length + ')'), samples(th)),
           h('div', { className: 'flex gap-1.5 mt-auto pt-1' },
             h('button', { onClick: function () { set('niche', g.name); setTab('ch'); }, className: B.btn + ' flex-1' }, 'Xem ' + g.chans.length + ' kênh'),
             h('button', { onClick: function () { set('niche', g.name); setTab('vid'); }, className: B.btn }, 'Video'),
