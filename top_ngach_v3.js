@@ -760,15 +760,18 @@
     // ---------- Tab Kênh ----------
     var chCard = function (c, i) {
       var a = c.a, ok = a.n > 0, farm = a.v === 'farm', ageD = c.cr ? Math.round((Date.now() - c.cr) / 864e5) : null, m = marks[c.id] || {}, jv = justSeen(m);
-      return h('article', { key: c.id, className: cx('yt-card p-3 flex flex-col gap-2 transition', m.seen && !m.s && !jv && 'opacity-70 hover:opacity-100', jv ? '!border-[#3ea6ff]' : m.s && '!border-[#f5c451]/60') },
-        h('div', { className: 'flex items-start gap-3' },
+      return h('article', { key: c.id, className: cx('yt-card p-3 flex flex-col gap-2 transition relative overflow-hidden', m.seen && !m.s && !jv && 'opacity-70 hover:opacity-100', jv ? '!border-[#3ea6ff]' : m.s && '!border-[#f5c451]/60') },
+        // ruy băng chéo ở góc trên bên phải cho kênh vừa bấm vào
+        jv && h('span', { className: 'absolute top-0 right-0 w-[70px] h-[70px] overflow-hidden pointer-events-none z-10' },
+          h('span', { className: 'absolute top-[14px] right-[-27px] w-[100px] rotate-45 text-center bg-[#3ea6ff] text-[#0f0f0f] text-[9.5px] leading-[18px] font-bold tracking-wide shadow-[0_2px_6px_rgba(0,0,0,.45)]' }, 'VỪA XEM')),
+        h('div', { className: cx('flex items-start gap-3', jv && 'pr-10') },
           h('span', { className: 'shrink-0 h-7 min-w-7 px-1.5 rounded-md flex items-center justify-center text-[11px] font-bold tabular-nums bg-cham-800 text-cham-200' }, i + 1),
           h('div', { className: 'min-w-0 flex-1' },
             h('button', { onClick: function () { showDetail(c.id); }, title: 'Xem chi tiết kênh: ' + c.name, className: 'block max-w-full text-left text-[12.5px] font-semibold text-cham-50 hover:text-[#7cc3ff] truncate cursor-pointer' }, c.name),
             h('div', { className: 'text-[11px] text-cham-300 truncate tabular-nums', title: c.niche }, N(c.subs) + ' sub · ' + code(c.mk) + ' · ' + c.niche)),
           ok && farm ? h('span', { className: 'seal stamp', title: 'Điểm farm ' + a.score + '/100' }, h('b', null, a.score), h('span', null, 'Farm'))
             : ok ? h('div', { className: 'text-right shrink-0' }, h('div', { className: 'font-display text-[16.5px] leading-6 font-bold tabular-nums text-cham-50' }, a.score), h('div', { className: 'text-[11px] text-cham-400' }, 'điểm farm')) : null),
-        h('div', { className: 'flex items-start gap-2' }, h('div', { className: 'flex-1 min-w-0 flex flex-wrap items-center gap-1.5 min-h-7' }, jv && tag('Vừa xem', 'vua'), c.isNew && tag('Mới', 'moi'), badge(a), ageD != null && ageD < 180 ? tag(ageD + ' ngày tuổi', 'tim') : null, a.mid ? tag('Có mid-roll', 'teal') : null, m.seen && !jv && tag('Đã xem')),
+        h('div', { className: 'flex items-start gap-2' }, h('div', { className: 'flex-1 min-w-0 flex flex-wrap items-center gap-1.5 min-h-7' }, c.isNew && tag('Mới', 'moi'), badge(a), ageD != null && ageD < 180 ? tag(ageD + ' ngày tuổi', 'tim') : null, a.mid ? tag('Có mid-roll', 'teal') : null, m.seen && !jv && tag('Đã xem')),
           h('span', { className: 'shrink-0 inline-flex gap-1' },
             iconBtn('star', m.s, m.s ? 'Bỏ sao' : 'Gắn sao kênh ngon', function () { mark(c.id, { s: m.s ? 0 : 1 }); }),
             iconBtn('note', m.note, m.note ? 'Sửa ghi chú' : 'Thêm ghi chú', function () { showDetail(c.id); }, 'bg-[#3ea6ff] text-[#0f0f0f]'),
