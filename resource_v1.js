@@ -170,7 +170,7 @@
     var vids = R.videos.filter(function (v) { return sel.v[v.id]; }), imgs = R.images.filter(function (i) { return sel.i[i.key]; });
     var sec = function (t) { L.push('', '## ' + t); };
     L.push('# HỒ SƠ TÀI NGUYÊN VIDEO — ' + (D.title || 'Không tên'));
-    L.push('Tạo lúc: ' + new Date(R.at).toLocaleString('vi-VN') + ' • Chế độ: ' + (R.mode === 'ai' ? 'Gemini + Google Search' : 'miễn phí (Google News + YouTube)') + (D.category ? ' • Danh mục: ' + D.category : '') + (D.event_date ? ' • Ngày sự kiện: ' + D.event_date : '') + (D.status ? ' • Tình trạng: ' + D.status : ''));
+    L.push('Tạo lúc: ' + new Date(R.at).toLocaleString('vi-VN') + ' • Chế độ: ' + (R.mode === 'ai' ? (R.grounded === false ? 'Gemini đọc Wikipedia + tin tức (không có Google Search)' : 'Gemini + Google Search') : 'miễn phí (Google News + YouTube)') + (D.category ? ' • Danh mục: ' + D.category : '') + (D.event_date ? ' • Ngày sự kiện: ' + D.event_date : '') + (D.status ? ' • Tình trạng: ' + D.status : ''));
     L.push('Ghi chú: mọi thông tin có [n] đều dẫn tới mục NGUỒN ở cuối. Mục "CHƯA XÁC MINH" không được nói như sự thật.');
     sec('YÊU CẦU GỐC CỦA NGƯỜI LÀM VIDEO'); L.push(R.prompt);
     if (D.summary) { sec('TÓM TẮT'); L.push(D.summary); }
@@ -467,8 +467,8 @@
         mark('ai', 'run');
         try {
           var s1 = await api({ action: 'search', prompt: text, context: ctx, hours: o.hours });
-          res.sources = s1.sources || []; res.searchQueries = s1.queries || [];
-          mark('ai', 'ok', res.sources.length + ' nguồn'); mark('struct', 'run');
+          res.sources = s1.sources || []; res.searchQueries = s1.queries || []; res.grounded = s1.grounded !== false;
+          mark('ai', 'ok', res.sources.length + ' nguồn' + (res.grounded ? '' : ' • Wikipedia + tin tức, không có Google Search')); mark('struct', 'run');
           var s2 = await api({ action: 'structure', prompt: text, report: s1.report, sources: res.sources, lang: o.lang });
           D = s2.dossier; res.report = s1.report; mark('struct', 'ok');
         } catch (e) {
@@ -529,7 +529,7 @@
         var prev = more && tp && tp.label === label ? tp.list : [];
         var r = await api({ action: 'topics', group: G[1], cat: catEn, country: fd.country, period: fd.period, n: fd.n, note: fd.note, skip: prev.map(function (t) { return t.title; }) });
         var seen = {}; prev.forEach(function (t) { seen[t.title] = 1; });
-        var add = (r.topics || []).filter(function (t) { return !seen[t.title]; }), o = { at: Date.now(), label: label, period: fd.period, list: prev.concat(add) };
+        var add = (r.topics || []).filter(function (t) { return !seen[t.title]; }), o = { at: Date.now(), label: label, period: fd.period, list: prev.concat(add), grounded: r.grounded !== false, basis: r.basis || '' };
         setTp(o); lsPut('res1_topics', o); toast(prev.length ? 'Thêm ' + add.length + ' đề tài mới' : 'Tìm được ' + add.length + ' đề tài');
       } catch (e) { setTerr(e.status === 401 || e.status === 403 ? 'Bạn cần đăng nhập để dùng AI tìm đề tài.' : (e.message || 'AI lỗi, thử lại sau ít phút.')); }
       setTb(false);
@@ -653,6 +653,7 @@
       terr && h('div', { className: 'rounded-xl border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-xs text-rose-200' }, terr),
       tp && tp.list.length > 0 && h('div', { className: 'space-y-2 pt-1' },
         h('div', { className: 'flex flex-wrap items-center gap-2 text-[11px] text-[#aaa]' }, h('span', null, tp.list.length + ' đề tài · ' + tp.label + ' · tìm lúc ' + new Date(tp.at).toLocaleString('vi-VN')), h('button', { onClick: function () { setTp(null); try { localStorage.removeItem('res1_topics'); } catch (e) { } }, className: 'text-[#aaa] hover:text-white underline cursor-pointer' }, 'Xoá danh sách')),
+        tp.grounded === false && h('div', { className: 'rounded-lg bg-[#3a2a12] text-[#f5c451] px-3 py-2 text-[11px] leading-relaxed' }, 'Key Gemini đang ở gói miễn phí nên không dùng được Google Search. Danh sách này lấy từ ' + (tp.basis === 'news' ? 'tiêu đề Google News mới nhất' : 'kiến thức sẵn có của AI') + ', hãy bấm Xem trên Google để kiểm tra lại trước khi làm.'),
         h('div', { className: 'grid gap-2.5 md:grid-cols-2' }, tp.list.map(topicCard))));
 
     var histBox = hist.length > 0 && h('div', { className: 'rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 space-y-1.5' }, lab('Hồ sơ đã tạo (' + hist.length + ')'),
@@ -665,11 +666,12 @@
     var nSelV = Object.keys(sel.v).filter(function (k) { return sel.v[k]; }).length, nSelI = Object.keys(sel.i).filter(function (k) { return sel.i[k]; }).length;
     var head = h('div', { className: 'yt-card border-hoe-600/50 p-4 space-y-2' },
       h('div', { className: 'flex flex-wrap items-center gap-1.5 text-[10px]' },
-        h('span', { className: 'px-2 py-0.5 rounded-md font-bold ' + (R.mode === 'ai' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40' : 'bg-zinc-800 text-zinc-300 border border-zinc-700') }, R.mode === 'ai' ? 'Gemini + Google Search' : 'Chế độ miễn phí'),
+        h('span', { className: 'px-2 py-0.5 rounded-md font-bold ' + (R.mode === 'ai' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40' : 'bg-zinc-800 text-zinc-300 border border-zinc-700') }, R.mode === 'ai' ? (R.grounded === false ? 'Gemini + Wikipedia + tin tức' : 'Gemini + Google Search') : 'Chế độ miễn phí'),
         D.category && h('span', { className: 'px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700 font-bold' }, D.category),
         D.event_date && h('span', { className: 'px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300 border border-zinc-700' }, '' + D.event_date),
         D.status && h('span', { className: 'px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/30' }, D.status),
         h('span', { className: 'text-zinc-500' }, 'tạo ' + new Date(R.at).toLocaleString('vi-VN'))),
+      R.mode === 'ai' && R.grounded === false && h('div', { className: 'text-[11px] text-amber-200/90' }, 'Key Gemini đang ở gói miễn phí nên không có Google Search. Hồ sơ này dựng từ Wikipedia và tiêu đề tin tức, có thể thiếu diễn biến mới nhất.'),
       R.mode !== 'ai' && R.aiError && h('div', { className: 'text-[11px] text-amber-200/90' }, 'Bước AI lỗi: ' + R.aiError + (/GEMINI_API_KEY|501/.test(R.aiError) ? ' — thêm GEMINI_API_KEY trên Vercel rồi Redeploy.' : ' — thử lại sau ít phút.')),
       h('h3', { className: 'text-lg sm:text-xl font-bold text-cham-50' }, D.title),
       h('div', { className: 'flex flex-wrap gap-2 pt-1' },

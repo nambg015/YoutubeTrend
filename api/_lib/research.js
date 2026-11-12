@@ -5,17 +5,21 @@
 // B0 news     : Google News RSS (miễn phí, luôn chạy; là phương án dự phòng khi Gemini lỗi/hết lượt)
 'use strict';
 
-// Model mặc định + dự phòng: Google ngừng cấp model cũ cho key mới, nên gặp 404 thì tự thử model kế tiếp
-const MODELS = () => [...new Set([process.env.GEMINI_MODEL, 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-2.5-flash'].filter(Boolean))];
-let GOOD = '';
-const MODEL = () => GOOD || MODELS()[0];
+// Model mặc định + dự phòng. Google ngừng cấp model cũ cho key mới (404) và mỗi model có hạn mức riêng (429),
+// nên gặp 2 lỗi đó thì tự thử model kế tiếp. lite = ưu tiên Flash-Lite (hạn mức miễn phí lớn hơn nhiều).
+const BASE = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
+const LITE = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash'];
+const DEAD = new Set();
+const MODELS = lite => { const all = [...new Set((lite ? LITE : [process.env.GEMINI_MODEL].concat(BASE)).filter(Boolean))], live = all.filter(m => !DEAD.has(m)); return live.length ? live : all; };
+let LAST = '';
+const MODEL = () => LAST || MODELS()[0];
 const UA = 'Mozilla/5.0 (compatible; YouTrendResearch/1.0; +https://youtubetrend-rho.vercel.app)';
 
-async function gemini(key, body, timeoutMs) {
+async function gemini(key, body, timeoutMs, lite) {
   if (!key) { const e = new Error('NO_API_KEY'); e.code = 'NO_API_KEY'; throw e; }
-  const t0 = Date.now(), total = timeoutMs || 24000, list = GOOD ? [GOOD] : MODELS();
+  const t0 = Date.now(), total = timeoutMs || 24000;
   let last = null;
-  for (const m of list) {
+  for (const m of MODELS(lite)) {
     const left = total - (Date.now() - t0); if (left < 3000) break;
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
@@ -23,13 +27,14 @@ async function gemini(key, body, timeoutMs) {
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
-      const msg = ((j.error && j.error.message) || '').slice(0, 200);
+      const msg = ((j.error && j.error.message) || '').slice(0, 300);
       const e = new Error('Gemini ' + r.status + ': ' + msg);
       e.code = r.status === 429 ? 'GEMINI_LIMIT' : 'GEMINI_ERROR';
-      if (r.status === 404 || /no longer available|is not found|not supported for generateContent/i.test(msg)) { if (GOOD === m) GOOD = ''; last = e; continue; }
+      if (r.status === 404 || /no longer available|is not found|not supported for generateContent/i.test(msg)) { DEAD.add(m); last = last || e; continue; }
+      if (r.status === 429) { last = e; continue; }   // lỗi hạn mức được ưu tiên báo ra để phía trên biết đường chuyển sang chế độ dự phòng
       throw e;
     }
-    GOOD = m;
+    LAST = m;
     const c = (j.candidates || [])[0] || {};
     const text = ((c.content && c.content.parts) || []).map(p => p.text || '').join('');
     if (!text) { const e = new Error('Gemini trả về rỗng'); e.code = 'GEMINI_EMPTY'; throw e; }
@@ -37,6 +42,7 @@ async function gemini(key, body, timeoutMs) {
   }
   throw last || Object.assign(new Error('Gemini quá thời gian chờ'), { code: 'GEMINI_ERROR' });
 }
+const askJson = async (key, text, ms, lite) => parseJson((await gemini(key, { contents: [{ parts: [{ text }] }], generationConfig: { temperature: 0.3, responseMimeType: 'application/json' } }, ms, lite)).text);
 
 // Gắn [n] vào câu theo groundingSupports → mỗi ý trong báo cáo đều trỏ về nguồn thật
 function annotate(text, meta) {
@@ -126,9 +132,70 @@ function parseJson(t) {
   const e = new Error('AI trả về JSON lỗi'); e.code = 'BAD_JSON'; throw e;
 }
 
+// Key miễn phí: nhớ trong 15 phút là Google Search không dùng được, khỏi thử lại mỗi lần
+let noSearchUntil = 0;
 async function doSearch(key, prompt, ctx, hours) {
-  const r = await gemini(key, { contents: [{ parts: [{ text: searchPrompt(prompt, ctx, hours) }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.2 } }, 52000);
-  return annotate(r.text, r.meta);
+  const t0 = Date.now();
+  if (t0 < noSearchUntil) return searchFree(key, prompt, ctx, hours, 54000);
+  try {
+    const r = await gemini(key, { contents: [{ parts: [{ text: searchPrompt(prompt, ctx, hours) }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.2 } }, 52000);
+    return Object.assign(annotate(r.text, r.meta), { grounded: true });
+  } catch (e) {
+    // Gói Gemini miễn phí không có Google Search (429) → tự gom Wikipedia + tin tức rồi nhờ AI viết báo cáo
+    if (e.code !== 'GEMINI_LIMIT' || Date.now() - t0 > 12000) throw e;
+    noSearchUntil = Date.now() + 15 * 60000;
+    return searchFree(key, prompt, ctx, hours, 54000 - (Date.now() - t0));
+  }
+}
+// Wikipedia: tìm bài theo từ khoá, lấy toàn văn dạng chữ
+async function wiki(lang, queries) {
+  if (!/^[a-z]{2,3}$/.test(lang || '')) lang = 'en';
+  const out = [];
+  await Promise.all((queries || []).map(q => String(q || '').trim()).filter(Boolean).slice(0, 3).map(async q => {
+    try {
+      const u = 'https://' + lang + '.wikipedia.org/w/api.php?action=query&format=json&redirects=1&generator=search&gsrlimit=1&gsrsearch=' + encodeURIComponent(q) + '&prop=extracts|info&explaintext=1&exlimit=1&inprop=url';
+      const j = await (await fetch(u, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(7000) })).json();
+      Object.values((j.query && j.query.pages) || {}).forEach(p => { if (p && p.extract && p.extract.length > 200) out.push({ lang, title: p.title, url: p.fullurl || 'https://' + lang + '.wikipedia.org/wiki/' + encodeURIComponent(p.title), text: p.extract }); });
+    } catch (e) { }
+  }));
+  return out;
+}
+// Bing News RSS: cho link bài báo thật (Google News chỉ cho link trung gian) → mở được bài để lấy ảnh. Có thì tốt, lỗi thì bỏ qua.
+async function bingNews(queries) {
+  const out = [], seen = new Set();
+  await Promise.all((queries || []).map(q => String(q || '').trim()).filter(Boolean).slice(0, 4).map(async q => {
+    try {
+      const r = await fetch('https://www.bing.com/news/search?format=rss&q=' + encodeURIComponent(q), { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36', Accept: 'application/rss+xml,application/xml,text/xml' }, signal: AbortSignal.timeout(7000) });
+      if (!r.ok) return;
+      parseRss(await r.text()).slice(0, 8).forEach(x => {
+        let link = x.link; const m = /[?&]url=([^&]+)/.exec(link); if (m) { try { link = decodeURIComponent(m[1]); } catch (e) { } }
+        const u = safeUrl(link); if (!u || /(^|\.)bing\.com$/i.test(u.hostname) || seen.has(u.href)) return;
+        seen.add(u.href); out.push({ title: x.title, link: u.href, t: x.t, source: u.hostname.replace(/^www\./, '') });
+      });
+    } catch (e) { }
+  }));
+  return out;
+}
+async function searchFree(key, prompt, ctx, hours, budget) {
+  const t0 = Date.now(), left = () => Math.max(4000, (budget || 50000) - (Date.now() - t0));
+  let plan = {};
+  try { plan = await askJson(key, `A video creator needs research material for this story:\n"""${String(prompt).slice(0, 1500)}"""\nReturn ONLY JSON: {"lang":"two-letter code of the story's main local language, e.g. ja, en, ko, vi","wiki":["1-3 Wikipedia search queries in that language naming the event or person exactly"],"wiki_en":["1-2 English Wikipedia search queries"],"news":["3 short news search queries in the local language","1 in English"]}`, Math.min(10000, left()), true); } catch (e) { if (e.code === 'GEMINI_LIMIT' || e.code === 'NO_API_KEY') throw e; }
+  const arr = v => (Array.isArray(v) ? v : []).map(x => String(x || '').slice(0, 120)).filter(Boolean);
+  const nq = arr(plan.news).length ? arr(plan.news) : [String(prompt).split('\n')[0].slice(0, 100)];
+  const [w1, w2, bn, gn] = await Promise.all([wiki(String(plan.lang || 'en').toLowerCase(), arr(plan.wiki)), wiki('en', arr(plan.wiki_en)), bingNews(nq), doNews(nq, hours).catch(() => [])]);
+  const pages = [], seenW = new Set();
+  w1.concat(w2).forEach(p => { if (!seenW.has(p.url)) { seenW.add(p.url); pages.push(p); } });
+  const sources = pages.slice(0, 4).map(p => ({ title: p.title + ' — Wikipedia (' + p.lang + ')', uri: p.url, kind: 'wiki', text: p.text.slice(0, 9000) }))
+    .concat(bn.slice(0, 12).map(x => ({ title: x.title + ' — ' + x.source, uri: x.link, kind: 'news', t: x.t })))
+    .concat(gn.slice(0, 8).map(x => ({ title: x.title + (x.source ? ' — ' + x.source : ''), uri: x.link, kind: 'news', t: x.t })))
+    .map((x, i) => Object.assign({ n: i + 1 }, x));
+  const material = sources.map(x => x.kind === 'wiki' ? `[${x.n}] WIKIPEDIA ARTICLE: ${x.title}\n${x.text}` : `[${x.n}] NEWS HEADLINE${x.t ? ' (' + new Date(x.t).toISOString().slice(0, 10) + ')' : ''}: ${x.title}`).join('\n\n');
+  const text = searchPrompt(prompt, ctx, hours)
+    .replace('Research THIS story using Google Search.', 'You have NO web access in this run. Research THIS story using ONLY the SOURCE MATERIAL at the end plus widely known background.')
+    .replace('Only state what sources support. Clearly mark rumors or unconfirmed claims.', 'After every fact taken from the material put its source marker, e.g. [1] or [2][5]. A fact that comes only from your own memory must be listed in section 8 as unverified, not stated as confirmed. Clearly mark rumors or unconfirmed claims.')
+    + '\n\nSOURCE MATERIAL:\n' + (material || '(nothing found — rely on widely known background and say so)');
+  const r = await gemini(key, { contents: [{ parts: [{ text }] }], generationConfig: { temperature: 0.2 } }, left(), true);
+  return { report: r.text, sources: sources.map(x => ({ n: x.n, title: x.title, uri: x.uri })), queries: nq, grounded: false };
 }
 async function doStructure(key, prompt, report, sources, lang) {
   const r = await gemini(key, { contents: [{ parts: [{ text: structurePrompt(prompt, report, sources || [], lang) }] }], generationConfig: { temperature: 0.2, responseMimeType: 'application/json' } }, 50000);
@@ -323,11 +390,15 @@ async function fetchImage(u0, ref) {
 
 // ---------- Tìm đề tài theo danh mục (Gemini + Google Search) ----------
 const PERIODS = { d7: 'that happened or had major new developments in the LAST 7 DAYS', d30: 'that happened or had major new developments in the LAST 30 DAYS', y1: 'from the LAST 12 MONTHS', classic: 'from ANY era — well-documented classic cases, mixing famous ones with lesser-known ones' };
-function topicsPrompt(o) {
+function topicsPrompt(o, mode, heads) {
   const today = new Date().toISOString().slice(0, 10), n = Math.max(4, Math.min(15, Number(o.n) || 10));
   const where = o.country && !/^(global|all|)$/i.test(o.country) ? 'that took place in or mainly concern ' + o.country : 'from anywhere in the world';
+  const cat = '"' + String(o.cat || 'true crime cases').slice(0, 120) + '"' + (o.group ? ' (content group: ' + String(o.group).slice(0, 60) + ')' : '');
+  const task = mode === 'news' ? `Below are recent news headlines from Google News. Pick up to ${n} DISTINCT real stories from these headlines that fit this category: ${cat}, ${where}. Use ONLY stories that appear in the headlines; add background only if it is widely known.`
+    : mode === 'known' ? `You have NO web access in this run. From your own knowledge, list ${n} real, well-documented stories in this category: ${cat}, ${where}, ${PERIODS[o.period] || PERIODS.classic}. Include only events you are confident really happened; if unsure of the exact day give only the year.`
+      : `Use Google Search to find ${n} real stories in this category: ${cat}, ${where}, ${PERIODS[o.period] || PERIODS.classic}.`;
   return `Today is ${today}. You research story ideas for a YouTube channel that makes documentary / explainer videos about REAL events.
-Use Google Search to find ${n} real stories in this category: "${String(o.cat || 'true crime cases').slice(0, 120)}"${o.group ? ' (content group: ' + String(o.group).slice(0, 60) + ')' : ''}, ${where}, ${PERIODS[o.period] || PERIODS.classic}.
+${task}
 ${o.note ? 'EXTRA WISHES FROM THE CREATOR: """' + String(o.note).slice(0, 400) + '"""\n' : ''}${Array.isArray(o.skip) && o.skip.length ? 'DO NOT repeat these already-suggested stories: ' + o.skip.slice(0, 40).map(x => String(x).slice(0, 80)).join(' | ') + '\n' : ''}
 Selection rules:
 - Only real, verifiable events covered by reputable sources. No fiction, no urban legends presented as fact.
@@ -347,16 +418,35 @@ Return ONLY a JSON object (no prose, no markdown fence) with this exact shape:
  "visuals_vi": "1 câu tiếng Việt: có sẵn loại hình ảnh / video tư liệu nào",
  "queries": ["2-3 search queries in the original language", "1 query in English"],
  "brief_en": "One paragraph research brief in English with the exact names, dates and places, ready to hand to a researcher"
-}]}`;
+}]}${mode === 'news' ? '\n\nHEADLINES:\n' + (heads || []).map((x, i) => (i + 1) + '. ' + (x.t ? '(' + new Date(x.t).toISOString().slice(0, 10) + ') ' : '') + x.title + (x.source ? ' — ' + x.source : '')).join('\n') : ''}`;
 }
 function cleanTopics(j) {
   const list = Array.isArray(j) ? j : (j && Array.isArray(j.topics) ? j.topics : []);
   const S = (v, n) => String(v == null ? '' : v).slice(0, n);
   return list.filter(t => t && (t.title || t.title_vi)).slice(0, 20).map(t => ({ title: S(t.title || t.title_vi, 200), title_vi: S(t.title_vi || t.title, 200), date: S(t.date, 40), place: S(t.place, 120), status_vi: S(t.status_vi, 120), summary_vi: S(t.summary_vi, 700), why_vi: S(t.why_vi, 300), visuals_vi: S(t.visuals_vi, 300), queries: (Array.isArray(t.queries) ? t.queries : []).map(q => S(q, 120)).filter(Boolean).slice(0, 5), brief_en: S(t.brief_en, 1200) }));
 }
+// Gói Gemini miễn phí không có Google Search: tin mới → đọc tiêu đề Google News; vụ kinh điển → kiến thức sẵn có của AI
+async function topicsFree(key, o, budget) {
+  const t0 = Date.now(), left = () => Math.max(4000, budget - (Date.now() - t0));
+  let heads = [], queries = [];
+  if (o.period === 'd7' || o.period === 'd30' || o.period === 'y1') {
+    const where = o.country && !/^(global|all|)$/i.test(o.country) ? o.country : 'the world';
+    try { queries = ((await askJson(key, `Give 4 short Google News search queries, written in the main language of ${where}, that would surface recent news stories about: "${String(o.cat || '').slice(0, 120)}" in ${where}. Return ONLY JSON {"queries":["..."]}`, Math.min(10000, left()), true)).queries || []).map(q => String(q).slice(0, 80)).filter(Boolean).slice(0, 5); } catch (e) { if (e.code === 'GEMINI_LIMIT' || e.code === 'NO_API_KEY') throw e; }
+    if (queries.length) heads = (await doNews(queries, o.period === 'd7' ? 168 : o.period === 'd30' ? 720 : 0).catch(() => [])).filter(x => o.period !== 'y1' || !x.t || Date.now() - x.t < 366 * 864e5).slice(0, 45);
+  }
+  const basis = heads.length >= 4 ? 'news' : 'known';
+  const j = await askJson(key, topicsPrompt(o, basis, heads), left(), true);
+  const topics = cleanTopics(j);
+  if (!topics.length) { const e = new Error('AI không tìm được đề tài phù hợp, thử đổi danh mục hoặc thời gian.'); e.code = 'NO_TOPICS'; throw e; }
+  return { topics, sources: heads.slice(0, 30).map(x => ({ title: x.title, uri: x.link })), queries, grounded: false, basis };
+}
 async function doTopics(key, o) {
   o = o || {};
-  const r = await gemini(key, { contents: [{ parts: [{ text: topicsPrompt(o) }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.6 } }, 40000);
+  const t0 = Date.now();
+  if (t0 < noSearchUntil) return topicsFree(key, o, 52000);
+  let r;
+  try { r = await gemini(key, { contents: [{ parts: [{ text: topicsPrompt(o) }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.6 } }, 40000); }
+  catch (e) { if (e.code !== 'GEMINI_LIMIT' || Date.now() - t0 > 12000) throw e; noSearchUntil = Date.now() + 15 * 60000; return topicsFree(key, o, 52000 - (Date.now() - t0)); }
   const sources = ((r.meta && r.meta.groundingChunks) || []).map(c => c.web || {}).filter(w => w.uri).slice(0, 40).map(w => ({ title: w.title || '', uri: w.uri }));
   let topics = [];
   try { topics = cleanTopics(parseJson(r.text)); } catch (e) { }
@@ -366,7 +456,7 @@ async function doTopics(key, o) {
     topics = cleanTopics(parseJson(r2.text));
   }
   if (!topics.length) { const e = new Error('AI không tìm được đề tài phù hợp, thử đổi danh mục hoặc thời gian.'); e.code = 'NO_TOPICS'; throw e; }
-  return { topics, sources, queries: (r.meta && r.meta.webSearchQueries) || [] };
+  return { topics, sources, queries: (r.meta && r.meta.webSearchQueries) || [], grounded: true, basis: 'search' };
 }
 
 
@@ -432,4 +522,4 @@ async function doTitles(key, data) {
   return { titles: (Array.isArray(j.titles) ? j.titles : []).filter(t => t && t.title).slice(0, 30).map(t => ({ title: String(t.title).trim(), formula: String(t.formula || '').trim(), why: String(t.why || '').trim() })), thumbs: (Array.isArray(j.thumbnail_texts) ? j.thumbnail_texts : []).map(String).slice(0, 8) };
 }
 
-module.exports = { model: MODEL, models: MODELS, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
