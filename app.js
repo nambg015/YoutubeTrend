@@ -26,6 +26,9 @@
     explore: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm3.5-12.5-2 5-5 2 2-5 5-2Z', niche: 'M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.2 1.2-3.6 2.3-4.6.3 1.6 1.1 2.6 2.2 2.6 0-3 .5-5.6.5-8Z',
     channels: 'M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM20 20v-1.5a3.5 3.5 0 0 0-2.5-3.35M15.5 4.15a3.5 3.5 0 0 1 0 6.7',
     resource: 'M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Zm8 4v5m-2.5-2.5h5', library: 'M5 5h14M4 9h16v10H4V9Zm6.5 2.5v5l4-2.5-4-2.5Z',
+    today: 'M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-8.5Z', star: 'M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.7l5.9-.9L12 3.5Z',
+    hide: 'M3 3l18 18M10.6 6.2A9.6 9.6 0 0 1 12 6c5 0 8.5 4.5 9.5 6-.4.7-1.3 1.9-2.6 3.1M6.2 7.8C4.3 9.2 3 11 2.5 12c1 1.5 4.5 6 9.5 6 1.5 0 2.8-.4 4-1M9.9 9.9a3 3 0 0 0 4.2 4.2',
+    note: 'M5 4h14v12l-4 4H5V4Zm10 16v-4h4M8 9h8M8 13h5', check: 'M5 12.5l4.5 4.5L19 7.5', plus: 'M12 5v14M5 12h14', copy: 'M9 9h10v11H9V9Zm-4 6V4h10', bolt: 'M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z',
     settings: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.3 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.3 2.5h4l.3-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4-2-1.6Z' };
   function Icon(p) { return h('svg', { width: p.size || 14, height: p.size || 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: p.stroke || 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true, className: p.className }, h('path', { d: ICONS[p.name] || '' })); }
   function Btn(p) { return h('button', { type: p.type || 'button', onClick: p.onClick, disabled: p.disabled, title: p.title, className: cx(p.primary ? C.pri : p.small ? (p.on ? C.smOn : C.sm) : C.btn, p.className) }, p.children); }
@@ -88,25 +91,26 @@
   var STOP = new Set(('the a an and or of in on at to for from with by is are was were be this that it its as you your how what why when who i my me we our vs video full new official part ep episode shorts short live 2024 2025 2026 '
     + 'và của là có cho khi đã đang một này với tại trong từ được người những các không thì mà nè ơi ạ nhé ko bị đi ra vào lại rất quá').split(' '));
   function words(t) { return (String(t || '').toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{N}'’\-]*/gu) || []); }
+  // Đặc điểm tiêu đề dùng chung (Khuôn tiêu đề, Hồ sơ clone, Xưởng tiêu đề)
+  var TITLE_FEATS = [
+    ['Có con số', function (t) { return /\d/.test(t); }],
+    ['Dạng câu hỏi', function (t) { return /\?|^(why|how|what|who|when|where|is|can|did|does|tại sao|vì sao|làm sao|có nên|liệu)\b/i.test(t); }],
+    ['Có dấu | hoặc :', function (t) { return /[|:–—]/.test(t); }],
+    ['Có từ VIẾT HOA', function (t) { return /\b[A-ZÀ-Ỹ]{3,}\b/.test(t); }],
+    ['Có ngoặc ( ) [ ]', function (t) { return /[\(\[]/.test(t); }],
+    ['Nói tới tiền / số lớn', function (t) { return /\$|million|billion|triệu|tỷ|\d{3,}/i.test(t); }],
+    ['Ngôi thứ 2 (you / bạn)', function (t) { return /\byou(r)?\b|\bbạn\b/i.test(t); }],
+    ['Phủ định / cảnh báo', function (t) { return /\bnever|don'?t|stop|warning|mistake|đừng|không bao giờ|sai lầm|cảnh báo/i.test(t); }],
+    ['So sánh (vs)', function (t) { return /\bvs\.?\b|versus|so với/i.test(t); }],
+    ['Có emoji', function (t) { return /[\uD83C-\uD83E][\uDC00-\uDFFF]/.test(t); }]
+  ];
   // Khuôn tiêu đề: so đặc điểm tiêu đề nhóm thắng (top 25% outlier) với phần còn lại
   function titlePatterns(vids, score) {
     if (!vids.length) return null;
     var sorted = vids.slice().sort(function (a, b) { return score(b) - score(a); }), k = Math.max(3, Math.ceil(sorted.length / 4));
     var win = sorted.slice(0, k), rest = sorted.slice(k);
-    var feats = [
-      ['Có con số', function (t) { return /\d/.test(t); }],
-      ['Dạng câu hỏi', function (t) { return /\?|^(why|how|what|who|when|where|is|can|did|does|tại sao|vì sao|làm sao|có nên|liệu)\b/i.test(t); }],
-      ['Có dấu | hoặc :', function (t) { return /[|:–—]/.test(t); }],
-      ['Có từ VIẾT HOA', function (t) { return /\b[A-ZÀ-Ỹ]{3,}\b/.test(t); }],
-      ['Có ngoặc ( ) [ ]', function (t) { return /[\(\[]/.test(t); }],
-      ['Nói tới tiền / số lớn', function (t) { return /\$|million|billion|triệu|tỷ|\d{3,}/i.test(t); }],
-      ['Ngôi thứ 2 (you / bạn)', function (t) { return /\byou(r)?\b|\bbạn\b/i.test(t); }],
-      ['Phủ định / cảnh báo', function (t) { return /\bnever|don'?t|stop|warning|mistake|đừng|không bao giờ|sai lầm|cảnh báo/i.test(t); }],
-      ['So sánh (vs)', function (t) { return /\bvs\.?\b|versus|so với/i.test(t); }],
-      ['Có emoji', function (t) { return /[\uD83C-\uD83E][\uDC00-\uDFFF]/.test(t); }]
-    ];
     var rate = function (arr, f) { return arr.length ? arr.filter(function (v) { return f(v.title); }).length / arr.length : 0; };
-    var rows = feats.map(function (x) { var a = rate(win, x[1]), b = rate(rest, x[1]); return { name: x[0], win: a, rest: b, lift: a - b }; }).sort(function (a, b) { return b.lift - a.lift; });
+    var rows = TITLE_FEATS.map(function (x) { var a = rate(win, x[1]), b = rate(rest, x[1]); return { name: x[0], win: a, rest: b, lift: a - b }; }).sort(function (a, b) { return b.lift - a.lift; });
     var len = function (arr) { return Math.round(U.median(arr.map(function (v) { return v.title.length; }))); };
     var cnt = {}; win.forEach(function (v) { var seen = {}; words(v.title).forEach(function (w) { if (w.length < 3 || STOP.has(w) || /^\d+$/.test(w) || seen[w]) return; seen[w] = 1; cnt[w] = (cnt[w] || 0) + 1; }); });
     var hooks = Object.keys(cnt).filter(function (w) { return cnt[w] >= 2; }).sort(function (a, b) { return cnt[b] - cnt[a]; }).slice(0, 18).map(function (w) { return [w, cnt[w]]; });
@@ -198,6 +202,38 @@
           : h(Frag, null, h(Table, { cols: p.cols, rows: rows, rowKey: function (v) { return v.id; }, limit: lim }), h(More, { total: rows.length, lim: lim, setLim: setLim, step: p.step || 24 })));
   }
 
+  // ---------- Hộp gửi Claude: copy prompt sang claude.ai, hoặc viết ngay bằng Claude API; lưu thành bản phân tích trong Dự án ----------
+  // p: title, kind ('clone'|'niche'|'compare'|'titles'), prompt (chuỗi), system, brief (bản đã lưu để mở lại), meta
+  function ClaudeBox(p) {
+    useBus('projects'); useBus('claude');
+    var b0 = p.brief || {};
+    var s0 = useState(b0.text || ''), out = s0[0], setOut = s0[1], s1 = useState(false), busy = s1[0], setBusy = s1[1], s2 = useState(''), err = s2[0], setErr = s2[1];
+    var s3 = useState(b0.pid || ''), pid = s3[0], setPid = s3[1], s4 = useState(b0.id || ''), bid = s4[0], setBid = s4[1], s5 = useState(b0.stop || ''), stop = s5[0], setStop = s5[1];
+    var ctl = useRef(null), prompt = p.prompt || b0.prompt || '', projects = store.projects(), pj = projects.find(function (x) { return x.id === pid; }), cfg = Y.claude.cfg();
+    function save(text, st2, quiet) { var b = store.saveBrief({ id: bid || undefined, kind: p.kind || b0.kind || 'note', title: p.title || b0.title || 'Bản phân tích', prompt: prompt, text: text != null ? text : out, pid: pid, stop: st2 != null ? st2 : stop, meta: p.meta || b0.meta || null, at: Date.now() }); setBid(b.id); if (!quiet) toast(pid ? 'Đã lưu vào dự án' : 'Đã lưu (xem ở Tạo tài nguyên → Dự án & Claude)'); return b; }
+    function copyOpen() { U.copy(prompt).then(function () { toast('Đã copy prompt (' + N(prompt.length) + ' ký tự). Dán vào Claude.'); }).catch(function () { toast('Trình duyệt chặn copy, dùng nút Tải .md'); }); window.open((pj && pj.claudeUrl) || 'https://claude.ai/new', '_blank', 'noopener'); }
+    async function write() {
+      setErr(''); setOut(''); setBusy(true); ctl.current = new AbortController();
+      try { var res = await Y.claude.stream({ prompt: prompt, signal: ctl.current.signal, system: p.system || 'Bạn là chuyên gia chiến lược nội dung YouTube. Chỉ dựa trên số liệu được cung cấp, không bịa số. Trả lời bằng tiếng Việt, Markdown, cụ thể và làm được ngay.', onText: function (_, full) { setOut(full); } }); setStop(res.stop || ''); save(res.text, res.stop || '', true); toast(res.stop === 'max_tokens' ? 'Claude dừng vì chạm giới hạn độ dài.' : 'Claude đã viết xong, đã lưu.'); }
+      catch (e) { if (e.name !== 'AbortError') setErr(e.message); }
+      setBusy(false);
+    }
+    return h('div', { className: 'space-y-3' },
+      h('div', { className: 'flex flex-wrap items-center gap-2' },
+        h(Btn, { primary: true, onClick: copyOpen }, 'Copy prompt & mở ' + (pj && pj.claudeUrl ? 'Project claude.ai' : 'claude.ai')),
+        h(Btn, { onClick: write, disabled: busy || !Y.claude.ready(), title: Y.claude.ready() ? '' : 'Thêm Claude API key trong Cài đặt' }, busy ? 'Claude đang viết…' : 'Viết ngay bằng Claude API'),
+        busy && h(Btn, { small: true, onClick: function () { ctl.current && ctl.current.abort(); } }, 'Dừng'),
+        h(Btn, { small: true, onClick: function () { U.download((p.file || 'prompt') + '.md', new Blob([prompt], { type: 'text/markdown' })); } }, 'Tải prompt .md'),
+        h('span', { className: 'flex-1' }),
+        h('div', { className: 'w-44' }, h(Select, { value: pid, onChange: setPid, className: 'h-7', options: [['', 'Chưa gắn dự án']].concat(projects.map(function (x) { return [x.id, x.name]; })) })),
+        h(Btn, { small: true, on: !!bid, onClick: function () { save(); } }, bid ? 'Đã lưu · lưu lại' : 'Lưu vào Dự án')),
+      h('div', { className: 'text-[11px] text-cham-400' }, N(prompt.length) + ' ký tự' + (Y.claude.ready() ? ' · ' + cfg.model : ' · chưa có Claude API key (Cài đặt → Claude) nên chỉ copy được prompt')),
+      err && h(Note, { error: true }, err),
+      (busy || out) && h(Section, { title: busy ? 'Claude đang viết…' : 'Kết quả từ Claude', right: !busy && out && h('div', { className: 'flex gap-1.5' }, h(Btn, { small: true, onClick: function () { U.copy(out).then(function () { toast('Đã copy'); }); } }, 'Copy'), h(Btn, { small: true, onClick: function () { U.download((p.file || 'ket-qua') + '-claude.md', new Blob([out], { type: 'text/markdown' })); } }, 'Tải .md')) },
+        h('pre', { className: 'whitespace-pre-wrap text-[11.5px] leading-relaxed text-cham-100 font-sans max-h-[65vh] overflow-y-auto' }, out || '…')),
+      h('details', { className: cx(C.card, 'p-3') }, h('summary', { className: 'cursor-pointer text-[11px] text-cham-300' }, 'Xem toàn bộ prompt'), h('pre', { className: 'mt-3 whitespace-pre-wrap text-[11px] text-cham-400 max-h-[50vh] overflow-y-auto' }, prompt)));
+  }
+
   // ---------- Hướng dẫn nhanh: hiện lần đầu, bấm "Đã hiểu" để ẩn, nút "Hướng dẫn" để xem lại ----------
   function Help(p) {
     var key = 'yt4_help_open_' + p.id, s = useState(st.get(key) === '1'), open = s[0], set = s[1];
@@ -212,5 +248,5 @@
       p.terms && h('dl', { className: 'mt-3 pt-3 border-t border-cham-800 grid gap-x-6 gap-y-1.5 md:grid-cols-2' }, p.terms.map(function (t) { return h('div', { key: t[0], className: 'text-[10.5px] text-cham-300' }, h('dt', { className: 'inline text-hoe-300 font-semibold' }, t[0] + ': '), h('dd', { className: 'inline' }, t[1])); })));
   }
 
-  window.YT4UI = { Icon: Icon, Help: Help, VideoList: VideoList, VideoCard: VideoCard, C: C, Btn: Btn, Field: Field, Input: Input, Select: Select, Seg: Seg, Tabs: Tabs, Stat: Stat, Empty: Empty, Note: Note, Busy: Busy, Bar: Bar, Section: Section, Modal: Modal, Table: Table, More: More, Thumb: Thumb, useBus: useBus, useLS: useLS, Toaster: Toaster, toast: toast, Mono: Mono, Missing: Missing, followChannel: followChannel, titlePatterns: titlePatterns, PatternView: PatternView, InsightBox: InsightBox, words: words, STOP: STOP, cx: cx };
+  window.YT4UI = { ClaudeBox: ClaudeBox, Icon: Icon, Help: Help, VideoList: VideoList, VideoCard: VideoCard, C: C, Btn: Btn, Field: Field, Input: Input, Select: Select, Seg: Seg, Tabs: Tabs, Stat: Stat, Empty: Empty, Note: Note, Busy: Busy, Bar: Bar, Section: Section, Modal: Modal, Table: Table, More: More, Thumb: Thumb, useBus: useBus, useLS: useLS, Toaster: Toaster, toast: toast, Mono: Mono, Missing: Missing, followChannel: followChannel, titlePatterns: titlePatterns, PatternView: PatternView, InsightBox: InsightBox, words: words, STOP: STOP, TITLE_FEATS: TITLE_FEATS, cx: cx };
 })();

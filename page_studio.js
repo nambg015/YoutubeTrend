@@ -173,9 +173,11 @@
           h('button', { onClick: function () { if (window.confirm('Xoá phiên này (cả ảnh đã chụp)?')) window.ResourceStore.remove(r.id); }, className: 'ml-auto text-[11px] text-zinc-500 hover:text-rose-300 cursor-pointer' }, 'Xoá'))));
   }
   function Projects(p) {
-    K.useBus('projects'); K.useBus('productions');
+    K.useBus('projects'); K.useBus('productions'); K.useBus('briefs');
     var sessions = useSessions(), projects = store.projects(), links = store.links();
-    var s0 = useState(p.pick || 'all'), pid = s0[0], setPid = s0[1], s1 = useState(null), edit = s1[0], setEdit = s1[1];
+    var s0 = useState(p.pick || 'all'), pid = s0[0], setPid = s0[1], s1 = useState(null), edit = s1[0], setEdit = s1[1], s2 = useState(null), openB = s2[0], setOpenB = s2[1];
+    var KIND = { clone: ['Clone kênh', 'bg-[#3a2a5c] text-[#d4bbff]'], niche: ['Phân tích ngách', 'bg-[#ff4e45]/15 text-[#ff8a83]'], compare: ['So sánh kênh', 'bg-[#3ea6ff]/15 text-[#7cc3ff]'], titles: ['Tiêu đề', 'bg-[#f2b52c]/15 text-[#f5c451]'] };
+    var briefs = store.briefs().filter(function (b) { return pid === 'all' ? true : pid === 'none' ? !b.pid : b.pid === pid; }), curB = openB && store.briefs().find(function (b) { return b.id === openB; });
     if (!sessions) return h(Busy, null, 'Đang mở kho phiên…');
     var cnt = function (id) { return sessions.filter(function (r) { return id === 'all' ? true : id === 'none' ? !links[r.id] : links[r.id] === id; }).length; };
     var list = sessions.filter(function (r) { return pid === 'all' ? true : pid === 'none' ? !links[r.id] : links[r.id] === pid; });
@@ -189,9 +191,16 @@
         cur && h('div', { className: cx(K.C.card, 'p-4 flex flex-wrap items-start gap-3') },
           h('div', { className: 'flex-1 min-w-0' }, h('div', { className: 'text-[12px] text-cham-50 font-medium' }, cur.name), cur.desc && h('div', { className: 'text-[10.5px] text-zinc-400 mt-1 whitespace-pre-line' }, cur.desc), cur.refUrl && h('a', { href: cur.refUrl, target: '_blank', rel: 'noopener noreferrer', className: 'text-[11px] text-sky-300 hover:underline' }, 'Video mẫu')),
           h('div', { className: 'flex gap-2' }, cur.claudeUrl && h('a', { href: cur.claudeUrl, target: '_blank', rel: 'noopener noreferrer', className: K.C.btn }, 'Mở Project claude.ai'), h(Btn, { onClick: function () { setEdit(cur); } }, 'Sửa'))),
+        briefs.length > 0 && h(Section, { title: 'Bản phân tích & prompt gửi Claude', sub: 'Lưu từ Hồ sơ clone kênh, Gửi ngách sang Claude, So sánh kênh và Xưởng tiêu đề' },
+          h('div', { className: 'divide-y divide-cham-800/70' }, briefs.map(function (b) { var k = KIND[b.kind] || ['Bản lưu', 'bg-[#272727] text-cham-200']; var pj = projects.find(function (x) { return x.id === b.pid; });
+            return h('div', { key: b.id, className: 'py-2 flex flex-wrap items-center gap-2.5' }, h('span', { className: 'shrink-0 text-[10.5px] font-medium px-1.5 py-1 rounded-md ' + k[1] }, k[0]),
+              h('button', { onClick: function () { setOpenB(b.id); }, className: 'flex-1 min-w-[200px] text-left text-[12px] text-cham-50 hover:text-[#7cc3ff] truncate cursor-pointer' }, b.title),
+              h('span', { className: 'text-[11px] text-cham-400 tabular-nums' }, (pj ? pj.name + ' · ' : '') + (b.text ? 'đã có kết quả · ' : 'mới có prompt · ') + U.date(b.at)),
+              h(Btn, { small: true, onClick: function () { setOpenB(b.id); } }, 'Mở'), h(Btn, { small: true, onClick: function () { if (window.confirm('Xoá bản này?')) store.removeBrief(b.id); } }, 'Xoá')); }))),
         !list.length ? h(Empty, { title: sessions.length ? 'Chưa có phiên nào trong mục này' : 'Chưa có phiên tìm tài nguyên nào', sub: 'Tạo hồ sơ ở tab "Tìm tài nguyên", rồi bấm "Lưu thẻ phiên" và chọn dự án.' }, h(Btn, { onClick: p.goSearch }, 'Tìm tài nguyên'))
           : h('div', { className: 'grid gap-3 md:grid-cols-2 2xl:grid-cols-3' }, list.map(function (r) { return h(SessionCard, { key: r.id, r: r, projects: projects, produce: p.produce, open: p.open }); }))),
-      edit && h(ProjectModal, { pj: edit, onClose: function () { setEdit(null); } }));
+      edit && h(ProjectModal, { pj: edit, onClose: function () { setEdit(null); } }),
+      curB && h(Modal, { title: curB.title, wide: true, onClose: function () { setOpenB(null); } }, h(K.ClaudeBox, { key: curB.id, brief: curB })));
   }
 
   function Studio(p) {

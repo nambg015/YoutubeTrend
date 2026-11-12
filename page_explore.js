@@ -203,12 +203,15 @@
 
   function Explore(p) {
     var s = useState(p.params && p.params.sub || 'kw'), sub = s[0], setSub = s[1];
-    useEffect(function () { if (p.params && p.params.q) setSub('kw'); }, [p.params]);
+    useEffect(function () { if (p.params && p.params.sub) setSub(p.params.sub); else if (p.params && p.params.q) setSub('kw'); }, [p.params]);
+    var W = window.YT4Workshop;
     return h('div', { className: 'space-y-5' },
-      h('div', null, h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Khám phá'), h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, 'Phân tích một từ khoá từ đầu đến cuối, hoặc để AI đề xuất ngách đang lên.')),
+      h('div', null, h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Khám phá'), h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, 'Phân tích một từ khoá, để AI đề xuất ngách, viết tiêu đề theo khuôn đang thắng và thử thumbnail giữa đối thủ.')),
       h(K.Help, { id: 'explore', title: 'Cách dùng Khám phá', steps: ['Gõ một từ khoá (ví dụ: plane crash), chọn thị trường, khoảng thời gian và định dạng, rồi bấm Phân tích.', 'Xem Điểm cơ hội: từ 65 trở lên là nên làm, 45–64 là cân nhắc, dưới 45 là khó vì kênh lớn chiếm hết.', 'Tab Video: video đang nổ. Bấm Lưu để giữ lại, Theo dõi để đưa kênh vào danh sách đối thủ, Kênh để phân tích kênh đó.', 'Tab Từ khoá: bấm vào cụm bất kỳ để phân tích tiếp. Tab Nhận định AI: AI đọc số liệu và gợi ý ý tưởng video.'], terms: [['View ÷ sub (outlier)', 'video được bao nhiêu lần số người đăng ký của kênh; ×5 trở lên là nổ thật sự'], ['View/giờ', 'tốc độ lên view từ lúc đăng'], ['RPM', 'tiền nhận được cho 1.000 view (ước tính theo nước và chủ đề)'], ['Quota', 'mỗi API key được 10.000 lượt/ngày; 1 lần phân tích nhanh tốn khoảng 100–200']] }),
-      h(Tabs, { value: sub, onChange: setSub, items: [['kw', 'Phân tích từ khoá'], ['ai', 'AI đề xuất ngách']] }),
+      h(Tabs, { value: sub, onChange: setSub, items: [['kw', 'Phân tích từ khoá'], ['ai', 'AI đề xuất ngách'], ['titles', 'Xưởng tiêu đề'], ['thumb', 'Thử thumbnail']] }),
       sub === 'kw' ? h(KeywordLab, { goto: p.goto, preset: p.params && p.params.q, presetKey: p.params && p.params._k })
+        : sub === 'titles' ? (W ? h(W.TitleLab, { goto: p.goto, q: p.params && p.params.q }) : h(K.Missing, { name: 'Xưởng tiêu đề', file: 'page_workshop.js' }))
+        : sub === 'thumb' ? (W ? h(W.ThumbLab, { goto: p.goto }) : h(K.Missing, { name: 'Thử thumbnail', file: 'page_workshop.js' }))
         : (window.TrendToolSectionV2 ? h(K.Mono, null, h(window.TrendToolSectionV2, { apiKey: Y.keys.getActiveKey(), showToast: K.toast })) : h(K.Missing, { name: 'AI đề xuất ngách', file: 'trend_v2_bundle.js' })));
   }
   window.YT4Pages = window.YT4Pages || {};

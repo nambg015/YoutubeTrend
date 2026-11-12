@@ -1,4 +1,4 @@
-// /api/research — tab "Tạo tài nguyên". action: search | structure | news | enrich
+// /api/research — tab "Tạo tài nguyên" + AI dùng chung. action: search | structure | news | enrich | insight | titles
 const auth = require('./_lib/auth');
 const { applyCors } = auth;
 const { consumeDaily } = require('./_lib/store');
@@ -22,12 +22,12 @@ module.exports = async (req, res) => {
   const key = req.headers['x-gemini-key'] || GEMINI_API_KEY;
 
   // Mỗi hồ sơ tính 1 lượt (đếm ở bước search — kể cả khi AI lỗi và chuyển sang chế độ miễn phí)
-  const bucket = action === 'search' ? 'research' : action === 'insight' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' ? 'research_aux' : '';
+  const bucket = action === 'search' ? 'research' : action === 'insight' || action === 'titles' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' ? 'research_aux' : '';
   if (bucket) {
     const limit = bucket === 'research' ? (Number(process.env.RESEARCH_DAILY_LIMIT) || 100) : bucket === 'insight' ? (Number(process.env.INSIGHT_DAILY_LIMIT) || 150) : 300;
     try {
       const q = await consumeDaily(claims.uid || claims.sub, bucket, limit);
-      if (!q.allowed) return res.status(429).json({ success: false, code: 'QUOTA_EXCEEDED', message: 'Bạn đã dùng hết ' + q.limit + ' lượt tạo tài nguyên hôm nay. Quay lại vào ngày mai nhé!' });
+      if (!q.allowed) return res.status(429).json({ success: false, code: 'QUOTA_EXCEEDED', message: 'Bạn đã dùng hết ' + q.limit + ' lượt ' + (bucket === 'insight' ? 'AI phân tích' : 'tạo tài nguyên') + ' hôm nay. Quay lại vào ngày mai nhé!' });
     } catch (e) {
       return res.status(503).json({ success: false, code: 'QUOTA_UNAVAILABLE', message: 'Hệ thống đếm hạn mức đang lỗi, thử lại sau.' });
     }
@@ -45,6 +45,11 @@ module.exports = async (req, res) => {
     }
     if (action === 'insight') {
       return res.json({ success: true, insight: await R.doInsight(key, body.kind === 'channel' ? 'channel' : 'keyword', body.data || {}) });
+    }
+    if (action === 'titles') {
+      const d = body.data || {};
+      if (String(d.topic || '').trim().length < 4) return res.status(400).json({ success: false, message: 'Mô tả video quá ngắn.' });
+      return res.json({ success: true, ...(await R.doTitles(key, d)) });
     }
     if (action === 'news') {
       const qs = (Array.isArray(body.queries) ? body.queries : [prompt]).map(String).filter(Boolean);

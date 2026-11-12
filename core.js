@@ -249,6 +249,21 @@
   store.saveProduction = function (pr) { var a = store.productions().filter(function (x) { return x.id !== pr.id; }); a.unshift(pr); while (a.length > 40) a.pop(); try { st.put('yt4_productions', a); } catch (e) { st.put('yt4_productions', a.slice(0, 15)); } emit('productions'); };
   store.removeProduction = function (id) { st.put('yt4_productions', store.productions().filter(function (x) { return x.id !== id; })); emit('productions'); };
 
+  // ---------- Bản phân tích / prompt gửi Claude (clone kênh, phân tích ngách, tiêu đề…) ----------
+  store.briefs = function () { var a = st.json('yt4_briefs', []); return Array.isArray(a) ? a : []; };
+  store.saveBrief = function (b) {
+    b = Object.assign({ id: 'br_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: Date.now() }, b);
+    b.prompt = String(b.prompt || '').slice(0, 60000); b.text = String(b.text || '').slice(0, 80000);
+    var a = [b].concat(store.briefs().filter(function (x) { return x.id !== b.id; })).slice(0, 30);
+    try { localStorage.setItem('yt4_briefs', JSON.stringify(a)); } catch (e) { try { localStorage.setItem('yt4_briefs', JSON.stringify(a.slice(0, 8))); } catch (e2) { st.put('yt4_briefs', a.slice(0, 8)); } }
+    emit('briefs'); return b;
+  };
+  store.removeBrief = function (id) { st.put('yt4_briefs', store.briefs().filter(function (x) { return x.id !== id; })); emit('briefs'); };
+  // Giỏ so sánh kênh (tối đa 4)
+  store.compare = function () { var a = st.json('yt4_compare', []); return Array.isArray(a) ? a : []; };
+  store.addCompare = function (c) { var a = store.compare(); if (!c || !c.id || a.some(function (x) { return x.id === c.id; })) return false; a.push({ id: c.id, title: c.title || c.id }); while (a.length > 4) a.shift(); st.put('yt4_compare', a); emit('compare'); return true; };
+  store.removeCompare = function (id) { st.put('yt4_compare', store.compare().filter(function (x) { return x.id !== id; })); emit('compare'); };
+
   // ---------- Claude API (gọi thẳng từ trình duyệt, key lưu trên máy này) ----------
   var CLAUDE_MODELS = [['claude-sonnet-5-5', 'Claude Sonnet 5.5 (cân bằng, khuyên dùng)'], ['claude-opus-5-5', 'Claude Opus 5.5 (mạnh nhất, đắt hơn)'], ['claude-haiku-5-5', 'Claude Haiku 5.5 (nhanh, rẻ)'], ['claude-fable-5-1', 'Claude Fable 5.1']];
   var claude = {

@@ -150,7 +150,7 @@
   function DataPanel() {
     var inp = React.useRef(null);
     function backup() {
-      var data = { app: 'youtrend', v: 4, at: new Date().toISOString(), keys: Y.keys.getPool(), saved: store.saved(), channels: store.channels(), ideas: store.ideas(), explore: st.json('yt4_explore_hist', []), channelHist: st.json('yt4_channel_hist', []) };
+      var data = { app: 'youtrend', v: 4, at: new Date().toISOString(), keys: Y.keys.getPool(), saved: store.saved(), channels: store.channels(), ideas: store.ideas(), explore: st.json('yt4_explore_hist', []), channelHist: st.json('yt4_channel_hist', []), projects: store.projects(), briefs: store.briefs(), compare: store.compare(), nicheMarks: st.json('tn3_marks', {}), nichePresets: st.json('tn3_presets', []) };
       U.download('youtrend-sao-luu-' + new Date().toISOString().slice(0, 10) + '.json', new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
     }
     function restore(e) {
@@ -162,6 +162,10 @@
           var saved = d.saved || d.savedVideos; if (Array.isArray(saved)) { var cur = store.saved(), ids = {}; cur.forEach(function (v) { ids[v.id] = 1; }); st.put('yt_saved_cashcow_videos', cur.concat(saved.filter(function (v) { return v && v.id && !ids[v.id]; }))); }
           var ch = d.channels || d.competitors; if (Array.isArray(ch)) ch.forEach(function (c) { if (c && /^UC/.test(c.id || '')) store.addChannel(c); });
           if (Array.isArray(d.ideas)) { var ci = store.ideas(), ii = {}; ci.forEach(function (x) { ii[x.id] = 1; }); store.saveIdeas(ci.concat(d.ideas.filter(function (x) { return x && !ii[x.id]; }))); }
+          if (Array.isArray(d.projects)) { var cp = store.projects(), pi = {}; cp.forEach(function (x) { pi[x.id] = 1; }); st.put('yt4_projects', cp.concat(d.projects.filter(function (x) { return x && x.id && !pi[x.id]; }))); Y.emit('projects'); }
+          if (Array.isArray(d.briefs)) { var cb = store.briefs(), bi = {}; cb.forEach(function (x) { bi[x.id] = 1; }); st.put('yt4_briefs', cb.concat(d.briefs.filter(function (x) { return x && x.id && !bi[x.id]; })).slice(0, 30)); Y.emit('briefs'); }
+          if (d.nicheMarks && typeof d.nicheMarks === 'object') st.put('tn3_marks', Object.assign({}, d.nicheMarks, st.json('tn3_marks', {})));
+          if (Array.isArray(d.nichePresets)) { var pp = st.json('tn3_presets', []) || [], pn = {}; pp.forEach(function (x) { pn[x[0]] = 1; }); st.put('tn3_presets', pp.concat(d.nichePresets.filter(function (x) { return Array.isArray(x) && !pn[x[0]]; })).slice(0, 12)); }
           Y.emit('saved'); K.toast('Đã khôi phục (gộp với dữ liệu hiện có). Thêm ' + n + ' key mới.');
         } catch (err) { K.toast('File sao lưu không hợp lệ'); }
         e.target.value = '';

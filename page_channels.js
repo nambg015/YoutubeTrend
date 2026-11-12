@@ -47,25 +47,47 @@
     };
   }
 
+  // Cập nhật video mới của mọi kênh đang theo dõi (dùng chung cho tab Theo dõi và trang Hôm nay). ≈2 quota/kênh.
+  async function refreshFeed(say) {
+    var chans = store.channels(); say = say || function () { };
+    if (!chans.length) return st.json('yt4_feed', { at: 0, items: [] });
+    say('Cập nhật số liệu ' + chans.length + ' kênh…');
+    var stats = await Y.channelStats(chans.map(function (c) { return c.id; }));
+    var items = [], done = 0;
+    for (var g = 0, gs = U.chunk(chans, 6); g < gs.length; g++) {
+      await Promise.all(gs[g].map(async function (c) {
+        try {
+          var vids = await Y.uploads(c.id, 20), now = Date.now();
+          var ripe = vids.filter(function (v) { return now - v.t > 2 * 864e5; }), med = U.median((ripe.length >= 3 ? ripe : vids).map(function (v) { return v.views; }));
+          var s = stats[c.id] || {};
+          store.updateChannel(c.id, { title: s.title || c.title, subs: s.subs != null ? s.subs : c.subs, prevSubs: c.subs, prevAt: c.checkedAt || 0, videoCount: s.videos || c.videoCount, viewCount: s.views || c.viewCount, avatar: s.avatar || c.avatar, med: med, lastUpload: vids[0] ? vids[0].t : 0, checkedAt: now });
+          vids.filter(function (v) { return now - v.t <= 45 * 864e5; }).forEach(function (v) { items.push({ id: v.id, title: v.title, channel: s.title || c.title, channelId: c.id, subs: s.subs, t: v.t, views: v.views, dur: v.dur, rel: med ? v.views / med : null }); });
+        } catch (e) { if (e && e.code === 'quotaExceeded') throw e; }
+        done++; say('Cập nhật ' + done + '/' + chans.length + ' kênh…');
+      }));
+    }
+    var f = { at: Date.now(), items: items.sort(function (a, b) { return b.t - a.t; }) }; st.put('yt4_feed', f); Y.emit('feed'); return f;
+  }
+
   function ChannelLab(p) {
     var s0 = useState(''), q = s0[0], setQ = s0[1], s1 = useState(null), R = s1[0], setR = s1[1], s2 = useState(''), busy = s2[0], setBusy = s2[1], s3 = useState(''), err = s3[0], setErr = s3[1];
     var s4 = useState('vid'), tab = s4[0], setTab = s4[1], s5 = useState(100), n = s5[0], setN = s5[1], s6 = useState('all'), fmt = s6[0], setFmt = s6[1], s7 = useState(40), lim = s7[0], setLim = s7[1];
     var s8 = useState(st.json('yt4_channel_hist', [])), hist = s8[0], setHist = s8[1];
     K.useBus('saved'); K.useBus('channels');
-    async function run(raw) {
+    async function run(raw, tabAfter) {
       raw = String(raw != null ? raw : q).trim(); if (!raw) { setErr('Nhập link kênh, @handle, ID kênh hoặc link một video của kênh'); return; }
       setErr(''); setLim(40);
-      try { var r = await analyzeChannel(raw, n, setBusy); setR(r); setTab('vid'); var hh = [{ id: r.id, title: r.title, subs: r.subs, at: r.at }].concat(hist.filter(function (x) { return x.id !== r.id; })).slice(0, 16); setHist(hh); st.put('yt4_channel_hist', hh); if (store.hasChannel(r.id)) store.updateChannel(r.id, { subs: r.subs, videoCount: r.videoCount, viewCount: r.views, med: r.long ? r.long.med : r.short ? r.short.med : 0 }); }
+      try { var r = await analyzeChannel(raw, n, setBusy); setR(r); setTab(tabAfter || 'vid'); var hh = [{ id: r.id, title: r.title, subs: r.subs, at: r.at }].concat(hist.filter(function (x) { return x.id !== r.id; })).slice(0, 16); setHist(hh); st.put('yt4_channel_hist', hh); if (store.hasChannel(r.id)) store.updateChannel(r.id, { subs: r.subs, videoCount: r.videoCount, viewCount: r.views, med: r.long ? r.long.med : r.short ? r.short.med : 0 }); }
       catch (e) { setErr(U.errMsg(e)); }
       setBusy('');
     }
-    useEffect(function () { if (p.target) { setQ(p.target); run(p.target); } }, [p.targetKey]);
+    useEffect(function () { if (p.target) { setQ(p.target); run(p.target, p.tab); } }, [p.targetKey]);
 
     var form = h('div', { className: cx(K.C.card, 'p-4 space-y-3') },
       h('div', { className: 'flex flex-col md:flex-row gap-2' },
-        h(Input, { value: q, onChange: function (e) { setQ(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Enter') run(); }, placeholder: 'Link kênh, @handle, ID kênh hoặc link một video của kênh', className: 'md:flex-1 h-10 text-[11px]' }),
+        h(Input, { value: q, onChange: function (e) { setQ(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Enter') run(null, tab === 'clone' ? 'clone' : 'vid'); }, placeholder: 'Link kênh, @handle, ID kênh hoặc link một video của kênh', className: 'md:flex-1 h-10 text-[11px]' }),
         h('div', { className: 'w-40' }, h(Select, { value: n, onChange: function (v) { setN(+v); }, className: 'h-10', options: [[50, '50 video gần nhất'], [100, '100 video gần nhất'], [200, '200 video gần nhất']] })),
-        h(Btn, { primary: true, onClick: function () { run(); }, disabled: !!busy, className: 'h-10 px-6' }, busy ? 'Đang phân tích…' : 'Phân tích kênh')),
+        h(Btn, { primary: true, onClick: function () { run(null, tab === 'clone' ? 'clone' : 'vid'); }, disabled: !!busy, className: 'h-10 px-6' }, busy ? 'Đang phân tích…' : 'Phân tích kênh')),
       busy && h(Busy, null, busy), err && h(Note, { error: true }, err),
       !R && hist.length > 0 && h('div', { className: 'flex flex-wrap gap-1.5 pt-1' }, hist.map(function (x) { return h('button', { key: x.id, onClick: function () { setQ(x.id); run(x.id); }, className: 'h-8 px-3 rounded-md border border-zinc-800 text-[10.5px] text-zinc-300 hover:border-zinc-500 cursor-pointer' }, x.title, h('span', { className: 'ml-2 text-zinc-500' }, x.subs == null ? '' : N(x.subs))); })));
     if (!R) return h('div', { className: 'space-y-5' }, form, !busy && h(Empty, { title: 'Phân tích một kênh bất kỳ', sub: 'So từng video với trung vị của chính kênh để thấy video nào thật sự vượt trội, kênh có farm view đều không, đăng giờ nào, tần suất, đà tăng, doanh thu ước tính và khuôn tiêu đề của video thắng.' }));
@@ -82,6 +104,8 @@
           R.desc && h('div', { className: 'text-[10.5px] text-zinc-400 mt-1 line-clamp-2 max-w-3xl' }, R.desc)),
         h('div', { className: 'flex gap-2' },
           h(Btn, { onClick: function () { if (followed) { store.removeChannel(R.id); K.toast('Đã bỏ theo dõi'); } else { store.addChannel({ id: R.id, title: R.title, subs: R.subs || 0, videoCount: R.videoCount, viewCount: R.views, avatar: R.avatar, country: R.country, med: F ? F.med : 0 }); K.toast('Đã theo dõi ' + R.title); } } }, followed ? 'Đang theo dõi' : 'Theo dõi'),
+          h(Btn, { onClick: function () { setTab('clone'); }, className: '!bg-[#3a2a5c] !text-[#d4bbff] hover:!bg-[#4a3673]' }, 'Hồ sơ clone'),
+          h(Btn, { onClick: function () { var ok = store.addCompare({ id: R.id, title: R.title }); K.toast(ok ? 'Đã thêm vào so sánh (' + store.compare().length + '/4). Mở tab So sánh.' : 'Kênh đã có trong danh sách so sánh'); } }, 'So sánh'),
           h(Btn, { onClick: function () { p.goto('explore', { q: (R.vids.slice().sort(function (a, b) { return (b.rel || 0) - (a.rel || 0); })[0] || {}).title || R.title }); } }, 'Tìm ngách tương tự'),
           h(Btn, { onClick: function () { setR(null); } }, 'Kênh khác'))),
       h('div', { className: 'grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4' },
@@ -117,6 +141,7 @@
         sorts: [['t', 'Mới nhất', function (v) { return v.t; }], ['rel', 'Vượt trung vị kênh', function (v) { return v.rel || 0; }], ['views', 'View cao nhất', function (v) { return v.views; }], ['vph', 'View/giờ', function (v) { return v.vph; }]],
         left: h(Seg, { value: fmt, onChange: setFmt, options: [['all', 'Tất cả'], ['long', 'Video dài'], ['short', 'Shorts']] }),
         tools: h(Btn, { small: true, onClick: function () { U.csv('kenh-' + R.title, [['Tiêu đề', 'Link', 'View', 'So với trung vị', 'View÷sub', 'View/giờ', 'Tương tác %', 'Thời lượng', 'Ngày đăng']].concat(list.map(function (v) { return [v.title, U.vurl(v.id), v.views, v.rel ? v.rel.toFixed(2) : '', v.out ? v.out.toFixed(2) : '', Math.round(v.vph), (v.eng * 100).toFixed(2), U.dur(v.dur), U.date(v.t)]; }))); } }, 'Xuất CSV') }));
+    else if (tab === 'clone') body = window.YT4Clone ? h(window.YT4Clone.ClonePanel, { R: R, goto: p.goto }) : h(K.Missing, { name: 'Hồ sơ clone', file: 'page_clone.js' });
     else if (tab === 'title') body = h(K.PatternView, { data: K.titlePatterns(R.vids.filter(function (v) { return v.rel != null && Date.now() - v.t > 2 * 864e5; }), function (v) { return v.rel; }), metric: 'mức vượt trung vị kênh' });
     else if (tab === 'time') {
       var max = Math.max.apply(null, WD.map(function (d) { return R.weekdays[d] || 0; }).concat([1]));
@@ -129,7 +154,7 @@
       kind: 'channel', topic: R.title, onKeyword: function (k) { p.goto('explore', { q: k }); },
       data: function () { return { channel: R.title, subs: R.subs, total_views: R.views, videos: R.videoCount, country: R.country, age_days: ageD, category: CATN[R.topCat] || '', verdict: fm.v, farm_score: fm.score, long: R.long && { n: R.long.n, median_views: R.long.med, per_week: +R.long.perWeek.toFixed(1), avg_minutes: Math.round(R.long.avgDur / 60), momentum: R.long.mom && +R.long.mom.toFixed(2) }, shorts: R.short && { n: R.short.n, median_views: R.short.med, per_week: +R.short.perWeek.toFixed(1), momentum: R.short.mom && +R.short.mom.toFixed(2) }, best_slots_vn: R.slots, videos_sample: R.vids.slice().sort(function (a, b) { return b.t - a.t; }).slice(0, 60).map(function (v) { return { title: v.title, views: v.views, vs_channel_median: v.rel ? +v.rel.toFixed(2) : null, minutes: Math.round(v.dur / 60), days_old: Math.round(v.hrs / 24) }; }) }; }
     });
-    return h('div', { className: 'space-y-5' }, form, head, h(Tabs, { value: tab, onChange: setTab, items: [['vid', 'Video', list.length], ['title', 'Khuôn tiêu đề'], ['time', 'Lịch đăng'], ['ai', 'Nhận định AI']] }), body);
+    return h('div', { className: 'space-y-5' }, form, head, h(Tabs, { value: tab, onChange: setTab, items: [['vid', 'Video', list.length], ['clone', 'Hồ sơ clone'], ['title', 'Khuôn tiêu đề'], ['time', 'Lịch đăng'], ['ai', 'Nhận định AI']] }), body);
   }
 
   // ---------- THEO DÕI ----------
@@ -144,27 +169,11 @@
       catch (e) { setErr(U.errMsg(e)); }
       setBusy('');
     }
+    useEffect(function () { return Y.on('feed', function () { setFeed(st.json('yt4_feed', { at: 0, items: [] })); }); }, []);
     async function refresh() {
       if (!chans.length) return; setErr('');
-      try {
-        setBusy('Cập nhật số liệu ' + chans.length + ' kênh…');
-        var stats = await Y.channelStats(chans.map(function (c) { return c.id; }));
-        var items = [], done = 0;
-        for (var g = 0, gs = U.chunk(chans, 6); g < gs.length; g++) {
-          await Promise.all(gs[g].map(async function (c) {
-            try {
-              var vids = await Y.uploads(c.id, 20), now = Date.now();
-              var ripe = vids.filter(function (v) { return now - v.t > 2 * 864e5; }), med = U.median((ripe.length >= 3 ? ripe : vids).map(function (v) { return v.views; }));
-              var s = stats[c.id] || {};
-              store.updateChannel(c.id, { title: s.title || c.title, subs: s.subs != null ? s.subs : c.subs, prevSubs: c.subs, prevAt: c.checkedAt || 0, videoCount: s.videos || c.videoCount, viewCount: s.views || c.viewCount, avatar: s.avatar || c.avatar, med: med, lastUpload: vids[0] ? vids[0].t : 0, checkedAt: now });
-              vids.filter(function (v) { return now - v.t <= 45 * 864e5; }).forEach(function (v) { items.push({ id: v.id, title: v.title, channel: s.title || c.title, channelId: c.id, subs: s.subs, t: v.t, views: v.views, dur: v.dur, rel: med ? v.views / med : null }); });
-            } catch (e) { if (e && e.code === 'quotaExceeded') throw e; }
-            done++; setBusy('Cập nhật ' + done + '/' + chans.length + ' kênh…');
-          }));
-        }
-        var f = { at: Date.now(), items: items.sort(function (a, b) { return b.t - a.t; }) }; setFeed(f); st.put('yt4_feed', f);
-        K.toast('Đã cập nhật ' + chans.length + ' kênh, ' + items.length + ' video trong 45 ngày');
-      } catch (e) { setErr(U.errMsg(e)); }
+      try { var f = await refreshFeed(setBusy); setFeed(f); K.toast('Đã cập nhật ' + chans.length + ' kênh, ' + f.items.length + ' video trong 45 ngày'); }
+      catch (e) { setErr(U.errMsg(e)); }
       setBusy('');
     }
     var items = feed.items.filter(function (v) { return Date.now() - v.t <= days * 864e5 && (!onlyHot || (v.rel || 0) >= 2) && chans.some(function (c) { return c.id === v.channelId; }); });
@@ -205,20 +214,22 @@
 
   function Channels(p) {
     var s = useState((p.params && p.params.analyze) ? 'lab' : (p.params && p.params.sub) || 'track'), sub = s[0], setSub = s[1];
-    var s1 = useState({ target: p.params && p.params.analyze, key: p.params && p.params._k }), tg = s1[0], setTg = s1[1];
-    useEffect(function () { if (p.params && p.params.analyze) { setSub('lab'); setTg({ target: p.params.analyze, key: p.params._k }); } }, [p.params && p.params._k]);
+    var s1 = useState({ target: p.params && p.params.analyze, key: p.params && p.params._k, tab: p.params && p.params.tab }), tg = s1[0], setTg = s1[1];
+    K.useBus('compare');
+    useEffect(function () { if (p.params && p.params.analyze) { setSub('lab'); setTg({ target: p.params.analyze, key: p.params._k, tab: p.params.tab }); } else if (p.params && p.params.sub) setSub(p.params.sub); }, [p.params && p.params._k]);
     function analyze(id) { setSub('lab'); setTg({ target: id, key: Date.now() }); }
     var key = Y.keys.getActiveKey();
     return h('div', { className: 'space-y-5' },
-      h('div', null, h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Kênh'), h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, 'Theo dõi đối thủ, phân tích sâu một kênh, truy vết kênh ẩn danh từ ảnh Studio và soi số liệu một video.')),
+      h('div', null, h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Kênh'), h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, 'Theo dõi đối thủ, phân tích và bóc hồ sơ clone một kênh, so sánh nhiều kênh, truy vết kênh ẩn danh và soi số liệu một video.')),
       h(K.Help, { id: 'channels', title: 'Cách dùng mục Kênh', steps: ['Theo dõi: dán link kênh hoặc @handle để thêm đối thủ, bấm Cập nhật tất cả để xem video mới nhất của họ.', 'Video có nhãn ×2 trở lên là đang vượt mức trung bình của chính kênh đó: đây là chủ đề đáng làm theo.', 'Phân tích kênh: dán link một kênh bất kỳ để xem kênh có ra view đều không, đăng giờ nào, tiêu đề kiểu gì thì thắng.', 'Truy vết kênh ẩn: tải ảnh chụp YouTube Studio của người khác để đoán ra kênh. Soi video: xem số liệu chi tiết một video.'], terms: [['So với trung vị kênh', 'view của video chia cho view thường gặp của kênh; ×1 là bình thường'], ['Đà tăng', '10 video mới nhất so với 10 video trước đó; lớn hơn 1 là kênh đang lên']] }),
-      h(Tabs, { value: sub, onChange: setSub, items: [['track', 'Theo dõi', store.channels().length], ['lab', 'Phân tích kênh'], ['spy', 'Truy vết kênh ẩn'], ['studio', 'Soi video']] }),
+      h(Tabs, { value: sub, onChange: setSub, items: [['track', 'Theo dõi', store.channels().length], ['lab', 'Phân tích & clone kênh'], ['compare', 'So sánh', store.compare().length || null], ['spy', 'Truy vết kênh ẩn'], ['studio', 'Soi video']] }),
       sub === 'track' ? h(Tracking, { analyze: analyze, goto: p.goto })
-        : sub === 'lab' ? h(ChannelLab, { goto: p.goto, target: tg.target, targetKey: tg.key })
+        : sub === 'lab' ? h(ChannelLab, { goto: p.goto, target: tg.target, targetKey: tg.key, tab: tg.tab })
+          : sub === 'compare' ? (window.YT4Clone ? h(window.YT4Clone.Compare, { goto: p.goto, analyze: analyze }) : h(K.Missing, { name: 'So sánh kênh', file: 'page_clone.js' }))
           : sub === 'spy' ? (window.SpyToolSectionV3 ? h(K.Mono, null, h(window.SpyToolSectionV3, { apiKey: key, isUltraPro: true, onUpgradePrompt: function () { }, showToast: K.toast, onAddCompetitor: async function (title) { try { var c = await Y.resolveChannel(title); K.followChannel(c.id, c.snippet.title); } catch (e) { K.toast(U.errMsg(e)); } } })) : h(K.Missing, { name: 'Truy vết kênh', file: 'spy_v3_bundle.js' }))
             : (window.StudioChartSection ? h(K.Mono, null, h(window.StudioChartSection, { apiKey: key, showToast: K.toast })) : h(K.Missing, { name: 'Soi video', file: 'studio_chart_bundle.js' })));
   }
   window.YT4Pages = window.YT4Pages || {};
   window.YT4Pages.channels = Channels;
-  window.YT4Channels = { analyzeChannel: analyzeChannel };
+  window.YT4Channels = { analyzeChannel: analyzeChannel, refreshFeed: refreshFeed };
 })();

@@ -281,4 +281,38 @@ async function doInsight(key, kind, data) {
   return parseJson(r.text);
 }
 
-module.exports = { level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+// Xưởng tiêu đề: sinh tiêu đề theo khuôn của các video đang thắng (chỉ dựa trên dữ liệu gửi lên)
+function titlesPrompt(d) {
+  const n = Math.max(5, Math.min(30, Number(d.n) || 12));
+  const refs = (Array.isArray(d.refs) ? d.refs : []).slice(0, 40).map((r, i) => `${i + 1}. ${String(r.title || '').slice(0, 140)} (${r.views || '?'} view, x${r.x || '?'})`).join('\n');
+  const pt = d.patterns || {};
+  const feats = (Array.isArray(pt.features) ? pt.features : []).slice(0, 10).map(f => `- ${f.name}: nhóm thắng ${f.win}%, còn lại ${f.rest}%`).join('\n');
+  return `Bạn là chuyên gia đặt tiêu đề YouTube. Nhiệm vụ: viết ${n} tiêu đề cho video của tôi, bám theo khuôn của các video ĐANG THẮNG trong ngách (danh sách bên dưới, xếp theo mức view vượt số sub).
+
+VIDEO CỦA TÔI: ${String(d.topic || '').slice(0, 800)}
+NGÔN NGỮ TIÊU ĐỀ: ${String(d.lang || 'English').slice(0, 40)}
+${d.note ? 'GHI CHÚ: ' + String(d.note).slice(0, 300) : ''}
+
+KHUÔN ĐO ĐƯỢC TỪ VIDEO THẮNG:
+- Độ dài trung vị tiêu đề thắng: ${pt.len || '?'} ký tự
+${feats}
+- Cách mở đầu hay gặp: ${(pt.openers || []).slice(0, 8).join(' | ') || 'không rõ'}
+- Từ lặp lại: ${(pt.hooks || []).slice(0, 18).join(', ') || 'không rõ'}
+
+TIÊU ĐỀ VIDEO THẮNG ĐỂ THAM KHẢO:
+${refs}
+
+YÊU CẦU:
+- Mỗi tiêu đề dùng một khuôn/góc khác nhau, độ dài gần mức trung vị, đúng ngôn ngữ yêu cầu, tự nhiên như người bản xứ viết.
+- Không chép nguyên tiêu đề tham khảo. Không bịa số liệu hay sự kiện không có trong mô tả video của tôi; nếu cần con số thì dùng dạng chung (ví dụ số thứ tự, "3 lý do").
+- Không giật tít sai sự thật.
+
+Trả về JSON đúng dạng: {"titles":[{"title":"...","formula":"khuôn đã dùng, viết tiếng Việt ngắn gọn","why":"vì sao người xem bấm, tiếng Việt, 1 câu"}],"thumbnail_texts":["chữ trên thumbnail tối đa 4 từ, đúng ngôn ngữ tiêu đề", "..."]}. thumbnail_texts gồm 5 phương án.`;
+}
+async function doTitles(key, data) {
+  const r = await gemini(key, { contents: [{ parts: [{ text: titlesPrompt(data || {}) }] }], generationConfig: { temperature: 0.9, responseMimeType: 'application/json' } }, 40000);
+  const j = parseJson(r.text) || {};
+  return { titles: (Array.isArray(j.titles) ? j.titles : []).filter(t => t && t.title).slice(0, 30).map(t => ({ title: String(t.title).trim(), formula: String(t.formula || '').trim(), why: String(t.why || '').trim() })), thumbs: (Array.isArray(j.thumbnail_texts) ? j.thumbnail_texts : []).map(String).slice(0, 8) };
+}
+
+module.exports = { doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };

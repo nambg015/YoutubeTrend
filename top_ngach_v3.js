@@ -105,11 +105,11 @@
   function mergeStore(a, b) {
     var o = emptyStore(); a = a || emptyStore(); b = b || emptyStore();
     [a, b].forEach(function (s) {
-      Object.keys(s.videos || {}).forEach(function (id) { var x = s.videos[id], y = o.videos[id]; if (!y || (x.vw || 0) >= (y.vw || 0)) o.videos[id] = x; });
+      Object.keys(s.videos || {}).forEach(function (id) { var x = s.videos[id], y = o.videos[id]; if (!y) { o.videos[id] = x; return; } var w = (x.vw || 0) >= (y.vw || 0) ? x : y, fs = x.fs && y.fs ? Math.min(x.fs, y.fs) : undefined; if (w.fs !== fs) { w = Object.assign({}, w); if (fs) w.fs = fs; else delete w.fs; } o.videos[id] = w; });
       Object.keys(s.channels || {}).forEach(function (id) {
         var x = s.channels[id], y = o.channels[id];
         if (!y) o.channels[id] = x;
-        else { var n = Object.assign({}, y, x); if ((y.at || 0) > (x.at || 0)) { n.u = y.u; n.at = y.at; } n.seen = Math.max(x.seen || 0, y.seen || 0); o.channels[id] = n; }
+        else { var n = Object.assign({}, y, x); if ((y.at || 0) > (x.at || 0)) { n.u = y.u; n.at = y.at; } n.seen = Math.max(x.seen || 0, y.seen || 0); if (x.fs && y.fs) n.fs = Math.min(x.fs, y.fs); else delete n.fs; o.channels[id] = n; }
       });
       Object.assign(o.log, s.log || {}); Object.keys(s.snow || {}).forEach(function (k) { o.snow[k] = s.snow[k]; });
       o.at = Math.max(o.at, s.at || 0); o.q = Math.max(o.q, s.q || 0);
@@ -167,11 +167,18 @@
   }
 
   // ---------- Dựng toàn bộ dữ liệu hiển thị từ kho + bộ lọc ----------
-  // f: {mode:'rpm'|'all', country, maxSub, fmt:'long'|'short', hours, minView, minOut, text, vSort, cSort, verdict, perCh, niche}
+  // f: {mode:'rpm'|'all', country, maxSub, fmt:'long'|'short', hours, minView, minOut, text, vSort, cSort, verdict, perCh, niche,
+  //     maxAge (ngày tuổi kênh tối đa), cat (videoCategoryId), minDur (giây), newHours (cửa sổ nhãn Mới), chanFilter(c)→bool}
   function build(store, f, now) {
     now = now || Date.now(); var short = f.fmt === 'short', text = String(f.text || '').toLowerCase().trim();
     var CH = store.channels, A = {};
-    Object.keys(CH).forEach(function (id) { var c = CH[id]; if (c.s == null || c.s > f.maxSub || !inMarket(c.mk, f)) return; A[id] = analyze(c, now, short); });
+    var newMs = (f.newHours || 24) * HOUR;
+    Object.keys(CH).forEach(function (id) {
+      var c = CH[id]; if (c.s == null || c.s > f.maxSub || !inMarket(c.mk, f)) return;
+      if (f.maxAge && (!c.cr || now - c.cr > f.maxAge * DAY)) return;
+      if (f.cat && c.cat !== f.cat) return;
+      A[id] = analyze(c, now, short);
+    });
     // so với ngách: outlier trung vị của kênh ÷ outlier trung vị của các kênh cùng ngách
     var byN = {}; Object.keys(A).forEach(function (id) { var a = A[id]; if (a.n) (byN[CH[id].nc] = byN[CH[id].nc] || []).push(a.medOut); });
     var nMed = {}; Object.keys(byN).forEach(function (k) { nMed[k] = median(byN[k]); });
@@ -182,9 +189,10 @@
       var isS = v.du <= SHORT_MAX; if (short !== isS) return;
       var hrs = Math.max(1, (now - v.t) / HOUR); if (hrs > f.hours) return;
       var out = v.vw / Math.max(c.s, 1); if (v.vw < f.minView || out < f.minOut) return;
+      if (f.minDur && v.du < f.minDur) return;
       if (f.niche && c.nc !== f.niche) return;
       if (text && (v.ti + ' ' + c.n + ' ' + c.nc).toLowerCase().indexOf(text) < 0) return;
-      vids.push({ id: id, title: v.ti, t: v.t, views: v.vw, dur: v.du, cat: v.cat || c.cat, ch: v.ch, chName: c.n, subs: c.s, mk: c.mk, niche: c.nc, hrs: hrs, vph: Math.round(v.vw / hrs), out: out, a: A[v.ch] });
+      vids.push({ id: id, title: v.ti, t: v.t, views: v.vw, dur: v.du, cat: v.cat || c.cat, ch: v.ch, chName: c.n, subs: c.s, mk: c.mk, niche: c.nc, hrs: hrs, vph: Math.round(v.vw / hrs), out: out, a: A[v.ch], isNew: !!(v.fs && now - v.fs <= newMs) });
     });
     var vByCh = {}; vids.forEach(function (v) { (vByCh[v.ch] = vByCh[v.ch] || []).push(v); });
     Object.keys(vByCh).forEach(function (k) { vByCh[k].sort(function (a, b) { return b.views - a.views; }); });
@@ -196,15 +204,15 @@
       if (f.niche && c.nc !== f.niche) return;
       if (text && !vv.length && (c.n + ' ' + c.nc).toLowerCase().indexOf(text) < 0) return;
       var best = vv[0] || null, bestOut = best ? best.out : (a.max || 0) / Math.max(c.s, 1);
-      chans.push({ id: id, name: c.n, subs: c.s, mk: c.mk, niche: c.nc, cat: c.cat, cr: c.cr, a: a, vids: vv, best: best, bestOut: bestOut, peer: a.n && nMed[c.nc] ? a.medOut / Math.max(nMed[c.nc], 0.01) : null });
+      chans.push({ id: id, name: c.n, subs: c.s, mk: c.mk, niche: c.nc, cat: c.cat, cr: c.cr, country: c.c || '', vc: c.vc || 0, fs: c.fs || 0, isNew: !!(c.fs && now - c.fs <= newMs), a: a, vids: vv, best: best, bestOut: bestOut, peer: a.n && nMed[c.nc] ? a.medOut / Math.max(nMed[c.nc], 0.01) : null });
     });
-    var stats = { channels: chans.length, farm: 0, rise: 0, unk: 0, fluke: 0, videos: vids.length, markets: new Set(chans.map(function (c) { return c.mk; })).size };
+    var stats = { channels: chans.length, farm: 0, rise: 0, unk: 0, fluke: 0, fresh: chans.filter(function (c) { return c.isNew; }).length, videos: vids.length, markets: new Set(chans.map(function (c) { return c.mk; })).size };
     chans.forEach(function (c) { if (stats[c.a.v] != null) stats[c.a.v]++; });
     // ngách đề xuất
     var NG = {};
     chans.forEach(function (c) {
-      var g = NG[c.niche] = NG[c.niche] || { name: c.niche, chans: [], farm: 0, rise: 0, outs: [], v30: 0, mks: {}, cats: {}, rpm: [] };
-      g.chans.push(c); if (c.a.v === 'farm') g.farm++; if (c.a.v === 'rise') g.rise++;
+      var g = NG[c.niche] = NG[c.niche] || { name: c.niche, chans: [], farm: 0, rise: 0, fresh: 0, outs: [], v30: 0, mks: {}, cats: {}, rpm: [] };
+      g.chans.push(c); if (c.isNew) g.fresh++; if (c.a.v === 'farm') g.farm++; if (c.a.v === 'rise') g.rise++;
       if (c.a.n) g.outs.push(c.a.medOut); else g.outs.push(c.bestOut / 3);
       g.v30 += c.a.v30 || 0; g.mks[c.mk] = (g.mks[c.mk] || 0) + 1; if (c.cat) g.cats[c.cat] = (g.cats[c.cat] || 0) + 1; g.rpm.push(rpmOf(c)[1]);
     });
@@ -219,12 +227,16 @@
     }).sort(function (a, b) { return b.score - a.score; });
     // lọc + sắp xếp kênh
     var vf = f.verdict || 'good';
-    var cl = chans.filter(function (c) { return vf === 'all' ? true : vf === 'good' ? (c.a.v === 'farm' || c.a.v === 'rise' || c.a.v === 'unk') : c.a.v === vf; });
+    var cl = chans.filter(function (c) { return vf === 'all' ? true : vf === 'new' ? c.isNew : vf === 'good' ? (c.a.v === 'farm' || c.a.v === 'rise' || c.a.v === 'unk') : c.a.v === vf; });
+    if (typeof f.chanFilter === 'function') cl = cl.filter(f.chanFilter);
     var cs = f.cSort || 'smart';
     if (cs === 'score') cl.sort(function (a, b) { return b.a.score - a.a.score || b.bestOut - a.bestOut; });
     else if (cs === 'v30') cl.sort(function (a, b) { return (b.a.v30 || 0) - (a.a.v30 || 0); });
     else if (cs === 'new') cl.sort(function (a, b) { return (b.cr || 0) - (a.cr || 0); });
     else if (cs === 'out') cl.sort(function (a, b) { return b.bestOut - a.bestOut; });
+    else if (cs === 'rev') cl.sort(function (a, b) { return ((b.a.eligible && b.a.rev ? b.a.rev[1] : 0) - (a.a.eligible && a.a.rev ? a.a.rev[1] : 0)) || b.a.score - a.a.score; });
+    else if (cs === 'fresh') cl.sort(function (a, b) { return (b.fs || 0) - (a.fs || 0) || b.a.score - a.a.score; });
+    else if (cs === 'young') cl.sort(function (a, b) { return (b.cr || 0) - (a.cr || 0); });
     else cl = smallFirst(cl, f.maxSub, function (c) { return c.subs; }, function (c) { return c.a.score * 10 + Math.log10(1 + c.bestOut); });
     // sắp xếp video + giới hạn số video mỗi kênh để đa dạng
     var vs = f.vSort || 'smart';
@@ -309,7 +321,7 @@
               if (sub == null || sub > CAP_SUB) { if (old) delete S.channels[x.id]; S.log['big|' + x.id] = now; return; }
               var sv = chSrc[x.id] || {}, mk = CC[x.snippet.country] || (old && old.mk) || sv.mk || 'EN';
               if (!old) newC++;
-              S.channels[x.id] = Object.assign({}, old || {}, { id: x.id, n: x.snippet.title, s: sub, c: x.snippet.country || '', cr: Date.parse(x.snippet.publishedAt) || 0, vc: +x.statistics.videoCount || 0, mk: mk, nc: (old && old.nc) || sv.label || 'Khác', seen: now });
+              S.channels[x.id] = Object.assign({}, old || {}, old ? {} : { fs: now }, { id: x.id, n: x.snippet.title, s: sub, c: x.snippet.country || '', cr: Date.parse(x.snippet.publishedAt) || 0, vc: +x.statistics.videoCount || 0, mk: mk, nc: (old && old.nc) || sv.label || 'Khác', seen: now });
             });
           } catch (e) { if (e.code === 'BUDGET' || e.code === 'quotaExceeded') { stop = e.code; return; } }
         }
@@ -319,8 +331,9 @@
           if (raw) raw.push({ ch: c.id, x: [views, du, t] });
           if (!c.cat && v.snippet.categoryId) c.cat = v.snippet.categoryId;
           if (views < 500 || views < c.s * 0.5) return;
-          if (!S.videos[v.id]) newV++;
+          var ov = S.videos[v.id]; if (!ov) newV++;
           S.videos[v.id] = { id: v.id, t: t, ti: v.snippet.title, ch: c.id, vw: views, du: du, cat: v.snippet.categoryId || '', mk: c.mk, nc: c.nc };
+          if (!ov) S.videos[v.id].fs = now; else if (ov.fs) S.videos[v.id].fs = ov.fs;
         });
       }
     }
@@ -360,7 +373,7 @@
   var LEVELS = [['quick', 'Quét nhanh', 1500], ['deep', 'Quét sâu', 4500], ['max', 'Quét tối đa', 9000]];
 
   return {
-    version: '3.0.0', M: M, CATS: CATS, RPM_MK: RPM_MK, ALL_MK: ALL_MK, CC: CC, VERDICT: VERDICT, LEVELS: LEVELS, SHORT_MAX: SHORT_MAX, CAP_SUB: CAP_SUB,
+    version: '3.1.0', M: M, CATS: CATS, RPM_MK: RPM_MK, ALL_MK: ALL_MK, CC: CC, VERDICT: VERDICT, LEVELS: LEVELS, SHORT_MAX: SHORT_MAX, CAP_SUB: CAP_SUB,
     seedsFor: seedsFor, marketsOf: marketsOf, inMarket: inMarket, phrases: phrases, iso: iso, median: median, fmtN: fmtN, chunk: chunk, shuffle: shuffle,
     emptyStore: emptyStore, mergeStore: mergeStore, prune: prune, analyze: analyze, rpmOf: rpmOf, smallFirst: smallFirst, build: build, scan: scan
   };
@@ -384,17 +397,136 @@
   var dur = function (s) { s = Math.round(s || 0); var hh = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60), ss = s % 60; return (hh ? hh + ':' + String(mm).padStart(2, '0') : mm) + ':' + String(ss).padStart(2, '0'); };
   var age = function (hrs) { return hrs < 24 ? Math.round(hrs) + ' giờ' : Math.round(hrs / 24) + ' ngày'; };
   var cx = function () { return Array.prototype.filter.call(arguments, Boolean).join(' '); };
-  var DEF = { mode: 'rpm', country: '', maxSub: 5000, fmt: 'long', hours: 168, minView: 1000, minOut: 2, text: '', vSort: 'smart', cSort: 'smart', nSort: 'out', verdict: 'good', perCh: 2, niche: '' };
+  var DEF = { mode: 'rpm', country: '', maxSub: 5000, fmt: 'long', hours: 168, minView: 1000, minOut: 2, text: '', vSort: 'smart', cSort: 'smart', nSort: 'out', verdict: 'good', perCh: 2, niche: '', maxAge: 0, cat: '', minDur: 0, hideSeen: false };
+  var DAYMS = 864e5;
+  // Bộ lọc nhanh có sẵn (bấm để áp dụng; bộ lọc tự lưu nằm sau)
+  var BUILTIN = [
+    ['Mỹ dưới 5K · 7 ngày', { mode: 'rpm', country: 'EN', maxSub: 5000, fmt: 'long', hours: 168, minView: 1000, minOut: 2, maxAge: 0, minDur: 0, cat: '' }],
+    ['Kênh mới dưới 90 ngày', { maxSub: 20000, fmt: 'long', hours: 720, minView: 1000, minOut: 2, maxAge: 90, minDur: 0, cat: '' }],
+    ['Video dài có mid-roll', { fmt: 'long', hours: 168, minView: 5000, minOut: 2, minDur: 480, maxAge: 0 }],
+    ['Shorts nổ 24 giờ', { fmt: 'short', hours: 24, minView: 20000, minOut: 5, maxAge: 0, minDur: 0 }]
+  ];
+  function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
   function toApp(v) { return { id: v.id, title: v.title, channel: v.chName, channelId: v.ch, subs: v.subs, views: v.views, dur: v.dur, thumb: thumb(v.id), published: new Date(v.t).toISOString(), vph: v.vph }; }
   function csvDownload(name, rows) {
     var b = new Blob(['﻿' + rows.map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n')], { type: 'text/csv' });
     var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name + '-' + new Date().toISOString().slice(0, 10) + '.csv'; a.click();
   }
+  function fetchDaily() { return fetch('/data/top_ngach.json?h=' + new Date().toISOString().slice(0, 13)).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { return j && j.v === 3 ? j : null; }).catch(function () { return null; }); }
+  // Cho các trang khác (Hôm nay, Xưởng tiêu đề) dùng chung kho Top Ngách
+  window.TopNgachData = {
+    DEF: DEF,
+    load: function () { return Promise.all([idbGet('store'), fetchDaily()]).then(function (x) { var l = x[0] && x[0].v === 3 ? x[0] : null; return { store: E.mergeStore(x[1], l), daily: x[1], local: l }; }); },
+    marks: function () { return lsGet('tn3_marks', {}) || {}; },
+    filters: function () { return Object.assign({}, DEF, lsGet('tn3_filters', {}), { text: '', niche: '' }); }
+  };
+
+  // ---------- Prompt gửi Claude cho một ngách ----------
+  function nichePrompt(g, f) {
+    var L = [], fmt = f.fmt === 'short' ? 'Shorts' : 'video dài', now = Date.now();
+    var vids = []; g.chans.forEach(function (c) { (c.vids || []).forEach(function (v) { vids.push(v); }); });
+    vids.sort(function (a, b) { return b.out - a.out; });
+    L.push('# NHIỆM VỤ: PHÂN TÍCH NGÁCH YOUTUBE "' + g.name + '" VÀ LẬP KẾ HOẠCH LÀM KÊNH ĂN THEO');
+    L.push('');
+    L.push('Tôi săn kênh nhỏ (dưới ' + N(f.maxSub) + ' sub) đang ra view vượt số người đăng ký để làm kênh tương tự. Số liệu dưới đây lấy từ YouTube Data API ngày ' + new Date().toLocaleDateString('vi-VN') + ', định dạng ' + fmt + ', video đăng trong ' + (f.hours >= 48 ? Math.round(f.hours / 24) + ' ngày' : f.hours + ' giờ') + ' qua.');
+    L.push('');
+    L.push('## SỐ LIỆU NGÁCH');
+    L.push('- Kênh nhỏ qua lọc: ' + g.chans.length + ' (farm đều: ' + g.farm + ', đang lên: ' + g.rise + ')');
+    L.push('- View ÷ sub trung vị của các kênh: ×' + g.medOut.toFixed(1));
+    L.push('- Tổng view 30 ngày của các kênh này: ' + N(g.v30));
+    L.push('- RPM ước tính (theo nước + danh mục): tới ~$' + g.rpmHi.toFixed(1));
+    L.push('- Thị trường: ' + g.topMk.map(function (k) { return M[k] ? M[k][1] : k; }).join(', ') + (CATS[g.topCat] ? ' · Danh mục YouTube: ' + CATS[g.topCat][1] : ''));
+    L.push('');
+    L.push('## KÊNH NHỎ TRONG NGÁCH (xếp theo điểm farm)');
+    L.push('| Kênh | Sub | Nước | Tuổi kênh | Đánh giá | Điểm | Video đạt | View trung vị | Dài TB | Video/tuần | View 30 ngày | Link |');
+    L.push('|---|---|---|---|---|---|---|---|---|---|---|---|');
+    g.chans.slice(0, 15).forEach(function (c) {
+      var a = c.a, ageD = c.cr ? Math.round((now - c.cr) / DAYMS) + ' ngày' : '?';
+      L.push('| ' + [c.name.replace(/\|/g, '/'), N(c.subs), M[c.mk] ? M[c.mk][2] : c.mk, ageD, (V[a.v] || V.unk)[0].replace(/^\S+\s/, ''), a.n ? a.score : '–', a.n ? a.hits + '/' + a.n : '–', a.n ? N(a.med) : '–', a.n ? (f.fmt === 'short' ? Math.round(a.avgDur) + 's' : Math.round(a.avgDur / 60) + ' phút') : '–', a.n ? a.cad.toFixed(1) : '–', a.n ? N(a.v30) : '–', 'https://www.youtube.com/channel/' + c.id].join(' | ') + ' |');
+    });
+    L.push('');
+    L.push('## VIDEO MẪU VIEW CAO (xếp theo view ÷ sub)');
+    L.push('| Tiêu đề | Kênh | Sub | View | × sub | Dài | Đăng | Link |');
+    L.push('|---|---|---|---|---|---|---|---|');
+    vids.slice(0, 30).forEach(function (v) { L.push('| ' + [v.title.replace(/\|/g, '/'), v.chName.replace(/\|/g, '/'), N(v.subs), N(v.views), '×' + Math.round(v.out), dur(v.dur), age(v.hrs) + ' trước', 'https://youtu.be/' + v.id].join(' | ') + ' |'); });
+    var ph = E.phrases(vids.slice(0, 80).map(function (v) { return v.title; }), M[g.topMk[0]] ? M[g.topMk[0]][3] : 'en', 15);
+    if (ph.length) { L.push(''); L.push('## CỤM TỪ LẶP LẠI TRONG TIÊU ĐỀ VIDEO NỔ'); L.push(ph.join(' · ')); }
+    L.push('');
+    L.push('## YÊU CẦU ĐẦU RA (tiếng Việt, Markdown)');
+    L.push('1. Ngách này thực chất là nội dung gì, người xem là ai, vì sao kênh nhỏ vẫn lên view. Bám vào số liệu trên.');
+    L.push('2. Công thức chung của video thắng: dạng tiêu đề, độ dài, nhịp đăng, kiểu thumbnail và cấu trúc nội dung có thể suy ra. Ghi rõ điều nào là suy đoán cần tôi mở video kiểm tra.');
+    L.push('3. Ba kênh đáng clone nhất, lý do, và những gì cần xem trực tiếp trên kênh để xác nhận.');
+    L.push('4. Mức cạnh tranh và rủi ro: bản quyền, nội dung tái sử dụng, chính sách kiếm tiền, phụ thuộc trend.');
+    L.push('5. Kế hoạch làm kênh: định vị, 15 ý tưởng video đầu tiên (tiêu đề viết đúng ngôn ngữ của thị trường, kèm góc khai thác), lịch đăng 4 tuần.');
+    L.push('6. Cách sản xuất nhanh: nguồn hình, giọng đọc, công cụ, thời gian ước tính mỗi video.');
+    L.push('');
+    L.push('Không bịa số liệu ngoài các bảng trên. Nếu thiếu dữ liệu để kết luận, nói rõ là thiếu.');
+    return L.join('\n');
+  }
+
+  // ---------- Cửa sổ chi tiết một kênh ----------
+  function ChannelDetail(p) {
+    var React = window.React, h = React.createElement, K = window.YT4UI;
+    var c = p.c, a = c.a, m = p.mark || {}, short = p.short, now = Date.now();
+    var s = React.useState(m.note || ''), note = s[0], setNote = s[1];
+    var u = (p.raw || []).filter(function (x) { return (x[1] <= E.SHORT_MAX) === short && now - x[2] <= 60 * DAYMS; }).sort(function (x, y) { return x[2] - y[2]; });
+    var floor = Math.max(c.subs, short ? 3000 : 1000), max = Math.max.apply(null, u.map(function (x) { return x[0]; }).concat([floor * 1.2]));
+    var ageD = c.cr ? Math.round((now - c.cr) / DAYMS) : null, fmtName = short ? 'Shorts' : 'video dài';
+    var why = [];
+    if (!a.n) why.push(a.v === 'unk' ? 'Kênh chưa được so toàn bộ video. Bấm Phân tích ở dải vàng trong Top Ngách để biết kênh farm thật hay ăn may.' : 'Không có ' + fmtName + ' nào trong 60 ngày qua.');
+    else {
+      why.push(a.hits + '/' + a.n + ' ' + fmtName + ' trong 60 ngày có view từ ' + N(floor) + ' trở lên (mức sub của kênh), tức ' + Math.round(a.hr * 100) + '% video đạt.');
+      why.push('View trung vị ' + N(a.med) + ', bằng ×' + (a.medOut >= 10 ? Math.round(a.medOut) : a.medOut.toFixed(1)) + ' số sub.' + (a.med >= floor ? ' Video bình thường của kênh cũng vượt sub.' : ' Video bình thường chưa vượt sub.'));
+      why.push('Đăng ' + a.cad.toFixed(1) + ' video/tuần, dài trung bình ' + (short ? Math.round(a.avgDur) + ' giây' : Math.round(a.avgDur / 60) + ' phút') + (a.mid ? ' (đủ dài để chèn quảng cáo giữa video).' : '.'));
+      if (a.topShare > 0.8 && a.n >= 3) why.push('Một video chiếm ' + Math.round(a.topShare * 100) + '% tổng view: kênh đang phụ thuộc một video nổ.');
+      if (ageD != null && ageD < 120 && a.hits >= 2) why.push('Kênh mới ' + ageD + ' ngày tuổi đã có ' + a.hits + ' video đạt: tín hiệu được đề xuất mạnh.');
+      if (c.peer) why.push('So với các kênh cùng ngách: ×' + c.peer.toFixed(1) + (c.peer >= 1.5 ? ' (nổi bật hơn mặt bằng ngách).' : c.peer < 0.7 ? ' (kém hơn mặt bằng ngách).' : ' (ngang mặt bằng ngách).'));
+    }
+    var RULE = { farm: 'Farm tiền = ít nhất 3 video đạt, tối thiểu 50% video đạt và view trung vị cũng vượt sub.', rise: 'Đang lên = có 2 video đạt, hoặc 1 video đạt và view trung vị đã vượt sub.', fluke: 'Ăn may = chỉ 1 video nổ, các video khác thấp.', cold: 'View thấp = không video nào đạt mức sub trong 60 ngày.' };
+    var bw = u.length ? Math.min(28, 600 / u.length - 2) : 0;
+    var chart = u.length > 0 && h('div', null,
+      h('div', { className: 'flex justify-between text-[11px] text-cham-400 mb-1' }, h('span', null, u.length + ' ' + fmtName + ' gần nhất (cũ → mới), kể cả video flop'), h('span', null, 'Vạch đứt: mức sub ' + N(floor))),
+      h('svg', { viewBox: '0 0 600 120', className: 'w-full h-28 rounded-lg bg-[#181818]', role: 'img', 'aria-label': 'View từng video so với mức sub' },
+        u.map(function (x, i) { var hh = Math.max(2, x[0] / max * 104), ok = x[0] >= floor; return h('rect', { key: i, x: i * (600 / u.length) + (600 / u.length - bw) / 2, y: 112 - hh, width: bw, height: hh, rx: 2, fill: ok ? '#4bc167' : '#5a5a5a' }, h('title', null, N(x[0]) + ' view · ' + dur(x[1]) + ' · ' + new Date(x[2]).toLocaleDateString('vi-VN'))); }),
+        h('line', { x1: 0, x2: 600, y1: 112 - floor / max * 104, y2: 112 - floor / max * 104, stroke: '#f5c451', strokeWidth: 1.5, strokeDasharray: '6 5' })));
+    var cell = function (l, v, tone) { return h('div', { className: 'yt-cell px-2.5 py-2 min-w-0' }, h('dt', { className: 'text-[11px] text-cham-400 truncate' }, l), h('dd', { className: 'text-[12px] font-semibold truncate tabular-nums ' + (tone || 'text-cham-50') }, v)); };
+    var btn = K.C.btn, vl = V[a.v] || V.unk;
+    return h(K.Modal, { title: c.name, wide: true, onClose: function () { if (note !== (m.note || '')) p.onMark({ note: note.trim() }); p.onClose(); } },
+      h('div', { className: 'space-y-4' },
+        h('div', { className: 'text-[12px] text-cham-300 tabular-nums' }, [N(c.subs) + ' sub', M[c.mk] ? M[c.mk][1] : c.mk, c.niche, ageD != null ? 'kênh ' + (ageD < 365 ? ageD + ' ngày tuổi' : (ageD / 365).toFixed(1) + ' năm tuổi') : '', c.vc ? N(c.vc) + ' video' : '', vl[0].replace(/^\S+\s/, '') + (a.n ? ' · điểm ' + a.score + '/100' : '')].filter(Boolean).join(' · ')),
+        chart,
+        h('div', null, h('h3', { className: 'text-[12px] font-semibold text-cham-50 mb-1.5' }, 'Vì sao được xếp loại này'),
+          h('ul', { className: 'space-y-1' }, why.map(function (t, i) { return h('li', { key: i, className: 'text-[12px] text-cham-200 leading-relaxed pl-3 relative' }, h('span', { className: 'absolute left-0 text-cham-500' }, '–'), t); })),
+          RULE[a.v] && h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, RULE[a.v])),
+        a.n > 0 && h('dl', { className: 'grid grid-cols-3 sm:grid-cols-6 gap-1.5' },
+          cell('Video đạt', a.hits + '/' + a.n, a.hr >= 0.5 ? 'text-[#6fcf85]' : ''), cell('View trung vị', N(a.med)), cell('View cao nhất', N(a.max)), cell('View 30 ngày', N(a.v30)),
+          cell('Nhịp đăng', a.cad.toFixed(1) + '/tuần'), cell('Ước tính/tháng', a.eligible ? '$' + N(Math.round(a.rev[0])) + '–' + N(Math.round(a.rev[1])) : 'Chưa đủ 1K', a.eligible ? 'text-[#6fcf85]' : 'text-cham-400')),
+        c.vids.length > 0 && h('div', null, h('h3', { className: 'text-[12px] font-semibold text-cham-50 mb-1.5' }, 'Video nổ đã quét được (' + c.vids.length + ')'),
+          h('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-2' }, c.vids.slice(0, 12).map(function (v) {
+            return h('a', { key: v.id, href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer', className: 'block group' },
+              h('div', { className: 'relative rounded-lg overflow-hidden bg-black' }, h('img', { src: thumb(v.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover' }),
+                h('span', { className: 'absolute top-1 right-1 text-[10px] font-bold px-1 rounded tabular-nums ' + (v.out >= 20 ? 'bg-[#ff4e45] text-white' : v.out >= 5 ? 'bg-[#f5c451] text-[#2a1d00]' : 'bg-black/80 text-[#f1f1f1]') }, '×' + Math.round(v.out)),
+                h('span', { className: 'absolute bottom-1 right-1 text-[10px] px-1 rounded bg-black/80 text-[#f1f1f1] tabular-nums' }, dur(v.dur))),
+              h('div', { className: 'mt-1 text-[11px] text-cham-100 leading-snug line-clamp-2 group-hover:text-white' }, v.title),
+              h('div', { className: 'text-[10.5px] text-cham-400 tabular-nums' }, N(v.views) + ' view · ' + age(v.hrs) + ' trước'));
+          }))),
+        h('label', { className: 'block' }, h('span', { className: 'block text-[11.5px] font-medium text-cham-300 mb-1.5' }, 'Ghi chú của bạn về kênh này'),
+          h('textarea', { value: note, onChange: function (e) { setNote(e.target.value); }, onBlur: function () { if (note !== (m.note || '')) p.onMark({ note: note.trim() }); }, rows: 2, placeholder: 'Ví dụ: giọng AI + ảnh tĩnh, dễ clone; cần xem cách dựng thumbnail…', className: 'w-full rounded-lg bg-[#121212] border border-[#303030] px-3 py-2 text-[12px] text-cham-50 placeholder:text-cham-500 focus:border-[#3ea6ff] outline-none' })),
+        h('div', { className: 'flex flex-wrap gap-2 pt-1' },
+          h('a', { href: 'https://www.youtube.com/channel/' + c.id + '/videos', target: '_blank', rel: 'noopener noreferrer', onClick: function () { p.onMark({ seen: Date.now() }); }, className: K.C.pri }, 'Mở kênh'),
+          p.onOpen && h('button', { onClick: function () { p.onOpen(c.id, 'clone'); }, className: btn }, 'Hồ sơ clone'),
+          p.onOpen && h('button', { onClick: function () { p.onOpen(c.id, 'vid'); }, className: btn }, 'Phân tích sâu'),
+          p.onFollow && h('button', { onClick: p.onFollow, className: btn }, 'Theo dõi'),
+          p.onCompare && h('button', { onClick: p.onCompare, className: btn, title: 'Thêm kênh này vào bảng so sánh' }, 'So sánh'),
+          h('button', { onClick: function () { p.onMark({ s: m.s ? 0 : 1 }); }, className: btn }, m.s ? 'Bỏ sao' : 'Gắn sao'),
+          h('button', { onClick: function () { p.onMark({ h: 1, n: c.name }); p.onClose(); }, className: btn }, 'Ẩn kênh'))));
+  }
 
   function TopNgachV3(props) {
     var React = window.React, h = React.createElement, useState = React.useState, useMemo = React.useMemo, useEffect = React.useEffect;
-    var p = props || {}, isPro = !!p.isPro, FREE = 6;
-    var s0 = useState(function () { try { return Object.assign({}, DEF, JSON.parse(localStorage.getItem('tn3_filters') || '{}'), { text: '', niche: '' }); } catch (e) { return Object.assign({}, DEF); } }), f = s0[0], setF = s0[1];
+    var p = props || {}, isPro = !!p.isPro, FREE = 6, UI = window.YT4UI || {};
+    var s0 = useState(function () { return Object.assign({}, DEF, lsGet('tn3_filters', {}), { text: '', niche: '' }); }), f = s0[0], setF = s0[1];
     var s1 = useState(null), local = s1[0], setLocal = s1[1];
     var s2 = useState(null), daily = s2[0], setDaily = s2[1];
     var s3 = useState('niche'), tab = s3[0], setTab = s3[1];
@@ -404,17 +536,37 @@
     var s7 = useState(''), kw = s7[0], setKw = s7[1];
     var s8 = useState(null), last = s8[0], setLast = s8[1];
     var s9 = useState(false), side = s9[0], setSide = s9[1];
+    var sa = useState(function () { return lsGet('tn3_marks', {}) || {}; }), marks = sa[0], setMarks = sa[1];
+    var sb = useState(function () { return lsGet('tn3_presets', []) || []; }), presets = sb[0], setPresets = sb[1];
+    var sc = useState(null), detail = sc[0], setDetail = sc[1];
+    var sd = useState(null), send = sd[0], setSend = sd[1];
+    var se = useState(function () { try { return localStorage.getItem('tn3_view') || 'card'; } catch (e) { return 'card'; } }), view = se[0], setView = se[1];
+    var sf = useState(null), naming = sf[0], setNaming = sf[1];
+    var sg = useState(false), showHidden = sg[0], setShowHidden = sg[1];
+    var sh = useState(function () { return lsGet('tn3_hist', []) || []; }), hist = sh[0], setHist = sh[1];
     var deferredText = React.useDeferredValue ? React.useDeferredValue(f.text) : f.text;
 
     useEffect(function () {
       idbGet('store').then(function (s) { setLocal(s && s.v === 3 ? s : E.emptyStore()); });
-      fetch('/data/top_ngach.json?h=' + new Date().toISOString().slice(0, 13)).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { if (j && j.v === 3) setDaily(j); }).catch(function () { });
+      fetchDaily().then(function (j) { if (j) setDaily(j); });
     }, []);
     useEffect(function () { setLim(60); }, [f, tab]);
-    function set(k, v) { setF(function (o) { var n = Object.assign({}, o); n[k] = v; if (k === 'mode') { n.country = ''; n.niche = ''; } try { var keep = Object.assign({}, n, { text: '', niche: '' }); localStorage.setItem('tn3_filters', JSON.stringify(keep)); } catch (e) { } return n; }); }
+    function persist(n) { lsSet('tn3_filters', Object.assign({}, n, { text: '', niche: '' })); }
+    function set(k, v) { setF(function (o) { var n = Object.assign({}, o); n[k] = v; if (k === 'mode') { n.country = ''; n.niche = ''; } if (k === 'fmt' && v === 'short') n.minDur = 0; persist(n); return n; }); }
+    function apply(patch) { setF(function (o) { var n = Object.assign({}, o, patch, { text: '', niche: '' }); persist(n); return n; }); }
+    function mark(id, patch) {
+      setMarks(function (m) { var n = Object.assign({}, m), cur = Object.assign({}, n[id] || {}, patch); Object.keys(cur).forEach(function (k) { if (!cur[k]) delete cur[k]; }); if (!cur.h) delete cur.n; if (Object.keys(cur).length) n[id] = cur; else delete n[id]; lsSet('tn3_marks', n); return n; });
+    }
+    var hiddenIds = Object.keys(marks).filter(function (id) { return marks[id].h; }), hiddenKey = hiddenIds.join(',');
 
-    var store = useMemo(function () { return E.mergeStore(daily, local); }, [daily, local]);
-    var fb = useMemo(function () { return Object.assign({}, f, { text: deferredText }); }, [f, deferredText]);
+    var store = useMemo(function () { var m = E.mergeStore(daily, local); hiddenIds.forEach(function (id) { delete m.channels[id]; }); return m; }, [daily, local, hiddenKey]);
+    var pick = f.verdict === 'star' || f.verdict === 'noted' ? f.verdict : '';
+    var fb = useMemo(function () {
+      var o = Object.assign({}, f, { text: deferredText });
+      if (pick) o.verdict = 'all';
+      if (pick || f.hideSeen) o.chanFilter = function (c) { var m = marks[c.id] || {}; if (pick === 'star' && !m.s) return false; if (pick === 'noted' && !m.note) return false; if (f.hideSeen && m.seen) return false; return true; };
+      return o;
+    }, [f, deferredText, pick || f.hideSeen ? marks : null]);
     var D = useMemo(function () { return E.build(store, fb, Date.now()); }, [store, fb]);
     var nStore = Object.keys(store.channels).length;
 
@@ -425,22 +577,28 @@
       try {
         var res = await E.scan(Object.assign({ yt: function (path, prm) { return p.yt(path, prm, p.apiKey); }, store: S, f: f, onProgress: setBusy }, opt));
         var P = E.prune(S); await idbSet('store', P); setLocal(P); setLast(res);
-        if (res.stop === 'quotaExceeded') setErr('API key đã hết quota hôm nay — đã lưu phần quét được. Thêm key khác trong phần cài đặt API để quét tiếp.');
-        p.showToast && p.showToast('Xong: +' + res.newChannels + ' kênh nhỏ • +' + res.newVideos + ' video • so sánh ' + res.profiled + ' kênh • ' + res.units + ' quota');
+        var hh = [{ at: Date.now(), units: res.units, ch: res.newChannels, v: res.newVideos, prof: res.profiled, kind: opt.profileOnly ? 'Phân tích kênh' : opt.custom ? 'Từ khoá riêng' : 'Quét' }].concat(hist).slice(0, 12); setHist(hh); lsSet('tn3_hist', hh);
+        if (res.stop === 'quotaExceeded') setErr('API key đã hết quota hôm nay. Phần quét được đã lưu. Thêm key khác trong Cài đặt để quét tiếp.');
+        p.showToast && p.showToast('Xong: +' + res.newChannels + ' kênh nhỏ, +' + res.newVideos + ' video, so sánh ' + res.profiled + ' kênh, ' + res.units + ' quota');
       } catch (e) { setErr((e && (e.msg || e.message)) || 'Lỗi quét'); }
       setBusy('');
     }
     function clearAll() { if (!window.confirm('Xoá toàn bộ dữ liệu Top Ngách bạn đã quét trên máy này?')) return; var s = E.emptyStore(); idbSet('store', s); setLocal(s); }
+    function savePreset() { var nm = (naming || '').trim(); if (!nm) return; var keep = {}; ['mode', 'country', 'maxSub', 'fmt', 'hours', 'minView', 'minOut', 'maxAge', 'cat', 'minDur', 'verdict', 'cSort', 'vSort', 'nSort', 'perCh'].forEach(function (k) { keep[k] = f[k]; }); var n = presets.filter(function (x) { return x[0] !== nm; }).concat([[nm, keep]]).slice(-12); setPresets(n); lsSet('tn3_presets', n); setNaming(null); p.showToast && p.showToast('Đã lưu bộ lọc "' + nm + '"'); }
+    function dropPreset(nm) { var n = presets.filter(function (x) { return x[0] !== nm; }); setPresets(n); lsSet('tn3_presets', n); }
+    function openCh(id) { var c = D.allChannels.find(function (x) { return x.id === id; }); if (c) setDetail(id); else window.open('https://www.youtube.com/channel/' + id, '_blank', 'noopener'); }
+    function compare(c) { var Y = window.YT4; if (!Y) return; var ok = Y.store.addCompare({ id: c.id, title: c.name }); p.showToast && p.showToast(ok ? 'Đã thêm "' + c.name + '" vào so sánh (' + Y.store.compare().length + '/4). Mở mục Kênh → So sánh.' : 'Kênh đã có trong danh sách so sánh'); }
 
-    // ---------- mảnh giao diện (Đông Hồ: chàm · điệp · son · hoè) ----------
+    // ---------- mảnh giao diện ----------
     var VL = { farm: ['Farm tiền', 'ngoc'], rise: ['Đang lên', 'hoe'], fluke: ['Ăn may', 'do'], cold: ['View thấp', 'cham'], none: ['Không có video đúng định dạng', 'cham'], unk: ['Chưa phân tích', 'nhat'] };
-    var CHIP = { ngoc: 'bg-[#2ba640]/20 text-[#6fcf85] border-transparent', hoe: 'bg-[#f2b52c]/15 text-[#f5c451] border-transparent', nhat: 'bg-[#3ea6ff]/15 text-[#7cc3ff] border-transparent', tim: 'bg-[#a970ff]/18 text-[#c9a7ff] border-transparent', do: 'bg-[#ff4e45]/15 text-[#ff8a83] border-transparent', teal: 'bg-[#22c3b5]/15 text-[#5fdccf] border-transparent', cham: 'bg-[#272727] text-[#aaaaaa] border-transparent' };
-    var B = { btn: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full border border-transparent bg-[#323232] text-[12.5px] font-medium text-cham-100 hover:bg-[#424242] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap', sm: 'inline-flex items-center justify-center h-7 px-3 rounded-full border border-transparent bg-[#323232] text-[12px] font-medium text-cham-200 hover:bg-[#424242] transition disabled:opacity-40 cursor-pointer whitespace-nowrap', pri: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full bg-[#3ea6ff] text-[#0f0f0f] text-[12.5px] font-medium hover:bg-[#65b8ff] active:bg-[#2b8fe0] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap', field: 'h-9 rounded-lg bg-[#121212] border border-[#303030] px-3 text-[12px] text-cham-50 placeholder:text-cham-500 hover:border-[#3f3f3f] focus:border-[#3ea6ff] outline-none transition' };
-    var ic = function (n) { var I = window.YT4UI && window.YT4UI.Icon; return I ? h(I, { name: n, size: 13 }) : null; };
+    var CHIP = { ngoc: 'bg-[#2ba640]/20 text-[#6fcf85] border-transparent', hoe: 'bg-[#f2b52c]/15 text-[#f5c451] border-transparent', nhat: 'bg-[#3ea6ff]/15 text-[#7cc3ff] border-transparent', tim: 'bg-[#a970ff]/18 text-[#c9a7ff] border-transparent', do: 'bg-[#ff4e45]/15 text-[#ff8a83] border-transparent', teal: 'bg-[#22c3b5]/15 text-[#5fdccf] border-transparent', cham: 'bg-[#272727] text-[#aaaaaa] border-transparent', moi: 'bg-[#ff4e45] text-white border-transparent' };
+    var B = { btn: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full border border-transparent bg-[#323232] text-[12.5px] font-medium text-cham-100 hover:bg-[#424242] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap', sm: 'inline-flex items-center justify-center h-7 px-3 rounded-full border border-transparent bg-[#323232] text-[12px] font-medium text-cham-200 hover:bg-[#424242] transition disabled:opacity-40 cursor-pointer whitespace-nowrap', act: 'inline-flex items-center justify-center gap-1 h-8 px-2.5 rounded-full bg-[#323232] text-[12px] font-medium text-cham-100 hover:bg-[#424242] transition cursor-pointer whitespace-nowrap min-w-0', pri: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full bg-[#3ea6ff] text-[#0f0f0f] text-[12.5px] font-medium hover:bg-[#65b8ff] active:bg-[#2b8fe0] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap', field: 'h-9 rounded-lg bg-[#121212] border border-[#303030] px-3 text-[12px] text-cham-50 placeholder:text-cham-500 hover:border-[#3f3f3f] focus:border-[#3ea6ff] outline-none transition' };
+    var ic = function (n, size) { var I = UI.Icon; return I ? h(I, { name: n, size: size || 13 }) : null; };
+    var iconBtn = function (name, on, title, fn, tone) { return h('button', { type: 'button', title: title, 'aria-label': title, 'aria-pressed': !!on, onClick: fn, className: cx('h-6 w-6 rounded-md inline-flex items-center justify-center transition cursor-pointer', on ? (tone || 'bg-[#f5c451] text-[#2a1d00]') : 'bg-[#272727] text-[#aaaaaa] hover:bg-[#3a3a3a] hover:text-[#f1f1f1]') }, ic(name, 13)); };
     var SCAN = ['bg-[#f5c451] text-[#2a1d00] hover:bg-[#f8d27a]', 'bg-[#2ba640] text-white hover:bg-[#33b84a]', 'bg-gradient-to-r from-[#8b5cf6] to-[#22c3b5] text-white hover:brightness-110'];
     var fx = function (x) { return '×' + (x >= 10 ? Math.round(x) : x.toFixed(1)); };
     var code = function (mk) { return M[mk] ? M[mk][2] : mk || ''; };
-    var pill = function (on) { return cx('h-9 px-2 rounded-lg text-[12px] font-medium border whitespace-nowrap transition cursor-pointer', on ? 'bg-[#f1f1f1] text-[#0f0f0f] border-[#f1f1f1] font-medium' : 'bg-[#323232] text-[#f1f1f1] border-transparent hover:bg-[#424242]'); };
+    var pill = function (on, tight) { return cx('h-9 rounded-lg font-medium border whitespace-nowrap transition cursor-pointer', tight ? 'px-1 text-[11.5px]' : 'px-2 text-[12px]', on ? 'bg-[#f1f1f1] text-[#0f0f0f] border-[#f1f1f1]' : 'bg-[#323232] text-[#f1f1f1] border-transparent hover:bg-[#424242]'); };
     var label = function (t, id) { return h('div', { id: id, className: 'h-4 flex items-center text-[11.5px] font-medium text-cham-300 mb-1.5' }, t); };
     var select = function (k, opts, aria) { return h('select', { value: f[k], 'aria-label': aria, onChange: function (e) { var v = e.target.value; set(k, isNaN(+v) || v === '' ? v : +v); }, className: cx(B.field, 'w-full cursor-pointer') }, opts.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); })); };
     var badge = function (a) { var v = VL[a.v] || VL.unk; return h('span', { className: 'inline-flex items-center h-6 px-2 rounded-md border text-[11px] font-semibold whitespace-nowrap ' + CHIP[v[1]] }, v[0]); };
@@ -449,21 +607,31 @@
     var group = function (kids) { return h('div', { className: 'pt-4 first:pt-0 border-t first:border-t-0 border-cham-800 space-y-3' }, kids); };
     var mkOpts = [['', f.mode === 'rpm' ? 'Cả 12 nước RPM cao' : 'Tất cả quốc gia']].concat((f.mode === 'rpm' ? E.RPM_MK : E.RPM_MK.concat(E.ALL_MK.filter(function (k) { return E.RPM_MK.indexOf(k) < 0; }))).map(function (k) { return [k, M[k][1] + ' (' + M[k][2] + ')' + (E.RPM_MK.indexOf(k) >= 0 ? '  ·  RPM ~$' + M[k][4][0] + '–' + M[k][4][1] : '')]; }));
     var runKw = function () { return run({ budget: 1500, custom: kw.split(',').map(function (x) { return x.trim(); }).filter(Boolean) }); };
+    var pchip = 'h-7 px-2.5 rounded-lg bg-[#272727] text-[11.5px] text-[#f1f1f1] hover:bg-[#3a3a3a] transition cursor-pointer whitespace-nowrap max-w-full truncate';
 
     var sidebar = h('aside', { 'aria-label': 'Bộ lọc và quét', className: cx('lg:block lg:sticky lg:top-[80px] self-start lg:max-h-[calc(100vh-96px)] lg:overflow-y-auto no-scrollbar rounded-xl', side ? 'block' : 'hidden') },
       h('div', { className: 'yt-card p-4 space-y-4' },
+        group([
+          h('div', { key: 'p' }, label('Bộ lọc nhanh'),
+            h('div', { className: 'flex flex-wrap gap-1.5' },
+              BUILTIN.map(function (x) { return h('button', { key: x[0], onClick: function () { apply(x[1]); }, title: 'Áp dụng bộ lọc này', className: pchip }, x[0]); }),
+              presets.map(function (x) { return h('span', { key: 'u' + x[0], className: 'inline-flex items-center max-w-full rounded-lg bg-[#1d3a2a] text-[11.5px] text-[#9fe0ad]' }, h('button', { onClick: function () { apply(x[1]); }, className: 'h-7 pl-2.5 pr-1 truncate cursor-pointer hover:text-white' }, x[0]), h('button', { onClick: function () { dropPreset(x[0]); }, title: 'Xoá bộ lọc đã lưu', 'aria-label': 'Xoá bộ lọc ' + x[0], className: 'h-7 w-6 inline-flex items-center justify-center cursor-pointer hover:text-white' }, ic('x', 11))); })),
+            naming == null ? h('button', { onClick: function () { setNaming(''); }, className: 'mt-2 text-[11.5px] text-[#7cc3ff] hover:text-[#b0daff] cursor-pointer' }, '+ Lưu bộ lọc đang chọn')
+              : h('div', { className: 'mt-2 grid grid-cols-[minmax(0,1fr)_52px] gap-2' }, h('input', { autoFocus: true, value: naming, 'aria-label': 'Tên bộ lọc', onChange: function (e) { setNaming(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Enter') savePreset(); if (e.key === 'Escape') setNaming(null); }, placeholder: 'Tên bộ lọc', className: cx(B.field, 'w-full min-w-0') }), h('button', { onClick: savePreset, disabled: !naming.trim(), className: 'h-9 rounded-lg bg-[#323232] text-[12px] font-medium text-[#f1f1f1] hover:bg-[#424242] disabled:opacity-40 cursor-pointer' }, 'Lưu')))
+        ]),
         group([
           h('div', { key: 'm' }, label('Chế độ'),
             h('div', { role: 'radiogroup', className: 'grid grid-cols-2 lg:grid-cols-1 gap-2' },
               [['rpm', 'Ngách RPM cao', '12 nước trả tiền cao: US, UK, CA, AU, CH, NO, DE, NL, SE, JP, KR, FR'], ['all', 'Toàn cầu, mọi content', 'Mọi nước, mọi loại content, không xét RPM']].map(function (m) {
                 var on = f.mode === m[0];
                 return h('button', { key: m[0], role: 'radio', 'aria-checked': on, onClick: function () { set('mode', m[0]); }, className: cx('text-left rounded-lg border px-3 py-2.5 min-h-[76px] transition cursor-pointer', on ? 'bg-[#272727] border-[#f1f1f1]' : 'bg-[#181818] border-transparent hover:bg-[#272727]') },
-                  h('div', { className: cx('text-[10.5px] font-semibold', on ? 'text-[#f1f1f1]' : 'text-cham-200') }, m[1]), h('div', { className: cx('text-[10.5px] mt-0.5 leading-snug', 'text-cham-300') }, m[2]));
+                  h('div', { className: cx('text-[12px] font-semibold', on ? 'text-[#f1f1f1]' : 'text-cham-200') }, m[1]), h('div', { className: 'text-[10.5px] mt-0.5 leading-snug text-cham-300' }, m[2]));
               }))),
           h('div', { key: 'c' }, label('Quốc gia'), select('country', mkOpts, 'Quốc gia'))
         ]),
         group([
           h('div', { key: 's' }, label('Quy mô kênh'), h('div', { className: 'grid grid-cols-2 gap-1.5' }, [[5000, 'Dưới 5K sub'], [20000, 'Dưới 20K sub']].map(function (o) { return h('button', { key: o[0], 'aria-pressed': f.maxSub === o[0], onClick: function () { set('maxSub', o[0]); }, className: pill(f.maxSub === o[0]) }, o[1]); }))),
+          h('div', { key: 'a' }, label('Tuổi kênh'), h('div', { className: 'grid grid-cols-4 gap-1.5' }, [[0, 'Bất kỳ'], [30, '≤30 ng'], [90, '≤90 ng'], [365, '≤1 năm']].map(function (o) { return h('button', { key: o[0], 'aria-pressed': f.maxAge === o[0], title: o[0] ? 'Chỉ kênh tạo trong ' + o[0] + ' ngày qua' : 'Không lọc tuổi kênh', onClick: function () { set('maxAge', o[0]); }, className: pill(f.maxAge === o[0], true) }, o[1]); }))),
           h('div', { key: 'f' }, label('Định dạng'), h('div', { className: 'grid grid-cols-2 gap-1.5' }, [['long', 'Video dài'], ['short', 'Shorts']].map(function (o) { return h('button', { key: o[0], 'aria-pressed': f.fmt === o[0], onClick: function () { set('fmt', o[0]); }, className: pill(f.fmt === o[0]) }, o[1]); }))),
           h('div', { key: 't' }, label('Thời gian đăng'), h('div', { className: 'grid grid-cols-3 gap-1.5' }, [[2, '2 giờ'], [12, '12 giờ'], [24, '24 giờ'], [72, '3 ngày'], [168, '7 ngày'], [720, '30 ngày']].map(function (o) { return h('button', { key: o[0], 'aria-pressed': f.hours === o[0], onClick: function () { set('hours', o[0]); }, className: pill(f.hours === o[0]) }, o[1]); }))),
           h('div', { key: 'v', className: 'grid grid-cols-2 gap-2' },
@@ -481,73 +649,82 @@
               h('button', { disabled: !!busy || !kw.trim(), onClick: runKw, className: 'h-9 rounded-lg bg-[#323232] text-[12px] font-medium text-[#f1f1f1] hover:bg-[#424242] transition disabled:opacity-40 cursor-pointer' }, 'Quét')))
         ]),
         group([
-          h('dl', { key: 'd', className: 'text-[10.5px] space-y-1.5' },
+          h('dl', { key: 'd', className: 'text-[11px] space-y-1.5' },
             h('div', { className: 'flex justify-between gap-2' }, h('dt', { className: 'text-cham-400' }, 'Quét tự động'), h('dd', { className: 'text-cham-100 text-right tabular-nums' }, daily ? new Date(daily.at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) + ' · ' + N(Object.keys(daily.channels).length) + ' kênh' : 'chưa có')),
             h('div', { className: 'flex justify-between gap-2' }, h('dt', { className: 'text-cham-400' }, 'Bạn đã quét'), h('dd', { className: 'text-cham-100 text-right tabular-nums' }, local && local.at ? new Date(local.at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) + ' · ' + N(Object.keys(local.channels).length) + ' kênh' : 'chưa')),
             h('div', { className: 'flex justify-between gap-2' }, h('dt', { className: 'text-cham-400' }, 'Tổng kho'), h('dd', { className: 'text-cham-100 text-right tabular-nums' }, N(nStore) + ' kênh · ' + N(Object.keys(store.videos).length) + ' video'))),
-          local && local.at ? h('button', { key: 'x', onClick: clearAll, className: 'text-[10.5px] text-dieu-300 hover:text-dieu-200 underline decoration-dieu-700 underline-offset-2 cursor-pointer' }, 'Xoá dữ liệu đã quét trên máy này') : null
+          hist.length > 0 && h('details', { key: 'h', className: 'text-[11px]' }, h('summary', { className: 'cursor-pointer text-cham-300 hover:text-cham-50' }, 'Lịch sử quét (' + hist.length + ')'),
+            h('ul', { className: 'mt-1.5 space-y-1' }, hist.map(function (x) { return h('li', { key: x.at, className: 'flex justify-between gap-2 text-cham-400 tabular-nums' }, h('span', null, new Date(x.at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })), h('span', { className: 'text-cham-200' }, '+' + x.ch + ' kênh · ' + N(x.units) + ' quota')); }))),
+          hiddenIds.length > 0 && h('button', { key: 'hid', onClick: function () { setShowHidden(true); }, className: 'block text-[11px] text-cham-300 hover:text-cham-50 underline decoration-cham-600 underline-offset-2 cursor-pointer' }, 'Kênh đã ẩn (' + hiddenIds.length + ')'),
+          local && local.at ? h('button', { key: 'x', onClick: clearAll, className: 'block text-[11px] text-dieu-300 hover:text-dieu-200 underline decoration-dieu-700 underline-offset-2 cursor-pointer' }, 'Xoá dữ liệu đã quét trên máy này') : null
         ])));
 
     var st = D.stats;
-    var kpi = function (val, lbl, tone) { return h('div', { className: 'bg-[#212121] px-3.5 py-2.5 min-w-0' }, h('div', { className: cx('font-display text-[16.5px] leading-7 font-bold tabular-nums tracking-tight', tone || 'text-cham-50') }, N(val)), h('div', { className: 'text-[10.5px] text-cham-400 leading-tight' }, lbl)); };
+    var kpi = function (val, lbl, tone, fn) { return h(fn ? 'button' : 'div', { onClick: fn || null, title: fn ? 'Bấm để xem danh sách' : null, className: cx('bg-[#212121] px-3.5 py-2.5 min-w-0 text-left', fn && 'hover:bg-[#2a2a2a] cursor-pointer transition') }, h('div', { className: cx('font-display text-[16.5px] leading-7 font-bold tabular-nums tracking-tight', tone || 'text-cham-50') }, N(val)), h('div', { className: 'text-[10.5px] text-cham-400 leading-tight' }, lbl)); };
+    var goCh = function (v) { return function () { set('verdict', v); setTab('ch'); }; };
     var head = h('div', { className: 'space-y-3' },
-      h('div', { className: 'flex flex-wrap items-end justify-between gap-3' },
+      h('div', { className: 'flex flex-wrap items-end justify-between gap-3 pr-24' },
         h('div', null,
           h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Top Ngách'),
           h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, f.mode === 'rpm' ? 'Ngách của 12 nước RPM cao, ưu tiên kênh nhỏ có view vượt sub.' : 'Toàn cầu, mọi loại content: cứ view cao mà sub thấp là vào.')),
         h('button', { onClick: function () { setSide(!side); }, 'aria-expanded': side, className: B.btn + ' lg:hidden' }, side ? 'Ẩn bộ lọc' : 'Bộ lọc & quét')),
-      busy && h('div', { role: 'status', className: 'rounded-lg border border-hoe-600/50 bg-hoe-950 px-3.5 py-2.5 text-[10.5px] text-hoe-100 flex items-center gap-2.5' }, h('span', { className: 'inline-block w-3.5 h-3.5 rounded-md border-2 border-hoe-800 border-t-hoe-300 animate-spin shrink-0' }), busy),
-      err && h('div', { role: 'alert', className: 'rounded-lg border border-dieu-500/50 bg-dieu-950 px-3.5 py-2.5 text-[10.5px] text-dieu-100' }, err),
+      busy && h('div', { role: 'status', className: 'rounded-lg border border-hoe-600/50 bg-hoe-950 px-3.5 py-2.5 text-[11.5px] text-hoe-100 flex items-center gap-2.5' }, h('span', { className: 'inline-block w-3.5 h-3.5 rounded-full border-2 border-hoe-800 border-t-hoe-300 animate-spin shrink-0' }), busy),
+      err && h('div', { role: 'alert', className: 'rounded-lg border border-dieu-500/50 bg-dieu-950 px-3.5 py-2.5 text-[11.5px] text-dieu-100' }, err),
       h('div', { className: 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px bg-[#303030] rounded-xl overflow-hidden' },
-        kpi(st.channels, 'kênh nhỏ qua lọc'), kpi(st.farm, 'kênh farm tiền', 'text-[#4bc167]'), kpi(st.rise, 'kênh đang lên', 'text-[#f5c451]'),
-        kpi(st.videosShown, 'video nổ', 'text-[#ff6b63]'), kpi(D.niches.length, 'ngách', 'text-[#c9a7ff]'), kpi(st.markets, 'quốc gia', 'text-[#5fdccf]')),
-      D.needProfile > 0 && h('div', { className: 'rounded-lg border border-hoe-600/50 bg-hoe-950 px-3.5 py-2.5 text-[10.5px] text-hoe-100 flex flex-wrap items-center justify-between gap-3' },
+        kpi(st.channels, 'kênh nhỏ qua lọc', null, goCh('all')), kpi(st.farm, 'kênh farm tiền', 'text-[#4bc167]', goCh('farm')), kpi(st.rise, 'kênh đang lên', 'text-[#f5c451]', goCh('rise')),
+        kpi(st.videosShown, 'video nổ', 'text-[#ff6b63]', function () { setTab('vid'); }), kpi(D.niches.length, 'ngách', 'text-[#c9a7ff]', function () { setTab('niche'); }), kpi(st.fresh, 'kênh mới phát hiện (24 giờ)', 'text-[#5fdccf]', goCh('new'))),
+      D.needProfile > 0 && h('div', { className: 'rounded-lg border border-hoe-600/50 bg-hoe-950 px-3.5 py-2.5 text-[11.5px] text-hoe-100 flex flex-wrap items-center justify-between gap-3' },
         h('span', null, N(D.needProfile) + ' kênh có video nổ nhưng chưa được so toàn bộ video, nên chưa biết farm thật hay ăn may.'),
-        h('button', { disabled: !!busy, onClick: function () { return run({ profileOnly: true, budget: Math.min(2500, Math.ceil(D.needProfile * 1.7) + 20), maxProfiles: 400 }); }, className: 'inline-flex items-center h-7 px-3 rounded-lg bg-hoe-400 text-hoe-950 text-[10.5px] font-semibold hover:bg-hoe-300 transition disabled:opacity-40 cursor-pointer whitespace-nowrap' }, 'Phân tích ' + Math.min(D.needProfile, 400) + ' kênh (≈' + N(Math.ceil(Math.min(D.needProfile, 400) * 1.7)) + ' quota)')),
-      last && h('p', { className: 'text-[10.5px] text-cham-400 tabular-nums' }, 'Lần quét vừa rồi: ' + last.searches + ' nguồn · +' + last.newChannels + ' kênh mới · +' + last.newVideos + ' video · so sánh ' + last.profiled + ' kênh · ' + N(last.units) + ' quota'));
+        h('button', { disabled: !!busy, onClick: function () { return run({ profileOnly: true, budget: Math.min(2500, Math.ceil(D.needProfile * 1.7) + 20), maxProfiles: 400 }); }, className: 'inline-flex items-center h-7 px-3 rounded-lg bg-hoe-400 text-hoe-950 text-[11.5px] font-semibold hover:bg-hoe-300 transition disabled:opacity-40 cursor-pointer whitespace-nowrap' }, 'Phân tích ' + Math.min(D.needProfile, 400) + ' kênh (≈' + N(Math.ceil(Math.min(D.needProfile, 400) * 1.7)) + ' quota)')),
+      last && h('p', { className: 'text-[11px] text-cham-400 tabular-nums' }, 'Lần quét vừa rồi: ' + last.searches + ' nguồn · +' + last.newChannels + ' kênh mới · +' + last.newVideos + ' video · so sánh ' + last.profiled + ' kênh · ' + N(last.units) + ' quota'));
 
     var tabs = [['niche', 'Ngách đề xuất', D.niches.length], ['ch', 'Kênh farm tiền', D.channels.length], ['vid', 'Video nổ', D.videos.length]];
-    var sel = function (val, on, opts, aria) { return h('select', { value: val, 'aria-label': aria, onChange: on, className: cx(B.field, 'h-7 text-[10.5px] cursor-pointer') }, opts.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); })); };
+    var sel = function (val, on, opts, aria) { return h('select', { value: val, 'aria-label': aria, onChange: on, className: cx(B.field, 'h-8 text-[11.5px] cursor-pointer max-w-full') }, opts.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); })); };
+    var catOpts = [['', 'Mọi danh mục']].concat(Object.keys(CATS).map(function (k) { return [k, CATS[k][1]]; }));
+    var toggle = function (on, text, fn) { return h('button', { type: 'button', 'aria-pressed': !!on, onClick: fn, className: cx('h-8 px-3 rounded-lg text-[11.5px] font-medium whitespace-nowrap transition cursor-pointer', on ? 'bg-[#f1f1f1] text-[#0f0f0f]' : 'bg-[#272727] text-[#f1f1f1] hover:bg-[#3a3a3a]') }, text); };
     var toolbar = h('div', { className: 'space-y-3' },
       h('div', { role: 'tablist', className: 'flex max-w-full gap-2 overflow-x-auto no-scrollbar' },
-        tabs.map(function (t) { var on = tab === t[0]; return h('button', { key: t[0], role: 'tab', 'aria-selected': on, onClick: function () { setTab(t[0]); }, className: cx('h-7 px-3.5 rounded-lg text-[11px] whitespace-nowrap transition cursor-pointer', on ? 'bg-[#f1f1f1] text-[#0f0f0f] font-medium' : 'text-[#f1f1f1] font-medium bg-[#272727] hover:bg-[#424242]') }, t[1], h('span', { className: cx('ml-1.5 text-[10.5px] tabular-nums', on ? 'text-cham-600' : 'text-cham-500') }, N(t[2]))); })),
+        tabs.map(function (t) { var on = tab === t[0]; return h('button', { key: t[0], role: 'tab', 'aria-selected': on, onClick: function () { setTab(t[0]); }, className: cx('h-8 px-3.5 rounded-lg text-[12px] whitespace-nowrap transition cursor-pointer font-medium', on ? 'bg-[#f1f1f1] text-[#0f0f0f]' : 'text-[#f1f1f1] bg-[#272727] hover:bg-[#424242]') }, t[1], h('span', { className: cx('ml-1.5 text-[11px] tabular-nums', on ? 'text-cham-600' : 'text-cham-500') }, N(t[2]))); })),
       h('div', { className: 'flex flex-wrap items-center gap-2' },
-        h('input', { value: f.text, 'aria-label': 'Lọc theo tiêu đề, kênh hoặc ngách', onChange: function (e) { set('text', e.target.value); }, placeholder: 'Lọc theo tiêu đề, kênh, ngách', className: cx(B.field, 'h-7 text-[10.5px] w-full sm:w-64') }),
-        tab === 'ch' && sel(f.verdict, function (e) { set('verdict', e.target.value); }, [['good', 'Farm + đang lên + chờ phân tích'], ['farm', 'Chỉ farm tiền'], ['rise', 'Chỉ đang lên'], ['unk', 'Chỉ chưa phân tích'], ['fluke', 'Chỉ ăn may'], ['all', 'Tất cả']], 'Lọc theo đánh giá'),
-        tab === 'ch' && sel(f.cSort, function (e) { set('cSort', e.target.value); }, [['smart', 'Xếp: 80% kênh nhỏ trên cùng'], ['score', 'Xếp: điểm farm'], ['v30', 'Xếp: view 30 ngày'], ['out', 'Xếp: view ÷ sub'], ['new', 'Xếp: kênh mới nhất']], 'Sắp xếp kênh'),
-        tab === 'niche' && sel(f.nSort, function (e) { set('nSort', e.target.value); }, [['out', 'Xếp: view cao sub thấp trước'], ['score', 'Xếp: điểm cơ hội'], ['v30', 'Xếp: view 30 ngày'], ['farm', 'Xếp: nhiều kênh farm']], 'Sắp xếp ngách'),
+        h('input', { value: f.text, 'aria-label': 'Lọc theo tiêu đề, kênh hoặc ngách', onChange: function (e) { set('text', e.target.value); }, placeholder: 'Lọc theo tiêu đề, kênh, ngách', className: cx(B.field, 'h-8 text-[11.5px] w-full sm:w-48') }),
+        tab === 'ch' && sel(f.verdict, function (e) { set('verdict', e.target.value); }, [['good', 'Farm + đang lên + chờ phân tích'], ['farm', 'Chỉ farm tiền'], ['rise', 'Chỉ đang lên'], ['new', 'Chỉ kênh mới phát hiện (24 giờ)'], ['star', 'Chỉ kênh gắn sao'], ['noted', 'Chỉ kênh có ghi chú'], ['unk', 'Chỉ chưa phân tích'], ['fluke', 'Chỉ ăn may'], ['all', 'Tất cả']], 'Lọc theo đánh giá'),
+        tab === 'ch' && sel(f.cSort, function (e) { set('cSort', e.target.value); }, [['smart', 'Xếp: 80% kênh nhỏ trên cùng'], ['score', 'Xếp: điểm farm'], ['v30', 'Xếp: view 30 ngày'], ['rev', 'Xếp: ước tính doanh thu'], ['out', 'Xếp: view ÷ sub'], ['fresh', 'Xếp: mới phát hiện trước'], ['new', 'Xếp: kênh trẻ nhất']], 'Sắp xếp kênh'),
+        tab === 'niche' && sel(f.nSort, function (e) { set('nSort', e.target.value); }, [['out', 'Xếp: view cao sub thấp trước'], ['score', 'Xếp: điểm cơ hội'], ['v30', 'Xếp: view 30 ngày'], ['farm', 'Xếp: nhiều kênh farm'], ['fresh', 'Xếp: nhiều kênh mới']], 'Sắp xếp ngách'),
         tab === 'vid' && sel(f.vSort, function (e) { set('vSort', e.target.value); }, [['smart', 'Xếp: 80% kênh nhỏ trên cùng'], ['farm', 'Xếp: kênh farm trước'], ['views', 'Xếp: view cao'], ['out', 'Xếp: view ÷ sub'], ['vph', 'Xếp: view/giờ'], ['new', 'Xếp: mới nhất']], 'Sắp xếp video'),
         tab === 'vid' && sel(f.perCh, function (e) { set('perCh', +e.target.value); }, [[1, 'Tối đa 1 video/kênh'], [2, 'Tối đa 2 video/kênh'], [5, 'Tối đa 5 video/kênh'], [0, 'Không giới hạn']], 'Số video mỗi kênh'),
-        f.niche && h('button', { onClick: function () { set('niche', ''); }, title: 'Bỏ lọc ngách', className: 'inline-flex items-center gap-1.5 h-7 px-3 rounded-full border border-transparent bg-[#f1f1f1] text-[#0f0f0f] text-[12px] font-medium cursor-pointer hover:bg-white' }, 'Ngách: ' + f.niche, ic('x')),
-        h('span', { className: 'flex-1' }),
-        h('button', { onClick: exportCsv, className: B.sm }, 'Tải CSV')));
+        tab === 'vid' && f.fmt === 'long' && sel(f.minDur, function (e) { set('minDur', +e.target.value); }, [[0, 'Mọi độ dài'], [480, 'Từ 8 phút (có mid-roll)'], [1200, 'Từ 20 phút']], 'Độ dài tối thiểu'),
+        tab !== 'niche' && sel(f.cat, function (e) { set('cat', e.target.value); }, catOpts, 'Danh mục'),
+        tab === 'ch' && toggle(f.hideSeen, 'Ẩn kênh đã xem', function () { set('hideSeen', !f.hideSeen); }),
+        f.niche && h('button', { onClick: function () { set('niche', ''); }, title: 'Bỏ lọc ngách', className: 'inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-transparent bg-[#f1f1f1] text-[#0f0f0f] text-[12px] font-medium cursor-pointer hover:bg-white max-w-full' }, h('span', { className: 'truncate' }, 'Ngách: ' + f.niche), ic('x')),
+        h('div', { className: 'ml-auto inline-flex items-center gap-2' },
+          tab === 'ch' && h('div', { className: 'inline-flex gap-1' }, toggle(view === 'card', 'Thẻ', function () { setView('card'); try { localStorage.setItem('tn3_view', 'card'); } catch (e) { } }), toggle(view === 'table', 'Bảng', function () { setView('table'); try { localStorage.setItem('tn3_view', 'table'); } catch (e) { } })),
+          h('button', { onClick: exportCsv, className: B.sm + ' h-8' }, 'Tải CSV'))));
 
     function exportCsv() {
-      if (tab === 'niche') return csvDownload('top-ngach', [['Hạng', 'Ngách', 'Điểm cơ hội', 'Số kênh nhỏ', 'Kênh farm', 'Kênh đang lên', 'Outlier trung vị', 'RPM ước tính tối đa ($)', 'View 30 ngày', 'Quốc gia', 'Danh mục']].concat(D.niches.map(function (g, i) { return [i + 1, g.name, g.score, g.chans.length, g.farm, g.rise, g.medOut.toFixed(1), g.rpmHi.toFixed(1), g.v30, g.topMk.map(function (k) { return M[k] ? M[k][1] : k; }).join(' / '), CATS[g.topCat] ? CATS[g.topCat][1] : '']; })));
-      if (tab === 'ch') return csvDownload('kenh-farm', [['Kênh', 'Link', 'Sub', 'Quốc gia', 'Ngách', 'Đánh giá', 'Điểm farm', 'Video đạt / phân tích', 'View trung vị', 'Outlier trung vị', 'So với ngách (×)', 'View 30 ngày', 'Ước tính 30 ngày ($)', 'Thời lượng TB (phút)', 'Video/tuần', 'Tuổi kênh (ngày)']].concat(D.channels.map(function (c) { var a = c.a; return [c.name, 'https://www.youtube.com/channel/' + c.id, c.subs, M[c.mk] ? M[c.mk][1] : c.mk, c.niche, (VL[a.v] || VL.unk)[0], a.score, a.n ? a.hits + '/' + a.n : '', a.med || '', a.medOut ? a.medOut.toFixed(1) : '', c.peer ? c.peer.toFixed(1) : '', a.v30 || '', a.rev ? Math.round(a.rev[0]) + '-' + Math.round(a.rev[1]) : '', a.avgDur ? (a.avgDur / 60).toFixed(1) : '', a.cad ? a.cad.toFixed(1) : '', c.cr ? Math.round((Date.now() - c.cr) / 864e5) : '']; })));
+      if (tab === 'niche') return csvDownload('top-ngach', [['Hạng', 'Ngách', 'Điểm cơ hội', 'Số kênh nhỏ', 'Kênh farm', 'Kênh đang lên', 'Kênh mới 24h', 'Outlier trung vị', 'RPM ước tính tối đa ($)', 'View 30 ngày', 'Quốc gia', 'Danh mục']].concat(NS.map(function (g, i) { return [i + 1, g.name, g.score, g.chans.length, g.farm, g.rise, g.fresh, g.medOut.toFixed(1), g.rpmHi.toFixed(1), g.v30, g.topMk.map(function (k) { return M[k] ? M[k][1] : k; }).join(' / '), CATS[g.topCat] ? CATS[g.topCat][1] : '']; })));
+      if (tab === 'ch') return csvDownload('kenh-farm', [['Kênh', 'Link', 'Sub', 'Quốc gia', 'Ngách', 'Đánh giá', 'Điểm farm', 'Video đạt / phân tích', 'View trung vị', 'Outlier trung vị', 'So với ngách (×)', 'View 30 ngày', 'Ước tính 30 ngày ($)', 'Thời lượng TB (phút)', 'Video/tuần', 'Tuổi kênh (ngày)', 'Gắn sao', 'Ghi chú']].concat(D.channels.map(function (c) { var a = c.a, m = marks[c.id] || {}; return [c.name, 'https://www.youtube.com/channel/' + c.id, c.subs, M[c.mk] ? M[c.mk][1] : c.mk, c.niche, (VL[a.v] || VL.unk)[0], a.score, a.n ? a.hits + '/' + a.n : '', a.med || '', a.medOut ? a.medOut.toFixed(1) : '', c.peer ? c.peer.toFixed(1) : '', a.v30 || '', a.rev ? Math.round(a.rev[0]) + '-' + Math.round(a.rev[1]) : '', a.avgDur ? (a.avgDur / 60).toFixed(1) : '', a.cad ? a.cad.toFixed(1) : '', c.cr ? Math.round((Date.now() - c.cr) / 864e5) : '', m.s ? 'x' : '', m.note || '']; })));
       return csvDownload('video-no', [['Tiêu đề', 'Link', 'Kênh', 'Link kênh', 'Sub', 'View', 'Outlier', 'View/giờ', 'Thời lượng', 'Đăng cách đây', 'Quốc gia', 'Ngách', 'Đánh giá kênh']].concat(D.videos.map(function (v) { return [v.title, 'https://youtu.be/' + v.id, v.chName, 'https://www.youtube.com/channel/' + v.ch, v.subs, v.views, v.out.toFixed(1), v.vph, dur(v.dur), age(v.hrs), M[v.mk] ? M[v.mk][1] : v.mk, v.niche, (VL[v.a.v] || VL.unk)[0]]; })));
     }
 
-    var empty = function (msg) { return h('div', { className: 'py-16 px-6 text-center rounded-xl border border-dashed border-cham-700 bg-cham-950/70' }, h('div', { className: 'text-[12px] font-semibold text-cham-50' }, msg), h('p', { className: 'mt-1.5 text-[10.5px] text-cham-300 max-w-md mx-auto leading-relaxed' }, nStore ? 'Thử nới bộ lọc: chọn Dưới 20K sub, chuyển sang Toàn cầu, tăng thời gian đăng hoặc hạ mức view ÷ sub.' : 'Kho đang trống. Bấm Quét nhanh ở cột trái để bắt đầu, mỗi lần tốn khoảng 1.500 quota.'), !nStore && h('button', { disabled: !!busy, onClick: function () { return run({ budget: E.LEVELS[0][2] }); }, className: B.pri + ' mt-5' }, 'Quét nhanh ngay')); };
+    var empty = function (msg) { return h('div', { className: 'py-16 px-6 text-center rounded-xl border border-dashed border-cham-700 bg-cham-950/70' }, h('div', { className: 'text-[13px] font-semibold text-cham-50' }, msg), h('p', { className: 'mt-1.5 text-[11.5px] text-cham-300 max-w-md mx-auto leading-relaxed' }, nStore ? 'Thử nới bộ lọc: chọn Dưới 20K sub, bỏ lọc tuổi kênh và danh mục, chuyển sang Toàn cầu, tăng thời gian đăng hoặc hạ mức view ÷ sub.' : 'Kho đang trống. Bấm Quét nhanh ở cột trái để bắt đầu, mỗi lần tốn khoảng 1.500 quota.'), !nStore && h('button', { disabled: !!busy, onClick: function () { return run({ budget: E.LEVELS[0][2] }); }, className: B.pri + ' mt-5' }, 'Quét nhanh ngay')); };
     var lock = function (total) { return !isPro && total > FREE && h('button', { onClick: p.onUpgradePrompt, className: B.btn + ' w-full' }, 'Còn ' + N(total - FREE) + ' mục nữa'); };
     var more = function (total) { return isPro && total > lim && h('div', { className: 'flex gap-2 justify-center pt-1' }, h('button', { onClick: function () { setLim(lim + 120); }, className: B.btn }, 'Hiện thêm 120 (còn ' + N(total - lim) + ')'), h('button', { onClick: function () { setLim(total); }, className: B.btn }, 'Hiện hết ' + N(total))); };
     var cut = function (arr) { return arr.slice(0, isPro ? lim : FREE); };
-    var note = function (t) { return h('p', { className: 'text-[10.5px] text-cham-300 leading-relaxed max-w-[110ch]' }, t); };
+    var hotCls = function (o) { return o >= 20 ? 'bg-[#ff4e45] text-white' : o >= 5 ? 'bg-[#f5c451] text-[#2a1d00]' : 'bg-black/80 text-[#f1f1f1]'; };
     var thumbs = function (list, top, corner) { return h('div', { className: 'grid grid-cols-3 gap-1.5' }, list.map(function (x) {
       return h('a', { key: x.id, href: 'https://www.youtube.com/watch?v=' + x.id, target: '_blank', rel: 'noopener noreferrer', title: x.title, className: 'relative block rounded-md overflow-hidden bg-cham-950' },
         h('img', { src: thumb(x.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover' }),
         h('span', { className: 'absolute bottom-1 left-1 text-[10.5px] font-semibold px-1 rounded bg-black/80 text-cham-50 tabular-nums' }, top(x)),
-        h('span', { className: 'absolute top-1 right-1 text-[10.5px] font-bold px-1 rounded tabular-nums ' + (x.out >= 20 ? 'bg-[#ff4e45] text-white' : x.out >= 5 ? 'bg-[#f5c451] text-[#2a1d00]' : 'bg-black/80 text-[#f1f1f1]') }, corner(x)));
+        h('span', { className: 'absolute top-1 right-1 text-[10.5px] font-bold px-1 rounded tabular-nums ' + hotCls(x.out) }, corner(x)));
     })); };
-    var cell = function (l, v, tone) { return h('div', { className: 'yt-cell px-2 py-1.5 min-w-0' }, h('dt', { className: 'text-[11px] text-cham-400 truncate' }, l), h('dd', { className: 'text-[10.5px] font-semibold truncate tabular-nums ' + (tone || 'text-cham-50') }, v)); };
+    var cell = function (l, v, tone) { return h('div', { className: 'yt-cell px-2 py-1.5 min-w-0' }, h('dt', { className: 'text-[11px] text-cham-400 truncate' }, l), h('dd', { className: 'text-[11.5px] font-semibold truncate tabular-nums ' + (tone || 'text-cham-50') }, v)); };
 
-    var NS = D.niches.slice().sort(function (a, b) { return f.nSort === 'score' ? b.score - a.score : f.nSort === 'v30' ? b.v30 - a.v30 : f.nSort === 'farm' ? (b.farm - a.farm) || (b.score - a.score) : (b.medOut - a.medOut) || (b.score - a.score); });
+    var NS = D.niches.slice().sort(function (a, b) { return f.nSort === 'score' ? b.score - a.score : f.nSort === 'v30' ? b.v30 - a.v30 : f.nSort === 'farm' ? (b.farm - a.farm) || (b.score - a.score) : f.nSort === 'fresh' ? (b.fresh - a.fresh) || (b.score - a.score) : (b.medOut - a.medOut) || (b.score - a.score); });
     var samples = function (list) { return h('div', { className: 'grid grid-cols-3 gap-1.5' }, list.map(function (x) {
-      var hot = x.out >= 20 ? 'bg-[#ff4e45] text-white' : x.out >= 5 ? 'bg-[#f5c451] text-[#2a1d00]' : 'bg-black/80 text-[#f1f1f1]';
       return h('a', { key: x.id, href: 'https://www.youtube.com/watch?v=' + x.id, target: '_blank', rel: 'noopener noreferrer', title: x.title + ' · ' + N(x.views) + ' view · ' + N(x._subs) + ' sub', className: 'relative block rounded-md overflow-hidden bg-black' },
         h('img', { src: thumb(x.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover' }),
         h('span', { className: 'absolute top-1 left-1 text-[10px] font-semibold px-1 rounded bg-black/80 text-[#f1f1f1] tabular-nums' }, N(x._subs) + ' sub'),
-        h('span', { className: 'absolute top-1 right-1 text-[10px] font-bold px-1 rounded tabular-nums ' + hot }, '×' + Math.round(x.out)),
+        h('span', { className: 'absolute top-1 right-1 text-[10px] font-bold px-1 rounded tabular-nums ' + hotCls(x.out) }, '×' + Math.round(x.out)),
         h('span', { className: 'absolute bottom-1 left-1 text-[10px] font-semibold px-1 rounded bg-black/80 text-[#f1f1f1] tabular-nums' }, N(x.views) + ' view'));
     })); };
 
@@ -557,52 +734,79 @@
         var cat = CATS[g.topCat], th = [];
         g.chans.forEach(function (c) { (c.vids || []).forEach(function (v) { th.push(Object.assign({}, v, { _subs: c.subs, title: v.title + ' · ' + c.name })); }); });
         th.sort(function (a, b) { return b.out - a.out; }); th = th.slice(0, 6);
-        return h('article', { key: g.name, className: 'yt-card p-3 flex flex-col gap-2 transition hover:border-cham-600' },
+        return h('article', { key: g.name, className: 'yt-card p-3 flex flex-col gap-2' },
           h('div', { className: 'flex items-start gap-3' },
-            h('span', { className: cx('shrink-0 h-7 min-w-7 px-1.5 rounded-md flex items-center justify-center text-[10.5px] font-bold tabular-nums', ['bg-[#f5c451] text-[#2a1d00]', 'bg-[#d6dbe2] text-[#1b1f24]', 'bg-[#e0915a] text-[#2a1405]'][i] || 'bg-[#272727] text-[#aaaaaa]') }, i + 1),
+            h('span', { className: cx('shrink-0 h-7 min-w-7 px-1.5 rounded-md flex items-center justify-center text-[11px] font-bold tabular-nums', ['bg-[#f5c451] text-[#2a1d00]', 'bg-[#d6dbe2] text-[#1b1f24]', 'bg-[#e0915a] text-[#2a1405]'][i] || 'bg-[#272727] text-[#aaaaaa]') }, i + 1),
             h('div', { className: 'min-w-0 flex-1' },
-              h('h3', { className: 'text-[12px] font-semibold text-cham-50 truncate', title: g.name }, g.name),
-              h('div', { className: 'text-[10.5px] text-cham-300 truncate' }, (cat ? cat[1] + ' · ' : '') + g.topMk.slice(0, 5).map(code).join(' '))),
-            h('div', { className: 'text-right shrink-0' }, h('div', { className: 'font-display text-[16.5px] leading-6 font-bold text-cham-50 tabular-nums' }, g.score), h('div', { className: 'text-[11px] text-cham-400' }, 'điểm cơ hội'))),
+              h('h3', { className: 'text-[12.5px] font-semibold text-cham-50 truncate', title: g.name }, g.name),
+              h('div', { className: 'text-[11px] text-cham-300 truncate' }, (cat ? cat[1] + ' · ' : '') + g.topMk.slice(0, 5).map(code).join(' '))),
+            h('div', { className: 'text-right shrink-0', title: f.mode === 'rpm' ? 'Điểm cơ hội = số kênh nhỏ đang farm được (40) + mức view vượt sub (30) + RPM của nước và danh mục (30)' : 'Điểm cơ hội = số kênh nhỏ đang farm được (40) + mức view vượt sub (30) + tổng view 30 ngày (30)' }, h('div', { className: 'font-display text-[16.5px] leading-6 font-bold text-cham-50 tabular-nums' }, g.score), h('div', { className: 'text-[11px] text-cham-400' }, 'điểm cơ hội'))),
           bar(g.score, g.score >= 70 ? 'bg-[#4bc167]' : g.score >= 50 ? 'bg-[#f5c451]' : 'bg-[#3ea6ff]'),
           h('dl', { className: 'grid grid-cols-4 gap-1.5' },
-            cell('Kênh nhỏ', N(g.chans.length)), cell('Farm', g.farm, g.farm ? 'text-ngoc-300' : ''), cell('Đang lên', g.rise, g.rise ? 'text-hoe-300' : ''), cell('View÷sub', fx(g.medOut))),
-          h('div', { className: 'flex justify-between gap-2 text-[10.5px] text-cham-300 tabular-nums' }, h('span', null, 'RPM tới ~$' + g.rpmHi.toFixed(1)), h('span', null, 'View 30 ngày ' + N(g.v30))),
+            cell('Kênh nhỏ', N(g.chans.length)), cell('Farm', g.farm, g.farm ? 'text-[#6fcf85]' : ''), cell('Đang lên', g.rise, g.rise ? 'text-[#f5c451]' : ''), cell('View÷sub', fx(g.medOut))),
+          h('div', { className: 'flex justify-between items-center gap-2 text-[11px] text-cham-300 tabular-nums' }, h('span', null, 'RPM tới ~$' + g.rpmHi.toFixed(1)), g.fresh > 0 && tag('+' + g.fresh + ' kênh mới', 'moi'), h('span', null, 'View 30 ngày ' + N(g.v30))),
           th.length > 0 && h('div', { className: 'space-y-1.5' }, h('div', { className: 'text-[11px] text-cham-400' }, 'Video mẫu view cao (' + th.length + ')'), samples(th)),
           h('div', { className: 'flex gap-1.5 mt-auto pt-1' },
-            h('button', { onClick: function () { set('niche', g.name); setTab('ch'); }, className: B.btn + ' flex-1' }, 'Xem ' + g.chans.length + ' kênh'),
-            h('button', { onClick: function () { set('niche', g.name); setTab('vid'); }, className: B.btn }, 'Video'),
-            p.onSelectKeywordForSearch && h('button', { onClick: function () { p.onSelectKeywordForSearch(g.name); }, className: B.btn }, 'Phân tích')));
+            h('button', { onClick: function () { set('niche', g.name); setTab('ch'); }, className: B.act + ' flex-1' }, 'Xem ' + g.chans.length + ' kênh'),
+            h('button', { onClick: function () { set('niche', g.name); setTab('vid'); }, className: B.act }, 'Video'),
+            p.onSelectKeywordForSearch && h('button', { onClick: function () { p.onSelectKeywordForSearch(g.name); }, title: 'Phân tích từ khoá này ở mục Khám phá', className: B.act }, 'Từ khoá'),
+            UI.ClaudeBox && h('button', { onClick: function () { setSend(g); }, title: 'Gom kênh farm và video mẫu của ngách thành prompt cho Claude', className: B.act + ' !bg-[#3a2a5c] !text-[#d4bbff] hover:!bg-[#4a3673]' }, 'Gửi Claude')));
       })),
       more(D.niches.length), lock(D.niches.length));
 
     // ---------- Tab Kênh ----------
+    var chCard = function (c, i) {
+      var a = c.a, ok = a.n > 0, farm = a.v === 'farm', ageD = c.cr ? Math.round((Date.now() - c.cr) / 864e5) : null, m = marks[c.id] || {};
+      return h('article', { key: c.id, className: cx('yt-card p-3 flex flex-col gap-2 transition', m.seen && !m.s && 'opacity-70 hover:opacity-100', m.s && '!border-[#f5c451]/60') },
+        h('div', { className: 'flex items-start gap-3' },
+          h('span', { className: 'shrink-0 h-7 min-w-7 px-1.5 rounded-md flex items-center justify-center text-[11px] font-bold tabular-nums bg-cham-800 text-cham-200' }, i + 1),
+          h('div', { className: 'min-w-0 flex-1' },
+            h('button', { onClick: function () { setDetail(c.id); }, title: 'Xem chi tiết kênh: ' + c.name, className: 'block max-w-full text-left text-[12.5px] font-semibold text-cham-50 hover:text-[#7cc3ff] truncate cursor-pointer' }, c.name),
+            h('div', { className: 'text-[11px] text-cham-300 truncate tabular-nums', title: c.niche }, N(c.subs) + ' sub · ' + code(c.mk) + ' · ' + c.niche)),
+          ok && farm ? h('span', { className: 'seal stamp', title: 'Điểm farm ' + a.score + '/100' }, h('b', null, a.score), h('span', null, 'Farm'))
+            : ok ? h('div', { className: 'text-right shrink-0' }, h('div', { className: 'font-display text-[16.5px] leading-6 font-bold tabular-nums text-cham-50' }, a.score), h('div', { className: 'text-[11px] text-cham-400' }, 'điểm farm')) : null),
+        h('div', { className: 'flex items-start gap-2' }, h('div', { className: 'flex-1 min-w-0 flex flex-wrap items-center gap-1.5 min-h-7' }, c.isNew && tag('Mới', 'moi'), badge(a), ageD != null && ageD < 180 ? tag(ageD + ' ngày tuổi', 'tim') : null, a.mid ? tag('Có mid-roll', 'teal') : null, m.seen && tag('Đã xem')),
+          h('span', { className: 'shrink-0 inline-flex gap-1' },
+            iconBtn('star', m.s, m.s ? 'Bỏ sao' : 'Gắn sao kênh ngon', function () { mark(c.id, { s: m.s ? 0 : 1 }); }),
+            iconBtn('note', m.note, m.note ? 'Sửa ghi chú' : 'Thêm ghi chú', function () { setDetail(c.id); }, 'bg-[#3ea6ff] text-[#0f0f0f]'),
+            iconBtn('hide', false, 'Ẩn kênh này khỏi kết quả', function () { mark(c.id, { h: 1, n: c.name }); p.showToast && p.showToast('Đã ẩn "' + c.name + '". Xem lại ở cuối cột trái: Kênh đã ẩn.'); }))),
+        m.note && h('p', { className: 'text-[11px] text-[#b0daff] leading-snug line-clamp-2', title: m.note }, 'Ghi chú: ' + m.note),
+        ok ? h('dl', { className: 'grid grid-cols-3 gap-1.5' },
+          cell('Video đạt', a.hits + '/' + a.n + ' · ' + Math.round(a.hr * 100) + '%', a.hr >= 0.5 ? 'text-[#6fcf85]' : ''),
+          cell('View trung vị', N(a.med) + ' · ' + fx(a.medOut), a.medOut >= 1 ? 'text-[#6fcf85]' : ''),
+          cell('So với ngách', c.peer ? '×' + c.peer.toFixed(1) : '–', c.peer >= 1.5 ? 'text-[#f5c451]' : ''),
+          cell('View 30 ngày', N(a.v30)),
+          cell('Độ dài · nhịp', (f.fmt === 'short' ? Math.round(a.avgDur) + 's' : Math.round(a.avgDur / 60) + 'p') + ' · ' + a.cad.toFixed(1) + '/tuần'),
+          cell('Ước tính/tháng', a.eligible ? '$' + N(Math.round(a.rev[0])) + '–' + N(Math.round(a.rev[1])) : 'Chưa đủ 1K', a.eligible ? 'text-[#6fcf85]' : 'text-cham-400'))
+          : h('p', { className: 'yt-cell text-[11px] text-cham-200 px-3 py-2.5 leading-relaxed' }, a.v === 'unk' ? 'Mới thấy ' + c.vids.length + ' video nổ (tốt nhất ×' + Math.round(c.bestOut) + '). Bấm Phân tích ở dải vàng phía trên để so toàn bộ video của kênh.' : 'Không có video ' + (f.fmt === 'short' ? 'Shorts' : 'dài') + ' trong 60 ngày.'),
+        c.vids.length > 0 && thumbs(c.vids.slice(0, 3), function (v) { return N(v.views); }, function (v) { return '×' + Math.round(v.out); }),
+        h('div', { className: 'flex gap-1.5 mt-auto pt-1' },
+          h('a', { href: 'https://www.youtube.com/channel/' + c.id + '/videos', target: '_blank', rel: 'noopener noreferrer', onClick: function () { mark(c.id, { seen: Date.now() }); }, className: B.act + ' flex-1' }, 'Mở kênh', ic('ext')),
+          h('button', { onClick: function () { setDetail(c.id); }, className: B.act }, 'Chi tiết'),
+          p.onOpenChannel && h('button', { onClick: function () { mark(c.id, { seen: Date.now() }); p.onOpenChannel(c.id, 'clone'); }, title: 'Bóc công thức kênh này thành hồ sơ clone', className: B.act }, 'Clone'),
+          p.onAddCompetitor && h('button', { onClick: function () { p.onAddCompetitor(c.best ? toApp(c.best) : { channel: c.name, channelId: c.id, subs: c.subs }); }, className: B.act }, 'Theo dõi')));
+    };
+    var chTable = function () {
+      var T = UI.Table; if (!T) return null;
+      var cols = [
+        { k: 'name', t: 'Kênh', v: function (c) { return c.name.toLowerCase(); }, cls: 'min-w-[200px]', r: function (c) { var m = marks[c.id] || {}; return h('div', { className: 'min-w-0' }, h('button', { onClick: function () { setDetail(c.id); }, className: 'text-left text-[12px] font-medium text-cham-50 hover:text-[#7cc3ff] cursor-pointer' }, (m.s ? '★ ' : '') + c.name), h('div', { className: 'text-[11px] text-cham-400 truncate max-w-[260px]' }, c.niche + (m.note ? ' · ' + m.note : ''))); } },
+        { k: 'subs', t: 'Sub', right: true, v: function (c) { return c.subs; }, r: function (c) { return N(c.subs); } },
+        { k: 'mk', t: 'Nước', v: function (c) { return code(c.mk); } },
+        { k: 'age', t: 'Tuổi kênh', right: true, v: function (c) { return c.cr ? Date.now() - c.cr : 9e15; }, r: function (c) { if (!c.cr) return '–'; var d = Math.round((Date.now() - c.cr) / 864e5); return d < 365 ? d + ' ngày' : (d / 365).toFixed(1) + ' năm'; } },
+        { k: 'v', t: 'Đánh giá', v: function (c) { return ['farm', 'rise', 'unk', 'fluke', 'cold', 'none'].indexOf(c.a.v); }, r: function (c) { return h('span', { className: 'inline-flex gap-1' }, c.isNew && tag('Mới', 'moi'), badge(c.a)); } },
+        { k: 'score', t: 'Điểm', right: true, v: function (c) { return c.a.score; }, r: function (c) { return c.a.n ? c.a.score : '–'; } },
+        { k: 'hr', t: 'Video đạt', right: true, v: function (c) { return c.a.hr || 0; }, r: function (c) { return c.a.n ? c.a.hits + '/' + c.a.n : '–'; } },
+        { k: 'med', t: 'View trung vị', right: true, v: function (c) { return c.a.med || 0; }, r: function (c) { return c.a.n ? N(c.a.med) : '–'; } },
+        { k: 'out', t: '× sub', right: true, v: function (c) { return c.a.n ? c.a.medOut : c.bestOut / 100; }, r: function (c) { return c.a.n ? fx(c.a.medOut) : '–'; } },
+        { k: 'v30', t: 'View 30 ngày', right: true, v: function (c) { return c.a.v30 || 0; }, r: function (c) { return c.a.n ? N(c.a.v30) : '–'; } },
+        { k: 'rev', t: 'Ước tính/tháng', right: true, v: function (c) { return c.a.eligible && c.a.rev ? c.a.rev[1] : 0; }, r: function (c) { return c.a.n && c.a.eligible ? '$' + N(Math.round(c.a.rev[0])) + '–' + N(Math.round(c.a.rev[1])) : '–'; } },
+        { k: 'cad', t: 'Video/tuần', right: true, v: function (c) { return c.a.cad || 0; }, r: function (c) { return c.a.n ? c.a.cad.toFixed(1) : '–'; } },
+        { k: 'act', t: '', r: function (c) { var m = marks[c.id] || {}; return h('span', { className: 'inline-flex gap-1 justify-end' }, iconBtn('star', m.s, 'Gắn sao', function () { mark(c.id, { s: m.s ? 0 : 1 }); }), iconBtn('hide', false, 'Ẩn kênh', function () { mark(c.id, { h: 1, n: c.name }); }), h('a', { href: 'https://www.youtube.com/channel/' + c.id + '/videos', target: '_blank', rel: 'noopener noreferrer', onClick: function () { mark(c.id, { seen: Date.now() }); }, title: 'Mở kênh', className: 'h-6 w-6 rounded-md inline-flex items-center justify-center bg-[#272727] text-[#aaaaaa] hover:bg-[#3a3a3a] hover:text-[#f1f1f1]' }, ic('ext'))); } }
+      ];
+      return h('div', { className: 'yt-card p-2' }, h(T, { cols: cols, rows: D.channels, rowKey: function (c) { return c.id; }, limit: isPro ? lim : FREE }));
+    };
     var chView = !D.channels.length ? empty('Chưa có kênh nào qua bộ lọc') : h('div', { className: 'space-y-3' },
-      h('div', { className: 'grid gap-3 grid-cols-[repeat(auto-fill,minmax(310px,1fr))]' }, cut(D.channels).map(function (c, i) {
-        var a = c.a, ok = a.n > 0, farm = a.v === 'farm', ageD = c.cr ? Math.round((Date.now() - c.cr) / 864e5) : null;
-        return h('article', { key: c.id, className: cx('yt-card p-3 flex flex-col gap-2 transition', '') },
-          h('div', { className: 'flex items-start gap-3' },
-            h('span', { className: 'shrink-0 h-7 min-w-7 px-1.5 rounded-md flex items-center justify-center text-[10.5px] font-bold tabular-nums bg-cham-800 text-cham-200' }, i + 1),
-            h('div', { className: 'min-w-0 flex-1' },
-              h('a', { href: 'https://www.youtube.com/channel/' + c.id, target: '_blank', rel: 'noopener noreferrer', title: c.name, className: 'block text-[12px] font-semibold text-cham-50 hover:text-ngoc-200 truncate' }, c.name),
-              h('div', { className: 'text-[10.5px] text-cham-300 truncate tabular-nums', title: c.niche }, N(c.subs) + ' sub · ' + code(c.mk) + ' · ' + c.niche)),
-            ok && farm ? h('span', { className: 'seal stamp', title: 'Điểm farm ' + a.score + '/100' }, h('b', null, a.score), h('span', null, 'Farm'))
-              : ok ? h('div', { className: 'text-right shrink-0' }, h('div', { className: 'font-display text-[16.5px] leading-6 font-bold tabular-nums text-cham-50' }, a.score), h('div', { className: 'text-[11px] text-cham-400' }, 'điểm farm')) : null),
-          h('div', { className: 'flex flex-wrap items-center gap-1.5' }, badge(a), ageD != null && ageD < 180 ? tag(ageD + ' ngày tuổi', 'tim') : null, a.mid ? tag('Có mid-roll', 'teal') : null),
-          ok ? h('dl', { className: 'grid grid-cols-3 gap-1.5' },
-            cell('Video đạt', a.hits + '/' + a.n + ' · ' + Math.round(a.hr * 100) + '%', a.hr >= 0.5 ? 'text-la-300' : ''),
-            cell('View trung vị', N(a.med) + ' · ' + fx(a.medOut), a.medOut >= 1 ? 'text-la-300' : ''),
-            cell('So với ngách', c.peer ? '×' + c.peer.toFixed(1) : '–', c.peer >= 1.5 ? 'text-hoe-300' : ''),
-            cell('View 30 ngày', N(a.v30)),
-            cell('Độ dài · nhịp', (f.fmt === 'short' ? Math.round(a.avgDur) + 's' : Math.round(a.avgDur / 60) + 'p') + ' · ' + a.cad.toFixed(1) + '/tuần'),
-            cell('Ước tính/tháng', a.eligible ? '$' + N(Math.round(a.rev[0])) + '–' + N(Math.round(a.rev[1])) : 'Chưa đủ 1K', a.eligible ? 'text-la-300' : 'text-cham-400'))
-            : h('p', { className: 'yt-cell text-[10.5px] text-cham-200 px-3 py-2.5 leading-relaxed' }, a.v === 'unk' ? 'Mới thấy ' + c.vids.length + ' video nổ (tốt nhất ×' + Math.round(c.bestOut) + '). Bấm Phân tích ở dải vàng phía trên để so toàn bộ video của kênh.' : 'Không có video ' + (f.fmt === 'short' ? 'Shorts' : 'dài') + ' trong 60 ngày.'),
-          c.vids.length > 0 && thumbs(c.vids.slice(0, 3), function (v) { return N(v.views); }, function (v) { return '×' + Math.round(v.out); }),
-          h('div', { className: 'flex gap-1.5 mt-auto pt-1' },
-            h('a', { href: 'https://www.youtube.com/channel/' + c.id + '/videos', target: '_blank', rel: 'noopener noreferrer', className: B.btn + ' flex-1' }, 'Mở kênh', ic('ext')),
-            p.onAddCompetitor && h('button', { onClick: function () { p.onAddCompetitor(c.best ? toApp(c.best) : { channel: c.name, channelId: c.id, subs: c.subs }); }, className: B.btn }, 'Theo dõi'),
-            p.onSelectKeywordForSearch && c.best && h('button', { onClick: function () { p.onSelectKeywordForSearch(c.best.title); }, className: B.btn }, 'Tương tự')));
-      })),
+      view === 'table' ? chTable() : h('div', { className: 'grid gap-3 grid-cols-[repeat(auto-fill,minmax(310px,1fr))]' }, cut(D.channels).map(chCard)),
       more(D.channels.length), lock(D.channels.length));
 
     // ---------- Tab Video ----------
@@ -613,27 +817,42 @@
           h('a', { href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer', className: 'relative block rounded-xl overflow-hidden bg-[#272727]' },
             h('img', { src: thumb(v.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover' }),
             h('span', { className: cx(chip, 'top-2 left-2 bg-black/80 text-cham-50') }, code(v.mk) + ' · ' + N(v.subs) + ' sub'),
-            h('span', { className: cx(chip, 'top-2 right-2 font-bold', v.out >= 20 ? 'bg-[#ff4e45] text-white' : v.out >= 5 ? 'bg-[#f5c451] text-[#2a1d00]' : 'bg-black/80 text-[#f1f1f1]'), title: 'View chia sub' }, fx(v.out)),
-            farm && h('span', { className: cx(chip, 'bottom-2 left-2 bg-ngoc-900 text-ngoc-100 border border-ngoc-600/70') }, 'Kênh farm'),
+            h('span', { className: cx(chip, 'top-2 right-2 font-bold', hotCls(v.out)), title: 'View chia sub' }, fx(v.out)),
+            (farm || v.isNew) && h('span', { className: 'absolute bottom-2 left-2 inline-flex gap-1' }, v.isNew && h('span', { className: 'text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-[#ff4e45] text-white' }, 'Mới'), farm && h('span', { className: 'text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-[#1d3a2a] text-[#9fe0ad]' }, 'Kênh farm')),
             h('span', { className: cx(chip, 'bottom-2 right-2 bg-black/80 text-cham-50 font-medium') }, dur(v.dur))),
           h('div', { className: 'flex-1 flex flex-col gap-1 px-0.5' },
-            h('div', { className: 'text-[10.5px] font-medium leading-snug text-cham-50 line-clamp-2', title: v.title }, v.title),
-            h('a', { href: 'https://www.youtube.com/channel/' + v.ch, target: '_blank', rel: 'noopener noreferrer', className: 'text-[10.5px] text-cham-300 truncate hover:text-nhat-200' }, v.chName + ' · ' + v.niche),
-            h('dl', { className: 'grid grid-cols-3 gap-1 text-[10.5px] mt-auto pt-1.5' },
+            h('div', { className: 'text-[11.5px] font-medium leading-snug text-cham-50 line-clamp-2', title: v.title }, v.title),
+            h('button', { onClick: function () { openCh(v.ch); }, title: 'Xem chi tiết kênh', className: 'text-left text-[11px] text-cham-300 truncate hover:text-[#7cc3ff] cursor-pointer' }, v.chName + ' · ' + v.niche),
+            h('dl', { className: 'grid grid-cols-3 gap-1 text-[11px] mt-auto pt-1.5' },
               h('div', null, h('dt', { className: 'text-cham-400' }, 'View'), h('dd', { className: 'text-cham-50 font-semibold tabular-nums' }, N(v.views))),
-              h('div', null, h('dt', { className: 'text-cham-400' }, 'View/giờ'), h('dd', { className: 'text-hoe-300 font-semibold tabular-nums' }, N(v.vph))),
+              h('div', null, h('dt', { className: 'text-cham-400' }, 'View/giờ'), h('dd', { className: 'text-[#f5c451] font-semibold tabular-nums' }, N(v.vph))),
               h('div', { className: 'text-right' }, h('dt', { className: 'text-cham-400' }, 'Đăng'), h('dd', { className: 'text-cham-200 tabular-nums' }, age(v.hrs) + ' trước'))),
             h('div', { className: 'flex gap-1.5 pt-1.5' },
-              p.onToggleSave && h('button', { onClick: function () { p.onToggleSave(toApp(v)); }, 'aria-pressed': !!saved, className: cx(B.sm, saved && '!border-la-500/60 !bg-la-900 !text-la-200') }, saved ? 'Đã lưu' : 'Lưu'),
+              p.onToggleSave && h('button', { onClick: function () { p.onToggleSave(toApp(v)); }, 'aria-pressed': !!saved, className: cx(B.sm, saved && '!bg-[#f1f1f1] !text-[#0f0f0f]') }, saved ? 'Đã lưu' : 'Lưu'),
               p.onAddCompetitor && h('button', { onClick: function () { p.onAddCompetitor(toApp(v)); }, className: B.sm }, 'Theo dõi kênh'),
               p.onSelectKeywordForSearch && h('button', { onClick: function () { p.onSelectKeywordForSearch(v.title); }, className: B.sm + ' ml-auto' }, 'Tương tự'))));
       })),
       more(D.videos.length), lock(D.videos.length));
 
-    if (!local) return h('div', { role: 'status', className: 'py-16 text-center text-[10.5px] text-cham-300' }, 'Đang mở kho Top Ngách…');
+    // ---------- Cửa sổ nổi ----------
+    var dc = detail && D.allChannels.find(function (x) { return x.id === detail; });
+    var detailModal = dc && h(ChannelDetail, { key: dc.id, c: dc, raw: (store.channels[dc.id] || {}).u, short: f.fmt === 'short', mark: marks[dc.id], onMark: function (patch) { mark(dc.id, patch); }, onClose: function () { setDetail(null); },
+      onOpen: p.onOpenChannel ? function (id, t) { mark(id, { seen: Date.now() }); setDetail(null); p.onOpenChannel(id, t); } : null,
+      onFollow: p.onAddCompetitor ? function () { p.onAddCompetitor(dc.best ? toApp(dc.best) : { channel: dc.name, channelId: dc.id, subs: dc.subs }); } : null,
+      onCompare: function () { compare(dc); } });
+    var sendModal = send && UI.Modal && h(UI.Modal, { title: 'Gửi ngách "' + send.name + '" sang Claude', wide: true, onClose: function () { setSend(null); } },
+      h('p', { className: 'text-[11.5px] text-cham-300 mb-3 leading-relaxed' }, 'Prompt gồm số liệu ngách, ' + Math.min(15, send.chans.length) + ' kênh nhỏ và video mẫu view cao. Claude sẽ phân tích vì sao ngách chạy và lập kế hoạch 15 video đầu tiên.'),
+      h(UI.ClaudeBox, { key: send.name, kind: 'niche', title: 'Phân tích ngách: ' + send.name, file: 'ngach-' + send.name.replace(/[^\p{L}\p{N}]+/gu, '-').slice(0, 40), prompt: nichePrompt(send, f) }));
+    var hiddenModal = showHidden && UI.Modal && h(UI.Modal, { title: 'Kênh đã ẩn (' + hiddenIds.length + ')', onClose: function () { setShowHidden(false); } },
+      !hiddenIds.length ? h('p', { className: 'text-[12px] text-cham-300' }, 'Không còn kênh nào bị ẩn.') : h('ul', { className: 'space-y-1.5 max-h-[60vh] overflow-y-auto' }, hiddenIds.map(function (id) {
+        return h('li', { key: id, className: 'flex items-center justify-between gap-3 text-[12px]' }, h('a', { href: 'https://www.youtube.com/channel/' + id, target: '_blank', rel: 'noopener noreferrer', className: 'text-cham-100 hover:text-white truncate' }, marks[id].n || id), h('button', { onClick: function () { mark(id, { h: 0 }); }, className: B.sm }, 'Hiện lại'));
+      })));
+
+    if (!local) return h('div', { role: 'status', className: 'py-16 text-center text-[11.5px] text-cham-300' }, 'Đang mở kho Top Ngách…');
     return h('section', { className: 'grid gap-5 lg:grid-cols-[232px_minmax(0,1fr)]' },
       sidebar,
-      h('div', { className: 'space-y-4 min-w-0' }, head, toolbar, tab === 'niche' ? nicheView : tab === 'ch' ? chView : vidView));
+      h('div', { className: 'space-y-4 min-w-0' }, head, toolbar, tab === 'niche' ? nicheView : tab === 'ch' ? chView : vidView),
+      detailModal, sendModal, hiddenModal);
   }
   window.TopNgachV3 = TopNgachV3;
 })();
