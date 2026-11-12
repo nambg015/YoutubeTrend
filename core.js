@@ -42,13 +42,13 @@
       return single ? [{ id: 'k_main', name: 'Key 1', key: single, status: 'active', addedAt: Date.now() }] : [];
     },
     savePool: function (pool, silent) {
-      var active = pool.find(function (p) { return p.status === 'active' && p.key; }) || pool.find(function (p) { return p.status !== 'quota_exceeded' && p.key; });
+      var active = pool.find(function (p) { return p.status === 'active' && p.key; }) || pool.find(function (p) { return p.status !== 'quota_exceeded' && p.status !== 'suspended' && p.key; });
       if (active) active.status = 'active';
       st.put('yt_key_pool', pool); st.set('yt_key', active ? active.key : '');
       if (!silent) { emit('keys'); try { W.dispatchEvent(new CustomEvent('yt-keys-updated', { detail: { pool: pool, activeKey: active ? active.key : '' } })); } catch (e) { } }
       return active ? active.key : '';
     },
-    getActiveKey: function () { var p = this.getPool(), a = p.find(function (x) { return x.status === 'active' && x.key; }) || p.find(function (x) { return x.status !== 'quota_exceeded' && x.key; }); return a ? a.key : ''; },
+    getActiveKey: function () { var p = this.getPool(), a = p.find(function (x) { return x.status === 'active' && x.key; }) || p.find(function (x) { return x.status !== 'quota_exceeded' && x.status !== 'suspended' && x.key; }); return a ? a.key : ''; },
     addKey: function (name, key) {
       key = String(key || '').trim(); if (!key) return false; var pool = this.getPool(); if (pool.some(function (p) { return p.key === key; })) return false;
       pool.push({ id: 'k_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: String(name || '').trim() || 'Key ' + (pool.length + 1), key: key, status: pool.length ? 'standby' : 'active', addedAt: Date.now() });
@@ -58,17 +58,18 @@
     setActive: function (id) { var pool = this.getPool().map(function (p) { var o = Object.assign({}, p); if (p.id === id || p.key === id) o.status = 'active'; else if (o.status === 'active') o.status = 'standby'; return o; }); this.savePool(pool); },
     rename: function (id, name) { var pool = this.getPool(); pool.forEach(function (p) { if (p.id === id) p.name = name; }); this.savePool(pool); },
     resetStatus: function (id) { var pool = this.getPool(); pool.forEach(function (p) { if ((p.id === id || !id) && p.status === 'quota_exceeded') p.status = 'standby'; }); this.savePool(pool); },
-    markQuotaExceeded: function (key) {
+    markSuspended: function (key) { return this.markQuotaExceeded(key, 'suspended'); },
+    markQuotaExceeded: function (key, status) {
       var pool = this.getPool(), next = null;
-      pool.forEach(function (p) { if (p.key === key) p.status = 'quota_exceeded'; });
+      pool.forEach(function (p) { if (p.key === key) p.status = status || 'quota_exceeded'; });
       pool.forEach(function (p) { if (p.status === 'active') p.status = 'standby'; });
-      var n = pool.find(function (p) { return p.status !== 'quota_exceeded' && p.key; }); if (n) { n.status = 'active'; next = n.key; }
+      var n = pool.find(function (p) { return p.status !== 'quota_exceeded' && p.status !== 'suspended' && p.key; }); if (n) { n.status = 'active'; next = n.key; }
       this.savePool(pool); return next;
     },
     stats: function () {
-      var pool = this.getPool(), use = this.usage(), ok = pool.filter(function (k) { return k.status !== 'quota_exceeded' && k.key; });
+      var pool = this.getPool(), use = this.usage(), ok = pool.filter(function (k) { return k.status !== 'quota_exceeded' && k.status !== 'suspended' && k.key; });
       var left = ok.reduce(function (a, k) { return a + Math.max(0, 1e4 - (use[k.key] || 0)); }, 0);
-      return { total: pool.length, ok: ok.length, left: left, used: pool.reduce(function (a, k) { return a + (use[k.key] || 0); }, 0) };
+      return { total: pool.length, ok: ok.length, susp: pool.filter(function (k) { return k.status === 'suspended'; }).length, left: left, used: pool.reduce(function (a, k) { return a + (use[k.key] || 0); }, 0) };
     }
   };
   W.ytKeyManager = ytKeyManager;
@@ -78,12 +79,13 @@
   async function yt(path, params, key) {
     var cands = [], first = key || ytKeyManager.getActiveKey();
     if (first) cands.push(first);
-    ytKeyManager.getPool().forEach(function (p) { if (p.key && p.status !== 'quota_exceeded' && cands.indexOf(p.key) < 0) cands.push(p.key); });
+    ytKeyManager.getPool().forEach(function (p) { if (p.key && p.status !== 'quota_exceeded' && p.status !== 'suspended' && cands.indexOf(p.key) < 0) cands.push(p.key); });
     if (!cands.length) {
       var pool = ytKeyManager.getPool();
+      if (pool.length && pool.every(function (p) { return p.status === 'suspended'; })) throw { code: 'suspended', msg: 'Google đã tạm khoá (suspend) project Google Cloud chứa API key này, nên mọi key của project đó đều bị từ chối. Tạo key mới từ một project khác rồi thêm trong Cài đặt.' };
       throw pool.length ? { code: 'quotaExceeded', msg: 'Tất cả API key đã hết quota hôm nay (reset khoảng 14–15h giờ VN). Thêm key mới trong Cài đặt.' } : { code: 'MISSING', msg: 'Chưa có YouTube API key. Thêm key trong Cài đặt.' };
     }
-    var tried = {};
+    var tried = {}, susp = 0, quota = 0;
     for (var i = 0; i < cands.length; i++) {
       var k = cands[i]; if (tried[k]) continue; tried[k] = 1;
       var u = new URL('https://www.googleapis.com/youtube/v3/' + path);
@@ -94,10 +96,12 @@
       j = await r.json().catch(function () { return {}; });
       if (r.ok) { ytKeyManager.trackUnits(k, COST[path] || 1); return j; }
       var reason = (j.error && j.error.errors && j.error.errors[0] && j.error.errors[0].reason) || ('HTTP' + r.status);
-      if (/quotaExceeded|dailyLimitExceeded|rateLimitExceeded/.test(reason)) { var nx = ytKeyManager.markQuotaExceeded(k); if (nx && !tried[nx]) cands.push(nx); continue; }
+      if (/has been suspended|CONSUMER_SUSPENDED/i.test(((j.error || {}).message || '') + JSON.stringify((j.error || {}).details || ''))) { susp++; var ns = ytKeyManager.markSuspended(k); if (ns && !tried[ns]) cands.push(ns); continue; }
+      if (/quotaExceeded|dailyLimitExceeded|rateLimitExceeded/.test(reason)) { quota++; var nx = ytKeyManager.markQuotaExceeded(k); if (nx && !tried[nx]) cands.push(nx); continue; }
       if (reason === 'keyInvalid' || /API key not valid/i.test((j.error || {}).message || '')) throw { code: 'keyInvalid', msg: 'API key không hợp lệ: ' + k.slice(0, 8) + '…' };
       throw { code: reason, msg: (j.error && j.error.message) || reason, raw: j };
     }
+    if (susp && !quota) throw { code: 'suspended', msg: 'Google đã tạm khoá (suspend) project Google Cloud chứa API key này, nên mọi key của project đó đều bị từ chối. Tạo key mới từ một project khác rồi thêm trong Cài đặt.' };
     throw { code: 'quotaExceeded', msg: 'Tất cả API key đã hết quota hôm nay (reset khoảng 14–15h giờ VN). Thêm key mới trong Cài đặt.' };
   }
   W.yt = yt;

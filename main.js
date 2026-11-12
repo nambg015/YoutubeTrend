@@ -12,7 +12,13 @@
   function readRoute() { var hsh = (location.hash || '').replace(/^#\/?/, '').split('/')[0]; if (NAV.some(function (n) { return n[0] === hsh; })) return hsh; var q = new URLSearchParams(location.search).get('tab'); return OLD[q] || 'today'; }
 
   // ---------- ĐĂNG NHẬP ----------
-  function Mark(p) { return h('span', { className: 'inline-flex items-center gap-2' }, h('span', { 'aria-hidden': true, className: cx('grid place-items-center rounded-lg bg-[#3ea6ff] text-[#0f0f0f] font-bold tracking-tight', p.big ? 'w-10 h-10 text-[15px]' : 'w-7 h-7 text-[11.5px]') }, 'YT'), h('span', { className: cx('font-bold tracking-[-0.04em] text-[#f1f1f1]', p.big ? 'text-[24px]' : 'text-[19px]') }, 'YouTrend')); }
+  function Mark(p) {
+    var box = p.big ? 40 : 28;
+    return h('span', { className: 'inline-flex items-center gap-2', 'aria-label': 'YouTrend' },
+      h('span', { 'aria-hidden': true, className: 'grid place-items-center rounded-lg bg-[#1f1f1f] border border-[#3a3a3a]', style: { width: box, height: box } },
+        h('svg', { width: box * 0.62, height: box * 0.62, viewBox: '0 0 24 24', fill: 'none', stroke: '#ff4e45', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round' }, h('path', { d: 'M3 17l6-6 4 4 8-8' }), h('path', { d: 'M15 7h6v6' }))),
+      h('span', { 'aria-hidden': true, className: cx('brand leading-none whitespace-nowrap', p.big ? 'text-[32px]' : 'text-[24px]') }, h('span', { className: 'text-[#f1f1f1]' }, 'You'), h('span', { className: 'text-[#ff4e45]' }, 'Trend')));
+  }
   function Login(p) {
     var s0 = useState(''), id = s0[0], setId = s0[1], s1 = useState(''), pw = s1[0], setPw = s1[1], s2 = useState(''), busy = s2[0], setBusy = s2[1], s3 = useState(p.message || ''), err = s3[0], setErr = s3[1];
     useEffect(function () { setErr(p.message || ''); }, [p.message]);
@@ -71,7 +77,7 @@
     K.useBus('keys'); K.useBus('quota');
     var S = Y.keys.stats(), tone = !S.total ? 'border-dashed border-[#3f3f3f] text-[#aaaaaa]' : !S.ok ? 'border-transparent bg-[#3a1d1d] text-[#ff8a80]' : 'border-transparent bg-[#323232] text-[#f1f1f1] hover:bg-[#424242]';
     return h('button', { onClick: p.onClick, title: 'Quota YouTube còn lại hôm nay. Bấm để quản lý API key.', className: cx('h-9 px-4 rounded-full border text-[12.5px] font-medium tabular-nums transition cursor-pointer whitespace-nowrap', tone) },
-      !S.total ? 'Chưa có key' : !S.ok ? 'Hết quota' : h(Frag, null, h('span', { className: 'sm:hidden' }, N(S.left)), h('span', { className: 'hidden sm:inline' }, 'Quota ' + N(S.left) + ' · ' + S.ok + '/' + S.total + ' key')));
+      !S.total ? 'Chưa có key' : !S.ok ? (S.susp === S.total ? 'Key bị khoá' : 'Hết quota') : h(Frag, null, h('span', { className: 'sm:hidden' }, N(S.left)), h('span', { className: 'hidden sm:inline' }, 'Quota ' + N(S.left) + ' · ' + S.ok + '/' + S.total + ' key')));
   }
   function Shell(p) {
     var s0 = useState(readRoute()), route = s0[0], setRoute = s0[1], s1 = useState({}), params = s1[0], setParams = s1[1];
