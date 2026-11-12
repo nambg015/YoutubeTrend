@@ -230,10 +230,11 @@ async function openPage(u0) {
   }
   return null;
 }
-async function commons(queries) {
+async function commons(queries, per) {
+  per = Math.max(4, Math.min(30, per || 8));
   const out = [], seen = new Set();
-  await Promise.all(queries.slice(0, 6).map(async q => {
-    const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=640&gsrsearch=' + encodeURIComponent(q);
+  await Promise.all(queries.slice(0, 8).map(async q => {
+    const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=' + per + '&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=640&gsrsearch=' + encodeURIComponent(q);
     try {
       const j = await (await fetch(u, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(7000) })).json();
       Object.values((j.query && j.query.pages) || {}).forEach(p => {
@@ -244,12 +245,115 @@ async function commons(queries) {
       });
     } catch (e) { }
   }));
-  return out.slice(0, 30);
+  return out.slice(0, Math.max(30, per * 6));
 }
 async function doEnrich(urls, imageQueries) {
-  const list = [...new Set((urls || []).filter(Boolean))].slice(0, 16);
+  const list = [...new Set((urls || []).filter(Boolean))].slice(0, 24);
   const pages = await Promise.all(list.map(u => openPage(u).then(p => p && Object.assign({ from: u }, p)).catch(() => null)));
-  return { pages: pages.filter(Boolean), commons: await commons(imageQueries || []) };
+  return { pages: pages.filter(Boolean), commons: await commons(imageQueries || [], 12), openverse: await openverse((imageQueries || []).slice(0, 4)) };
+}
+
+// ---------- Openverse: ảnh giấy phép mở (Flickr, bảo tàng...), không cần key ----------
+async function openverse(queries) {
+  const out = [], seen = new Set();
+  await Promise.all((queries || []).slice(0, 6).map(async q => {
+    try {
+      const r = await fetch('https://api.openverse.org/v1/images/?page_size=20&q=' + encodeURIComponent(q), { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
+      if (!r.ok) return;
+      const j = await r.json();
+      (j.results || []).forEach(x => {
+        if (!x || !x.url || seen.has(x.url)) return; seen.add(x.url);
+        out.push({ q, title: String(x.title || q).slice(0, 160), url: x.url, thumb: x.thumbnail || x.url, page: x.foreign_landing_url || '', author: String(x.creator || '').slice(0, 80), license: 'CC ' + String(x.license || '').toUpperCase() + (x.license_version ? ' ' + x.license_version : ''), source: x.source || x.provider || '' });
+      });
+    } catch (e) { }
+  }));
+  return out.slice(0, 100);
+}
+// Tìm thêm ảnh theo từ khoá người dùng gõ
+async function doImages(queries) {
+  const qs = [...new Set((queries || []).map(q => String(q || '').trim()).filter(q => q.length >= 2))].slice(0, 6);
+  const [c, o] = await Promise.all([commons(qs, 20), openverse(qs)]);
+  return { commons: c, openverse: o };
+}
+
+// ---------- Tải 1 ảnh về máy chủ rồi trả lại trình duyệt (để đóng gói zip) ----------
+const dns = require('dns').promises;
+function privateIp(ip) {
+  ip = String(ip || '').toLowerCase();
+  const m4 = /^(?:::ffff:)?(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(ip);
+  if (m4) { const a = +m4[1], b = +m4[2]; return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224; }
+  return ip === '::' || ip === '::1' || /^f[cd]/.test(ip) || /^fe[89ab]/.test(ip);
+}
+async function publicHost(u) {
+  try { const a = await dns.lookup(u.hostname, { all: true }); return a.length > 0 && !a.some(x => privateIp(x.address)); } catch (e) { return false; }
+}
+const IMG_MAX = 4.2 * 1024 * 1024;
+async function fetchImage(u0, ref) {
+  const fail = (code, msg) => { const e = new Error(msg); e.code = code; return e; };
+  let u = safeUrl(u0); if (!u) throw fail('BAD_URL', 'Link ảnh không hợp lệ');
+  const r0 = safeUrl(ref || '');
+  for (let hop = 0; hop < 5; hop++) {
+    if (!(await publicHost(u))) throw fail('BAD_URL', 'Link ảnh không hợp lệ');
+    const r = await fetch(u.href, { redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36', Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8', Referer: r0 ? r0.href : u.origin + '/' }, signal: AbortSignal.timeout(12000) });
+    if (r.status >= 300 && r.status < 400 && r.headers.get('location')) { u = safeUrl(new URL(r.headers.get('location'), u).href); if (!u) throw fail('BAD_URL', 'Link ảnh không hợp lệ'); continue; }
+    if (!r.ok) throw fail('IMG_HTTP', 'Trang gốc từ chối (' + r.status + ')');
+    const type = String(r.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (!/^image\/(jpeg|jpg|png|webp|gif|avif)$/.test(type)) throw fail('NOT_IMAGE', 'Không phải file ảnh');
+    if (+r.headers.get('content-length') > IMG_MAX) throw fail('TOO_BIG', 'Ảnh lớn hơn 4 MB');
+    const reader = r.body.getReader(), parts = []; let got = 0;
+    for (;;) { const { done, value } = await reader.read(); if (done) break; got += value.length; if (got > IMG_MAX) { try { reader.cancel(); } catch (e) { } throw fail('TOO_BIG', 'Ảnh lớn hơn 4 MB'); } parts.push(Buffer.from(value)); }
+    if (got < 200) throw fail('NOT_IMAGE', 'File ảnh rỗng');
+    return { buf: Buffer.concat(parts), type: type === 'image/jpg' ? 'image/jpeg' : type, url: u.href };
+  }
+  throw fail('BAD_URL', 'Chuyển hướng quá nhiều lần');
+}
+
+// ---------- Tìm đề tài theo danh mục (Gemini + Google Search) ----------
+const PERIODS = { d7: 'that happened or had major new developments in the LAST 7 DAYS', d30: 'that happened or had major new developments in the LAST 30 DAYS', y1: 'from the LAST 12 MONTHS', classic: 'from ANY era — well-documented classic cases, mixing famous ones with lesser-known ones' };
+function topicsPrompt(o) {
+  const today = new Date().toISOString().slice(0, 10), n = Math.max(4, Math.min(15, Number(o.n) || 10));
+  const where = o.country && !/^(global|all|)$/i.test(o.country) ? 'that took place in or mainly concern ' + o.country : 'from anywhere in the world';
+  return `Today is ${today}. You research story ideas for a YouTube channel that makes documentary / explainer videos about REAL events.
+Use Google Search to find ${n} real stories in this category: "${String(o.cat || 'true crime cases').slice(0, 120)}"${o.group ? ' (content group: ' + String(o.group).slice(0, 60) + ')' : ''}, ${where}, ${PERIODS[o.period] || PERIODS.classic}.
+${o.note ? 'EXTRA WISHES FROM THE CREATOR: """' + String(o.note).slice(0, 400) + '"""\n' : ''}${Array.isArray(o.skip) && o.skip.length ? 'DO NOT repeat these already-suggested stories: ' + o.skip.slice(0, 40).map(x => String(x).slice(0, 80)).join(' | ') + '\n' : ''}
+Selection rules:
+- Only real, verifiable events covered by reputable sources. No fiction, no urban legends presented as fact.
+- Prefer stories with plenty of public visual material (news photos, footage, maps, court or agency documents) and a clear narrative arc or an open question.
+- Make the list diverse (different years, places, kinds of story). Do not list the same event twice.
+- Keep names of people, places and the story title in the ORIGINAL language of the country (e.g. Japanese for Japan), and also give a Vietnamese title.
+
+Return ONLY a JSON object (no prose, no markdown fence) with this exact shape:
+{"topics":[{
+ "title": "name of the story in its original language",
+ "title_vi": "tên vụ việc bằng tiếng Việt",
+ "date": "YYYY-MM-DD, YYYY-MM or YYYY of the main event",
+ "place": "city / region, country",
+ "status_vi": "ví dụ: chưa phá án / đã kết án / đang điều tra / đang diễn ra",
+ "summary_vi": "2-3 câu tiếng Việt: chuyện gì xảy ra, ai liên quan",
+ "why_vi": "1 câu tiếng Việt: vì sao hợp làm video (bí ẩn gì, tranh cãi gì)",
+ "visuals_vi": "1 câu tiếng Việt: có sẵn loại hình ảnh / video tư liệu nào",
+ "queries": ["2-3 search queries in the original language", "1 query in English"],
+ "brief_en": "One paragraph research brief in English with the exact names, dates and places, ready to hand to a researcher"
+}]}`;
+}
+function cleanTopics(j) {
+  const list = Array.isArray(j) ? j : (j && Array.isArray(j.topics) ? j.topics : []);
+  const S = (v, n) => String(v == null ? '' : v).slice(0, n);
+  return list.filter(t => t && (t.title || t.title_vi)).slice(0, 20).map(t => ({ title: S(t.title || t.title_vi, 200), title_vi: S(t.title_vi || t.title, 200), date: S(t.date, 40), place: S(t.place, 120), status_vi: S(t.status_vi, 120), summary_vi: S(t.summary_vi, 700), why_vi: S(t.why_vi, 300), visuals_vi: S(t.visuals_vi, 300), queries: (Array.isArray(t.queries) ? t.queries : []).map(q => S(q, 120)).filter(Boolean).slice(0, 5), brief_en: S(t.brief_en, 1200) }));
+}
+async function doTopics(key, o) {
+  o = o || {};
+  const r = await gemini(key, { contents: [{ parts: [{ text: topicsPrompt(o) }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.6 } }, 40000);
+  const sources = ((r.meta && r.meta.groundingChunks) || []).map(c => c.web || {}).filter(w => w.uri).slice(0, 40).map(w => ({ title: w.title || '', uri: w.uri }));
+  let topics = [];
+  try { topics = cleanTopics(parseJson(r.text)); } catch (e) { }
+  if (!topics.length) {
+    // AI trả về văn xuôi → nhờ chuyển sang JSON (không tìm web lần nữa)
+    const r2 = await gemini(key, { contents: [{ parts: [{ text: 'Convert the following research notes into JSON with the shape {"topics":[{"title","title_vi","date","place","status_vi","summary_vi","why_vi","visuals_vi","queries":[],"brief_en"}]}. Fields ending in _vi must be Vietnamese. Keep only real stories found in the notes.\n\nNOTES:\n"""' + r.text.slice(0, 20000) + '"""' }] }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json' } }, 16000);
+    topics = cleanTopics(parseJson(r2.text));
+  }
+  if (!topics.length) { const e = new Error('AI không tìm được đề tài phù hợp, thử đổi danh mục hoặc thời gian.'); e.code = 'NO_TOPICS'; throw e; }
+  return { topics, sources, queries: (r.meta && r.meta.webSearchQueries) || [] };
 }
 
 
@@ -315,4 +419,4 @@ async function doTitles(key, data) {
   return { titles: (Array.isArray(j.titles) ? j.titles : []).filter(t => t && t.title).slice(0, 30).map(t => ({ title: String(t.title).trim(), formula: String(t.formula || '').trim(), why: String(t.why || '').trim() })), thumbs: (Array.isArray(j.thumbnail_texts) ? j.thumbnail_texts : []).map(String).slice(0, 8) };
 }
 
-module.exports = { doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };

@@ -1,4 +1,4 @@
-// /api/research — tab "Tạo tài nguyên" + AI dùng chung. action: search | structure | news | enrich | insight | titles
+// /api/research — tab "Tạo tài nguyên" + AI dùng chung. action: search | structure | news | enrich | insight | titles | topics | images | image
 const auth = require('./_lib/auth');
 const { applyCors } = auth;
 const { consumeDaily } = require('./_lib/store');
@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
   const key = req.headers['x-gemini-key'] || GEMINI_API_KEY;
 
   // Mỗi hồ sơ tính 1 lượt (đếm ở bước search — kể cả khi AI lỗi và chuyển sang chế độ miễn phí)
-  const bucket = action === 'search' ? 'research' : action === 'insight' || action === 'titles' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' ? 'research_aux' : '';
+  const bucket = action === 'search' ? 'research' : action === 'insight' || action === 'titles' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' || action === 'topics' || action === 'images' ? 'research_aux' : '';
   if (bucket) {
     const limit = bucket === 'research' ? (Number(process.env.RESEARCH_DAILY_LIMIT) || 100) : bucket === 'insight' ? (Number(process.env.INSIGHT_DAILY_LIMIT) || 150) : 300;
     try {
@@ -58,6 +58,20 @@ module.exports = async (req, res) => {
     if (action === 'enrich') {
       const r = await R.doEnrich(Array.isArray(body.urls) ? body.urls.map(String) : [], Array.isArray(body.imageQueries) ? body.imageQueries.map(String) : []);
       return res.json({ success: true, ...r });
+    }
+    if (action === 'topics') {
+      return res.json({ success: true, ...(await R.doTopics(key, { group: body.group, cat: body.cat, country: body.country, period: body.period, n: body.n, note: body.note, skip: body.skip })) });
+    }
+    if (action === 'images') {
+      return res.json({ success: true, ...(await R.doImages(Array.isArray(body.queries) ? body.queries : [prompt])) });
+    }
+    if (action === 'image') {
+      // trả thẳng file ảnh (nhị phân) để trình duyệt đóng gói zip; lỗi vẫn trả JSON
+      let im;
+      try { im = await R.fetchImage(String(body.url || ''), String(body.ref || '')); }
+      catch (e) { return res.status(e.code === 'TOO_BIG' ? 413 : e.code === 'BAD_URL' ? 400 : 502).json({ success: false, code: e.code || 'IMG_ERROR', message: e.message || 'Không tải được ảnh' }); }
+      res.setHeader('Content-Type', im.type); res.setHeader('Cache-Control', 'private, max-age=600'); res.setHeader('X-Content-Type-Options', 'nosniff');
+      return res.status(200).send(im.buf);
     }
     return res.status(400).json({ success: false, message: 'action không hợp lệ' });
   } catch (e) {
