@@ -554,6 +554,9 @@
     function persist(n) { lsSet('tn3_filters', Object.assign({}, n, { text: '', niche: '' })); }
     function set(k, v) { setF(function (o) { var n = Object.assign({}, o); n[k] = v; if (k === 'mode') { n.country = ''; n.niche = ''; } if (k === 'fmt' && v === 'short') n.minDur = 0; persist(n); return n; }); }
     function apply(patch) { setF(function (o) { var n = Object.assign({}, o, patch, { text: '', niche: '' }); persist(n); return n; }); }
+    // Kênh vừa bấm vào trong 30 phút gần đây → nhãn "Vừa xem" (sau đó thành "Đã xem")
+    function justSeen(m) { return !!(m && m.seen > 1e12 && Date.now() - m.seen < 30 * 60000); }
+    function showDetail(id) { mark(id, { seen: Date.now() }); setDetail(id); }
     function mark(id, patch) {
       setMarks(function (m) { var n = Object.assign({}, m), cur = Object.assign({}, n[id] || {}, patch); Object.keys(cur).forEach(function (k) { if (!cur[k]) delete cur[k]; }); if (!cur.h) delete cur.n; if (Object.keys(cur).length) n[id] = cur; else delete n[id]; lsSet('tn3_marks', n); return n; });
     }
@@ -564,7 +567,7 @@
     var fb = useMemo(function () {
       var o = Object.assign({}, f, { text: deferredText });
       if (pick) o.verdict = 'all';
-      if (pick || f.hideSeen) o.chanFilter = function (c) { var m = marks[c.id] || {}; if (pick === 'star' && !m.s) return false; if (pick === 'noted' && !m.note) return false; if (f.hideSeen && m.seen) return false; return true; };
+      if (pick || f.hideSeen) o.chanFilter = function (c) { var m = marks[c.id] || {}; if (pick === 'star' && !m.s) return false; if (pick === 'noted' && !m.note) return false; if (f.hideSeen && m.seen && !justSeen(m)) return false; return true; };
       return o;
     }, [f, deferredText, pick || f.hideSeen ? marks : null]);
     var D = useMemo(function () { return E.build(store, fb, Date.now()); }, [store, fb]);
@@ -586,12 +589,12 @@
     function clearAll() { if (!window.confirm('Xoá toàn bộ dữ liệu Top Ngách bạn đã quét trên máy này?')) return; var s = E.emptyStore(); idbSet('store', s); setLocal(s); }
     function savePreset() { var nm = (naming || '').trim(); if (!nm) return; var keep = {}; ['mode', 'country', 'maxSub', 'fmt', 'hours', 'minView', 'minOut', 'maxAge', 'cat', 'minDur', 'verdict', 'cSort', 'vSort', 'nSort', 'perCh'].forEach(function (k) { keep[k] = f[k]; }); var n = presets.filter(function (x) { return x[0] !== nm; }).concat([[nm, keep]]).slice(-12); setPresets(n); lsSet('tn3_presets', n); setNaming(null); p.showToast && p.showToast('Đã lưu bộ lọc "' + nm + '"'); }
     function dropPreset(nm) { var n = presets.filter(function (x) { return x[0] !== nm; }); setPresets(n); lsSet('tn3_presets', n); }
-    function openCh(id) { var c = D.allChannels.find(function (x) { return x.id === id; }); if (c) setDetail(id); else window.open('https://www.youtube.com/channel/' + id, '_blank', 'noopener'); }
+    function openCh(id) { var c = D.allChannels.find(function (x) { return x.id === id; }); if (c) showDetail(id); else window.open('https://www.youtube.com/channel/' + id, '_blank', 'noopener'); }
     function compare(c) { var Y = window.YT4; if (!Y) return; var ok = Y.store.addCompare({ id: c.id, title: c.name }); p.showToast && p.showToast(ok ? 'Đã thêm "' + c.name + '" vào so sánh (' + Y.store.compare().length + '/4). Mở mục Kênh → So sánh.' : 'Kênh đã có trong danh sách so sánh'); }
 
     // ---------- mảnh giao diện ----------
     var VL = { farm: ['Farm tiền', 'ngoc'], rise: ['Đang lên', 'hoe'], fluke: ['Ăn may', 'do'], cold: ['View thấp', 'cham'], none: ['Không có video đúng định dạng', 'cham'], unk: ['Chưa phân tích', 'nhat'] };
-    var CHIP = { ngoc: 'bg-[#2ba640]/20 text-[#6fcf85] border-transparent', hoe: 'bg-[#f2b52c]/15 text-[#f5c451] border-transparent', nhat: 'bg-[#3ea6ff]/15 text-[#7cc3ff] border-transparent', tim: 'bg-[#a970ff]/18 text-[#c9a7ff] border-transparent', do: 'bg-[#ff4e45]/15 text-[#ff8a83] border-transparent', teal: 'bg-[#22c3b5]/15 text-[#5fdccf] border-transparent', cham: 'bg-[#272727] text-[#aaaaaa] border-transparent', moi: 'bg-[#ff4e45] text-white border-transparent' };
+    var CHIP = { ngoc: 'bg-[#2ba640]/20 text-[#6fcf85] border-transparent', hoe: 'bg-[#f2b52c]/15 text-[#f5c451] border-transparent', nhat: 'bg-[#3ea6ff]/15 text-[#7cc3ff] border-transparent', tim: 'bg-[#a970ff]/18 text-[#c9a7ff] border-transparent', do: 'bg-[#ff4e45]/15 text-[#ff8a83] border-transparent', teal: 'bg-[#22c3b5]/15 text-[#5fdccf] border-transparent', cham: 'bg-[#272727] text-[#aaaaaa] border-transparent', moi: 'bg-[#ff4e45] text-white border-transparent', vua: 'bg-[#3ea6ff] text-[#0f0f0f] border-transparent !font-semibold' };
     var B = { btn: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full border border-transparent bg-[#323232] text-[12.5px] font-medium text-cham-100 hover:bg-[#424242] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap', sm: 'inline-flex items-center justify-center h-7 px-3 rounded-full border border-transparent bg-[#323232] text-[12px] font-medium text-cham-200 hover:bg-[#424242] transition disabled:opacity-40 cursor-pointer whitespace-nowrap', act: 'inline-flex items-center justify-center gap-1 h-8 px-2.5 rounded-full bg-[#323232] text-[12px] font-medium text-cham-100 hover:bg-[#424242] transition cursor-pointer whitespace-nowrap min-w-0', pri: 'inline-flex items-center justify-center gap-1.5 h-8 px-4 rounded-full bg-[#3ea6ff] text-[#0f0f0f] text-[12.5px] font-medium hover:bg-[#65b8ff] active:bg-[#2b8fe0] transition disabled:opacity-40 disabled:pointer-events-none cursor-pointer whitespace-nowrap', field: 'h-9 rounded-lg bg-[#121212] border border-[#303030] px-3 text-[12px] text-cham-50 placeholder:text-cham-500 hover:border-[#3f3f3f] focus:border-[#3ea6ff] outline-none transition' };
     var ic = function (n, size) { var I = UI.Icon; return I ? h(I, { name: n, size: size || 13 }) : null; };
     var iconBtn = function (name, on, title, fn, tone) { return h('button', { type: 'button', title: title, 'aria-label': title, 'aria-pressed': !!on, onClick: fn, className: cx('h-6 w-6 rounded-md inline-flex items-center justify-center transition cursor-pointer', on ? (tone || 'bg-[#f5c451] text-[#2a1d00]') : 'bg-[#272727] text-[#aaaaaa] hover:bg-[#3a3a3a] hover:text-[#f1f1f1]') }, ic(name, 13)); };
@@ -756,19 +759,19 @@
 
     // ---------- Tab Kênh ----------
     var chCard = function (c, i) {
-      var a = c.a, ok = a.n > 0, farm = a.v === 'farm', ageD = c.cr ? Math.round((Date.now() - c.cr) / 864e5) : null, m = marks[c.id] || {};
-      return h('article', { key: c.id, className: cx('yt-card p-3 flex flex-col gap-2 transition', m.seen && !m.s && 'opacity-70 hover:opacity-100', m.s && '!border-[#f5c451]/60') },
+      var a = c.a, ok = a.n > 0, farm = a.v === 'farm', ageD = c.cr ? Math.round((Date.now() - c.cr) / 864e5) : null, m = marks[c.id] || {}, jv = justSeen(m);
+      return h('article', { key: c.id, className: cx('yt-card p-3 flex flex-col gap-2 transition', m.seen && !m.s && !jv && 'opacity-70 hover:opacity-100', jv ? '!border-[#3ea6ff]' : m.s && '!border-[#f5c451]/60') },
         h('div', { className: 'flex items-start gap-3' },
           h('span', { className: 'shrink-0 h-7 min-w-7 px-1.5 rounded-md flex items-center justify-center text-[11px] font-bold tabular-nums bg-cham-800 text-cham-200' }, i + 1),
           h('div', { className: 'min-w-0 flex-1' },
-            h('button', { onClick: function () { setDetail(c.id); }, title: 'Xem chi tiết kênh: ' + c.name, className: 'block max-w-full text-left text-[12.5px] font-semibold text-cham-50 hover:text-[#7cc3ff] truncate cursor-pointer' }, c.name),
+            h('button', { onClick: function () { showDetail(c.id); }, title: 'Xem chi tiết kênh: ' + c.name, className: 'block max-w-full text-left text-[12.5px] font-semibold text-cham-50 hover:text-[#7cc3ff] truncate cursor-pointer' }, c.name),
             h('div', { className: 'text-[11px] text-cham-300 truncate tabular-nums', title: c.niche }, N(c.subs) + ' sub · ' + code(c.mk) + ' · ' + c.niche)),
           ok && farm ? h('span', { className: 'seal stamp', title: 'Điểm farm ' + a.score + '/100' }, h('b', null, a.score), h('span', null, 'Farm'))
             : ok ? h('div', { className: 'text-right shrink-0' }, h('div', { className: 'font-display text-[16.5px] leading-6 font-bold tabular-nums text-cham-50' }, a.score), h('div', { className: 'text-[11px] text-cham-400' }, 'điểm farm')) : null),
-        h('div', { className: 'flex items-start gap-2' }, h('div', { className: 'flex-1 min-w-0 flex flex-wrap items-center gap-1.5 min-h-7' }, c.isNew && tag('Mới', 'moi'), badge(a), ageD != null && ageD < 180 ? tag(ageD + ' ngày tuổi', 'tim') : null, a.mid ? tag('Có mid-roll', 'teal') : null, m.seen && tag('Đã xem')),
+        h('div', { className: 'flex items-start gap-2' }, h('div', { className: 'flex-1 min-w-0 flex flex-wrap items-center gap-1.5 min-h-7' }, jv && tag('Vừa xem', 'vua'), c.isNew && tag('Mới', 'moi'), badge(a), ageD != null && ageD < 180 ? tag(ageD + ' ngày tuổi', 'tim') : null, a.mid ? tag('Có mid-roll', 'teal') : null, m.seen && !jv && tag('Đã xem')),
           h('span', { className: 'shrink-0 inline-flex gap-1' },
             iconBtn('star', m.s, m.s ? 'Bỏ sao' : 'Gắn sao kênh ngon', function () { mark(c.id, { s: m.s ? 0 : 1 }); }),
-            iconBtn('note', m.note, m.note ? 'Sửa ghi chú' : 'Thêm ghi chú', function () { setDetail(c.id); }, 'bg-[#3ea6ff] text-[#0f0f0f]'),
+            iconBtn('note', m.note, m.note ? 'Sửa ghi chú' : 'Thêm ghi chú', function () { showDetail(c.id); }, 'bg-[#3ea6ff] text-[#0f0f0f]'),
             iconBtn('hide', false, 'Ẩn kênh này khỏi kết quả', function () { mark(c.id, { h: 1, n: c.name }); p.showToast && p.showToast('Đã ẩn "' + c.name + '". Xem lại ở cuối cột trái: Kênh đã ẩn.'); }))),
         m.note && h('p', { className: 'text-[11px] text-[#b0daff] leading-snug line-clamp-2', title: m.note }, 'Ghi chú: ' + m.note),
         ok ? h('dl', { className: 'grid grid-cols-3 gap-1.5' },
@@ -782,14 +785,14 @@
         c.vids.length > 0 && thumbs(c.vids.slice(0, 3), function (v) { return N(v.views); }, function (v) { return '×' + Math.round(v.out); }),
         h('div', { className: 'flex gap-1.5 mt-auto pt-1' },
           h('a', { href: 'https://www.youtube.com/channel/' + c.id + '/videos', target: '_blank', rel: 'noopener noreferrer', onClick: function () { mark(c.id, { seen: Date.now() }); }, className: B.act + ' flex-1' }, 'Mở kênh', ic('ext')),
-          h('button', { onClick: function () { setDetail(c.id); }, className: B.act }, 'Chi tiết'),
+          h('button', { onClick: function () { showDetail(c.id); }, className: B.act }, 'Chi tiết'),
           p.onOpenChannel && h('button', { onClick: function () { mark(c.id, { seen: Date.now() }); p.onOpenChannel(c.id, 'clone'); }, title: 'Bóc công thức kênh này thành hồ sơ clone', className: B.act }, 'Clone'),
           p.onAddCompetitor && h('button', { onClick: function () { p.onAddCompetitor(c.best ? toApp(c.best) : { channel: c.name, channelId: c.id, subs: c.subs }); }, className: B.act }, 'Theo dõi')));
     };
     var chTable = function () {
       var T = UI.Table; if (!T) return null;
       var cols = [
-        { k: 'name', t: 'Kênh', v: function (c) { return c.name.toLowerCase(); }, cls: 'min-w-[200px]', r: function (c) { var m = marks[c.id] || {}; return h('div', { className: 'min-w-0' }, h('button', { onClick: function () { setDetail(c.id); }, className: 'text-left text-[12px] font-medium text-cham-50 hover:text-[#7cc3ff] cursor-pointer' }, (m.s ? '★ ' : '') + c.name), h('div', { className: 'text-[11px] text-cham-400 truncate max-w-[260px]' }, c.niche + (m.note ? ' · ' + m.note : ''))); } },
+        { k: 'name', t: 'Kênh', v: function (c) { return c.name.toLowerCase(); }, cls: 'min-w-[200px]', r: function (c) { var m = marks[c.id] || {}; return h('div', { className: 'min-w-0' }, h('button', { onClick: function () { showDetail(c.id); }, className: 'text-left text-[12px] font-medium text-cham-50 hover:text-[#7cc3ff] cursor-pointer' }, (m.s ? '★ ' : '') + c.name), justSeen(m) ? h('span', { className: 'ml-1.5 align-middle inline-flex items-center h-5 px-1.5 rounded bg-[#3ea6ff] text-[#0f0f0f] text-[10.5px] font-semibold' }, 'Vừa xem') : m.seen ? h('span', { className: 'ml-1.5 text-[10.5px] text-cham-400' }, 'đã xem') : null, h('div', { className: 'text-[11px] text-cham-400 truncate max-w-[260px]' }, c.niche + (m.note ? ' · ' + m.note : ''))); } },
         { k: 'subs', t: 'Sub', right: true, v: function (c) { return c.subs; }, r: function (c) { return N(c.subs); } },
         { k: 'mk', t: 'Nước', v: function (c) { return code(c.mk); } },
         { k: 'age', t: 'Tuổi kênh', right: true, v: function (c) { return c.cr ? Date.now() - c.cr : 9e15; }, r: function (c) { if (!c.cr) return '–'; var d = Math.round((Date.now() - c.cr) / 864e5); return d < 365 ? d + ' ngày' : (d / 365).toFixed(1) + ' năm'; } },
