@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
     if (action === 'search') {
       if (prompt.length < 8) return res.status(400).json({ success: false, message: 'Mô tả vụ việc quá ngắn.' });
       const r = await R.doSearch(key, prompt, String(body.context || '').slice(0, 3000), Number(body.hours) || 0);
-      return res.json({ success: true, model: process.env.GEMINI_MODEL || 'gemini-2.5-flash', ...r });
+      return res.json({ success: true, model: R.model(), ...r });
     }
     if (action === 'structure') {
       const d = await R.doStructure(key, prompt, String(body.report || '').slice(0, 30000), Array.isArray(body.sources) ? body.sources.slice(0, 60) : [], body.lang === 'en' ? 'en' : 'vi');

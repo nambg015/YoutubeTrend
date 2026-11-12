@@ -10,6 +10,6 @@ module.exports = async (req, res) => {
   return res.json({
     success: true, admin: true, uid: claims.sub, email: claims.email || '',
     gemini: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+    model: process.env.GEMINI_MODEL || 'gemini-3.8-flash'
   });
 };

@@ -5,24 +5,37 @@
 // B0 news     : Google News RSS (miễn phí, luôn chạy; là phương án dự phòng khi Gemini lỗi/hết lượt)
 'use strict';
 
-const MODEL = () => process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+// Model mặc định + dự phòng: Google ngừng cấp model cũ cho key mới, nên gặp 404 thì tự thử model kế tiếp
+const MODELS = () => [...new Set([process.env.GEMINI_MODEL, 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-2.5-flash'].filter(Boolean))];
+let GOOD = '';
+const MODEL = () => GOOD || MODELS()[0];
 const UA = 'Mozilla/5.0 (compatible; YouTrendResearch/1.0; +https://youtubetrend-rho.vercel.app)';
 
 async function gemini(key, body, timeoutMs) {
   if (!key) { const e = new Error('NO_API_KEY'); e.code = 'NO_API_KEY'; throw e; }
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL()}:generateContent`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify(body), signal: AbortSignal.timeout(timeoutMs || 24000)
-  });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    const e = new Error('Gemini ' + r.status + ': ' + ((j.error && j.error.message) || '').slice(0, 200));
-    e.code = r.status === 429 ? 'GEMINI_LIMIT' : 'GEMINI_ERROR'; throw e;
+  const t0 = Date.now(), total = timeoutMs || 24000, list = GOOD ? [GOOD] : MODELS();
+  let last = null;
+  for (const m of list) {
+    const left = total - (Date.now() - t0); if (left < 3000) break;
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify(body), signal: AbortSignal.timeout(left)
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const msg = ((j.error && j.error.message) || '').slice(0, 200);
+      const e = new Error('Gemini ' + r.status + ': ' + msg);
+      e.code = r.status === 429 ? 'GEMINI_LIMIT' : 'GEMINI_ERROR';
+      if (r.status === 404 || /no longer available|is not found|not supported for generateContent/i.test(msg)) { if (GOOD === m) GOOD = ''; last = e; continue; }
+      throw e;
+    }
+    GOOD = m;
+    const c = (j.candidates || [])[0] || {};
+    const text = ((c.content && c.content.parts) || []).map(p => p.text || '').join('');
+    if (!text) { const e = new Error('Gemini trả về rỗng'); e.code = 'GEMINI_EMPTY'; throw e; }
+    return { text, meta: c.groundingMetadata || {} };
   }
-  const c = (j.candidates || [])[0] || {};
-  const text = ((c.content && c.content.parts) || []).map(p => p.text || '').join('');
-  if (!text) { const e = new Error('Gemini trả về rỗng'); e.code = 'GEMINI_EMPTY'; throw e; }
-  return { text, meta: c.groundingMetadata || {} };
+  throw last || Object.assign(new Error('Gemini quá thời gian chờ'), { code: 'GEMINI_ERROR' });
 }
 
 // Gắn [n] vào câu theo groundingSupports → mỗi ý trong báo cáo đều trỏ về nguồn thật
@@ -419,4 +432,4 @@ async function doTitles(key, data) {
   return { titles: (Array.isArray(j.titles) ? j.titles : []).filter(t => t && t.title).slice(0, 30).map(t => ({ title: String(t.title).trim(), formula: String(t.formula || '').trim(), why: String(t.why || '').trim() })), thumbs: (Array.isArray(j.thumbnail_texts) ? j.thumbnail_texts : []).map(String).slice(0, 8) };
 }
 
-module.exports = { doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { model: MODEL, models: MODELS, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };

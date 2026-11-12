@@ -1451,7 +1451,7 @@ window.FEATURE_TREND_V2 = true;
             const data = await res.json();
             if (data && data.success && Array.isArray(data.niches)) {
               niches = data.niches;
-              provider = data.provider === 'gemini-2.5-flash' ? 'Google Gemini 2.5 Flash' : 'YouTrend Grounding Engine';
+              provider = /^gemini/.test(data.provider || '') ? 'Google ' + data.provider : 'YouTrend Grounding Engine';
             }
           }
         } catch (e) {
@@ -1526,7 +1526,7 @@ window.FEATURE_TREND_V2 = true;
             const data = await res.json();
             if (data && data.success && Array.isArray(data.keywords)) {
               keywords = data.keywords;
-              provider = data.provider === 'gemini-2.5-flash' ? 'Google Gemini 2.5 Flash' : 'YouTrend Grounding Engine';
+              provider = /^gemini/.test(data.provider || '') ? 'Google ' + data.provider : 'YouTrend Grounding Engine';
             }
           }
         } catch (e) {

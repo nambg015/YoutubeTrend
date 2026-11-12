@@ -73,7 +73,7 @@ module.exports = async (req, res) => {
     });
 
     return new Promise((resolve, reject) => {
-      const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
       const reqPath = `/v1beta/models/${model}:generateContent`;
       const options = {
         hostname: 'generativelanguage.googleapis.com',
@@ -117,7 +117,7 @@ module.exports = async (req, res) => {
   try {
     if (action === 'propose_niches') {
       let rawResult = null;
-      let usedProvider = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      let usedProvider = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
       try {
         const prompt = buildNichesPrompt({ targetRegion, timeframe, count, topicHint, groundingContext });
@@ -152,7 +152,7 @@ module.exports = async (req, res) => {
 
     if (action === 'generate_keywords') {
       let rawResult = null;
-      let usedProvider = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      let usedProvider = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
       try {
         const prompt = buildKeywordsPrompt({ selectedNiches, count, targetRegion });

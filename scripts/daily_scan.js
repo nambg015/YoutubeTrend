@@ -5,7 +5,7 @@ const fs = require('fs'), path = require('path');
 const E = require(path.join(__dirname, '..', 'top_ngach_v3.js'));
 const OUT = path.join(__dirname, '..', 'data', 'top_ngach.json');
 const KEYS = (process.env.YT_API_KEYS || process.env.YT_API_KEY || '').split(',').map(s => s.trim()).filter(Boolean);
-const GEM = process.env.GEMINI_API_KEY, MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const GEM = process.env.GEMINI_API_KEY, MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 const PER_KEY = +process.env.PER_KEY || 9500, HOURS = +process.env.HOURS || 168;
 const dead = new Set(); let ki = 0;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
