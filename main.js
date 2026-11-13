@@ -20,8 +20,9 @@
   ];
   function Flow(p) {
     var cur = FLOW.findIndex(function (x) { return x[2] === p.route; });
-    return h('nav', { 'aria-label': 'Lộ trình nghiên cứu', className: 'mb-5 overflow-x-auto pb-1' },
-      h('ol', { className: 'grid grid-flow-col auto-cols-[minmax(210px,1fr)] gap-2' }, FLOW.map(function (x, i) {
+    if (p.off) return h('div', { className: 'relative h-0' }, h('button', { onClick: p.onToggle, title: 'Hiện lại lộ trình 5 bước', className: 'absolute right-0 -top-[19px] inline-flex items-center gap-1.5 h-5 px-2.5 rounded-md bg-[#212121] border border-[#303030] text-[11.5px] font-medium text-[#c8c8c8] hover:text-white hover:border-[#555] cursor-pointer' }, h(K.Icon, { name: 'left', size: 13, stroke: 2 }), 'Hiện lộ trình 5 bước'));
+    return h('nav', { 'aria-label': 'Lộ trình nghiên cứu', className: 'mb-4 flex items-stretch gap-2' },
+      h('ol', { className: 'flex-1 min-w-0 grid grid-flow-col auto-cols-[minmax(200px,1fr)] gap-2 overflow-x-auto' }, FLOW.map(function (x, i) {
         var on = i === cur, nav = NAV.filter(function (n) { return n[0] === x[2]; })[0] || [x[2], x[1], 0, '#aaaaaa'], col = nav[3];
         return h('li', { key: x[0], className: 'min-w-0' },
           h('button', { onClick: function () { if (x[2] === 'channels') { try { localStorage.setItem('yt4_track_view', JSON.stringify('list')); } catch (e) { } } p.goto(x[2], x[3] || {}); }, 'aria-current': on ? 'step' : null,
@@ -32,7 +33,8 @@
               h('span', { className: 'flex items-center gap-1.5 text-[11.5px] leading-4 text-[#aaa] min-w-0' },
                 h('span', { className: 'shrink-0 inline-flex items-center gap-1 font-medium', style: { color: col } }, h(K.Icon, { name: nav[0], size: 13, stroke: 2 }), nav[1]),
                 h('span', { className: 'truncate' }, '· ' + x[4])))));
-      })));
+      })),
+      h('button', { onClick: p.onToggle, title: 'Ẩn lộ trình 5 bước', 'aria-label': 'Ẩn lộ trình 5 bước', className: 'shrink-0 w-9 rounded-lg bg-[#181818]/90 border border-[#303030] text-[#aaa] hover:text-white hover:border-[#555] grid place-items-center cursor-pointer' }, h(K.Icon, { name: 'right', size: 16, stroke: 2 })));
   }
   function readRoute() { var hsh = (location.hash || '').replace(/^#\/?/, '').split('/')[0]; if (NAV.some(function (n) { return n[0] === hsh; })) return hsh; var q = new URLSearchParams(location.search).get('tab'); return OLD[q] || 'today'; }
 
@@ -107,6 +109,10 @@
   function Shell(p) {
     var w0 = useState(function () { try { return localStorage.getItem('yt4_nav_wide') === '1'; } catch (e) { return false; } }), wide = w0[0], setWide0 = w0[1], w1 = useState(false), drawer = w1[0], setDrawer = w1[1];
     function setWide(v) { setWide0(v); try { localStorage.setItem('yt4_nav_wide', v ? '1' : '0'); } catch (e) { } }
+    var ls1 = function (k) { try { return localStorage.getItem(k) === '1'; } catch (e) { return false; } }, put1 = function (k, v) { try { localStorage.setItem(k, v ? '1' : '0'); } catch (e) { } };
+    var w2 = useState(function () { return ls1('yt4_nav_off'); }), navOff = w2[0], setNavOff0 = w2[1], w3 = useState(function () { return ls1('yt4_flow_off'); }), flowOff = w3[0], setFlowOff0 = w3[1];
+    function setNavOff(v) { setNavOff0(v); put1('yt4_nav_off', v); }
+    function setFlowOff(v) { setFlowOff0(v); put1('yt4_flow_off', v); }
     var s0 = useState(readRoute()), route = s0[0], setRoute = s0[1], s1 = useState({}), params = s1[0], setParams = s1[1];
     K.useBus('keys'); K.useBus('feed'); K.useBus('alerts');
     var sp = useState(false), pal = sp[0], setPal = sp[1];
@@ -146,7 +152,7 @@
         h('span', { className: 'relative shrink-0', style: { color: n[3] } }, h(K.Icon, { name: n[0], size: mode === 'mobile' ? 22 : 25, stroke: on ? 2.2 : 1.7 }), badge(n)),
         h('span', { className: cx(row ? 'text-[14.5px] truncate' : 'leading-tight ' + (mode === 'mobile' ? 'text-[9.5px]' : 'text-[11.5px]'), on && (row ? 'font-semibold' : 'font-medium')) }, row ? n[1] : n[2] || n[1]));
     };
-    var burger = h('button', { type: 'button', onClick: function () { if (window.innerWidth >= 1024) setWide(!wide); else setDrawer(!drawer); }, 'aria-label': wide ? 'Thu gọn thanh bên trái' : 'Mở rộng thanh bên trái', 'aria-expanded': wide || drawer, className: 'shrink-0 w-10 h-10 -ml-1 rounded-full grid place-items-center text-[#f1f1f1] hover:bg-[#272727] cursor-pointer' }, h(K.Icon, { name: 'menu', size: 24, stroke: 1.8 }));
+    var burger = h('button', { type: 'button', onClick: function () { if (window.innerWidth >= 1024) { if (navOff) setNavOff(false); else setWide(!wide); } else setDrawer(!drawer); }, 'aria-label': wide ? 'Thu gọn thanh bên trái' : 'Mở rộng thanh bên trái', 'aria-expanded': wide || drawer, className: 'shrink-0 w-10 h-10 -ml-1 rounded-full grid place-items-center text-[#f1f1f1] hover:bg-[#272727] cursor-pointer' }, h(K.Icon, { name: 'menu', size: 24, stroke: 1.8 }));
     return h('div', { className: 'min-h-screen' },
       h('header', { className: 'fixed top-0 inset-x-0 z-40 h-14 bg-[#0f0f0f]/90 backdrop-blur-md flex items-center gap-3 pl-4 lg:pl-5 pr-4' },
         burger,
@@ -155,16 +161,17 @@
         h('button', { onClick: function () { setPal(true); }, 'aria-label': 'Tìm nhanh', className: 'md:hidden h-9 w-9 rounded-full bg-[#272727] text-[#f1f1f1] inline-flex items-center justify-center cursor-pointer' }, h(K.Icon, { name: 'search', size: 16 })),
         h('div', { className: 'flex items-center gap-2 shrink-0' }, h(QuotaChip, { onClick: function () { goto('settings'); } }),
           h('button', { onClick: function () { goto('settings'); }, title: user ? user.email : '', 'aria-label': 'Tài khoản và cài đặt', className: 'h-8 w-8 rounded-full bg-[#5e35b1] text-white text-[13px] font-medium cursor-pointer hover:brightness-110' }, (label || '?').charAt(0).toUpperCase()))),
-      h('nav', { 'aria-label': 'Mục chính', className: cx('hidden lg:flex fixed left-0 top-14 bottom-0 z-30 flex-col gap-1 pt-2 bg-[#0f0f0f]/85 backdrop-blur-md overflow-y-auto', wide ? 'w-[236px] px-3 items-stretch' : 'w-[84px] items-center') }, NAV.map(function (n) { return navItem(n, wide ? 'row' : 'rail'); })),
+      h('nav', { 'aria-label': 'Mục chính', className: cx('fixed left-0 top-14 bottom-0 z-30 flex-col gap-1 pt-2 bg-[#0f0f0f]/85 backdrop-blur-md overflow-y-auto', navOff ? 'hidden' : 'hidden lg:flex', wide ? 'w-[236px] px-3 items-stretch' : 'w-[84px] items-center') }, NAV.map(function (n) { return navItem(n, wide ? 'row' : 'rail'); })),
+      h('button', { onClick: function () { setNavOff(!navOff); }, title: navOff ? 'Hiện thanh bên trái' : 'Ẩn thanh bên trái', 'aria-label': navOff ? 'Hiện thanh bên trái' : 'Ẩn thanh bên trái', className: 'hidden lg:grid fixed top-1/2 -translate-y-1/2 z-40 w-7 h-7 rounded-full bg-[#272727] border border-[#4a4a4a] text-[#f1f1f1] hover:bg-[#3a3a3a] place-items-center cursor-pointer shadow-lg transition-[left] duration-150', style: { left: (navOff ? 6 : (wide ? 236 : 84) - 14) + 'px' } }, h(K.Icon, { name: navOff ? 'right' : 'left', size: 15, stroke: 2.2 })),
       h('nav', { 'aria-label': 'Mục chính', className: 'lg:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-8 bg-[#0f0f0f] border-t border-[#272727]' }, NAV.map(function (n) { return navItem(n, 'mobile'); })),
       drawer && h('div', { className: 'lg:hidden fixed inset-0 z-50' },
         h('div', { className: 'absolute inset-0 bg-black/60', onClick: function () { setDrawer(false); } }),
         h('nav', { 'aria-label': 'Mục chính', className: 'absolute left-0 top-0 bottom-0 w-[264px] bg-[#0f0f0f] flex flex-col gap-1 px-3 pb-4 overflow-y-auto' },
           h('div', { className: 'h-14 flex items-center gap-3 pl-1' }, burger, h(Mark)),
           NAV.map(function (n) { return navItem(n, 'row'); }))),
-      h('div', { className: cx('pt-14 transition-[padding] duration-150', wide ? 'lg:pl-[236px]' : 'lg:pl-[84px]') },
+      h('div', { className: cx('pt-14 transition-[padding] duration-150', navOff ? 'lg:pl-3' : wide ? 'lg:pl-[236px]' : 'lg:pl-[84px]') },
         noKey && route !== 'settings' && h('div', { className: 'mx-4 sm:mx-6 mt-3 rounded-xl bg-[#272727] px-4 py-2.5 flex items-center gap-3 text-[12px] text-[#f1f1f1]' }, 'Chưa có YouTube API key nên các mục tìm kiếm chưa chạy được.', h('button', { onClick: function () { goto('settings'); }, className: K.C.sm }, 'Thêm key')),
-        h('main', { className: 'max-w-[1760px] mx-auto px-4 sm:px-6 py-5 pb-24 lg:pb-12' }, FLOW.some(function (x) { return x[2] === route; }) && h(Flow, { route: route, goto: goto }), h(ErrorBoundary, { key: route }, page))),
+        h('main', { className: 'max-w-[1760px] mx-auto px-4 sm:px-6 py-5 pb-24 lg:pb-12' }, FLOW.some(function (x) { return x[2] === route; }) && h(Flow, { route: route, goto: goto, off: flowOff, onToggle: function () { setFlowOff(!flowOff); } }), h(ErrorBoundary, { key: route }, page))),
       pal && h(Palette, { goto: goto, onClose: function () { setPal(false); } }),
       h(K.Toaster));
   }

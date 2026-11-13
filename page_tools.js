@@ -92,20 +92,20 @@
       { k: 'a', t: 'Sao chép', r: function (c) { return h('button', { onClick: function () { copy(c.t, 'bình luận'); }, className: 'h-[2em] px-[0.8em] rounded-full bg-[#323232] hover:bg-[#424242] text-[0.92em] text-[#f1f1f1] cursor-pointer' }, 'Chép'); } }
     ];
     var list = function (ttl, arr, tone) { return arr && arr.length ? h('div', { className: 'rounded-xl bg-[#181818] border border-[#303030] p-3' }, h('div', { className: cx('text-[11.5px] font-semibold mb-1.5', tone) }, ttl), h('ul', { className: 'space-y-1.5' }, arr.map(function (x, i) { return h('li', { key: i, className: 'text-[12px] text-[#e6e6e6] leading-snug flex gap-2' }, h('span', { className: 'text-[#717171]' }, i + 1 + '.'), h('span', null, x)); }))) : null; };
-    return h('div', { className: 'space-y-4' },
-      h(Section, { title: 'Quét bình luận' },
-        h('div', { className: 'grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]' },
-          h('div', null, h('textarea', { value: links, onChange: function (e) { setLinks(e.target.value); }, rows: 5, placeholder: 'Dán link video YouTube, mỗi dòng một link (tối đa 30 video)\nhttps://www.youtube.com/watch?v=…', className: TA }),
-            h('div', { className: 'flex flex-wrap items-center gap-2 mt-2' }, h('span', { className: 'text-[11px] text-[#aaa]' }, ids.length + ' video hợp lệ'),
-              saved.length > 0 && h('button', { onClick: function () { setLinks(saved.slice(0, 15).map(function (v) { return U.vurl(v.id); }).join('\n')); }, className: 'text-[11px] text-[#7cc3ff] hover:underline cursor-pointer' }, 'Lấy ' + Math.min(15, saved.length) + ' video đã lưu'))),
-          h('div', { className: 'space-y-2' },
-            h(Field, { label: 'Số bình luận mỗi video' }, h(Select, { value: opt.max, onChange: function (v) { setOpt('max', +v); }, options: [[100, '100 (≈1 quota)'], [300, '300 (≈3 quota)'], [1000, '1.000 (≈10 quota)'], [3000, '3.000 (≈30 quota)']] })),
-            h(Field, { label: 'Thứ tự lấy' }, h(Select, { value: opt.order, onChange: function (v) { setOpt('order', v); }, options: [['relevance', 'Nổi bật nhất trước'], ['time', 'Mới nhất trước']] })),
-            h(Btn, { primary: true, onClick: scan, disabled: !!busy || !ids.length, className: 'w-full' }, busy ? 'Đang quét…' : 'Quét bình luận'))),
-        busy && h('div', { className: 'mt-3' }, h(Busy, null, busy)), err && h('div', { className: 'mt-3' }, h(Note, { error: true }, err))),
+    return h('div', { className: 'space-y-3' },
+      h('div', { className: 'yt-card p-3 space-y-2' },
+        h('div', { className: 'flex flex-wrap items-stretch gap-2' },
+          h('textarea', { value: links, onChange: function (e) { setLinks(e.target.value); }, rows: 2, 'aria-label': 'Link video', placeholder: 'Dán link video YouTube, mỗi dòng một link (tối đa 30 video)', className: TA + ' flex-1 min-w-[280px] !py-1.5 h-[58px]' }),
+          h('select', { value: opt.max, 'aria-label': 'Số bình luận mỗi video', onChange: function (e) { setOpt('max', +e.target.value); }, className: 'h-[58px] w-[170px] bg-[#121212] border border-[#303030] rounded-lg px-2 text-[12px] text-[#f1f1f1] cursor-pointer' }, [[100, '100 bình luận/video'], [300, '300 bình luận/video'], [1000, '1.000 bình luận/video'], [3000, '3.000 bình luận/video']].map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); })),
+          h('select', { value: opt.order, 'aria-label': 'Thứ tự lấy', onChange: function (e) { setOpt('order', e.target.value); }, className: 'h-[58px] w-[160px] bg-[#121212] border border-[#303030] rounded-lg px-2 text-[12px] text-[#f1f1f1] cursor-pointer' }, [['relevance', 'Nổi bật nhất trước'], ['time', 'Mới nhất trước']].map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); })),
+          h('button', { onClick: scan, disabled: !!busy || !ids.length, className: 'h-[58px] px-6 rounded-lg bg-[#3ea6ff] hover:bg-[#65b8ff] text-[#0f0f0f] text-[13.5px] font-semibold disabled:opacity-40 cursor-pointer whitespace-nowrap' }, busy ? 'Đang quét…' : 'Quét bình luận')),
+        h('div', { className: 'flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-[#aaa]' }, h('span', null, ids.length + ' video hợp lệ · khoảng ' + Math.max(1, Math.ceil(opt.max / 100)) * Math.max(1, ids.length) + ' quota'),
+          saved.length > 0 && h('button', { onClick: function () { setLinks(saved.slice(0, 15).map(function (v) { return U.vurl(v.id); }).join('\n')); }, className: 'text-[#7cc3ff] hover:underline cursor-pointer' }, 'Lấy ' + Math.min(15, saved.length) + ' video đã lưu'),
+          busy && h('span', { role: 'status', className: 'text-[#f5c451]' }, busy)),
+        err && h(Note, { error: true }, err)),
       !R ? h(Empty, { title: 'Chưa có bình luận nào', sub: 'Dán link các video đang thắng trong ngách của bạn. Bình luận cho biết khán giả muốn xem gì tiếp, họ hỏi gì và chê gì.' }) : h(Frag, null,
-        h('div', { className: 'grid gap-3 sm:grid-cols-2 lg:grid-cols-4' },
-          [['Bình luận đã lấy', N(R.rows.length), 'text-[#6fcf85]'], ['Video', R.vids.length, 'text-[#7cc3ff]'], ['Câu hỏi', N(R.rows.filter(function (c) { return /[?？]/.test(c.t); }).length), 'text-[#f5c451]'], ['Từ 5 like trở lên', N(R.rows.filter(function (c) { return c.l >= 5; }).length), 'text-[#c9a7ff]']].map(function (x) { return h('div', { key: x[0], className: 'yt-card px-4 py-3' }, h('div', { className: cx('text-[19px] font-bold tabular-nums', x[2]) }, x[1]), h('div', { className: 'text-[11px] text-[#aaa]' }, x[0])); })),
+        h('div', { className: 'flex flex-wrap gap-2' },
+          [['bình luận', N(R.rows.length), 'text-[#6fcf85]'], ['video', R.vids.length, 'text-[#7cc3ff]'], ['câu hỏi', N(R.rows.filter(function (c) { return /[?？]/.test(c.t); }).length), 'text-[#f5c451]'], ['bình luận từ 5 like', N(R.rows.filter(function (c) { return c.l >= 5; }).length), 'text-[#c9a7ff]']].map(function (x) { return h('span', { key: x[0], className: 'inline-flex items-center gap-2 h-9 px-3.5 rounded-lg bg-[#212121] border border-[#303030]' }, h('b', { className: cx('text-[16px] tabular-nums', x[2]) }, x[1]), h('span', { className: 'text-[12px] font-medium text-[#e6e6e6]' }, x[0])); })),
         R.skipped && R.skipped.length > 0 && h(Note, null, 'Bỏ qua ' + R.skipped.length + ' video: ' + R.skipped.join(' · ')),
         h(Section, { title: 'AI đọc bình luận', right: h(Btn, { primary: !A, small: !!A, onClick: readAI, disabled: aiBusy || R.rows.length < 5 }, aiBusy ? 'AI đang đọc, chờ 15–30 giây…' : A ? 'Đọc lại' : 'Để AI đọc ' + N(Math.min(320, R.rows.length)) + ' bình luận') },
           !A ? h('p', { className: 'text-[12px] text-[#aaa]' }, 'AI gom bình luận thành nhu cầu thật, câu hỏi hay gặp, điều khán giả khen và chê, ý tưởng video tiếp theo và chân dung người xem. Dùng 1 lượt AI.')
@@ -231,8 +231,8 @@
     var ok = function (v) { return ['cm', 'up', 'pr'].indexOf(v) >= 0 ? v : ''; };
     var s = useState(ok(p.params && p.params.sub) || ok(st.json('yt4_tools_tab', 'cm')) || 'cm'), sub = s[0], setSub0 = s[1];
     function setSub(v) { setSub0(v); st.put('yt4_tools_tab', v); }
-    return h('div', { className: 'space-y-5' },
-      h('div', null, h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Công cụ'), h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, 'Quét bình luận để biết khán giả muốn gì, tạo bộ thông tin đăng video và dùng câu lệnh AI soạn sẵn.')),
+    return h('div', { className: 'space-y-3' },
+      h('div', null, h('h1', { className: 'font-display text-[25px] leading-9 font-bold text-white tracking-tight' }, 'Công cụ'), h('p', { className: 'text-[13.5px] text-[#d0d0d0] mt-1 leading-relaxed' }, 'Quét bình luận để biết khán giả muốn gì, tạo bộ thông tin đăng video và dùng câu lệnh AI soạn sẵn.')),
       h(Tabs, { value: sub, onChange: setSub, items: [['cm', 'Quét bình luận'], ['up', 'Thông tin đăng video'], ['pr', 'Câu lệnh AI', PROMPTS.length]] }),
       sub === 'cm' ? h(Comments, { goto: p.goto }) : sub === 'up' ? h(Upload, null) : h(Prompts, null));
   }

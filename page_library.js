@@ -90,7 +90,7 @@
     K.useBus('saved'); K.useBus('ideas');
     var s = useState(p.params && p.params.sub || 'saved'), sub = s[0], setSub = s[1];
     return h('div', { className: 'space-y-5' },
-      h('div', null, h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Thư viện'), h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, 'Video đã lưu, kế hoạch sản xuất và cẩm nang.')),
+      h('div', null, h('h1', { className: 'font-display text-[25px] leading-9 font-bold text-white tracking-tight' }, 'Thư viện'), h('p', { className: 'text-[13.5px] text-[#d0d0d0] mt-1 leading-relaxed' }, 'Video đã lưu, kế hoạch sản xuất và cẩm nang.')),
       h(K.Help, { id: 'library', title: 'Cách dùng Thư viện', steps: ['Video đã lưu: mọi video bạn bấm Lưu ở các mục khác đều nằm đây; thêm ghi chú hoặc biến thành ý tưởng.', 'Kế hoạch video: kéo ý tưởng qua các cột Ý tưởng → Kịch bản → Dựng → Đã đăng bằng nút mũi tên.', 'Cẩm nang: các bài hướng dẫn làm YouTube, đọc khi cần.'] }),
       h(Tabs, { value: sub, onChange: setSub, items: [['saved', 'Video đã lưu', store.saved().length], ['plan', 'Kế hoạch video', store.ideas().length], ['guide', 'Cẩm nang']] }),
       sub === 'saved' ? h(Saved, { goto: p.goto }) : sub === 'plan' ? h(Planner) : h(Guide));
@@ -150,7 +150,7 @@
   function DataPanel() {
     var inp = React.useRef(null);
     function backup() {
-      var data = { app: 'youtrend', v: 4, at: new Date().toISOString(), keys: Y.keys.getPool(), saved: store.saved(), channels: store.channels(), ideas: store.ideas(), explore: st.json('yt4_explore_hist', []), channelHist: st.json('yt4_channel_hist', []), projects: store.projects(), briefs: store.briefs(), compare: store.compare(), nicheMarks: st.json('tn3_marks', {}), nichePresets: st.json('tn3_presets', []) };
+      var data = { app: 'youtrend', v: 4, at: new Date().toISOString(), keys: Y.keys.getPool(), saved: store.saved(), channels: store.channels(), ideas: store.ideas(), explore: st.json('yt4_explore_hist', []), channelHist: st.json('yt4_channel_hist', []), projects: store.projects(), briefs: store.briefs(), compare: store.compare(), nicheMarks: st.json('tn3_marks', {}), nichePresets: st.json('tn3_presets', []), countryGroups: st.json('tn3_cgroups', []) };
       U.download('youtrend-sao-luu-' + new Date().toISOString().slice(0, 10) + '.json', new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
     }
     function restore(e) {
@@ -166,6 +166,7 @@
           if (Array.isArray(d.briefs)) { var cb = store.briefs(), bi = {}; cb.forEach(function (x) { bi[x.id] = 1; }); st.put('yt4_briefs', cb.concat(d.briefs.filter(function (x) { return x && x.id && !bi[x.id]; })).slice(0, 30)); Y.emit('briefs'); }
           if (d.nicheMarks && typeof d.nicheMarks === 'object') st.put('tn3_marks', Object.assign({}, d.nicheMarks, st.json('tn3_marks', {})));
           if (Array.isArray(d.nichePresets)) { var pp = st.json('tn3_presets', []) || [], pn = {}; pp.forEach(function (x) { pn[x[0]] = 1; }); st.put('tn3_presets', pp.concat(d.nichePresets.filter(function (x) { return Array.isArray(x) && !pn[x[0]]; })).slice(0, 12)); }
+          if (Array.isArray(d.countryGroups)) { var cg = st.json('tn3_cgroups', []) || [], ci = {}; cg.forEach(function (x) { ci[x.id] = 1; }); st.put('tn3_cgroups', cg.concat(d.countryGroups.filter(function (x) { return x && x.id && Array.isArray(x.mks) && !ci[x.id]; })).slice(0, 30)); }
           Y.emit('saved'); K.toast('Đã khôi phục (gộp với dữ liệu hiện có). Thêm ' + n + ' key mới.');
         } catch (err) { K.toast('File sao lưu không hợp lệ'); }
         e.target.value = '';
@@ -180,7 +181,7 @@
   }
   function Settings(p) {
     return h('div', { className: 'space-y-5 max-w-5xl' },
-      h('div', null, h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Cài đặt'), h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, 'API key YouTube, Claude, tài khoản và sao lưu dữ liệu.')),
+      h('div', null, h('h1', { className: 'font-display text-[25px] leading-9 font-bold text-white tracking-tight' }, 'Cài đặt'), h('p', { className: 'text-[13.5px] text-[#d0d0d0] mt-1 leading-relaxed' }, 'API key YouTube, Claude, tài khoản và sao lưu dữ liệu.')),
       h(K.Help, { id: 'settings', title: 'Thiết lập lần đầu', steps: ['Thêm YouTube API key: vào console.cloud.google.com, bật YouTube Data API v3, tạo API key rồi dán vào ô bên dưới. Nên có nhiều key để quét được nhiều hơn.', 'Gemini (cho Tạo tài nguyên và Nhận định AI) đặt trên Vercel, ô Máy chủ & AI cho biết đã có chưa.', 'Claude API key là tuỳ chọn: chỉ cần khi muốn Claude viết kịch bản ngay trong web.', 'Thỉnh thoảng bấm Tải file sao lưu để giữ dữ liệu khi đổi máy.'] }),
       h(KeysPanel), h(ClaudePanel), window.YT4Mcp ? h(window.YT4Mcp.Box) : null, h(ServerPanel, { me: p.me }), h(AccountPanel, { onLogout: p.onLogout }), h(DataPanel));
   }
