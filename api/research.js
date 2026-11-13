@@ -81,6 +81,6 @@ module.exports = async (req, res) => {
     return res.status(400).json({ success: false, message: 'action không hợp lệ' });
   } catch (e) {
     const code = e.code || 'ERROR';
-    return res.status(code === 'NO_API_KEY' ? 501 : code === 'GEMINI_LIMIT' ? 429 : 502).json({ success: false, code, message: code === 'NO_API_KEY' ? 'Máy chủ chưa cấu hình GEMINI_API_KEY.' : code === 'GEMINI_LIMIT' ? 'Key Gemini đã hết lượt của gói miễn phí hôm nay (đặt lại khoảng 15h giờ VN). Thử lại sau, hoặc bật thanh toán cho project trong Google AI Studio để có hạn mức cao hơn.' : e.message });
+    return res.status(code === 'NO_API_KEY' ? 501 : code === 'GEMINI_LIMIT' ? 429 : code === 'GEMINI_BUSY' ? 503 : 502).json({ success: false, code, message: code === 'NO_API_KEY' ? 'Máy chủ chưa cấu hình GEMINI_API_KEY.' : code === 'GEMINI_BUSY' ? 'Máy chủ AI của Google đang quá tải, web đã thử hết các model dự phòng mà chưa được. Lỗi này thường tự hết sau một hai phút, bấm lại là chạy.' : code === 'GEMINI_LIMIT' ? 'Key Gemini đã hết lượt của gói miễn phí hôm nay (đặt lại khoảng 15h giờ VN). Thử lại sau, hoặc bật thanh toán cho project trong Google AI Studio để có hạn mức cao hơn.' : e.message });
   }
 };

@@ -19,6 +19,10 @@ async function gemini(key, body, timeoutMs, lite) {
   if (!key) { const e = new Error('NO_API_KEY'); e.code = 'NO_API_KEY'; throw e; }
   const t0 = Date.now(), total = timeoutMs || 24000;
   let last = null;
+  // Vòng 2 chỉ chạy khi có model báo quá tải (503): chờ một nhịp rồi thử lại, vì quá tải thường chỉ kéo dài vài giây.
+  for (let round = 0; round < 2; round++) {
+  let busy = 0;
+  if (round) { if (total - (Date.now() - t0) < 7000) break; await new Promise(r => setTimeout(r, 1500)); }
   for (const m of MODELS(lite)) {
     const left = total - (Date.now() - t0); if (left < 3000) break;
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
@@ -32,6 +36,8 @@ async function gemini(key, body, timeoutMs, lite) {
       e.code = r.status === 429 ? 'GEMINI_LIMIT' : 'GEMINI_ERROR';
       if (r.status === 404 || /no longer available|is not found|not supported for generateContent/i.test(msg)) { DEAD.add(m); last = last || e; continue; }
       if (r.status === 429) { last = e; continue; }   // lỗi hạn mức được ưu tiên báo ra để phía trên biết đường chuyển sang chế độ dự phòng
+      // model đang quá tải / lỗi tạm của Google: thử model kế tiếp thay vì báo lỗi ngay
+      if (r.status === 503 || r.status === 500 || r.status === 502 || r.status === 504 || /high demand|overloaded|unavailable|try again later/i.test(msg)) { busy++; e.code = 'GEMINI_BUSY'; if (!last || last.code !== 'GEMINI_LIMIT') last = e; continue; }
       throw e;
     }
     LAST = m;
@@ -39,6 +45,8 @@ async function gemini(key, body, timeoutMs, lite) {
     const text = ((c.content && c.content.parts) || []).map(p => p.text || '').join('');
     if (!text) { const e = new Error('Gemini trả về rỗng'); e.code = 'GEMINI_EMPTY'; throw e; }
     return { text, meta: c.groundingMetadata || {} };
+  }
+  if (!busy) break;
   }
   throw last || Object.assign(new Error('Gemini quá thời gian chờ'), { code: 'GEMINI_ERROR' });
 }
@@ -652,4 +660,4 @@ ${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
   return { answer: String(j.answer || '').slice(0, 900), ids };
 }
 
-module.exports = { doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { gemini, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
