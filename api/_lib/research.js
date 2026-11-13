@@ -559,6 +559,56 @@ ${JSON.stringify(cm)}`;
   return { audience: { summary: S(j.summary, 600), needs: A(j.needs, 8).map(x => ({ need: S(x && x.need, 200), evidence: S(x && x.evidence, 300), share: S(x && x.share, 20) })).filter(x => x.need), questions: A(j.questions, 10).map(x => S(x, 240)), loves: A(j.loves, 8).map(x => S(x, 240)), complaints: A(j.complaints, 8).map(x => S(x, 240)), ideas: A(j.ideas, 12).map(x => ({ title: S(x && x.title, 200), why: S(x && x.why, 260) })).filter(x => x.title), persona: Object.fromEntries(['who', 'age', 'gender', 'region', 'language', 'level', 'confidence', 'basis'].map(k => [k, S((j.persona || {})[k], 300)])) } };
 }
 
+// ---------- Phân tích kịch bản từ phụ đề: mở đầu, cấu trúc, thủ pháp giữ chân, chân dung người xem ----------
+function scriptStats(text) {
+  const words = (text.replace(/\b(?:\d{1,2}:)?\d{1,2}:\d{2}\b/g, ' ').match(/[\p{L}\p{N}'’-]+/gu) || []).length;
+  let last = 0; const re = /(?:^|\s)(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?=\s|$)/g; let m;
+  while ((m = re.exec(text))) { const t = (+m[1] || 0) * 3600 + (+m[2]) * 60 + (+m[3]); if (t > last && t < 6 * 3600) last = t; }
+  const minutes = last >= 60 ? last / 60 : words / 150;
+  return { words, minutes: Math.round(minutes * 10) / 10, timed: last >= 60, wpm: last >= 60 ? Math.round(words / (last / 60)) : null };
+}
+async function doScript(key, d) {
+  d = d || {};
+  const raw = String(d.transcript || '').replace(/\r/g, '').trim();
+  if (raw.length < 300) { const e = new Error('Phụ đề quá ngắn. Dán ít nhất vài đoạn (khoảng 300 ký tự trở lên).'); e.code = 'NO_DATA'; throw e; }
+  const text0 = raw.slice(0, 60000), cut = raw.length > text0.length;
+  const stats = scriptStats(text0);
+  const title = String(d.title || '').slice(0, 200), niche = String(d.niche || '').slice(0, 120);
+  const text = `You are a YouTube script analyst. Below is the transcript (subtitles) of a YouTube video${title ? ' titled "' + title + '"' : ''}. ${stats.timed ? 'It contains timestamps.' : 'It has no timestamps, so describe positions as a share of the script (for example "10% đầu").'}
+Analyse HOW the script holds attention so a creator can reuse the method${niche ? ' in the niche "' + niche + '"' : ''}. Base everything on the transcript; do not invent facts about the video.
+Write all explanations in Vietnamese. Quote the transcript only in short snippets (under 20 words each), in the original language.
+Real retention numbers are NOT available: "drops" are your reasoned guesses about where viewers may leave, not measured data.
+The viewer portrait is an ESTIMATE from vocabulary, topic and tone - say how sure you are.
+
+Return ONLY JSON:
+{"summary":"2-3 câu: video nói gì và kịch bản được dựng theo kiểu nào",
+ "hook":{"text":"trích ngắn câu mở đầu","technique":"kỹ thuật mở đầu được dùng","why":"vì sao nó giữ người xem","score":"điểm x/10"},
+ "structure":[{"part":"tên đoạn","range":"mốc thời gian hoặc phần trăm kịch bản","what":"đoạn này nói gì","job":"vai trò giữ chân của đoạn"}],
+ "devices":[{"name":"thủ pháp giữ chân (vòng lặp mở, hứa trước trả sau, con số, đổi nhịp...)","example":"trích ngắn"}],
+ "drops":["chỗ người xem có thể thoát và lý do (suy đoán)"],
+ "formula":"công thức kịch bản rút ra, viết thành các bước đánh số để dùng lại",
+ "persona":{"who":"1 câu mô tả người xem điển hình","age":"khoảng tuổi ước đoán","gender":"ước đoán hoặc 'không rõ'","region":"nước / khu vực","language":"ngôn ngữ","level":"mới bắt đầu / có kinh nghiệm ...","confidence":"thấp / vừa / cao","basis":"dựa vào dấu hiệu nào trong kịch bản"},
+ "rewrite":["câu mở đầu mới theo cùng kỹ thuật${niche ? ', cho ngách ' + niche : ''}"]}
+Give 4-8 structure parts, 4-8 devices, up to 5 drops, exactly 3 rewrite lines (write them in the transcript's language).
+
+TRANSCRIPT:
+${text0}`;
+  const j = await askJson(key, text, 50000, true);
+  const A = (v, n) => (Array.isArray(v) ? v : []).slice(0, n), S = (v, n) => String(v == null ? '' : v).slice(0, n);
+  const hk = j.hook || {};
+  return { script: {
+    summary: S(j.summary, 700),
+    hook: { text: S(hk.text, 300), technique: S(hk.technique, 240), why: S(hk.why, 400), score: S(hk.score, 12) },
+    structure: A(j.structure, 10).map(x => ({ part: S(x && x.part, 80), range: S(x && x.range, 40), what: S(x && x.what, 300), job: S(x && x.job, 300) })).filter(x => x.part || x.what),
+    devices: A(j.devices, 10).map(x => ({ name: S(x && x.name, 120), example: S(x && x.example, 240) })).filter(x => x.name),
+    drops: A(j.drops, 6).map(x => S(x, 300)).filter(Boolean),
+    formula: S(j.formula, 1500),
+    persona: Object.fromEntries(['who', 'age', 'gender', 'region', 'language', 'level', 'confidence', 'basis'].map(k => [k, S((j.persona || {})[k], 300)])),
+    rewrite: A(j.rewrite, 5).map(x => S(x, 300)).filter(Boolean),
+    stats: Object.assign({}, stats, { cut })
+  } };
+}
+
 // ---------- Bộ thông tin đăng video: tiêu đề, mô tả, thẻ từ khoá ----------
 async function doSeo(key, d) {
   d = d || {};
@@ -602,4 +652,4 @@ ${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
   return { answer: String(j.answer || '').slice(0, 900), ids };
 }
 
-module.exports = { doAsk, doTranslate, doAudience, doSeo, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };

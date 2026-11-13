@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
   const key = req.headers['x-gemini-key'] || GEMINI_API_KEY;
 
   // Mỗi hồ sơ tính 1 lượt (đếm ở bước search — kể cả khi AI lỗi và chuyển sang chế độ miễn phí)
-  const bucket = action === 'search' ? 'research' : action === 'insight' || action === 'titles' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' || action === 'topics' || action === 'images' || action === 'translate' || action === 'audience' || action === 'seo' || action === 'ask' ? 'research_aux' : '';
+  const bucket = action === 'search' ? 'research' : action === 'insight' || action === 'titles' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' || action === 'topics' || action === 'images' || action === 'translate' || action === 'audience' || action === 'seo' || action === 'script' || action === 'ask' ? 'research_aux' : '';
   if (bucket) {
     const limit = bucket === 'research' ? (Number(process.env.RESEARCH_DAILY_LIMIT) || 100) : bucket === 'insight' ? (Number(process.env.INSIGHT_DAILY_LIMIT) || 150) : 300;
     try {
@@ -62,6 +62,7 @@ module.exports = async (req, res) => {
     if (action === 'translate') return res.json({ success: true, ...(await R.doTranslate(key, body.items, body.to)) });
     if (action === 'audience') return res.json({ success: true, ...(await R.doAudience(key, body.data)) });
     if (action === 'seo') return res.json({ success: true, ...(await R.doSeo(key, body.data)) });
+    if (action === 'script') return res.json({ success: true, ...(await R.doScript(key, body.data)) });
     if (action === 'ask') return res.json({ success: true, ...(await R.doAsk(key, body.data)) });
     if (action === 'topics') {
       return res.json({ success: true, ...(await R.doTopics(key, { group: body.group, cat: body.cat, country: body.country, period: body.period, n: body.n, note: body.note, skip: body.skip })) });

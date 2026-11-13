@@ -227,14 +227,74 @@
           h(Btn, { onClick: function () { if (!nw.t.trim() || !nw.b.trim()) { K.toast('Điền tên và nội dung câu lệnh.'); return; } setMine([{ id: 'm' + Date.now(), t: nw.t.trim(), b: nw.b }].concat(mine).slice(0, 60)); setNw({ t: '', b: '' }); K.toast('Đã lưu câu lệnh'); } }, 'Lưu câu lệnh'))));
   }
 
+  // ------------------------------------------------------------------
+  // 4) PHÂN TÍCH KỊCH BẢN TỪ PHỤ ĐỀ: mở đầu, cấu trúc, thủ pháp giữ chân, chân dung người xem
+  // ------------------------------------------------------------------
+  function Script() {
+    var last = st.json('yt4_sc_last', null) || {};
+    var s0 = useState(last.text || ''), text = s0[0], setText = s0[1], s1 = useState(last.title || ''), title = s1[0], setTitle = s1[1], s2 = useState(last.niche || (st.json('yt4_pr_vars', {}) || {}).niche || ''), niche = s2[0], setNiche = s2[1];
+    var s3 = useState(last.res || null), R = s3[0], setR = s3[1], s4 = useState(false), busy = s4[0], setBusy = s4[1], s5 = useState(''), err = s5[0], setErr = s5[1];
+    var chars = text.trim().length, words = (text.replace(/\b(?:\d{1,2}:)?\d{1,2}:\d{2}\b/g, ' ').match(/\S+/g) || []).length;
+    async function run() {
+      if (chars < 300) { setErr('Dán phụ đề vào trước (ít nhất khoảng 300 ký tự).'); return; }
+      setBusy(true); setErr('');
+      try {
+        var r = await Y.api('/api/research', { action: 'script', data: { transcript: text, title: title, niche: niche } });
+        setR(r.script); try { st.put('yt4_sc_last', { text: text.slice(0, 60000), title: title, niche: niche, res: r.script }); } catch (e) { }
+      } catch (e) { setErr(e.message || 'AI lỗi, thử lại sau.'); }
+      setBusy(false);
+    }
+    var prompt = useMemo(function () {
+      return ['Bạn là chuyên gia phân tích kịch bản YouTube. Dưới đây là phụ đề của một video' + (title ? ' có tiêu đề "' + title + '"' : '') + '.', 'Hãy phân tích bằng tiếng Việt:', '1. MỞ ĐẦU (30 giây đầu): trích câu mở đầu, kỹ thuật dùng, vì sao giữ người xem, chấm điểm /10.', '2. CẤU TRÚC: chia kịch bản thành các đoạn, mỗi đoạn nói gì và giữ chân bằng cách nào.', '3. THỦ PHÁP GIỮ CHÂN: liệt kê kèm ví dụ trích ngắn.', '4. CHỖ DỄ MẤT NGƯỜI XEM: đoán vị trí và lý do (đây là suy đoán, không phải số đo).', '5. CÔNG THỨC rút ra, viết thành các bước đánh số.', '6. CHÂN DUNG NGƯỜI XEM ước đoán: tuổi, giới tính, khu vực, ngôn ngữ, mức độ hiểu biết, mức chắc chắn.', '7. Viết 5 câu mở đầu mới theo cùng kỹ thuật' + (niche ? ' cho ngách "' + niche + '"' : '') + ', rồi viết dàn ý kịch bản 8–10 phút theo công thức ở mục 5.', '', 'PHỤ ĐỀ:', text.trim().slice(0, 40000)].join('\n');
+    }, [text, title, niche]);
+    var box = function (label, tone, border, kids) { return h('div', { className: 'rounded-xl bg-[#181818] border p-3 ' + border }, h('div', { className: 'text-[11.5px] font-semibold mb-2 ' + tone }, label), kids); };
+    var S = R && R.stats;
+    return h('div', { className: 'space-y-3' },
+      h('div', { className: 'yt-card p-3 space-y-2.5' },
+        h('div', { className: 'grid gap-2.5 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]' },
+          h('input', { value: title, onChange: function (e) { setTitle(e.target.value); }, placeholder: 'Tiêu đề video (không bắt buộc)', 'aria-label': 'Tiêu đề video', className: 'h-9 bg-[#121212] border border-[#303030] rounded-lg px-3 text-[12.5px] text-[#f1f1f1] placeholder:text-[#717171]' }),
+          h('input', { value: niche, onChange: function (e) { setNiche(e.target.value); }, placeholder: 'Ngách của bạn (để AI viết lại mở đầu)', 'aria-label': 'Ngách của bạn', className: 'h-9 bg-[#121212] border border-[#303030] rounded-lg px-3 text-[12.5px] text-[#f1f1f1] placeholder:text-[#717171]' }),
+          h('button', { onClick: run, disabled: busy, className: 'h-9 px-5 rounded-lg bg-[#3ea6ff] hover:bg-[#65b8ff] text-[#0f0f0f] text-[13px] font-semibold cursor-pointer disabled:opacity-50 whitespace-nowrap' }, busy ? 'AI đang đọc…' : 'AI phân tích kịch bản')),
+        h('textarea', { value: text, onChange: function (e) { setText(e.target.value); }, 'aria-label': 'Phụ đề video', placeholder: 'Dán phụ đề (bản chép lời) của video vào đây. Có mốc thời gian hay không đều được.', className: TA + ' h-40 font-mono text-[11.5px]' }),
+        h('div', { className: 'flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-[#aaa]' },
+          h('span', { className: 'tabular-nums' }, N(words) + ' từ · ' + N(chars) + ' ký tự' + (chars > 60000 ? ' · AI chỉ đọc 60.000 ký tự đầu' : '')),
+          h('span', null, 'Cách lấy phụ đề: mở video trên YouTube, bấm "…thêm" dưới phần mô tả, chọn "Hiện bản chép lời", bôi đen toàn bộ rồi sao chép.'),
+          text && h('button', { onClick: function () { setText(''); setR(null); setErr(''); }, className: 'text-[#ff8a83] hover:text-white cursor-pointer' }, 'Xoá'))),
+      err && h(Note, { error: true }, err),
+      busy && h(Busy, null, 'AI đang đọc kịch bản, thường mất 10–30 giây…'),
+      !R && !busy && h(Empty, { title: 'Dán phụ đề của một video đang thắng', sub: 'AI chỉ ra câu mở đầu giữ chân thế nào, kịch bản chia đoạn ra sao, dùng thủ pháp gì, và đoán người xem là ai. YouTube không cho máy chủ tải phụ đề tự động nên bước dán phải làm tay.' }),
+      R && h('div', { className: 'space-y-3' },
+        h('div', { className: 'flex flex-wrap items-center gap-2' }, [[N(S.words), 'từ', 'text-white'], [S.minutes, 'phút' + (S.timed ? '' : ' (ước tính 150 từ/phút)'), 'text-[#7cc3ff]'], S.wpm ? [S.wpm, 'từ/phút', 'text-[#f5c451]'] : null, R.hook.score ? [R.hook.score, 'điểm mở đầu', 'text-[#6fcf85]'] : null].filter(Boolean).map(function (x) { return h('span', { key: x[1], className: 'inline-flex items-baseline gap-1.5 h-8 px-3 rounded-lg bg-[#212121] border border-[#303030]' }, h('b', { className: 'text-[15px] tabular-nums ' + x[2] }, x[0]), h('span', { className: 'text-[11.5px] text-[#c8c8c8]' }, x[1])); })),
+        R.summary && h('p', { className: 'text-[12.5px] text-[#f1f1f1] leading-relaxed' }, R.summary),
+        h('div', { className: 'grid gap-3 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]' },
+          h('div', { className: 'space-y-3 min-w-0' },
+            box('Mở đầu giữ chân', 'text-[#6fcf85]', 'border-[#2ba640]/50', h('div', { className: 'space-y-1.5' },
+              R.hook.text && h('p', { className: 'text-[12.5px] text-[#f1f1f1] italic' }, '"' + R.hook.text + '"'),
+              R.hook.technique && h('p', { className: 'text-[12px] text-[#e6e6e6]' }, h('b', { className: 'text-[#9fe0ad]' }, 'Kỹ thuật: '), R.hook.technique),
+              R.hook.why && h('p', { className: 'text-[12px] text-[#c8c8c8]' }, h('b', { className: 'text-[#9fe0ad]' }, 'Vì sao hiệu quả: '), R.hook.why))),
+            R.structure.length > 0 && box('Cấu trúc kịch bản', 'text-[#7cc3ff]', 'border-[#3ea6ff]/50', h('ol', { className: 'space-y-1.5' }, R.structure.map(function (x, i) { return h('li', { key: i, className: 'rounded-lg bg-[#212121] px-3 py-2 grid gap-x-3 gap-y-0.5 md:grid-cols-[150px_minmax(0,1fr)]' },
+              h('div', null, h('div', { className: 'text-[12.5px] font-semibold text-[#f1f1f1]' }, (i + 1) + '. ' + x.part), x.range && h('div', { className: 'text-[11px] text-[#8ab4f8] tabular-nums' }, x.range)),
+              h('div', { className: 'min-w-0' }, x.what && h('div', { className: 'text-[12px] text-[#e6e6e6]' }, x.what), x.job && h('div', { className: 'text-[11.5px] text-[#aaa] mt-0.5' }, 'Giữ chân: ' + x.job))); }))),
+            R.formula && box('Công thức dùng lại', 'text-[#c9a7ff]', 'border-[#a970ff]/50', h('div', null, h('p', { className: 'text-[12.5px] text-[#f1f1f1] leading-relaxed whitespace-pre-line' }, R.formula), h('button', { onClick: function () { copy(R.formula, 'công thức'); }, className: 'mt-2 h-7 px-3 rounded-full bg-[#323232] hover:bg-[#424242] text-[11.5px] text-[#f1f1f1] cursor-pointer' }, 'Sao chép công thức')))),
+          h('div', { className: 'space-y-3 min-w-0' },
+            R.devices.length > 0 && box('Thủ pháp giữ chân', 'text-[#f5c451]', 'border-[#f5c451]/40', h('div', { className: 'space-y-1.5' }, R.devices.map(function (x, i) { return h('div', { key: i, className: 'rounded-lg bg-[#212121] px-3 py-1.5' }, h('div', { className: 'text-[12.5px] font-medium text-[#f1f1f1]' }, x.name), x.example && h('div', { className: 'text-[11.5px] text-[#aaa] italic' }, '"' + x.example + '"')); }))),
+            R.drops.length > 0 && box('Chỗ dễ mất người xem (AI đoán)', 'text-[#ff8a83]', 'border-[#ff4e45]/40', h('div', null, h('ul', { className: 'space-y-1 list-disc pl-4 text-[12px] text-[#e6e6e6]' }, R.drops.map(function (x, i) { return h('li', { key: i }, x); })), h('p', { className: 'text-[10.5px] text-[#717171] mt-1.5' }, 'YouTube không công khai biểu đồ giữ chân của video người khác, nên đây là suy luận từ kịch bản chứ không phải số đo.'))),
+            box('Chân dung người xem (ước đoán)', 'text-[#7cc3ff]', 'border-[#3ea6ff]/50', h('div', null,
+              R.persona.who && h('p', { className: 'text-[12.5px] text-[#f1f1f1] leading-snug mb-2' }, R.persona.who),
+              h('dl', { className: 'grid grid-cols-2 gap-1.5' }, [['Độ tuổi', 'age'], ['Giới tính', 'gender'], ['Khu vực', 'region'], ['Ngôn ngữ', 'language'], ['Mức độ', 'level'], ['Độ chắc chắn', 'confidence']].map(function (x) { return R.persona[x[1]] ? h('div', { key: x[1], className: 'rounded-lg bg-[#212121] px-2.5 py-1.5' }, h('dt', { className: 'text-[10.5px] text-[#aaa]' }, x[0]), h('dd', { className: 'text-[12px] font-medium text-[#f1f1f1]' }, R.persona[x[1]])) : null; })),
+              R.persona.basis && h('p', { className: 'text-[11px] text-[#aaa] mt-2 leading-snug' }, 'Dựa vào: ' + R.persona.basis))))),
+        R.rewrite.length > 0 && box('Câu mở đầu viết lại' + (niche ? ' cho ngách ' + niche : ''), 'text-[#5fdccf]', 'border-[#22c3b5]/40', h('div', { className: 'grid gap-2 md:grid-cols-3' }, R.rewrite.map(function (x, i) { return h('div', { key: i, className: 'rounded-lg bg-[#212121] px-3 py-2 flex flex-col gap-2' }, h('p', { className: 'flex-1 text-[12.5px] text-[#f1f1f1] leading-snug' }, x), h('button', { onClick: function () { copy(x, 'câu mở đầu'); }, className: 'self-start h-7 px-3 rounded-full bg-[#323232] hover:bg-[#424242] text-[11.5px] text-[#f1f1f1] cursor-pointer' }, 'Sao chép')); })))),
+      chars >= 300 && K.ClaudeBox && h(K.ClaudeBox, { title: 'Gửi phụ đề sang Claude để phân tích sâu và viết dàn ý', kind: 'script', prompt: prompt, file: 'phan-tich-kich-ban', meta: { words: words } }));
+  }
+
   function Tools(p) {
-    var ok = function (v) { return ['cm', 'up', 'pr'].indexOf(v) >= 0 ? v : ''; };
+    var ok = function (v) { return ['cm', 'sc', 'up', 'pr'].indexOf(v) >= 0 ? v : ''; };
     var s = useState(ok(p.params && p.params.sub) || ok(st.json('yt4_tools_tab', 'cm')) || 'cm'), sub = s[0], setSub0 = s[1];
     function setSub(v) { setSub0(v); st.put('yt4_tools_tab', v); }
     return h('div', { className: 'space-y-3' },
-      h('div', null, h('h1', { className: 'font-display text-[25px] leading-9 font-bold text-white tracking-tight' }, 'Công cụ'), h('p', { className: 'text-[13.5px] text-[#d0d0d0] mt-1 leading-relaxed' }, 'Quét bình luận để biết khán giả muốn gì, tạo bộ thông tin đăng video và dùng câu lệnh AI soạn sẵn.')),
-      h(Tabs, { value: sub, onChange: setSub, items: [['cm', 'Quét bình luận'], ['up', 'Thông tin đăng video'], ['pr', 'Câu lệnh AI', PROMPTS.length]] }),
-      sub === 'cm' ? h(Comments, { goto: p.goto }) : sub === 'up' ? h(Upload, null) : h(Prompts, null));
+      h('div', null, h('h1', { className: 'font-display text-[25px] leading-9 font-bold text-white tracking-tight' }, 'Công cụ'), h('p', { className: 'text-[13.5px] text-[#d0d0d0] mt-1 leading-relaxed' }, 'Quét bình luận để biết khán giả muốn gì, phân tích kịch bản từ phụ đề, tạo bộ thông tin đăng video và dùng câu lệnh AI soạn sẵn.')),
+      h(Tabs, { value: sub, onChange: setSub, items: [['cm', 'Quét bình luận'], ['sc', 'Phân tích kịch bản'], ['up', 'Thông tin đăng video'], ['pr', 'Câu lệnh AI', PROMPTS.length]] }),
+      sub === 'cm' ? h(Comments, { goto: p.goto }) : sub === 'sc' ? h(Script, null) : sub === 'up' ? h(Upload, null) : h(Prompts, null));
   }
   window.YT4Pages = window.YT4Pages || {};
   window.YT4Pages.tools = Tools;

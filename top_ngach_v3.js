@@ -195,6 +195,13 @@
     now = now || Date.now(); var short = f.fmt === 'short', text = String(f.text || '').toLowerCase().trim();
     var CH = store.channels, A = {};
     var newMs = (f.newHours || 24) * HOUR;
+    // scope 'last': chỉ giữ thứ mới tìm thấy ở lần quét gần nhất (fs = mốc bắt đầu lần quét đó)
+    var lastCut = 0;
+    if (f.scope === 'last') {
+      var mx = 0; Object.keys(CH).forEach(function (id) { if (CH[id].fs > mx) mx = CH[id].fs; });
+      Object.keys(store.videos).forEach(function (id) { var x = store.videos[id].fs; if (x > mx) mx = x; });
+      lastCut = mx ? mx - 30 * 60 * 1000 : 1;
+    }
     Object.keys(CH).forEach(function (id) {
       var c = CH[id]; if (c.s == null || c.s > f.maxSub || !inMarket(c.mk, f, c.c)) return;
       if (f.maxAge && (!c.cr || now - c.cr > f.maxAge * DAY)) return;
@@ -208,6 +215,7 @@
     var vids = [];
     Object.keys(store.videos).forEach(function (id) {
       var v = store.videos[id], c = CH[v.ch]; if (!c || !A[v.ch]) return;
+      if (lastCut && !((v.fs || 0) >= lastCut)) return;
       var isS = v.du <= SHORT_MAX; if (short !== isS) return;
       var hrs = Math.max(1, (now - v.t) / HOUR); if (hrs > f.hours) return;
       var out = v.vw / Math.max(c.s, 1); if (v.vw < f.minView || out < f.minOut) return;
@@ -223,6 +231,7 @@
     Object.keys(A).forEach(function (id) {
       var c = CH[id], a = A[id], vv = vByCh[id] || [];
       if (!vv.length && !(a.v === 'farm' || a.v === 'rise')) return;
+      if (lastCut && !vv.length && !((c.fs || 0) >= lastCut)) return;
       if (f.niche && c.nc !== f.niche) return;
       if (text && !vv.length && (c.n + ' ' + c.nc).toLowerCase().indexOf(text) < 0) return;
       var best = vv[0] || null, bestOut = best ? best.out : (a.max || 0) / Math.max(c.s, 1);
@@ -419,7 +428,7 @@
   var dur = function (s) { s = Math.round(s || 0); var hh = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60), ss = s % 60; return (hh ? hh + ':' + String(mm).padStart(2, '0') : mm) + ':' + String(ss).padStart(2, '0'); };
   var age = function (hrs) { return hrs < 24 ? Math.round(hrs) + ' giờ' : Math.round(hrs / 24) + ' ngày'; };
   var cx = function () { return Array.prototype.filter.call(arguments, Boolean).join(' '); };
-  var DEF = { mode: 'rpm', country: '', maxSub: 5000, fmt: 'long', hours: 168, minView: 1000, minOut: 2, text: '', vSort: 'smart', cSort: 'smart', nSort: 'out', verdict: 'good', perCh: 2, niche: '', maxAge: 0, cat: '', minDur: 0, hideSeen: false, mks: null, grp: '' };
+  var DEF = { mode: 'rpm', country: '', maxSub: 5000, fmt: 'long', hours: 168, minView: 1000, minOut: 2, text: '', vSort: 'smart', cSort: 'smart', nSort: 'out', verdict: 'good', perCh: 2, niche: '', maxAge: 0, cat: '', minDur: 0, hideSeen: false, mks: null, grp: '', scope: 'all' };
   var DAYMS = 864e5;
   // Bộ lọc nhanh có sẵn (bấm để áp dụng; bộ lọc tự lưu nằm sau)
   var BUILTIN = [
@@ -658,6 +667,9 @@
     var mkOpts = [['', f.mode === 'rpm' ? 'Cả 12 nước RPM cao' : 'Tất cả quốc gia']].concat((f.mode === 'rpm' ? E.RPM_MK : E.RPM_MK.concat(E.ALL_MK.filter(function (k) { return E.RPM_MK.indexOf(k) < 0; }))).map(function (k) { return [k, M[k][1] + ' (' + M[k][2] + ')' + (E.RPM_MK.indexOf(k) >= 0 ? '  ·  RPM ~$' + M[k][4][0] + '–' + M[k][4][1] : '')]; }));
     // Cờ dạng ảnh (emoji cờ không hiện trên Windows). Ảnh lỗi thì tự ẩn, tên nước vẫn còn.
     var flagImg = function (k, cls) { var c = M[k] && M[k][2]; return c ? h('img', { src: 'https://flagcdn.com/w40/' + c.toLowerCase() + '.png', alt: '', width: 20, height: 15, loading: 'lazy', onError: function (e) { e.target.style.visibility = 'hidden'; }, className: cx('w-5 h-[15px] rounded-[2px] object-cover shrink-0 bg-[#303030]', cls) }) : null; };
+    // Dân số ước tính (triệu người, làm tròn) để biết thị trường to hay nhỏ
+    var POP = { US: 340, GB: 68, CA: 40, AU: 27, CH: 8.9, NO: 5.6, DE: 84, NL: 18, SE: 10.6, JP: 124, KR: 52, FR: 68, MX: 130, BR: 212, IN: 1440, ID: 281, TH: 72, RU: 144, VN: 100, NZ: 5.2, IE: 5.3, AT: 9.1, BE: 11.8, DK: 6, FI: 5.6, LU: 0.67, LI: 0.04, IS: 0.39, SG: 5.9, HK: 7.5, AE: 10, IL: 9.8, QA: 2.9, KW: 4.9, IT: 59, ES: 48, PT: 10.5, PL: 37, CZ: 10.9, SK: 5.4, HU: 9.6, RO: 19, BG: 6.4, GR: 10.4, HR: 3.9, SI: 2.1, EE: 1.4, LV: 1.9, LT: 2.9, CY: 1.3, MT: 0.55, TW: 23, SA: 34, BH: 1.6, OM: 5, PR: 3.2, CL: 19.7, UY: 3.4, CR: 5.1, PA: 4.5, AR: 46, CO: 53, PE: 34, ZA: 63, MY: 35, TR: 86, PH: 115, PK: 245, BD: 173, LK: 22, NP: 30, KH: 17, LA: 7.7, EG: 114, MA: 38, DZ: 46, TN: 12, IQ: 45, JO: 11, LB: 5.5, LY: 7, YE: 39, NG: 227, KE: 55, GH: 34, TZ: 67, UG: 48, SN: 18, ZW: 16, UA: 38, BY: 9.2, KZ: 20, AZ: 10, GE: 3.7, RS: 6.6, BA: 3.2, MK: 1.8, ME: 0.62, EC: 18, BO: 12, PY: 6.9, VE: 28, GT: 18, HN: 10.6, SV: 6.3, NI: 7, DO: 11, JM: 2.8, PG: 10 };
+    var popOf = function (k) { var n = M[k] && POP[M[k][2]]; return n == null ? '' : n >= 1000 ? (n / 1000).toFixed(2).replace(/0$/, '') + 'B' : n >= 10 ? Math.round(n) + 'M' : n >= 1 ? String(n).replace(/\.0$/, '') + 'M' : Math.round(n * 1000) + 'K'; };
     var plain = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); };
     var tierOf = function (k) { var hi = M[k][4][1]; return hi >= 6 ? 0 : hi >= 2.5 ? 1 : 2; };
     var MKEYS = Object.keys(M).sort(function (a, b) { return tierOf(a) - tierOf(b) || M[b][4][1] - M[a][4][1] || M[a][1].localeCompare(M[b][1], 'vi'); });
@@ -677,7 +689,7 @@
             var ks = MKEYS.filter(function (k) { return tierOf(k) === t && (!lq || (M[k][1] + ' ' + M[k][2]).toLowerCase().indexOf(lq) >= 0); }); if (!ks.length) return null;
             return h('div', { key: t }, h('div', { className: 'flex items-center gap-2 mb-2' }, h('span', { className: cx('text-[12px] font-bold', ['text-[#6fcf85]', 'text-[#f5c451]', 'text-[#aaa]'][t]) }, ['RPM cao', 'RPM vừa', 'RPM thấp'][t] + ' · ' + ks.length + ' nước'),
               h('button', { onClick: function () { var s2 = Object.assign({}, cgEdit.sel), all = ks.every(function (k) { return s2[k]; }); ks.forEach(function (k) { s2[k] = all ? 0 : 1; }); setCgEdit(Object.assign({}, cgEdit, { sel: s2 })); }, className: 'text-[11.5px] text-[#7cc3ff] hover:underline cursor-pointer' }, 'Chọn / bỏ cả nhóm')),
-              h('div', { className: 'grid gap-1.5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4' }, ks.map(function (k) { var on = !!cgEdit.sel[k]; return h('button', { key: k, type: 'button', role: 'checkbox', 'aria-checked': on, onClick: function () { var s3 = Object.assign({}, cgEdit.sel); s3[k] = on ? 0 : 1; setCgEdit(Object.assign({}, cgEdit, { sel: s3 })); }, className: cx('h-8 px-2.5 rounded-lg text-left text-[12px] flex items-center gap-2 min-w-0 cursor-pointer transition', on ? 'bg-[#f1f1f1] text-[#0f0f0f] font-semibold' : 'bg-[#181818] text-[#e6e6e6] hover:bg-[#323232]') }, flagImg(k), h('span', { className: 'truncate' }, M[k][1] + ' ', h('span', { className: 'opacity-60' }, M[k][2]))); })));
+              h('div', { className: 'grid gap-1.5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4' }, ks.map(function (k) { var on = !!cgEdit.sel[k]; return h('button', { key: k, type: 'button', role: 'checkbox', 'aria-checked': on, onClick: function () { var s3 = Object.assign({}, cgEdit.sel); s3[k] = on ? 0 : 1; setCgEdit(Object.assign({}, cgEdit, { sel: s3 })); }, className: cx('h-8 px-2.5 rounded-lg text-left text-[12px] flex items-center gap-2 min-w-0 cursor-pointer transition', on ? 'bg-[#f1f1f1] text-[#0f0f0f] font-semibold' : 'bg-[#181818] text-[#e6e6e6] hover:bg-[#323232]') }, flagImg(k), h('span', { className: 'flex-1 min-w-0 truncate' }, M[k][1] + ' ', h('span', { className: 'opacity-60' }, M[k][2])), popOf(k) && h('span', { className: 'shrink-0 text-[10.5px] tabular-nums opacity-70' }, popOf(k))); })));
           })),
           h('div', { className: 'p-4 border-t border-[#303030] flex flex-wrap items-center gap-2' },
             h('span', { className: 'flex-1 min-w-[180px] text-[11.5px] text-[#aaa]' }, 'Đã chọn ' + n.length + ' nước. Mỗi lần quét chia quota cho các nước này, nên nhóm càng nhiều nước thì mỗi nước càng được quét ít.'),
@@ -721,7 +733,7 @@
             cOpen && (function () {
               var q = plain(cQ.trim());
               var pick = function (v) { if (v.indexOf('g:') === 0) { var g = cgroups.filter(function (x) { return x.id === v.slice(2); })[0]; if (g) setMany({ grp: g.id, mks: g.mks, country: '', niche: '' }); } else setMany({ grp: '', mks: null, country: v, niche: '' }); setCOpen(false); setCQ(''); };
-              var row = function (key, on, v, left, name, right) { return h('button', { key: key, type: 'button', role: 'option', 'aria-selected': on, onClick: function () { pick(v); }, className: cx('w-full h-8 px-2.5 flex items-center gap-2 text-left text-[12px] cursor-pointer', on ? 'bg-[#3a3a3a] text-white font-semibold' : 'text-[#e6e6e6] hover:bg-[#272727]') }, left, h('span', { className: 'flex-1 min-w-0 truncate' }, name), right && h('span', { className: 'shrink-0 text-[11px] tabular-nums text-[#aaa]' }, right)); };
+              var row = function (key, on, v, left, name, right, tip) { return h('button', { key: key, type: 'button', role: 'option', 'aria-selected': on, title: tip || null, onClick: function () { pick(v); }, className: cx('w-full h-8 px-2.5 flex items-center gap-2 text-left text-[12px] cursor-pointer', on ? 'bg-[#3a3a3a] text-white font-semibold' : 'text-[#e6e6e6] hover:bg-[#272727]') }, left, h('span', { className: 'flex-1 min-w-0 truncate' }, name), right && h('span', { className: 'shrink-0 text-[11px] tabular-nums text-[#aaa]' }, right)); };
               var head = function (t, cls) { return h('div', { key: 'h' + t, className: cx('px-2.5 pt-2 pb-1 text-[10.5px] font-bold uppercase tracking-wide', cls) }, t); };
               var out = [];
               if (!q) out.push(row('all', !f.grp && !f.country, '', null, f.mode === 'rpm' ? 'Cả 12 nước RPM cao' : '19 thị trường chính'));
@@ -730,8 +742,8 @@
               [0, 1, 2].forEach(function (t) {
                 var ks = MKEYS.filter(function (k) { return tierOf(k) === t && (!q || plain(M[k][1]).indexOf(q) >= 0 || M[k][2].toLowerCase() === q); });
                 if (!ks.length) return;
-                out.push(head(['RPM cao', 'RPM vừa', 'RPM thấp'][t] + ' (ước tính)', ['text-[#6fcf85]', 'text-[#f5c451]', 'text-[#aaa]'][t]));
-                ks.forEach(function (k) { out.push(row(k, !f.grp && f.country === k, k, flagImg(k), M[k][1], '$' + M[k][4][0] + '–' + M[k][4][1])); });
+                out.push(head(['RPM cao', 'RPM vừa', 'RPM thấp'][t] + ' · dân số · RPM', ['text-[#6fcf85]', 'text-[#f5c451]', 'text-[#aaa]'][t]));
+                ks.forEach(function (k) { var pp = popOf(k); out.push(row(k, !f.grp && f.country === k, k, flagImg(k), M[k][1], h(React.Fragment, null, pp && h('span', { className: 'text-[#7cc3ff]' }, pp), pp ? ' · ' : '', '$' + M[k][4][0] + '–' + M[k][4][1]), M[k][1] + (pp ? ' · dân số khoảng ' + pp : '') + ' · RPM ước tính $' + M[k][4][0] + '–' + M[k][4][1])); });
               });
               return h('div', { className: 'mt-2 rounded-lg bg-[#121212] border border-[#303030] overflow-hidden' },
                 h('input', { value: cQ, onChange: function (e) { setCQ(e.target.value); }, autoFocus: true, placeholder: 'Tìm nước…', 'aria-label': 'Tìm quốc gia', className: 'w-full h-8 px-2.5 bg-[#181818] border-b border-[#303030] text-[12px] text-[#f1f1f1] placeholder:text-[#777] outline-none' }),
@@ -790,8 +802,10 @@
     var catOpts = [['', 'Mọi danh mục']].concat(Object.keys(CATS).map(function (k) { return [k, CATS[k][1]]; }));
     var toggle = function (on, text, fn) { return h('button', { type: 'button', 'aria-pressed': !!on, onClick: fn, className: cx('h-8 px-3 rounded-lg text-[11.5px] font-medium whitespace-nowrap transition cursor-pointer', on ? 'bg-[#f1f1f1] text-[#0f0f0f]' : 'bg-[#272727] text-[#f1f1f1] hover:bg-[#3a3a3a]') }, text); };
     var toolbar = h('div', { className: 'space-y-3' },
+      h('div', { className: 'flex flex-wrap items-center gap-x-4 gap-y-2' },
+      h('div', { role: 'group', 'aria-label': 'Phạm vi kết quả', className: 'inline-flex rounded-lg overflow-hidden border border-[#3a3a3a]' }, [['all', 'Cộng dồn', 'Mọi kết quả đã quét được từ trước tới giờ'], ['last', 'Quét mới', 'Chỉ kênh và video mới tìm thấy ở lần quét gần nhất']].map(function (o) { var on = (f.scope || 'all') === o[0]; return h('button', { key: o[0], type: 'button', 'aria-pressed': on, title: o[2], onClick: function () { set('scope', o[0]); }, className: cx('h-8 px-3 text-[11.5px] font-semibold uppercase tracking-wide whitespace-nowrap cursor-pointer transition', on ? 'bg-[#f5c451] text-[#2a1d00]' : 'bg-[#1c1c1c] text-[#c8c8c8] hover:bg-[#2c2c2c]') }, o[1]); })),
       h('div', { role: 'tablist', className: 'flex max-w-full gap-2 overflow-x-auto no-scrollbar' },
-        tabs.map(function (t) { var on = tab === t[0]; return h('button', { key: t[0], role: 'tab', 'aria-selected': on, onClick: function () { setTab(t[0]); }, className: cx('h-8 px-3.5 rounded-lg text-[12px] whitespace-nowrap transition cursor-pointer font-medium', on ? 'bg-[#f1f1f1] text-[#0f0f0f]' : 'text-[#f1f1f1] bg-[#272727] hover:bg-[#424242]') }, t[1], h('span', { className: cx('ml-1.5 text-[11px] tabular-nums', on ? 'text-cham-600' : 'text-cham-500') }, N(t[2]))); })),
+        tabs.map(function (t) { var on = tab === t[0]; return h('button', { key: t[0], role: 'tab', 'aria-selected': on, onClick: function () { setTab(t[0]); }, className: cx('h-8 px-3.5 rounded-lg text-[12px] whitespace-nowrap transition cursor-pointer font-medium', on ? 'bg-[#f1f1f1] text-[#0f0f0f]' : 'text-[#f1f1f1] bg-[#272727] hover:bg-[#424242]') }, t[1], h('span', { className: cx('ml-1.5 text-[11px] tabular-nums', on ? 'text-cham-600' : 'text-cham-500') }, N(t[2]))); }))),
       h('div', { className: 'flex flex-wrap items-center gap-2' },
         h('input', { value: f.text, 'aria-label': 'Lọc theo tiêu đề, kênh hoặc ngách', onChange: function (e) { set('text', e.target.value); }, placeholder: 'Lọc theo tiêu đề, kênh, ngách', className: cx(B.field, 'h-8 text-[11.5px] w-full sm:w-48') }),
         tab === 'ch' && sel(f.verdict, function (e) { set('verdict', e.target.value); }, [['good', 'Farm + đang lên + chờ phân tích'], ['farm', 'Chỉ farm tiền'], ['rise', 'Chỉ đang lên'], ['new', 'Chỉ kênh mới phát hiện (24 giờ)'], ['star', 'Chỉ kênh gắn sao'], ['noted', 'Chỉ kênh có ghi chú'], ['unk', 'Chỉ chưa phân tích'], ['fluke', 'Chỉ ăn may'], ['all', 'Tất cả']], 'Lọc theo đánh giá'),

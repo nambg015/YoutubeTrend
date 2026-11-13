@@ -150,7 +150,7 @@
   function DataPanel() {
     var inp = React.useRef(null);
     function backup() {
-      var data = { app: 'youtrend', v: 4, at: new Date().toISOString(), keys: Y.keys.getPool(), saved: store.saved(), channels: store.channels(), ideas: store.ideas(), explore: st.json('yt4_explore_hist', []), channelHist: st.json('yt4_channel_hist', []), projects: store.projects(), briefs: store.briefs(), compare: store.compare(), nicheMarks: st.json('tn3_marks', {}), nichePresets: st.json('tn3_presets', []), countryGroups: st.json('tn3_cgroups', []) };
+      var data = { app: 'youtrend', v: 4, at: new Date().toISOString(), keys: Y.keys.getPool(), saved: store.saved(), channels: store.channels(), ideas: store.ideas(), explore: st.json('yt4_explore_hist', []), channelHist: st.json('yt4_channel_hist', []), projects: store.projects(), briefs: store.briefs(), compare: store.compare(), nicheMarks: st.json('tn3_marks', {}), nichePresets: st.json('tn3_presets', []), countryGroups: st.json('tn3_cgroups', []), dreamGroups: st.json('yt4_groups', []), myPrompts: st.json('yt4_pr_mine', []) };
       U.download('youtrend-sao-luu-' + new Date().toISOString().slice(0, 10) + '.json', new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
     }
     function restore(e) {
@@ -166,6 +166,8 @@
           if (Array.isArray(d.briefs)) { var cb = store.briefs(), bi = {}; cb.forEach(function (x) { bi[x.id] = 1; }); st.put('yt4_briefs', cb.concat(d.briefs.filter(function (x) { return x && x.id && !bi[x.id]; })).slice(0, 30)); Y.emit('briefs'); }
           if (d.nicheMarks && typeof d.nicheMarks === 'object') st.put('tn3_marks', Object.assign({}, d.nicheMarks, st.json('tn3_marks', {})));
           if (Array.isArray(d.nichePresets)) { var pp = st.json('tn3_presets', []) || [], pn = {}; pp.forEach(function (x) { pn[x[0]] = 1; }); st.put('tn3_presets', pp.concat(d.nichePresets.filter(function (x) { return Array.isArray(x) && !pn[x[0]]; })).slice(0, 12)); }
+          if (Array.isArray(d.dreamGroups)) { var dg = st.json('yt4_groups', []) || []; d.dreamGroups.forEach(function (x) { if (typeof x === 'string' && x && dg.indexOf(x) < 0) dg.push(x.slice(0, 60)); }); st.put('yt4_groups', dg.slice(0, 40)); }
+          if (Array.isArray(d.myPrompts)) { var mp = st.json('yt4_pr_mine', []) || [], mi = {}; mp.forEach(function (x) { mi[x.id || x.title] = 1; }); st.put('yt4_pr_mine', mp.concat(d.myPrompts.filter(function (x) { return x && (x.id || x.title) && !mi[x.id || x.title]; })).slice(0, 60)); }
           if (Array.isArray(d.countryGroups)) { var cg = st.json('tn3_cgroups', []) || [], ci = {}; cg.forEach(function (x) { ci[x.id] = 1; }); st.put('tn3_cgroups', cg.concat(d.countryGroups.filter(function (x) { return x && x.id && Array.isArray(x.mks) && !ci[x.id]; })).slice(0, 30)); }
           Y.emit('saved'); K.toast('Đã khôi phục (gộp với dữ liệu hiện có). Thêm ' + n + ' key mới.');
         } catch (err) { K.toast('File sao lưu không hợp lệ'); }

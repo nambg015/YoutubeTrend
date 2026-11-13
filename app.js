@@ -94,7 +94,7 @@
           shown.map(function (c) {
             var on = sort && sort.k === c.k;
             return h('th', { key: c.k, onClick: c.v ? function () { setCfg({ sort: !on ? { k: c.k, d: -1 } : sort.d < 0 ? { k: c.k, d: 1 } : null }); } : null, title: c.v ? 'Bấm để xếp theo cột này' : null,
-              className: cx('px-2.5 py-2 text-[0.82em] font-semibold uppercase tracking-wide whitespace-nowrap select-none border-b-2', c.right ? 'text-right' : 'text-left', on ? 'text-white border-[#3ea6ff]' : 'border-[#3a3a3a] ' + (TONE[c.tone] || 'text-[#aaa]'), c.v && 'cursor-pointer hover:text-white') }, c.t, on ? (sort.d < 0 ? ' ▾' : ' ▴') : '');
+              className: cx('px-2.5 py-2 text-[0.82em] font-semibold uppercase tracking-wide whitespace-nowrap select-none border-b-2', c.right ? 'text-right' : 'text-left', on ? 'text-white border-[#3ea6ff]' : 'border-[#3a3a3a] ' + (TONE[c.tone] || 'text-[#aaa]'), c.v && 'cursor-pointer hover:text-white') }, c.head || c.t, on ? (sort.d < 0 ? ' ▾' : ' ▴') : '');
           }))),
         h('tbody', null, rows.slice(0, lim).map(function (r, i) {
           return h('tr', { key: p.rowKey ? p.rowKey(r) : i, className: cx('border-b border-[#2a2a2a] hover:bg-[#2a2a2a] transition-colors', i % 2 ? 'bg-[#1c1c1c]' : 'bg-[#212121]', p.rowClass && p.rowClass(r)) },

@@ -201,17 +201,138 @@
       h(Tabs, { value: tab, onChange: setTab, items: [['vid', 'Video', vids.length], ['ch', 'Kênh', chans.length], ['kw', 'Từ khoá', R.suggestions.length + R.tags.length], ['title', 'Khuôn tiêu đề'], ['ai', 'Nhận định AI']] }), body);
   }
 
+  // ---------- Thịnh hành theo nước: bảng "đang hot" của YouTube ở từng quốc gia ----------
+  function HotLab(p) {
+    var E = window.TopNgachEngine, M = (E && E.M) || {};
+    var LIST = useMemo(function () {
+      var seen = {}, out = [];
+      Object.keys(M).forEach(function (k) { var c = M[k][2]; if (seen[c]) return; seen[c] = 1; var hi = M[k][4][1]; out.push({ c: c, n: k === 'ES' ? 'Mexico' : M[k][1], hi: hi, tier: hi >= 6 ? 0 : hi >= 2.5 ? 1 : 2, rpm: '$' + M[k][4][0] + '–' + M[k][4][1] }); });
+      if (!out.length) REGIONS.forEach(function (r) { out.push({ c: r[0], n: r[1], hi: 0, tier: 1, rpm: '' }); });
+      return out.sort(function (a, b) { return a.tier - b.tier || b.hi - a.hi || a.n.localeCompare(b.n, 'vi'); });
+    }, []);
+    var saved = st.json('yt4_hot', {}) || {};
+    var s0 = useState(saved.cc || 'US'), cc = s0[0], setCc = s0[1], s1 = useState(saved.cat || ''), cat = s1[0], setCat = s1[1], s2 = useState(saved.n || 100), nMax = s2[0], setNMax = s2[1];
+    var s3 = useState(null), R = s3[0], setR = s3[1], s4 = useState(''), busy = s4[0], setBusy = s4[1], s5 = useState(''), err = s5[0], setErr = s5[1];
+    var s6 = useState('all'), fmt = s6[0], setFmt = s6[1], s7 = useState(false), small = s7[0], setSmall = s7[1], s8 = useState(''), q = s8[0], setQ = s8[1];
+    var s9 = useState(function () { return st.json('tn3_tr', {}) || {}; }), tr = s9[0], setTr = s9[1], sa = useState(''), trBusy = sa[0], setTrBusy = sa[1];
+    K.useBus('saved');
+    var cur = LIST.filter(function (x) { return x.c === cc; })[0] || LIST[0] || { c: cc, n: cc, rpm: '' };
+    var flag = function (c) { return h('img', { src: 'https://flagcdn.com/w40/' + String(c).toLowerCase() + '.png', alt: '', width: 20, height: 15, onError: function (e) { e.target.style.visibility = 'hidden'; }, className: 'w-5 h-[15px] rounded-[2px] object-cover shrink-0 bg-[#303030]' }); };
+
+    async function run() {
+      setErr(''); setBusy('Đang lấy bảng thịnh hành của ' + cur.n + '…');
+      st.put('yt4_hot', { cc: cc, cat: cat, n: nMax });
+      try {
+        var items = [], token = '', units = 0;
+        while (items.length < nMax) {
+          var prm = { part: 'snippet,statistics,contentDetails', chart: 'mostPopular', regionCode: cc, maxResults: 50 };
+          if (cat) prm.videoCategoryId = cat; if (token) prm.pageToken = token;
+          var r = await Y.yt('videos', prm); units++;
+          (r.items || []).forEach(function (v) { items.push(v); });
+          token = r.nextPageToken || ''; if (!token || !(r.items || []).length) break;
+        }
+        var chIds = [], seen = {}; items.forEach(function (v) { var id = v.snippet && v.snippet.channelId; if (id && !seen[id]) { seen[id] = 1; chIds.push(id); } });
+        var CH = {};
+        setBusy('Đang lấy số sub của ' + chIds.length + ' kênh…');
+        for (var i = 0, cs = U.chunk(chIds, 50); i < cs.length; i++) {
+          var rc = await Y.yt('channels', { part: 'snippet,statistics', id: cs[i].join(',') }); units++;
+          (rc.items || []).forEach(function (c) { var sx = c.statistics || {}; CH[c.id] = { subs: sx.hiddenSubscriberCount ? null : (+sx.subscriberCount || 0), vc: +sx.videoCount || 0, country: (c.snippet || {}).country || '', cr: Date.parse((c.snippet || {}).publishedAt) || 0 }; });
+        }
+        var now = Date.now();
+        var rows = items.map(function (v, i) {
+          var sn = v.snippet || {}, sx = v.statistics || {}, c = CH[sn.channelId] || {}, t = Date.parse(sn.publishedAt) || now, views = +sx.viewCount || 0, hrs = Math.max(1, (now - t) / 3600000);
+          return { rank: i + 1, id: v.id, title: sn.title || '', channel: sn.channelTitle || '', channelId: sn.channelId, t: t, views: views, likes: +sx.likeCount || 0, comments: +sx.commentCount || 0, dur: U.iso((v.contentDetails || {}).duration), cat: sn.categoryId || '', subs: c.subs, vc: c.vc || 0, chCountry: c.country || '', chAge: c.cr ? Math.round((now - c.cr) / 86400000) : null, vph: Math.round(views / hrs), out: c.subs ? views / c.subs : null };
+        });
+        setR({ rows: rows, cc: cc, name: cur.n, cat: cat, at: now, units: units });
+        if (!rows.length) setErr('YouTube không trả bảng thịnh hành cho ' + cur.n + (cat ? ' ở danh mục này' : '') + '. Thử bỏ danh mục hoặc chọn nước khác.');
+      } catch (e) { setErr((e && (e.msg || e.message)) || 'Không lấy được bảng thịnh hành.'); }
+      setBusy('');
+    }
+    async function translate(list) {
+      var need = list.filter(function (v) { return v.title && !tr[v.id]; }).slice(0, 200);
+      if (!need.length) { K.toast('Các tiêu đề đang hiện đã được dịch.'); return; }
+      var all = Object.assign({}, st.json('tn3_tr', {}) || {}, tr), done = 0;
+      try {
+        for (var i = 0; i < need.length; i += 40) {
+          setTrBusy('Đang dịch ' + Math.min(need.length, i + 40) + '/' + need.length + '…');
+          var r = await Y.api('/api/research', { action: 'translate', to: 'vi', items: need.slice(i, i + 40).map(function (v) { return { id: v.id, t: v.title }; }) });
+          Object.keys(r.map || {}).forEach(function (id) { all[id] = r.map[id]; done++; });
+          setTr(Object.assign({}, all));
+        }
+        K.toast('Đã dịch ' + done + ' tiêu đề');
+      } catch (e) { K.toast('Dịch bị dừng: ' + ((e && (e.message || e.msg)) || 'lỗi AI')); }
+      st.put('tn3_tr', all); setTrBusy('');
+    }
+
+    var SHORT = (E && E.SHORT_MAX) || 180;
+    var rows = !R ? [] : R.rows.filter(function (v) {
+      if (fmt === 'long' && v.dur <= SHORT) return false; if (fmt === 'short' && v.dur > SHORT) return false;
+      if (small && !(v.subs != null && v.subs < 20000)) return false;
+      if (q && (v.title + ' ' + v.channel).toLowerCase().indexOf(q.toLowerCase()) < 0) return false;
+      return true;
+    });
+    var cellBtn = 'inline-flex items-center justify-center h-[2.1em] px-[0.9em] rounded-full bg-[#323232] hover:bg-[#424242] text-[0.92em] font-medium text-[#f1f1f1] whitespace-nowrap cursor-pointer';
+    var hot = function (o) { return o == null ? 'text-[#717171]' : o >= 20 ? 'text-[#ff6b63] font-bold' : o >= 5 ? 'text-[#f5c451] font-semibold' : 'text-[#e6e6e6]'; };
+    var cols = [
+      { k: 'rank', t: 'Hạng', right: true, v: function (v) { return -v.rank; }, r: function (v) { return v.rank; } },
+      { k: 'th', t: 'Ảnh bìa', r: function (v) { return h(K.GThumb, { id: v.id, title: v.title, br: U.dur(v.dur) }); } },
+      { k: 'title', t: 'Tiêu đề gốc', w: 'min-w-[240px] max-w-[380px]', v: function (v) { return v.title.toLowerCase(); }, r: function (v) { return h('a', { href: U.vurl(v.id), target: '_blank', rel: 'noopener noreferrer', title: v.title, className: 'block truncate text-[#f1f1f1] hover:text-white' }, v.title); } },
+      { k: 'vi', t: 'Tiêu đề tiếng Việt', w: 'min-w-[200px] max-w-[340px]', r: function (v) { return tr[v.id] ? h('span', { title: tr[v.id], className: 'block truncate text-[#c8c8c8]' }, tr[v.id]) : h('span', { className: 'text-[#555]' }, '–'); } },
+      { k: 'ch', t: 'Kênh', tone: 'b', w: 'min-w-[140px] max-w-[200px]', v: function (v) { return v.channel.toLowerCase(); }, r: function (v) { return h('button', { onClick: function () { p.goto('channels', { analyze: v.channelId }); }, title: 'Phân tích kênh này', className: 'block max-w-full truncate text-left font-semibold text-[#7cc3ff] hover:text-white cursor-pointer' }, v.channel); } },
+      { k: 'subs', t: 'Sub', right: true, tone: 'y', v: function (v) { return v.subs == null ? -1 : v.subs; }, r: function (v) { return v.subs == null ? 'ẩn' : N(v.subs); } },
+      { k: 'views', t: 'View', right: true, tone: 'g', v: function (v) { return v.views; }, r: function (v) { return N(v.views); } },
+      { k: 'vph', t: 'View/giờ', right: true, tone: 'g', v: function (v) { return v.vph; }, r: function (v) { return N(v.vph) + '/h'; } },
+      { k: 'out', t: '× sub', right: true, v: function (v) { return v.out == null ? -1 : v.out; }, r: function (v) { return h('span', { className: hot(v.out) }, v.out == null ? '–' : '×' + (v.out >= 10 ? Math.round(v.out) : v.out.toFixed(1))); } },
+      { k: 'age', t: 'Ngày trên kênh', right: true, v: function (v) { return -v.t; }, r: function (v) { return U.ago(v.t); } },
+      { k: 'dur', t: 'Thời lượng', right: true, v: function (v) { return v.dur; }, r: function (v) { return U.dur(v.dur); } },
+      { k: 'hour', t: 'Giờ đăng (VN)', right: true, off: true, v: function (v) { var d = new Date(v.t + 7 * 3600000); return d.getUTCHours() * 60 + d.getUTCMinutes(); }, r: function (v) { var d = new Date(v.t + 7 * 3600000); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); } },
+      { k: 'date', t: 'Ngày đăng', right: true, off: true, v: function (v) { return v.t; }, r: function (v) { return new Date(v.t).toLocaleDateString('vi-VN'); } },
+      { k: 'cat', t: 'Danh mục', off: true, v: function (v) { return CATN[v.cat] || '~'; }, r: function (v) { return CATN[v.cat] || '–'; } },
+      { k: 'vc', t: 'Tổng video kênh', right: true, off: true, v: function (v) { return v.vc; }, r: function (v) { return v.vc ? N(v.vc) : '–'; } },
+      { k: 'chAge', t: 'Tuổi kênh', right: true, off: true, v: function (v) { return v.chAge == null ? 1e9 : v.chAge; }, r: function (v) { return v.chAge == null ? '–' : v.chAge < 365 ? v.chAge + ' ngày' : (v.chAge / 365).toFixed(1) + ' năm'; } },
+      { k: 'a', t: 'Thao tác', r: function (v) { var sv = store.isSaved(v.id); return h('span', { className: 'inline-flex gap-1' }, h('button', { onClick: function () { store.toggleSave(v); }, className: cellBtn + (sv ? ' !bg-[#1d3a2a] !text-[#9fe0ad]' : '') }, sv ? 'Đã lưu' : 'Lưu'), h('button', { onClick: function () { K.followChannel(v.channelId, v.channel); }, className: cellBtn }, 'Theo dõi kênh'), h('button', { onClick: function () { p.goto('explore', { sub: 'kw', q: v.title.split(/[|:\-–—(]/)[0].trim().slice(0, 60) }); }, title: 'Phân tích cụm đầu của tiêu đề như một từ khoá', className: cellBtn }, 'Phân tích')); } }
+    ];
+    var nSmall = R ? R.rows.filter(function (v) { return v.subs != null && v.subs < 20000; }).length : 0;
+    var chip = function (on, text, fn) { return h('button', { type: 'button', 'aria-pressed': !!on, onClick: fn, className: cx('h-7 px-3 rounded-full text-[11.5px] font-medium whitespace-nowrap cursor-pointer', on ? 'bg-[#f1f1f1] text-[#0f0f0f]' : 'bg-[#323232] text-[#f1f1f1] hover:bg-[#424242]') }, text); };
+    return h('div', { className: 'space-y-4' },
+      h('div', { className: 'yt-card p-4 flex flex-wrap items-end gap-3' },
+        h('label', { className: 'block' }, h('span', { className: 'block text-[11.5px] text-[#aaa] mb-1' }, 'Quốc gia'),
+          h('span', { className: 'flex items-center gap-2' }, flag(cc),
+            h('select', { value: cc, 'aria-label': 'Quốc gia xem thịnh hành', onChange: function (e) { setCc(e.target.value); }, className: 'h-9 min-w-[210px] bg-[#121212] border border-[#303030] rounded-lg px-2.5 text-[12.5px] text-[#f1f1f1] cursor-pointer' },
+              [0, 1, 2].map(function (t) { var g = LIST.filter(function (x) { return x.tier === t; }); return g.length ? h('optgroup', { key: t, label: ['RPM cao', 'RPM vừa', 'RPM thấp'][t] + ' (ước tính)' }, g.map(function (x) { return h('option', { key: x.c, value: x.c }, x.n + (x.rpm ? ' · ' + x.rpm : '')); })) : null; })))),
+        h('label', { className: 'block' }, h('span', { className: 'block text-[11.5px] text-[#aaa] mb-1' }, 'Danh mục'),
+          h('select', { value: cat, 'aria-label': 'Danh mục thịnh hành', onChange: function (e) { setCat(e.target.value); }, className: 'h-9 min-w-[170px] bg-[#121212] border border-[#303030] rounded-lg px-2.5 text-[12.5px] text-[#f1f1f1] cursor-pointer' }, [h('option', { key: '', value: '' }, 'Mọi danh mục')].concat(Object.keys(CATN).map(function (k) { return h('option', { key: k, value: k }, CATN[k]); })))),
+        h('label', { className: 'block' }, h('span', { className: 'block text-[11.5px] text-[#aaa] mb-1' }, 'Số video'),
+          h('select', { value: nMax, 'aria-label': 'Số video lấy về', onChange: function (e) { setNMax(+e.target.value); }, className: 'h-9 bg-[#121212] border border-[#303030] rounded-lg px-2.5 text-[12.5px] text-[#f1f1f1] cursor-pointer' }, [[50, '50 video'], [100, '100 video'], [200, '200 video (tối đa)']].map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); }))),
+        h(Btn, { primary: true, onClick: run, disabled: !!busy }, busy ? 'Đang lấy…' : 'Xem thịnh hành'),
+        h('span', { className: 'text-[11.5px] text-[#aaa] pb-2' }, 'Tốn khoảng ' + (Math.ceil(nMax / 50) * 2) + ' quota. Đây là bảng "Thịnh hành" công khai của YouTube tại nước đó.')),
+      busy && h(Busy, null, busy),
+      err && h(Note, { error: true }, err),
+      !R && !busy && !err && h(Empty, { title: 'Chọn nước rồi bấm Xem thịnh hành', sub: 'Mỗi nước một bảng riêng: video nào đang được đẩy, kênh nhỏ nào lọt vào, tiêu đề và ảnh bìa đang ăn khách ở thị trường đó.' }),
+      R && R.rows.length > 0 && h(Frag, null,
+        h('div', { className: 'flex flex-wrap items-center gap-2 text-[12.5px] text-[#d0d0d0]' }, flag(R.cc), h('b', { className: 'text-white' }, R.name), '· ' + R.rows.length + ' video · ', h('b', { className: 'text-[#6fcf85]' }, nSmall), ' video của kênh dưới 20K sub · lấy lúc ' + new Date(R.at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' · ' + R.units + ' quota'),
+        h(K.Grid, { storeKey: 'hot', cols: cols, rows: rows, rowKey: function (v) { return v.id; }, thumbs: true, limit: 60, empty: 'Không có video nào qua bộ lọc đang chọn.',
+          rowClass: function (v) { return v.subs != null && v.subs < 20000 ? 'shadow-[inset_3px_0_0_#4bc167]' : ''; },
+          left: h('div', { className: 'flex flex-wrap items-center gap-1.5' },
+            h('input', { value: q, onChange: function (e) { setQ(e.target.value); }, placeholder: 'Lọc theo tiêu đề, kênh', 'aria-label': 'Lọc bảng thịnh hành', className: 'h-7 w-44 bg-[#121212] border border-[#303030] rounded-full px-3 text-[11.5px] text-[#f1f1f1] placeholder:text-[#777]' }),
+            chip(fmt === 'all', 'Tất cả', function () { setFmt('all'); }), chip(fmt === 'long', 'Video dài', function () { setFmt('long'); }), chip(fmt === 'short', 'Shorts', function () { setFmt('short'); }),
+            chip(small, 'Chỉ kênh dưới 20K sub', function () { setSmall(!small); }),
+            h('button', { onClick: function () { translate(rows); }, disabled: !!trBusy, className: 'h-7 px-3 rounded-full bg-[#1d2f45] hover:bg-[#25405e] text-[11.5px] font-medium text-[#8ab4f8] cursor-pointer disabled:opacity-50' }, trBusy || 'Dịch tiêu đề sang tiếng Việt'),
+            h('button', { onClick: function () { U.csv('thinh-hanh-' + R.cc, [['Hạng', 'Tiêu đề', 'Tiêu đề tiếng Việt', 'Link', 'Kênh', 'Sub', 'View', 'View/giờ', 'View÷sub', 'Thời lượng (giây)', 'Ngày đăng', 'Danh mục']].concat(rows.map(function (v) { return [v.rank, v.title, tr[v.id] || '', U.vurl(v.id), v.channel, v.subs == null ? '' : v.subs, v.views, v.vph, v.out == null ? '' : v.out.toFixed(2), v.dur, new Date(v.t).toISOString(), CATN[v.cat] || '']; }))); }, className: 'h-7 px-3 rounded-full bg-[#3a3214] hover:bg-[#4a401a] text-[11.5px] font-medium text-[#f5c451] cursor-pointer' }, 'Xuất CSV')) })));
+  }
+
   function Explore(p) {
-    var okSub = function (v) { return ['kw', 'titles', 'thumb'].indexOf(v) >= 0 ? v : ''; };
+    var okSub = function (v) { return ['kw', 'titles', 'thumb', 'hot'].indexOf(v) >= 0 ? v : ''; };
     var s = useState(okSub(p.params && p.params.sub) || 'kw'), sub = s[0], setSub = s[1];
     useEffect(function () { if (p.params && okSub(p.params.sub)) setSub(p.params.sub); else if (p.params && p.params.q) setSub('kw'); }, [p.params]);
     var W = window.YT4Workshop;
     return h('div', { className: 'space-y-5' },
-      h('div', null, h('h1', { className: 'font-display text-[25px] leading-9 font-bold text-white tracking-tight' }, 'Khám phá'), h('p', { className: 'text-[13.5px] text-[#d0d0d0] mt-1 leading-relaxed' }, 'Phân tích một từ khoá, viết tiêu đề theo khuôn đang thắng và thử thumbnail giữa đối thủ.')),
+      h('div', null, h('h1', { className: 'font-display text-[25px] leading-9 font-bold text-white tracking-tight' }, 'Khám phá'), h('p', { className: 'text-[13.5px] text-[#d0d0d0] mt-1 leading-relaxed' }, 'Phân tích một từ khoá, xem video đang thịnh hành ở từng nước, viết tiêu đề theo khuôn đang thắng và thử thumbnail giữa đối thủ.')),
       h(K.Help, { id: 'explore', title: 'Cách dùng Khám phá', steps: ['Gõ một từ khoá (ví dụ: plane crash), chọn thị trường, khoảng thời gian và định dạng, rồi bấm Phân tích.', 'Xem Điểm cơ hội: từ 65 trở lên là nên làm, 45–64 là cân nhắc, dưới 45 là khó vì kênh lớn chiếm hết.', 'Tab Video: video đang nổ. Bấm Lưu để giữ lại, Theo dõi để đưa kênh vào danh sách đối thủ, Kênh để phân tích kênh đó.', 'Tab Từ khoá: bấm vào cụm bất kỳ để phân tích tiếp. Tab Nhận định AI: AI đọc số liệu và gợi ý ý tưởng video.'], terms: [['View ÷ sub (outlier)', 'video được bao nhiêu lần số người đăng ký của kênh; ×5 trở lên là nổ thật sự'], ['View/giờ', 'tốc độ lên view từ lúc đăng'], ['RPM', 'tiền nhận được cho 1.000 view (ước tính theo nước và chủ đề)'], ['Quota', 'mỗi API key được 10.000 lượt/ngày; 1 lần phân tích nhanh tốn khoảng 100–200']] }),
-      h(Tabs, { value: sub, onChange: setSub, items: [['kw', 'Phân tích từ khoá'], ['titles', 'Xưởng tiêu đề'], ['thumb', 'Thử thumbnail']] }),
+      h(Tabs, { value: sub, onChange: setSub, items: [['kw', 'Phân tích từ khoá'], ['hot', 'Thịnh hành theo nước'], ['titles', 'Xưởng tiêu đề'], ['thumb', 'Thử thumbnail']] }),
       sub === 'kw' ? h(KeywordLab, { goto: p.goto, preset: p.params && p.params.q, presetKey: p.params && p.params._k })
         : sub === 'titles' ? (W ? h(W.TitleLab, { goto: p.goto, q: p.params && p.params.q }) : h(K.Missing, { name: 'Xưởng tiêu đề', file: 'page_workshop.js' }))
+        : sub === 'hot' ? h(HotLab, { goto: p.goto })
         : sub === 'thumb' ? (W ? h(W.ThumbLab, { goto: p.goto }) : h(K.Missing, { name: 'Thử thumbnail', file: 'page_workshop.js' }))
         : h(KeywordLab, { goto: p.goto, preset: p.params && p.params.q, presetKey: p.params && p.params._k }));
   }
