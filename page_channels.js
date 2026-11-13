@@ -60,7 +60,9 @@
           var vids = await Y.uploads(c.id, 20), now = Date.now();
           var ripe = vids.filter(function (v) { return now - v.t > 2 * 864e5; }), med = U.median((ripe.length >= 3 ? ripe : vids).map(function (v) { return v.views; }));
           var s = stats[c.id] || {};
-          store.updateChannel(c.id, { title: s.title || c.title, subs: s.subs != null ? s.subs : c.subs, prevSubs: c.subs, prevAt: c.checkedAt || 0, videoCount: s.videos || c.videoCount, viewCount: s.views || c.viewCount, avatar: s.avatar || c.avatar, med: med, lastUpload: vids[0] ? vids[0].t : 0, checkedAt: now });
+          var in30 = vids.filter(function (v) { return now - v.t <= 30 * 864e5; }), day = Math.floor(now / 864e5);
+          var hist = (c.hist || []).filter(function (x) { return x[0] !== day; }).concat([[day, s.subs != null ? s.subs : c.subs || 0, s.views || c.viewCount || 0]]).slice(-90);
+          store.updateChannel(c.id, { title: s.title || c.title, subs: s.subs != null ? s.subs : c.subs, prevSubs: c.subs, prevAt: c.checkedAt || 0, videoCount: s.videos || c.videoCount, viewCount: s.views || c.viewCount, avatar: s.avatar || c.avatar, med: med, lastUpload: vids[0] ? vids[0].t : 0, checkedAt: now, v30: in30.reduce(function (a, v) { return a + v.views; }, 0), n30: in30.length, n30cap: in30.length >= vids.length && vids.length >= 20, hist: hist });
           vids.filter(function (v) { return now - v.t <= 45 * 864e5; }).forEach(function (v) { items.push({ id: v.id, title: v.title, channel: s.title || c.title, channelId: c.id, subs: s.subs, t: v.t, views: v.views, dur: v.dur, rel: med ? v.views / med : null }); });
         } catch (e) { if (e && e.code === 'quotaExceeded') throw e; }
         done++; say('Cập nhật ' + done + '/' + chans.length + ' kênh…');
@@ -195,6 +197,52 @@
       { k: 't', t: 'Đăng', right: true, v: function (v) { return v.t; }, r: function (v) { return U.ago(v.t) + ' trước'; } },
       { k: 'a', t: '', r: function (v) { var sv = store.isSaved(v.id); return h(Btn, { small: true, on: sv, onClick: function () { store.toggleSave(v); } }, sv ? 'Đã lưu' : 'Lưu'); } }
     ];
+    // ----- Dream 100: bảng theo dõi kênh theo dự án, có tăng trưởng giữa các lần cập nhật -----
+    var g0 = useState(''), grp = g0[0], setGrp = g0[1], g1 = useState(function () { return st.json('yt4_groups', []); }), groups0 = g1[0], setGroups0 = g1[1];
+    var groups = groups0.slice(); chans.forEach(function (c) { if (c.group && groups.indexOf(c.group) < 0) groups.push(c.group); });
+    function addGroup() { var n = (window.prompt('Tên dự án mới (ví dụ: Bóng đá Anh, Vụ án Nhật):') || '').trim().slice(0, 40); if (!n) return; if (groups.indexOf(n) < 0) { var a = groups0.concat([n]); setGroups0(a); st.put('yt4_groups', a); } setGrp(n); }
+    function growth(c, days) { var hs = c.hist || []; if (hs.length < 2) return null; var last = hs[hs.length - 1], base = null; for (var i = hs.length - 2; i >= 0; i--) { base = hs[i]; if (last[0] - hs[i][0] >= days) break; } return base ? { subs: last[1] - base[1], views: last[2] - base[2], days: last[0] - base[0] } : null; }
+    var dRows = chans.filter(function (c) { return !grp || (grp === '_none' ? !c.group : c.group === grp); });
+    var sum30 = dRows.reduce(function (a, c) { return a + (c.v30 || 0); }, 0);
+    function exportDream(json) {
+      if (json) return U.download('dream-100-' + new Date().toISOString().slice(0, 10) + '.json', new Blob([JSON.stringify({ app: 'youtrend', kind: 'dream100', at: Date.now(), groups: groups, channels: dRows }, null, 2)], { type: 'application/json' }));
+      U.csv('dream-100', [['Kênh', 'Link', 'Dự án', 'Sub', 'Tổng view', 'View/tháng', 'Tổng video', 'Video/tháng', 'Nước', 'Ghi chú']].concat(dRows.map(function (c) { return [c.title, 'https://www.youtube.com/channel/' + c.id, c.group || '', c.subs || 0, c.viewCount || 0, c.v30 || 0, c.videoCount || 0, c.n30 || 0, c.country || '', c.note || '']; })));
+    }
+    function importDream(e) {
+      var file = e.target.files && e.target.files[0]; if (!file) return; var rd = new FileReader();
+      rd.onload = function () { try { var j = JSON.parse(rd.result), list = Array.isArray(j) ? j : j.channels || [], n = 0; list.forEach(function (c) { if (c && c.id && /^UC[\w-]{22}$/.test(c.id) && store.addChannel({ id: c.id, title: String(c.title || c.id).slice(0, 120), subs: +c.subs || 0, videoCount: +c.videoCount || 0, viewCount: +c.viewCount || 0, avatar: c.avatar || '', country: c.country || '', group: c.group || '', note: c.note || '' })) n++; }); K.toast('Đã nạp ' + n + ' kênh mới. Bấm Cập nhật tất cả để lấy số liệu.'); } catch (x) { K.toast('File JSON không đúng định dạng.'); } };
+      rd.readAsText(file); e.target.value = '';
+    }
+    var cellBtn = 'inline-flex items-center justify-center h-[2.1em] px-[0.9em] rounded-full bg-[#323232] hover:bg-[#424242] text-[0.92em] font-medium text-[#f1f1f1] whitespace-nowrap cursor-pointer';
+    var up = function (n) { return n == null ? h('span', { className: 'text-[#717171]' }, '–') : h('span', { className: n > 0 ? 'text-[#6fcf85]' : n < 0 ? 'text-[#ff8a83]' : 'text-[#aaa]' }, (n > 0 ? '+' : '') + N(n)); };
+    var dCols = [
+      { k: 'title', t: 'Tên kênh', w: 'min-w-[200px] max-w-[280px]', v: function (c) { return String(c.title || '').toLowerCase(); }, r: function (c) { return h('div', { className: 'flex items-center gap-2 min-w-0' }, c.avatar ? h('img', { src: c.avatar, alt: '', className: 'w-7 h-7 rounded-full shrink-0' }) : h('span', { className: 'w-7 h-7 rounded-full bg-[#323232] shrink-0' }), h('div', { className: 'min-w-0' }, h('button', { onClick: function () { p.analyze(c.id); }, title: 'Phân tích kênh này', className: 'block max-w-full text-left font-semibold text-[#7cc3ff] hover:text-white truncate cursor-pointer' }, c.title), h('a', { href: 'https://www.youtube.com/channel/' + c.id + '/videos', target: '_blank', rel: 'noopener noreferrer', className: 'text-[0.86em] text-[#aaa] hover:text-white' }, 'Mở trên YouTube'))); } },
+      { k: 'group', t: 'Dự án', v: function (c) { return c.group || '~'; }, r: function (c) { return h('select', { value: c.group || '', 'aria-label': 'Dự án của kênh', onChange: function (e) { store.updateChannel(c.id, { group: e.target.value }); }, className: 'h-[2.1em] max-w-[150px] bg-[#181818] border border-[#303030] rounded-md px-1.5 text-[0.95em] text-[#f1f1f1] cursor-pointer' }, [h('option', { key: '', value: '' }, 'Chưa xếp')].concat(groups.map(function (g) { return h('option', { key: g, value: g }, g); }))); } },
+      { k: 'subs', t: 'Tổng sub', right: true, tone: 'y', v: function (c) { return c.subs || 0; }, r: function (c) { return N(c.subs); } },
+      { k: 'g7', t: 'Sub tăng', right: true, v: function (c) { var g = growth(c, 7); return g ? g.subs : -1e15; }, r: function (c) { var g = growth(c, 7); return g ? h('span', { title: 'So với ' + g.days + ' ngày trước' }, up(g.subs), h('span', { className: 'text-[#717171]' }, ' /' + g.days + 'ng')) : up(null); } },
+      { k: 'viewCount', t: 'Tổng view', right: true, v: function (c) { return c.viewCount || 0; }, r: function (c) { return N(c.viewCount); } },
+      { k: 'v30', t: 'View/tháng', right: true, tone: 'g', v: function (c) { return c.v30 || 0; }, r: function (c) { return c.v30 != null ? N(c.v30) : '–'; } },
+      { k: 'videoCount', t: 'Tổng video', right: true, v: function (c) { return c.videoCount || 0; }, r: function (c) { return N(c.videoCount); } },
+      { k: 'n30', t: 'Video/tháng', right: true, v: function (c) { return c.n30 || 0; }, r: function (c) { return c.n30 != null ? c.n30 + (c.n30cap ? '+' : '') : '–'; } },
+      { k: 'med', t: 'View trung vị', right: true, off: true, v: function (c) { return c.med || 0; }, r: function (c) { return c.med ? N(c.med) : '–'; } },
+      { k: 'country', t: 'Nước', v: function (c) { return c.country || '~'; }, r: function (c) { return c.country || '–'; } },
+      { k: 'last', t: 'Đăng gần nhất', right: true, v: function (c) { return c.lastUpload || 0; }, r: function (c) { return c.lastUpload ? U.ago(c.lastUpload) + ' trước' : '–'; } },
+      { k: 'note', t: 'Ghi chú', w: 'min-w-[180px]', r: function (c) { return h('input', { key: c.id + (c.note || ''), defaultValue: c.note || '', placeholder: 'Ghi chú…', 'aria-label': 'Ghi chú cho kênh', onBlur: function (e) { if (e.target.value !== (c.note || '')) store.updateChannel(c.id, { note: e.target.value.slice(0, 200) }); }, className: 'w-full h-[2.1em] bg-transparent border border-transparent hover:border-[#303030] focus:border-[#3ea6ff] rounded-md px-1.5 text-[#f1f1f1] placeholder:text-[#555]' }); } },
+      { k: 'a', t: 'Thao tác', r: function (c) { return h('span', { className: 'inline-flex gap-1' }, h('button', { onClick: function () { p.analyze(c.id); }, className: cellBtn }, 'Phân tích'), h('button', { onClick: function () { store.addCompare({ id: c.id, title: c.title }); K.toast('Đã thêm vào So sánh'); }, className: cellBtn }, 'So sánh'), h('button', { onClick: function () { if (window.confirm('Bỏ theo dõi ' + c.title + '?')) store.removeChannel(c.id); }, className: cellBtn + ' !text-[#ff8a83]' }, 'Bỏ')); } }
+    ];
+    var gchip = function (id, label, n) { return h('button', { key: id || 'all', onClick: function () { setGrp(id); }, 'aria-pressed': grp === id, className: cx('h-8 px-3 rounded-lg text-[11.5px] font-medium cursor-pointer whitespace-nowrap', grp === id ? 'bg-[#f1f1f1] text-[#0f0f0f]' : 'bg-[#272727] text-[#f1f1f1] hover:bg-[#3a3a3a]') }, label + ' ', h('span', { className: 'opacity-60 tabular-nums' }, n)); };
+    var dream = function () {
+      return h('div', { className: 'space-y-3' },
+        h('div', { className: 'flex flex-wrap items-center gap-1.5' }, gchip('', 'Tất cả', chans.length), groups.map(function (g) { return gchip(g, g, chans.filter(function (c) { return c.group === g; }).length); }), chans.some(function (c) { return !c.group; }) && groups.length > 0 && gchip('_none', 'Chưa xếp', chans.filter(function (c) { return !c.group; }).length),
+          h('button', { onClick: addGroup, className: 'h-8 px-3 rounded-lg text-[11.5px] font-semibold bg-[#1d3a2a] text-[#9fe0ad] hover:bg-[#25492f] cursor-pointer' }, '+ Thêm dự án')),
+        h('div', { className: 'grid gap-3 grid-cols-2 lg:grid-cols-4' }, [[dRows.length, 'kênh trong danh sách', 'text-[#7cc3ff]'], [N(sum30), 'tổng view/tháng (video đăng 30 ngày)', 'text-[#6fcf85]'], [dRows.filter(function (c) { return c.subs >= 20000 && c.subs < 1e6; }).length, 'kênh 20K → 1M sub', 'text-[#f5c451]'], [dRows.filter(function (c) { return c.subs >= 1000 && c.subs < 20000; }).length, 'kênh 1K → 20K sub', 'text-[#c9a7ff]']].map(function (x) { return h('div', { key: x[1], className: 'yt-card px-4 py-3' }, h('div', { className: cx('text-[19px] font-bold tabular-nums', x[2]) }, x[0]), h('div', { className: 'text-[11px] text-[#aaa]' }, x[1])); })),
+        h(K.Grid, { storeKey: 'dream', cols: dCols, rows: dRows, rowKey: function (c) { return c.id; }, thumbs: false, sort: { k: 'v30', d: -1 }, empty: 'Dự án này chưa có kênh nào. Chọn dự án ở cột "Dự án" của từng kênh.',
+          left: h('div', { className: 'flex flex-wrap items-center gap-2' },
+            h('button', { onClick: function () { exportDream(false); }, className: 'h-7 px-3 rounded-full bg-[#323232] hover:bg-[#424242] text-[11.5px] text-[#f1f1f1] cursor-pointer' }, 'Xuất CSV'),
+            h('button', { onClick: function () { exportDream(true); }, className: 'h-7 px-3 rounded-full bg-[#323232] hover:bg-[#424242] text-[11.5px] text-[#f1f1f1] cursor-pointer' }, 'Xuất JSON'),
+            h('label', { className: 'h-7 px-3 rounded-full bg-[#323232] hover:bg-[#424242] text-[11.5px] text-[#f1f1f1] cursor-pointer inline-flex items-center' }, 'Nạp JSON', h('input', { type: 'file', accept: 'application/json,.json', onChange: importDream, className: 'hidden' })),
+            h('span', { className: 'text-[11px] text-[#aaa]' }, 'Cột "Sub tăng" có số sau lần Cập nhật thứ hai trở đi.')) }));
+    };
     return h('div', { className: 'space-y-4' },
       h('div', { className: cx(K.C.card, 'p-4 flex flex-col md:flex-row gap-2') },
         h(Input, { value: q, onChange: function (e) { setQ(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Enter') add(); }, placeholder: 'Thêm kênh: link, @handle, ID hoặc link video', className: 'md:flex-1' }),
@@ -203,11 +251,11 @@
         h('span', { className: 'text-[11px] text-zinc-500 self-center' }, '≈' + (chans.length * 2 + 1) + ' quota')),
       busy && h(Busy, null, busy), err && h(Note, { error: true }, err),
       !chans.length ? h(Empty, { title: 'Chưa theo dõi kênh nào', sub: 'Thêm kênh đối thủ để xem video mới của họ, video nào đang vượt trung vị kênh và sub tăng bao nhiêu giữa các lần cập nhật.' }) : h(Frag, null,
-        h('div', { className: 'flex flex-wrap items-center gap-3' }, h(Seg, { value: view, onChange: setView, options: [['feed', 'Video mới'], ['list', 'Danh sách kênh (' + chans.length + ')']] }),
+        h('div', { className: 'flex flex-wrap items-center gap-3' }, h(Seg, { value: view, onChange: setView, options: [['feed', 'Video mới'], ['list', 'Dream 100 (' + chans.length + ' kênh)']] }),
           view === 'feed' && h(Seg, { value: days, onChange: function (v) { setDays(+v); }, options: [[3, '3 ngày'], [7, '7 ngày'], [14, '14 ngày'], [45, '45 ngày']] }),
           view === 'feed' && h('label', { className: 'flex items-center gap-2 text-[10.5px] text-zinc-400 cursor-pointer' }, h('input', { type: 'checkbox', checked: onlyHot, onChange: function () { setOnlyHot(!onlyHot); }, className: 'accent-white' }), 'Chỉ video vượt trung vị ×2'),
           h('span', { className: 'flex-1' }), feed.at ? h('span', { className: 'text-[11px] text-zinc-500' }, 'Cập nhật ' + U.ago(feed.at) + ' trước') : null),
-        view === 'list' ? h(Table, { cols: chCols, rows: chans, rowKey: function (c) { return c.id; } })
+        view === 'list' ? (K.Grid ? dream() : h(Table, { cols: chCols, rows: chans, rowKey: function (c) { return c.id; } }))
           : !feed.at ? h(Empty, { title: 'Bấm "Cập nhật tất cả" để lấy video mới', sub: 'Mỗi kênh tốn khoảng 2 quota.' })
             : h(K.VideoList, { rows: items, cols: feedCols, ratio: function (v) { return v.rel; }, ratioLabel: 'So với TB kênh', hotAt: 2, defSort: 't', onChannel: p.analyze, sorts: [['t', 'Mới nhất', function (v) { return v.t; }], ['rel', 'Vượt trung vị kênh', function (v) { return v.rel || 0; }], ['views', 'View cao nhất', function (v) { return v.views; }]] })));
   }

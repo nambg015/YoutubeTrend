@@ -7,7 +7,7 @@
   var Y = window.YT4, U = Y.U, N = U.fmtN, store = Y.store, K = window.YT4UI, cx = K.cx, P = window.YT4Pages || {};
   var Btn = K.Btn, Input = K.Input, Note = K.Note;
 
-  var NAV = [['today', 'Hôm nay', 0, '#f1f1f1'], ['explore', 'Khám phá', 0, '#3ea6ff'], ['niche', 'Top Ngách', 0, '#ff4e45'], ['channels', 'Kênh', 0, '#a970ff'], ['resource', 'Tạo tài nguyên', 'Tài nguyên', '#f5c451'], ['library', 'Thư viện', 0, '#4bc167'], ['settings', 'Cài đặt', 0, '#aaaaaa']];
+  var NAV = [['today', 'Hôm nay', 0, '#f1f1f1'], ['explore', 'Khám phá', 0, '#3ea6ff'], ['niche', 'Top Ngách', 0, '#ff4e45'], ['channels', 'Kênh', 0, '#a970ff'], ['resource', 'Tạo tài nguyên', 'Tài nguyên', '#f5c451'], ['tools', 'Công cụ', 0, '#22c3b5'], ['library', 'Thư viện', 0, '#4bc167'], ['settings', 'Cài đặt', 0, '#aaaaaa']];
   var OLD = { search: 'explore', keywords: 'explore', niche: 'explore', rpm: 'niche', competitors: 'channels', spy: 'channels', studio_chart: 'channels', wiki: 'library' };
   function readRoute() { var hsh = (location.hash || '').replace(/^#\/?/, '').split('/')[0]; if (NAV.some(function (n) { return n[0] === hsh; })) return hsh; var q = new URLSearchParams(location.search).get('tab'); return OLD[q] || 'today'; }
 
@@ -97,6 +97,7 @@
     else if (route === 'explore') page = h(P.explore, { goto: goto, params: params });
     else if (route === 'channels') page = h(P.channels, { goto: goto, params: params });
     else if (route === 'library') page = h(P.library, { goto: goto, params: params });
+    else if (route === 'tools') page = P.tools ? h(P.tools, { goto: goto, params: params }) : h(K.Missing, { name: 'Công cụ', file: 'page_tools.js' });
     else if (route === 'settings') page = h(P.settings, { goto: goto, me: p.me, onLogout: p.onLogout });
     else if (route === 'niche') page = window.TopNgachV3 ? h('div', { className: 'space-y-4' }, h(K.Help, { id: 'niche', title: 'Cách dùng Top Ngách', steps: ['Chọn một Bộ lọc nhanh hoặc tự chỉnh chế độ, quy mô, tuổi kênh, thời gian. Bấm Lưu bộ lọc đang chọn để dùng lại.', 'Bấm Quét nhanh ở cột trái. Kết quả cộng dồn, kênh và video vừa tìm thấy có nhãn Mới trong 24 giờ.', 'Tab Ngách: bấm Xem kênh để lọc theo ngách, Gửi Claude để nhờ phân tích ngách và lên 15 ý tưởng video.', 'Tab Kênh: bấm tên kênh để xem chi tiết, gắn sao kênh ngon, ẩn kênh rác, Clone để bóc hồ sơ làm theo. Đổi sang dạng Bảng khi cần lướt nhanh.'], terms: [['View ÷ sub (outlier)', '×20 nghĩa là video có view gấp 20 lần số người đăng ký'], ['Điểm farm', '0–100, càng cao càng chứng tỏ kênh ra view đều đặn']] }), h('div', null, h(window.TopNgachV3, Object.assign({}, common, {
       isPro: true, onUpgradePrompt: function () { },
@@ -122,7 +123,7 @@
         h('div', { className: 'flex items-center gap-2 shrink-0' }, h(QuotaChip, { onClick: function () { goto('settings'); } }),
           h('button', { onClick: function () { goto('settings'); }, title: user ? user.email : '', 'aria-label': 'Tài khoản và cài đặt', className: 'h-8 w-8 rounded-full bg-[#5e35b1] text-white text-[13px] font-medium cursor-pointer hover:brightness-110' }, (label || '?').charAt(0).toUpperCase()))),
       h('nav', { 'aria-label': 'Mục chính', className: 'hidden lg:flex fixed left-0 top-14 bottom-0 z-30 w-[72px] flex-col items-center gap-1 pt-1 bg-[#0f0f0f]/85 backdrop-blur-md' }, NAV.map(function (n) { return navItem(n); })),
-      h('nav', { 'aria-label': 'Mục chính', className: 'lg:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-7 bg-[#0f0f0f] border-t border-[#272727]' }, NAV.map(function (n) { return navItem(n, true); })),
+      h('nav', { 'aria-label': 'Mục chính', className: 'lg:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-8 bg-[#0f0f0f] border-t border-[#272727]' }, NAV.map(function (n) { return navItem(n, true); })),
       h('div', { className: 'pt-14 lg:pl-[72px]' },
         noKey && route !== 'settings' && h('div', { className: 'mx-4 sm:mx-6 mt-3 rounded-xl bg-[#272727] px-4 py-2.5 flex items-center gap-3 text-[12px] text-[#f1f1f1]' }, 'Chưa có YouTube API key nên các mục tìm kiếm chưa chạy được.', h('button', { onClick: function () { goto('settings'); }, className: K.C.sm }, 'Thêm key')),
         h('main', { className: 'max-w-[1760px] mx-auto px-4 sm:px-6 py-5 pb-24 lg:pb-12' }, h(ErrorBoundary, { key: route }, page))),

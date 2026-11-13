@@ -26,7 +26,7 @@
     explore: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm3.5-12.5-2 5-5 2 2-5 5-2Z', niche: 'M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.2 1.2-3.6 2.3-4.6.3 1.6 1.1 2.6 2.2 2.6 0-3 .5-5.6.5-8Z',
     channels: 'M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM20 20v-1.5a3.5 3.5 0 0 0-2.5-3.35M15.5 4.15a3.5 3.5 0 0 1 0 6.7',
     resource: 'M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Zm8 4v5m-2.5-2.5h5', library: 'M5 5h14M4 9h16v10H4V9Zm6.5 2.5v5l4-2.5-4-2.5Z',
-    today: 'M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-8.5Z', star: 'M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.7l5.9-.9L12 3.5Z',
+    today: 'M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-8.5Z', tools: 'M14.5 6.5a4 4 0 0 0-5.2 5.2L4 17l3 3 5.3-5.3a4 4 0 0 0 5.2-5.2l-2.6 2.6-2.4-.6-.6-2.4 2.6-2.6Z', star: 'M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.7l5.9-.9L12 3.5Z',
     hide: 'M3 3l18 18M10.6 6.2A9.6 9.6 0 0 1 12 6c5 0 8.5 4.5 9.5 6-.4.7-1.3 1.9-2.6 3.1M6.2 7.8C4.3 9.2 3 11 2.5 12c1 1.5 4.5 6 9.5 6 1.5 0 2.8-.4 4-1M9.9 9.9a3 3 0 0 0 4.2 4.2',
     note: 'M5 4h14v12l-4 4H5V4Zm10 16v-4h4M8 9h8M8 13h5', check: 'M5 12.5l4.5 4.5L19 7.5', plus: 'M12 5v14M5 12h14', copy: 'M9 9h10v11H9V9Zm-4 6V4h10', bolt: 'M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z',
     settings: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.3 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.3 2.5h4l.3-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4-2-1.6Z' };
@@ -62,6 +62,49 @@
       }))),
       h('tbody', null, rows.slice(0, lim).map(function (r, i) { return h('tr', { key: p.rowKey ? p.rowKey(r) : i, className: 'border-b border-cham-800/70 hover:bg-cham-800/40' }, p.cols.map(function (c) { return h('td', { key: c.k, className: cx('py-2 px-2 align-middle', c.right && 'text-right tabular-nums', c.cls) }, c.r ? c.r(r, i) : c.v(r)); })); }))));
   }
+  // Bảng dạng hàng: tiêu đề cột dính, bấm tiêu đề để xếp, ẩn/hiện cột, chỉnh cỡ chữ và cỡ ảnh (nhớ theo storeKey)
+  // cols: [{ k, t, v(row) → giá trị xếp, r(row, i) → hiển thị, right, w: lớp độ rộng, tone: 'g'|'y'|'b'|'p', off: mặc định ẩn }]
+  var TONE = { g: 'text-[#6fcf85]', y: 'text-[#f5c451]', b: 'text-[#7cc3ff]', p: 'text-[#c9a7ff]' };
+  function Grid(p) {
+    var key = 'yt4_grid_' + (p.storeKey || 'x');
+    var c0 = useState(function () { return Object.assign({ fs: 12, th: 104, hide: {}, sort: p.sort || null }, st.json(key, {})); }), cfg = c0[0], setCfg0 = c0[1];
+    var o0 = useState(false), open = o0[0], setOpen = o0[1];
+    function setCfg(patch) { setCfg0(function (o) { var n = Object.assign({}, o, patch); st.put(key, n); return n; }); }
+    var sort = cfg.sort, cols = p.cols.filter(Boolean);
+    var isOn = function (c) { var hd = cfg.hide[c.k]; return hd == null ? !c.off : !hd; };
+    var shown = cols.filter(isOn);
+    var rows = useMemo(function () {
+      if (!sort) return p.rows; var col = cols.find(function (c) { return c.k === sort.k; }); if (!col || !col.v) return p.rows;
+      return p.rows.slice().sort(function (a, b) { var x = col.v(a), y = col.v(b); return (x > y ? 1 : x < y ? -1 : 0) * sort.d; });
+    }, [p.rows, sort && sort.k, sort && sort.d]);
+    var lim = p.limit || rows.length;
+    var slider = function (label, k, min, max) { return h('label', { className: 'inline-flex items-center gap-1.5 text-[11px] text-[#aaa] whitespace-nowrap' }, label, h('input', { type: 'range', min: min, max: max, value: cfg[k], 'aria-label': 'Cỡ ' + label.toLowerCase(), onChange: function (e) { var o = {}; o[k] = +e.target.value; setCfg(o); }, className: 'w-20 accent-[#3ea6ff] cursor-pointer' })); };
+    return h('div', { className: 'yt-card overflow-hidden', style: { '--gth': cfg.th + 'px' } },
+      h('div', { className: 'flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 border-b border-[#303030]' },
+        p.left, h('span', { className: 'flex-1' }),
+        sort && h('button', { onClick: function () { setCfg({ sort: null }); }, className: 'text-[11px] text-[#aaa] hover:text-white underline cursor-pointer' }, 'Về thứ tự gốc'),
+        slider('Chữ', 'fs', 11, 15), p.thumbs !== false && slider('Ảnh', 'th', 56, 220),
+        h('div', { className: 'relative' },
+          h('button', { onClick: function () { setOpen(!open); }, 'aria-expanded': open, className: 'h-7 px-3 rounded-full bg-[#323232] hover:bg-[#424242] text-[11.5px] font-medium text-[#f1f1f1] cursor-pointer' }, 'Thêm bớt cột'),
+          open && h('div', { className: 'absolute right-0 top-full mt-1 z-30 w-56 max-h-80 overflow-auto rounded-xl bg-[#282828] border border-[#3a3a3a] p-2 shadow-2xl' },
+            cols.filter(function (c) { return c.t; }).map(function (c) { return h('label', { key: c.k, className: 'flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[#3a3a3a] text-[11.5px] text-[#f1f1f1] cursor-pointer' }, h('input', { type: 'checkbox', checked: isOn(c), onChange: function () { var hd = Object.assign({}, cfg.hide); hd[c.k] = isOn(c); setCfg({ hide: hd }); }, className: 'accent-[#3ea6ff]' }), c.t); })))),
+      h('div', { className: 'overflow-auto', style: { maxHeight: p.maxH || 'calc(100vh - 150px)' } }, h('table', { className: 'w-full border-collapse', style: { fontSize: cfg.fs + 'px' } },
+        h('thead', { className: 'sticky top-0 z-10' }, h('tr', { className: 'bg-[#181818]' },
+          h('th', { className: 'px-2 py-2 text-right font-semibold text-[#717171] border-b-2 border-[#3a3a3a] w-9' }, '#'),
+          shown.map(function (c) {
+            var on = sort && sort.k === c.k;
+            return h('th', { key: c.k, onClick: c.v ? function () { setCfg({ sort: !on ? { k: c.k, d: -1 } : sort.d < 0 ? { k: c.k, d: 1 } : null }); } : null, title: c.v ? 'Bấm để xếp theo cột này' : null,
+              className: cx('px-2.5 py-2 text-[0.82em] font-semibold uppercase tracking-wide whitespace-nowrap select-none border-b-2', c.right ? 'text-right' : 'text-left', on ? 'text-white border-[#3ea6ff]' : 'border-[#3a3a3a] ' + (TONE[c.tone] || 'text-[#aaa]'), c.v && 'cursor-pointer hover:text-white') }, c.t, on ? (sort.d < 0 ? ' ▾' : ' ▴') : '');
+          }))),
+        h('tbody', null, rows.slice(0, lim).map(function (r, i) {
+          return h('tr', { key: p.rowKey ? p.rowKey(r) : i, className: cx('border-b border-[#2a2a2a] hover:bg-[#2a2a2a] transition-colors', i % 2 ? 'bg-[#1c1c1c]' : 'bg-[#212121]', p.rowClass && p.rowClass(r)) },
+            h('td', { className: 'px-2 py-1.5 text-right text-[#717171] tabular-nums align-middle' }, i + 1),
+            shown.map(function (c) { return h('td', { key: c.k, className: cx('px-2.5 py-1.5 align-middle', c.right && 'text-right tabular-nums whitespace-nowrap', TONE[c.tone], c.w) }, c.r ? c.r(r, i) : c.v(r)); }));
+        })))),
+      !rows.length && h('div', { className: 'px-4 py-8 text-center text-[12px] text-[#aaa]' }, p.empty || 'Không có dòng nào.'));
+  }
+  // Ô thumbnail video dùng trong Grid: rộng theo thanh trượt "Ảnh"
+  function GThumb(p) { return h('a', { href: U.vurl(p.id), target: '_blank', rel: 'noopener noreferrer', title: p.title || 'Mở video trên YouTube', className: 'relative block shrink-0 overflow-hidden rounded-md bg-[#181818]', style: { width: 'var(--gth)' } }, h('img', { src: U.thumb(p.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover' }), p.tl && h('span', { className: 'absolute top-0.5 left-0.5 px-1 rounded bg-black/80 text-[10px] font-semibold text-white tabular-nums' }, p.tl), p.br && h('span', { className: 'absolute bottom-0.5 right-0.5 px-1 rounded bg-black/80 text-[10px] font-medium text-white tabular-nums' }, p.br)); }
   function More(p) { if (p.total <= p.lim) return null; return h('div', { className: 'pt-3 flex gap-2 justify-center' }, h(Btn, { small: true, onClick: function () { p.setLim(p.lim + p.step); } }, 'Xem thêm ' + Math.min(p.step, p.total - p.lim)), h(Btn, { small: true, onClick: function () { p.setLim(p.total); } }, 'Hiện hết ' + p.total)); }
   function Thumb(p) { return h('a', { href: U.vurl(p.id), target: '_blank', rel: 'noopener noreferrer', className: cx('block shrink-0 overflow-hidden rounded-md bg-cham-900', p.className || 'w-24') }, h('img', { src: U.thumb(p.id), loading: 'lazy', className: 'w-full aspect-video object-cover' })); }
   function useBus(ev) { var s = useState(0); useEffect(function () { return Y.on(ev, function () { s[1](function (n) { return n + 1; }); }); }, [ev]); return s[0]; }
@@ -248,5 +291,5 @@
       p.terms && h('dl', { className: 'mt-3 pt-3 border-t border-cham-800 grid gap-x-6 gap-y-1.5 md:grid-cols-2' }, p.terms.map(function (t) { return h('div', { key: t[0], className: 'text-[10.5px] text-cham-300' }, h('dt', { className: 'inline text-hoe-300 font-semibold' }, t[0] + ': '), h('dd', { className: 'inline' }, t[1])); })));
   }
 
-  window.YT4UI = { ClaudeBox: ClaudeBox, Icon: Icon, Help: Help, VideoList: VideoList, VideoCard: VideoCard, C: C, Btn: Btn, Field: Field, Input: Input, Select: Select, Seg: Seg, Tabs: Tabs, Stat: Stat, Empty: Empty, Note: Note, Busy: Busy, Bar: Bar, Section: Section, Modal: Modal, Table: Table, More: More, Thumb: Thumb, useBus: useBus, useLS: useLS, Toaster: Toaster, toast: toast, Mono: Mono, Missing: Missing, followChannel: followChannel, titlePatterns: titlePatterns, PatternView: PatternView, InsightBox: InsightBox, words: words, STOP: STOP, TITLE_FEATS: TITLE_FEATS, cx: cx };
+  window.YT4UI = { Grid: Grid, GThumb: GThumb, ClaudeBox: ClaudeBox, Icon: Icon, Help: Help, VideoList: VideoList, VideoCard: VideoCard, C: C, Btn: Btn, Field: Field, Input: Input, Select: Select, Seg: Seg, Tabs: Tabs, Stat: Stat, Empty: Empty, Note: Note, Busy: Busy, Bar: Bar, Section: Section, Modal: Modal, Table: Table, More: More, Thumb: Thumb, useBus: useBus, useLS: useLS, Toaster: Toaster, toast: toast, Mono: Mono, Missing: Missing, followChannel: followChannel, titlePatterns: titlePatterns, PatternView: PatternView, InsightBox: InsightBox, words: words, STOP: STOP, TITLE_FEATS: TITLE_FEATS, cx: cx };
 })();

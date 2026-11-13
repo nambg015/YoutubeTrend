@@ -522,4 +522,55 @@ async function doTitles(key, data) {
   return { titles: (Array.isArray(j.titles) ? j.titles : []).filter(t => t && t.title).slice(0, 30).map(t => ({ title: String(t.title).trim(), formula: String(t.formula || '').trim(), why: String(t.why || '').trim() })), thumbs: (Array.isArray(j.thumbnail_texts) ? j.thumbnail_texts : []).map(String).slice(0, 8) };
 }
 
-module.exports = { model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+// ---------- Dịch tiêu đề video (theo lô) ----------
+async function doTranslate(key, items, to) {
+  const list = (Array.isArray(items) ? items : []).filter(x => x && x.id && x.t).slice(0, 50).map(x => ({ id: String(x.id).slice(0, 20), t: String(x.t).slice(0, 220) }));
+  if (!list.length) return { map: {} };
+  const lang = to === 'en' ? 'English' : 'Vietnamese';
+  const j = await askJson(key, `Translate each YouTube video title below into natural ${lang}. Keep names of people, brands, games and numbers as they are; keep it as short and punchy as the original; no quotation marks. If a title is already in ${lang}, return it unchanged.\nReturn ONLY a JSON object that maps each id to its translation, e.g. {"abc":"..."}.\n\nTITLES:\n${JSON.stringify(list)}`, 26000, true);
+  const map = {}; list.forEach(x => { const v = j && j[x.id]; if (typeof v === 'string' && v.trim()) map[x.id] = v.trim().slice(0, 260); });
+  return { map };
+}
+
+// ---------- AI đọc bình luận: nhu cầu thật + chân dung khán giả ----------
+async function doAudience(key, d) {
+  d = d || {};
+  const cm = (Array.isArray(d.comments) ? d.comments : []).slice(0, 320).map(c => ({ t: String((c && c.t) || '').slice(0, 260), l: Number(c && c.l) || 0 })).filter(c => c.t.length > 2);
+  if (cm.length < 5) { const e = new Error('Cần ít nhất 5 bình luận để AI đọc.'); e.code = 'NO_DATA'; throw e; }
+  const titles = (Array.isArray(d.titles) ? d.titles : []).slice(0, 20).map(t => String(t).slice(0, 160));
+  const text = `You analyse YouTube comments for a video creator. Below are ${cm.length} real comments ("l" = likes) from these videos: ${JSON.stringify(titles)}.
+Read them and report what viewers actually want. Base every point on the comments; do not invent. Write all text values in Vietnamese; keep quoted comments in their original language.
+The audience portrait is an ESTIMATE from wording, topics and language of the comments (YouTube does not expose real demographics) - say how sure you are.
+
+Return ONLY JSON:
+{"summary":"2-3 câu tổng quan khán giả đang nói gì",
+ "needs":[{"need":"nhu cầu / mong muốn","evidence":"1 bình luận tiêu biểu nguyên văn","share":"ước lượng % bình luận nhắc tới"}],
+ "questions":["câu hỏi khán giả hay hỏi"],
+ "loves":["điều họ khen / thích"],
+ "complaints":["điều họ chê / khó chịu"],
+ "ideas":[{"title":"ý tưởng video tiếp theo","why":"dựa trên bình luận nào"}],
+ "persona":{"who":"1 câu mô tả người xem điển hình","age":"khoảng tuổi ước đoán","gender":"ước đoán giới tính chiếm đa số hoặc 'không rõ'","region":"nước / khu vực","language":"ngôn ngữ chính","level":"mới bắt đầu / có kinh nghiệm / fan lâu năm ...","confidence":"thấp / vừa / cao","basis":"dựa vào dấu hiệu nào trong bình luận"}}
+Give 4-7 needs, up to 8 questions, up to 6 loves, up to 6 complaints, 6-10 ideas.
+
+COMMENTS:
+${JSON.stringify(cm)}`;
+  const j = await askJson(key, text, 40000, true);
+  const A = (v, n) => (Array.isArray(v) ? v : []).slice(0, n), S = (v, n) => String(v == null ? '' : v).slice(0, n);
+  return { audience: { summary: S(j.summary, 600), needs: A(j.needs, 8).map(x => ({ need: S(x && x.need, 200), evidence: S(x && x.evidence, 300), share: S(x && x.share, 20) })).filter(x => x.need), questions: A(j.questions, 10).map(x => S(x, 240)), loves: A(j.loves, 8).map(x => S(x, 240)), complaints: A(j.complaints, 8).map(x => S(x, 240)), ideas: A(j.ideas, 12).map(x => ({ title: S(x && x.title, 200), why: S(x && x.why, 260) })).filter(x => x.title), persona: Object.fromEntries(['who', 'age', 'gender', 'region', 'language', 'level', 'confidence', 'basis'].map(k => [k, S((j.persona || {})[k], 300)])) } };
+}
+
+// ---------- Bộ thông tin đăng video: tiêu đề, mô tả, thẻ từ khoá ----------
+async function doSeo(key, d) {
+  d = d || {};
+  const topic = String(d.topic || '').slice(0, 600); if (topic.length < 4) { const e = new Error('Hãy mô tả video của bạn.'); e.code = 'NO_DATA'; throw e; }
+  const lang = String(d.lang || 'Vietnamese').slice(0, 40), kw = String(d.keyword || '').slice(0, 120), refs = (Array.isArray(d.refs) ? d.refs : []).slice(0, 15).map(t => String(t).slice(0, 140));
+  const j = await askJson(key, `Write the upload metadata for a YouTube video. Language of the output: ${lang}.
+VIDEO: """${topic}"""
+${kw ? 'MAIN KEYWORD: ' + kw + '\n' : ''}${refs.length ? 'TITLES OF WINNING VIDEOS IN THIS NICHE (match their style, do not copy): ' + JSON.stringify(refs) + '\n' : ''}
+Rules: titles under 70 characters, curiosity without lying; description 120-180 words with the main keyword in the first sentence, a short outline of what the viewer gets and a call to action; tags are short search phrases (total under 450 characters); no hashtags inside the description.
+Return ONLY JSON: {"titles":["5 options"],"description":"...","tags":["15-22 tags"],"hashtags":["3 hashtags starting with #"],"file_name":"main keyword and topic as lowercase ascii words joined by hyphens, max 8 words, no extension","pinned_comment":"a first comment that invites replies"}`, 30000, true);
+  const A = (v, n, m) => (Array.isArray(v) ? v : []).map(x => String(x || '').slice(0, m)).filter(Boolean).slice(0, n);
+  return { seo: { titles: A(j.titles, 6, 120), description: String(j.description || '').slice(0, 2500), tags: A(j.tags, 25, 60), hashtags: A(j.hashtags, 5, 40), file_name: String(j.file_name || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80), pinned_comment: String(j.pinned_comment || '').slice(0, 500) } };
+}
+
+module.exports = { doTranslate, doAudience, doSeo, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
