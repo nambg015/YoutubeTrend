@@ -105,17 +105,37 @@ function isAdmin(claims) {
 
 // ===== TÀI KHOẢN KHÁCH =====
 // Khách dùng được công cụ nhưng không phải chủ: lượt AI mỗi ngày thấp hơn, không quản lý tài khoản.
-// Đặt GUEST_EMAILS trên Vercel để đổi danh sách; đặt GUEST_EMAILS rỗng để tắt hẳn tài khoản khách.
-const DEFAULT_GUESTS = 'khach@youtrend.user';
+// Một tài khoản là khách khi:
+//  (a) chủ đã "ký" cho nó: tên hiển thị (claim "name") của tài khoản = mã HMAC của email, chỉ máy chủ tạo được
+//      → người lạ tự đăng ký tên bất kỳ cũng không vào được; hoặc
+//  (b) email nằm trong GUEST_EMAILS (danh sách cố định trên Vercel, mặc định trống).
+// GUESTS_DISABLED=1 tắt toàn bộ tài khoản khách.
+function guestsOff() { return /^(1|true|yes)$/i.test(process.env.GUESTS_DISABLED || ''); }
 function guestList() {
-  const raw = process.env.GUEST_EMAILS !== undefined ? process.env.GUEST_EMAILS : DEFAULT_GUESTS;
   const admins = adminList().emails;
-  return String(raw).split(',').map(s => s.trim().toLowerCase()).filter(Boolean).filter(e => !admins.includes(e));
+  return String(process.env.GUEST_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean).filter(e => !admins.includes(e));
+}
+function guestSecret() {
+  return process.env.GUEST_SECRET || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || '';
+}
+function guestTag(email) {
+  const sec = guestSecret(); if (!sec) return '';
+  return 'ytg:' + crypto.createHmac('sha256', 'youtrend-guest|' + sec).update(String(email || '').toLowerCase()).digest('base64url').slice(0, 32);
+}
+function isSignedGuest(claims) {
+  const email = String((claims && claims.email) || '').toLowerCase();
+  if (!email.endsWith('@youtrend.user') || adminList().emails.includes(email)) return false;
+  const provider = (claims.firebase && claims.firebase.sign_in_provider) || '';
+  if (provider !== 'password') return false;
+  const want = guestTag(email), got = String(claims.name || '');
+  if (!want || got.length !== want.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want));
 }
 function roleOf(claims) {
   if (!claims) return '';
   if (isAdmin(claims)) return 'admin';
-  return emailIn(claims, guestList()) ? 'guest' : '';
+  if (guestsOff()) return '';
+  return emailIn(claims, guestList()) || isSignedGuest(claims) ? 'guest' : '';
 }
 // Hạn mức ngày của khách = một phần của chủ (mặc định 30%).
 function limitFor(claims, n) {
@@ -134,6 +154,10 @@ async function requireUser(req, res, opts = {}) {
   const role = roleOf(claims);
   if (!role) {
     res.status(403).json({ success: false, code: 'NOT_ALLOWED', message: 'Tài khoản này không có quyền dùng web.' });
+    return null;
+  }
+  if (role === 'guest' && !opts.skipBlock && await require('./guests').isBlocked(claims.email)) {
+    res.status(403).json({ success: false, code: 'BLOCKED', message: 'Tài khoản khách này đang bị khoá. Liên hệ chủ web.' });
     return null;
   }
   claims.uid = claims.sub; claims.role = role;
@@ -168,4 +192,4 @@ function applyCors(req, res, extraHeaders = '') {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization' + (extraHeaders ? ', ' + extraHeaders : ''));
 }
 
-module.exports = { verifyIdToken, requireAdmin, requireUser, requirePhoneVerified, isAdmin, roleOf, guestList, limitFor, adminList, applyCors, bearer, ALLOWED_ORIGINS };
+module.exports = { verifyIdToken, requireAdmin, requireUser, requirePhoneVerified, isAdmin, roleOf, guestList, guestTag, guestSecret, isSignedGuest, limitFor, adminList, applyCors, bearer, ALLOWED_ORIGINS };

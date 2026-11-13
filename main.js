@@ -197,7 +197,7 @@
         set({ s: 'loading' });
         try {
           var me = await Y.auth.checkAdmin();
-          if (me.admin || me.role === 'guest') { Y.role = me.role || 'admin'; set({ s: 'ready', me: me }); }
+          if (me.admin || me.role === 'guest') { Y.role = me.role || 'admin'; if (me.role === 'guest') Y.trackStart(); set({ s: 'ready', me: me }); }
           else { var m = (u.email || '') + ': ' + (me.message || 'không có quyền.'); await Y.auth.signOut(); set({ s: 'login', msg: m, denied: m }); }
         } catch (e) { set({ s: 'error', msg: 'Không kiểm tra được quyền đăng nhập (' + e.message + ').' }); }
       });

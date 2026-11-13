@@ -138,52 +138,160 @@
       h('div', { className: 'grid gap-4 sm:grid-cols-3' }, h(Stat, { label: 'Gemini (Tạo tài nguyên, nhận định AI)', value: me.gemini ? 'Đã cấu hình' : 'Chưa có GEMINI_API_KEY', sub: me.model || '' }), h(Stat, { label: 'Quyền', value: me.role === 'guest' ? 'Khách' : 'Chủ (admin)', sub: (me.email || '').replace('@youtrend.user', '') }), h(Stat, { label: 'Phiên bản', value: 'YouTrend v4' })),
       !me.gemini && me.role !== 'guest' && h(Note, { className: 'mt-3' }, 'Thêm GEMINI_API_KEY ở Vercel → Settings → Environment Variables (lấy miễn phí tại aistudio.google.com/apikey), rồi Redeploy.'));
   }
-  // Tài khoản khách: chủ tạo và đổi mật khẩu ngay trong Cài đặt (máy chủ chỉ cho các tên trong danh sách khách vào)
+  // ---------- Tài khoản khách: danh sách, online / offline, lịch sử thao tác, đổi mật khẩu, khoá, xoá ----------
+  // Danh sách (tên, mật khẩu, ghi chú) lưu trên trình duyệt của chủ; trạng thái và lịch sử lấy từ máy chủ.
+  var ROUTE_VN = { today: 'Hôm nay', explore: 'Khám phá', niche: 'Top Ngách', channels: 'Kênh', resource: 'Tài nguyên', tools: 'Công cụ', library: 'Thư viện', settings: 'Cài đặt' };
+  var AI_VN = { search: 'gom hồ sơ sự kiện', structure: 'dựng cấu trúc hồ sơ', news: 'tìm tin tức', enrich: 'bổ sung hồ sơ', insight: 'nhận định', titles: 'viết tiêu đề', topics: 'tìm đề tài', images: 'tìm hình ảnh', image: 'tải hình', translate: 'dịch tiêu đề', audience: 'đọc bình luận', seo: 'thông tin đăng video', ask: 'hỏi trợ lý trên bảng', script: 'phân tích kịch bản' };
   function GuestPanel(p) {
-    var names = ((p.me && p.me.guests) || []).map(function (e) { return String(e).replace('@youtrend.user', ''); });
-    var s0 = useState(names[0] || ''), name = s0[0], setName = s0[1], s1 = useState(''), pw = s1[0], setPw = s1[1], s2 = useState(''), busy = s2[0], setBusy = s2[1], s3 = useState(null), msg = s3[0], setMsg = s3[1];
-    var s4 = useState(''), o = s4[0], setO = s4[1], s5 = useState(''), n = s5[0], setN = s5[1], s6 = useState(''), made = s6[0], setMade = s6[1];
-    var email = name.indexOf('@') >= 0 ? name : name + '@youtrend.user';
-    function rnd() { var A = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789', b = new Uint32Array(12), out = ''; (window.crypto || window.msCrypto).getRandomValues(b); for (var i = 0; i < b.length; i++) out += A[b[i] % A.length]; setPw(out); setMsg(null); }
+    var gName = function (e) { return String(e || '').replace('@youtrend.user', ''); };
+    var s0 = useState(function () { return st.json('yt4_guests', []) || []; }), mine = s0[0], setMine0 = s0[1];
+    function setMine(a) { setMine0(a); st.put('yt4_guests', a); }
+    var s1 = useState(null), srv = s1[0], setSrv = s1[1], s2 = useState(''), busy = s2[0], setBusy = s2[1], s3 = useState(null), msg = s3[0], setMsg = s3[1];
+    var s4 = useState({ n: '', p: '', note: '' }), F = s4[0], setF = s4[1];
+    var s5 = useState(null), open = s5[0], setOpen = s5[1];         // { n, kind: 'log' | 'pw' | 'del', ... }
+    var s6 = useState({}), show = s6[0], setShow = s6[1], s7 = useState({ n: '', p: '' }), AD = s7[0], setAD = s7[1], s8 = useState(0), tick = s8[0], setTick = s8[1];
+    async function load() { try { var r = await Y.api('/api/me', { action: 'guests' }); setSrv(r); } catch (e) { setSrv(function (x) { return x || { list: [], persistent: false, signing: true, err: e.message }; }); } }
+    useEffect(function () { load(); var t = setInterval(function () { if (!document.hidden) load(); }, 30000), t2 = setInterval(function () { setTick(function (x) { return x + 1; }); }, 20000); return function () { clearInterval(t); clearInterval(t2); }; }, []);
+    function rnd() { var A = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789', b = new Uint32Array(12), out = ''; (window.crypto || window.msCrypto).getRandomValues(b); for (var i = 0; i < b.length; i++) out += A[b[i] % A.length]; return out; }
+    var okName = function (n) { return /^[a-z0-9][a-z0-9._-]{2,23}$/.test(n); };
     var needConsole = function (e) { return /operation-not-allowed|admin-restricted|phiên phụ/.test((e.code || '') + ' ' + (e.message || '')); };
+    var info = function (g) { return 'Web: ' + location.origin + '\nTên đăng nhập: ' + g.n + '\nMật khẩu: ' + g.p; };
+    var copy = function (t, what) { U.copy(t).then(function () { K.toast('Đã sao chép ' + what); }, function () { K.toast('Trình duyệt chặn sao chép, hãy bôi đen rồi Ctrl+C.'); }); };
+    function put(g0) { var g = { n: g0.n, p: g0.p || '', note: g0.note || '', at: g0.at || Date.now() }, a = mine.slice(), i = a.findIndex(function (x) { return x.n === g.n; }); if (i >= 0) a[i] = g; else a.unshift(g); setMine(a.slice(0, 200)); }
+    function drop(n) { setMine(mine.filter(function (x) { return x.n !== n; })); }
+
     async function create() {
+      var n = F.n.trim().toLowerCase(), pw = F.p;
+      if (!okName(n)) { setMsg({ err: 1, t: 'Tên đăng nhập gồm 3–24 ký tự: chữ thường không dấu, số, dấu chấm, gạch ngang hoặc gạch dưới.' }); return; }
       if (pw.length < 8) { setMsg({ err: 1, t: 'Mật khẩu cần ít nhất 8 ký tự.' }); return; }
-      setBusy('c'); setMsg(null);
-      try { await Y.auth.createGuest(name, pw); setMade(pw); setMsg({ t: 'Đã tạo tài khoản khách "' + name + '". Gửi tên đăng nhập và mật khẩu cho khách là họ vào được ngay.' }); }
-      catch (e) { setMsg({ err: 1, t: e.message, console: needConsole(e) }); }
+      setBusy('create'); setMsg(null);
+      try { await Y.auth.createGuest(n, pw); put({ n: n, p: pw, note: F.note.trim().slice(0, 80), at: Date.now() }); setF({ n: '', p: '', note: '' }); setMsg({ t: 'Đã tạo tài khoản "' + n + '". Bấm "Chép" ở dòng của nó để lấy thông tin gửi cho khách.' }); load(); }
+      catch (e) { setMsg({ err: 1, t: e.message, console: needConsole(e), name: n }); }
       setBusy('');
     }
-    async function change() {
-      if (n.length < 8) { setMsg({ err: 1, t: 'Mật khẩu mới cần ít nhất 8 ký tự.' }); return; }
-      setBusy('p'); setMsg(null);
-      try { await Y.auth.changeGuestPassword(name, o, n); setMade(n); setO(''); setN(''); setMsg({ t: 'Đã đổi mật khẩu của "' + name + '". Mật khẩu cũ không còn dùng được.' }); }
+    async function adopt() {
+      var n = AD.n.trim().toLowerCase();
+      if (!okName(n)) { setMsg({ err: 1, t: 'Tên đăng nhập gồm 3–24 ký tự: chữ thường không dấu, số, dấu chấm, gạch ngang hoặc gạch dưới.' }); return; }
+      if (!AD.p) { setMsg({ err: 1, t: 'Nhập mật khẩu hiện tại của tài khoản đó.' }); return; }
+      setBusy('adopt'); setMsg(null);
+      try { await Y.auth.adoptGuest(n, AD.p); var old = mine.filter(function (x) { return x.n === n; })[0] || {}; put({ n: n, p: AD.p, note: old.note || '', at: old.at || Date.now() }); setAD({ n: '', p: '' }); setMsg({ t: 'Đã cấp quyền khách cho "' + n + '" và đưa vào danh sách.' }); load(); }
       catch (e) { setMsg({ err: 1, t: e.message }); }
       setBusy('');
     }
-    function copyInfo() { var t = 'Web: ' + location.origin + '\nTên đăng nhập: ' + name + '\nMật khẩu: ' + made; U.copy(t).then(function () { K.toast('Đã sao chép thông tin đăng nhập của khách'); }, function () { K.toast('Trình duyệt chặn sao chép, hãy bôi đen rồi Ctrl+C.'); }); }
-    if (!names.length) return h(Section, { title: 'Tài khoản khách' }, h(Note, null, 'Tài khoản khách đang tắt (biến GUEST_EMAILS trên Vercel đang để trống). Xoá biến đó rồi Redeploy để bật lại tên mặc định "khach".'));
+    async function changePw(g) {
+      var o = g.p || open.old || '', nw = open.nw || '';
+      if (!o) { setMsg({ err: 1, t: 'Máy này chưa lưu mật khẩu của "' + g.n + '". Nhập mật khẩu hiện tại của nó.' }); return; }
+      if (nw.length < 8) { setMsg({ err: 1, t: 'Mật khẩu mới cần ít nhất 8 ký tự.' }); return; }
+      setBusy('pw'); setMsg(null);
+      try { await Y.auth.changeGuestPassword(g.n, o, nw); put(Object.assign({}, g, { p: nw })); setOpen(null); setMsg({ t: 'Đã đổi mật khẩu của "' + g.n + '". Mật khẩu cũ không còn đăng nhập được.' }); }
+      catch (e) { setMsg({ err: 1, t: e.message }); }
+      setBusy('');
+    }
+    async function block(g, on) {
+      setBusy('blk'); setMsg(null);
+      try { var r = await Y.api('/api/me', { action: 'guestBlock', name: g.n, blocked: on }); setMsg({ t: (on ? 'Đã khoá "' : 'Đã mở khoá "') + g.n + '".' + (on ? ' Khách bị đẩy ra trong vòng 1 phút.' : '') + (r.persistent ? '' : ' Lưu ý: máy chủ chưa gắn kho lưu nên lệnh khoá có thể không giữ được.') }); await load(); }
+      catch (e) { setMsg({ err: 1, t: e.message }); }
+      setBusy('');
+    }
+    async function remove(g) {
+      var pw = g.p || open.old || '';
+      setBusy('del'); setMsg(null);
+      var gone = false, why = '';
+      if (pw) { try { await Y.auth.deleteGuest(g.n, pw); gone = true; } catch (e) { why = e.message; } } else why = 'Máy này không có mật khẩu của tài khoản.';
+      try {
+        if (gone) { await Y.api('/api/me', { action: 'guestForget', name: g.n }); drop(g.n); setMsg({ t: 'Đã xoá hẳn tài khoản "' + g.n + '" khỏi Firebase và khỏi danh sách.' }); }
+        else { await Y.api('/api/me', { action: 'guestBlock', name: g.n, blocked: true }); setMsg({ err: 1, t: 'Chưa xoá được "' + g.n + '" trong Firebase (' + why + '). Đã khoá tài khoản này trên web. Muốn xoá hẳn: Firebase Console → Authentication → Users → ' + g.n + '@youtrend.user → Delete account, rồi bấm "Gỡ khỏi danh sách".', drop: g.n }); }
+      } catch (e) { setMsg({ err: 1, t: e.message }); }
+      setOpen(null); setBusy(''); load();
+    }
+    async function forget(n) { try { await Y.api('/api/me', { action: 'guestForget', name: n }); } catch (e) { } drop(n); setMsg({ t: 'Đã gỡ "' + n + '" khỏi danh sách.' }); load(); }
+    function openLog(g) { if (open && open.n === g.n && open.kind === 'log') { setOpen(null); return; } loadLog(g); }
+    async function loadLog(g) {
+      setOpen({ n: g.n, kind: 'log', ev: null });
+      try { var r = await Y.api('/api/me', { action: 'guestLog', name: g.n, limit: 300 }); setOpen({ n: g.n, kind: 'log', ev: r.events || [] }); } catch (e) { setOpen({ n: g.n, kind: 'log', ev: [], err: e.message }); }
+    }
+    async function clearLog(g) { try { await Y.api('/api/me', { action: 'guestLogClear', name: g.n }); setOpen({ n: g.n, kind: 'log', ev: [] }); } catch (e) { setMsg({ err: 1, t: e.message }); } }
+
+    // gộp danh sách trên máy này với những tài khoản máy chủ từng thấy
+    var S = {}; ((srv && srv.list) || []).forEach(function (x) { S[gName(x.email)] = x; });
+    var rows = mine.map(function (g) { return Object.assign({}, g, { s: S[g.n] || null }); });
+    Object.keys(S).forEach(function (n) { if (!mine.some(function (g) { return g.n === n; })) rows.push({ n: n, p: '', note: '', at: S[n].first || 0, s: S[n], foreign: true }); });
+    var now = Date.now(), onlineMs = (srv && srv.onlineMs) || 150000;
+    var status = function (g) {
+      var x = g.s;
+      if (x && x.blocked) return { dot: 'bg-[#ff4e45]', cls: 'text-[#ff8a83]', t: 'Đang khoá' };
+      if (x && x.at && now - x.at < onlineMs) return { dot: 'bg-[#2ba640] shadow-[0_0_0_3px_rgba(43,166,64,.25)]', cls: 'text-[#6fcf85]', t: 'Đang online', sub: (ROUTE_VN[x.route] || x.route || '') + (x.ua ? ' · ' + x.ua : '') };
+      if (x && x.at) return { dot: 'bg-[#555]', cls: 'text-[#c8c8c8]', t: 'Offline', sub: 'lần cuối ' + U.ago(x.at) + ' trước' + (x.ua ? ' · ' + x.ua : '') };
+      return { dot: 'bg-[#3a3a3a]', cls: 'text-[#888]', t: 'Chưa đăng nhập' };
+    };
+    var evText = function (e) { return e.a === 'nav' ? 'Mở mục ' + (ROUTE_VN[e.d] || e.d) : e.a === 'ai' ? 'Gọi AI: ' + (AI_VN[e.d] || e.d) : e.a === 'login' ? 'Mở web' : 'Bấm "' + e.d + '"'; };
+    var evTone = function (e) { return e.a === 'nav' ? 'text-[#7cc3ff]' : e.a === 'ai' ? 'text-[#c9a7ff]' : e.a === 'login' ? 'text-[#6fcf85]' : 'text-[#e6e6e6]'; };
+    var when = function (t) { var d = new Date(t), z = function (x) { return String(x).padStart(2, '0'); }; return z(d.getHours()) + ':' + z(d.getMinutes()) + ' · ' + z(d.getDate()) + '/' + z(d.getMonth() + 1); };
     var fld = 'h-9 bg-[#121212] border border-[#303030] rounded-lg px-3 text-[12.5px] text-[#f1f1f1] placeholder:text-[#717171] min-w-0';
+    var act = function (label, fn, cls, on) { return h('button', { key: label, onClick: fn, disabled: !!busy, 'aria-pressed': on == null ? null : !!on, className: cx('h-7 px-2.5 rounded-full text-[11.5px] font-medium whitespace-nowrap cursor-pointer disabled:opacity-50', on ? 'bg-[#f1f1f1] text-[#0f0f0f]' : cls || 'bg-[#323232] hover:bg-[#424242] text-[#f1f1f1]') }, label); };
+    var nOn = rows.filter(function (g) { return status(g).t === 'Đang online'; }).length;
+
     return h(Section, { title: 'Tài khoản khách' },
-      h('p', { className: 'text-[12px] text-[#c8c8c8] leading-relaxed' }, 'Một tài khoản riêng để đưa cho người khác dùng web. Khách dùng được mọi công cụ; dữ liệu của họ lưu trên máy của họ, không thấy dữ liệu của bạn. Khách phải tự nhập YouTube API key ở Cài đặt, lượt AI mỗi ngày bằng khoảng 30% của bạn, và không đổi được mật khẩu trong web.'),
-      h('div', { className: 'mt-3 grid gap-2 md:grid-cols-[170px_minmax(0,1fr)_auto_auto] items-center' },
-        names.length > 1 ? h('select', { value: name, 'aria-label': 'Tên đăng nhập của khách', onChange: function (e) { setName(e.target.value); setMade(''); setMsg(null); }, className: fld + ' cursor-pointer' }, names.map(function (x) { return h('option', { key: x, value: x }, x); }))
-          : h('div', { className: 'h-9 px-3 rounded-lg bg-[#181818] border border-[#303030] flex items-center gap-2 text-[12.5px]' }, h('span', { className: 'text-[#aaa]' }, 'Tên đăng nhập'), h('b', { className: 'text-white' }, name)),
-        h('input', { type: 'text', value: pw, onChange: function (e) { setPw(e.target.value); }, placeholder: 'Mật khẩu cho khách (ít nhất 8 ký tự)', 'aria-label': 'Mật khẩu cho khách', autoComplete: 'off', spellCheck: false, className: fld + ' font-mono' }),
-        h(Btn, { onClick: rnd, disabled: !!busy }, 'Tạo ngẫu nhiên'),
-        h(Btn, { primary: true, onClick: create, disabled: !!busy || !pw }, busy === 'c' ? 'Đang tạo…' : 'Tạo tài khoản khách')),
+      h('p', { className: 'text-[12px] text-[#c8c8c8] leading-relaxed' }, 'Tạo tài khoản riêng cho từng người bạn muốn cho dùng web. Khách dùng được mọi công cụ, dữ liệu lưu trên máy của họ, phải tự nhập YouTube API key, lượt AI mỗi ngày bằng khoảng 30% của bạn. Bạn xem được ai đang online và họ đã làm gì; khách được báo rõ điều này trong Cài đặt của họ.'),
+      srv && !srv.signing && h(Note, { error: true, className: 'mt-3' }, 'Máy chủ chưa có khoá để cấp quyền khách. Thêm biến GUEST_SECRET (một chuỗi dài bất kỳ) ở Vercel → Settings → Environment Variables rồi Redeploy.'),
+      srv && !srv.persistent && h(Note, { className: 'mt-3' }, 'Máy chủ chưa gắn kho lưu (Upstash KV) nên trạng thái online, lịch sử thao tác và lệnh khoá chỉ giữ tạm, hay mất. Gắn ở Vercel → Storage → Upstash for Redis → Connect Project, rồi Redeploy. Tạo, đổi mật khẩu và xoá tài khoản vẫn chạy bình thường.'),
+      h('div', { className: 'mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto_minmax(0,1fr)_auto] items-center' },
+        h('input', { type: 'text', value: F.n, onChange: function (e) { setF(Object.assign({}, F, { n: e.target.value.toLowerCase().replace(/\s+/g, '') })); }, placeholder: 'Tên đăng nhập, ví dụ: lan', 'aria-label': 'Tên đăng nhập của khách', autoComplete: 'off', spellCheck: false, className: fld }),
+        h('input', { type: 'text', value: F.p, onChange: function (e) { setF(Object.assign({}, F, { p: e.target.value })); }, placeholder: 'Mật khẩu (ít nhất 8 ký tự)', 'aria-label': 'Mật khẩu cho khách', autoComplete: 'off', spellCheck: false, className: fld + ' font-mono' }),
+        h(Btn, { onClick: function () { setF(Object.assign({}, F, { p: rnd() })); }, disabled: !!busy }, 'Ngẫu nhiên'),
+        h('input', { type: 'text', value: F.note, onChange: function (e) { setF(Object.assign({}, F, { note: e.target.value })); }, placeholder: 'Ghi chú: cho ai', 'aria-label': 'Ghi chú cho tài khoản khách', className: fld }),
+        h(Btn, { primary: true, onClick: create, disabled: !!busy || !F.n || !F.p }, busy === 'create' ? 'Đang tạo…' : 'Tạo tài khoản')),
       msg && h('div', { role: msg.err ? 'alert' : 'status', className: cx('mt-3 rounded-lg border px-3.5 py-2.5 text-[12px] leading-relaxed', msg.err ? 'border-[#ff4e45]/50 bg-[#2a1614] text-[#ffb4ae]' : 'border-[#2ba640]/50 bg-[#14261a] text-[#9fe0ad]') }, msg.t,
-        !msg.err && made && h('button', { onClick: copyInfo, className: 'ml-3 h-7 px-3 rounded-full bg-[#1d3a2a] hover:bg-[#25492f] text-[11.5px] font-semibold text-[#9fe0ad] cursor-pointer' }, 'Sao chép thông tin gửi khách')),
+        msg.drop && h('button', { onClick: function () { forget(msg.drop); }, className: 'ml-3 h-7 px-3 rounded-full bg-[#3a1f1d] hover:bg-[#4a2624] text-[11.5px] font-semibold text-[#ffb4ae] cursor-pointer' }, 'Gỡ khỏi danh sách')),
       msg && msg.console && h('ol', { className: 'mt-2 list-decimal pl-5 space-y-1 text-[12px] text-[#d0d0d0] leading-relaxed' },
-        h('li', null, 'Mở console.firebase.google.com, chọn dự án của web, vào Authentication → Users.'),
-        h('li', null, 'Bấm Add user. Email: ', h('b', { className: 'text-white select-all' }, email), ' · Password: mật khẩu bạn muốn đưa cho khách.'),
-        h('li', null, 'Bấm Add user là xong. Khách đăng nhập bằng tên "' + name + '" và mật khẩu đó.')),
+        h('li', null, 'Mở console.firebase.google.com, chọn dự án của web, vào Authentication → Users → Add user.'),
+        h('li', null, 'Email: ', h('b', { className: 'text-white select-all' }, msg.name + '@youtrend.user'), ' · Password: mật khẩu bạn muốn đưa cho khách. Bấm Add user.'),
+        h('li', null, 'Quay lại đây, mở "Thêm tài khoản đã có" bên dưới, nhập tên và mật khẩu đó để cấp quyền khách.')),
+
+      h('div', { className: 'mt-4 flex items-center gap-3 text-[12px]' }, h('b', { className: 'text-white' }, 'Danh sách (' + rows.length + ')'), h('span', { className: 'text-[#6fcf85]' }, nOn + ' đang online'), h('span', { className: 'flex-1' }), h('button', { onClick: load, className: 'text-[11.5px] text-[#8ab4f8] hover:text-white cursor-pointer' }, 'Tải lại trạng thái')),
+      !rows.length ? h('div', { className: 'mt-2 rounded-lg border border-dashed border-[#3a3a3a] px-4 py-5 text-center text-[12px] text-[#aaa]' }, 'Chưa có tài khoản khách nào. Điền tên và mật khẩu ở trên rồi bấm Tạo tài khoản.')
+        : h('div', { className: 'mt-2 rounded-lg border border-[#2e2e2e] overflow-x-auto' }, h('table', { className: 'w-full text-[12px]' },
+          h('thead', null, h('tr', { className: 'text-left text-[10.5px] uppercase tracking-wide text-[#aaa] bg-[#181818]' }, ['Trạng thái', 'Tên đăng nhập', 'Mật khẩu', 'Ghi chú', 'Tạo lúc', 'Thao tác'].map(function (x) { return h('th', { key: x, className: 'px-3 py-2 font-semibold whitespace-nowrap' }, x); }))),
+          h('tbody', null, rows.map(function (g) {
+            var stt = status(g), isOpen = open && open.n === g.n, blocked = !!(g.s && g.s.blocked);
+            return h(Frag, { key: g.n },
+              h('tr', { className: 'border-t border-[#2a2a2a] align-middle' },
+                h('td', { className: 'px-3 py-2 whitespace-nowrap' }, h('div', { className: 'flex items-center gap-2' }, h('span', { 'aria-hidden': true, className: 'w-2.5 h-2.5 rounded-full shrink-0 ' + stt.dot }), h('div', null, h('div', { className: 'font-semibold ' + stt.cls }, stt.t), stt.sub && h('div', { className: 'text-[11px] text-[#aaa]' }, stt.sub)))),
+                h('td', { className: 'px-3 py-2 font-semibold text-white whitespace-nowrap' }, g.n),
+                h('td', { className: 'px-3 py-2 whitespace-nowrap' }, g.p ? h('span', { className: 'inline-flex items-center gap-2' }, h('span', { className: 'font-mono text-[#e6e6e6]' }, show[g.n] ? g.p : '••••••••'), h('button', { onClick: function () { var o = Object.assign({}, show); o[g.n] = !o[g.n]; setShow(o); }, className: 'text-[11px] text-[#8ab4f8] hover:text-white cursor-pointer' }, show[g.n] ? 'Ẩn' : 'Hiện')) : h('span', { className: 'text-[#888]', title: 'Tài khoản này được tạo từ máy khác nên máy này không có mật khẩu' }, 'không lưu trên máy này')),
+                h('td', { className: 'px-3 py-2 min-w-[140px]' }, g.foreign ? h('span', { className: 'text-[#888]' }, '–') : h('input', { key: g.n + '|' + (g.note || ''), defaultValue: g.note || '', placeholder: 'Ghi chú…', 'aria-label': 'Ghi chú của ' + g.n, onBlur: function (e) { if (e.target.value !== (g.note || '')) put(Object.assign({}, g, { note: e.target.value.slice(0, 80) })); }, className: 'w-full h-7 bg-transparent border border-transparent hover:border-[#303030] focus:border-[#3ea6ff] rounded-md px-1.5 text-[#f1f1f1] placeholder:text-[#555]' })),
+                h('td', { className: 'px-3 py-2 whitespace-nowrap text-[#aaa]' }, g.at ? new Date(g.at).toLocaleDateString('vi-VN') : '–'),
+                h('td', { className: 'px-3 py-2' }, h('div', { className: 'flex flex-nowrap gap-1' },
+                  act('Lịch sử', function () { openLog(g); }, null, isOpen && open.kind === 'log'),
+                  g.p && act('Chép', function () { copy(info(g), 'thông tin đăng nhập của ' + g.n); }),
+                  act('Đổi mật khẩu', function () { setOpen(isOpen && open.kind === 'pw' ? null : { n: g.n, kind: 'pw', nw: '', old: '' }); setMsg(null); }, null, isOpen && open.kind === 'pw'),
+                  act(blocked ? 'Mở khoá' : 'Khoá', function () { block(g, !blocked); }, blocked ? 'bg-[#1d3a2a] hover:bg-[#25492f] text-[#9fe0ad]' : 'bg-[#3a3214] hover:bg-[#4a401a] text-[#f5c451]'),
+                  act('Xoá', function () { setOpen(isOpen && open.kind === 'del' ? null : { n: g.n, kind: 'del', old: '' }); setMsg(null); }, 'bg-[#3a1f1d] hover:bg-[#4a2624] text-[#ff8a83]', isOpen && open.kind === 'del')))),
+              isOpen && h('tr', { className: 'bg-[#161616]' }, h('td', { colSpan: 6, className: 'px-3 py-3' },
+                open.kind === 'pw' ? h('div', { className: 'grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] items-center' },
+                  g.p ? h('div', { className: 'text-[12px] text-[#c8c8c8]' }, 'Đặt mật khẩu mới cho ', h('b', { className: 'text-white' }, g.n), '. Người đang dùng mật khẩu cũ sẽ không đăng nhập lại được.') : h('input', { type: 'text', value: open.old, onChange: function (e) { setOpen(Object.assign({}, open, { old: e.target.value })); }, placeholder: 'Mật khẩu hiện tại của ' + g.n, 'aria-label': 'Mật khẩu hiện tại', autoComplete: 'off', className: fld + ' font-mono' }),
+                  h('input', { type: 'text', value: open.nw, onChange: function (e) { setOpen(Object.assign({}, open, { nw: e.target.value })); }, placeholder: 'Mật khẩu mới (ít nhất 8 ký tự)', 'aria-label': 'Mật khẩu mới của khách', autoComplete: 'off', className: fld + ' font-mono' }),
+                  h(Btn, { onClick: function () { setOpen(Object.assign({}, open, { nw: rnd() })); } }, 'Ngẫu nhiên'),
+                  h(Btn, { primary: true, onClick: function () { changePw(g); }, disabled: !!busy || !open.nw }, busy === 'pw' ? 'Đang đổi…' : 'Lưu mật khẩu mới'))
+                : open.kind === 'del' ? h('div', { className: 'flex flex-wrap items-center gap-2 text-[12px] text-[#e6e6e6]' },
+                  h('span', null, 'Xoá hẳn tài khoản ', h('b', { className: 'text-white' }, g.n), '? Khách không đăng nhập được nữa và lịch sử của họ bị xoá.'),
+                  !g.p && h('input', { type: 'text', value: open.old, onChange: function (e) { setOpen(Object.assign({}, open, { old: e.target.value })); }, placeholder: 'Mật khẩu hiện tại của ' + g.n, 'aria-label': 'Mật khẩu hiện tại', autoComplete: 'off', className: fld + ' font-mono w-64' }),
+                  h('button', { onClick: function () { remove(g); }, disabled: !!busy, className: 'h-8 px-4 rounded-full bg-[#ff4e45] hover:brightness-110 text-white text-[12px] font-semibold cursor-pointer disabled:opacity-50' }, busy === 'del' ? 'Đang xoá…' : 'Xoá tài khoản này'),
+                  h(Btn, { onClick: function () { setOpen(null); } }, 'Thôi'))
+                : h('div', null,
+                  h('div', { className: 'flex items-center gap-3 mb-2 text-[11.5px] text-[#aaa]' }, h('b', { className: 'text-white text-[12px]' }, 'Lịch sử thao tác của ' + g.n), open.ev && h('span', null, open.ev.length + ' dòng gần nhất'), h('span', { className: 'flex-1' }), h('button', { onClick: function () { loadLog(g); }, className: 'text-[#8ab4f8] hover:text-white cursor-pointer' }, 'Tải lại'), open.ev && open.ev.length > 0 && h('button', { onClick: function () { clearLog(g); }, className: 'text-[#ff8a83] hover:text-white cursor-pointer' }, 'Xoá lịch sử')),
+                  !open.ev ? h(Busy, null, 'Đang tải lịch sử…')
+                    : open.err ? h(Note, { error: true }, open.err)
+                    : !open.ev.length ? h('div', { className: 'text-[12px] text-[#888]' }, 'Chưa có thao tác nào được ghi.' + (srv && !srv.persistent ? ' Máy chủ chưa gắn kho lưu nên lịch sử không giữ được lâu.' : ''))
+                    : h('ol', { className: 'max-h-[320px] overflow-y-auto rounded-lg border border-[#2a2a2a] divide-y divide-[#242424]' }, open.ev.map(function (e, i) { return h('li', { key: i, className: 'grid grid-cols-[110px_110px_minmax(0,1fr)] gap-3 px-3 py-1.5 text-[12px]' }, h('span', { className: 'tabular-nums text-[#aaa]' }, when(e.t)), h('span', { className: 'text-[#c8c8c8] truncate' }, ROUTE_VN[e.r] || e.r || ''), h('span', { className: 'truncate ' + evTone(e), title: evText(e) }, evText(e))); }))))));
+          })))),
       h('details', { className: 'mt-4 pt-3 border-t border-[#2a2a2a]' },
-        h('summary', { className: 'text-[12px] font-medium text-[#c8c8c8] cursor-pointer hover:text-white' }, 'Đổi mật khẩu khách (khi muốn thu lại quyền của người cũ)'),
+        h('summary', { className: 'text-[12px] font-medium text-[#c8c8c8] cursor-pointer hover:text-white' }, 'Thêm tài khoản đã có (tạo trong Firebase Console hoặc từ máy khác)'),
         h('div', { className: 'mt-2.5 grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]' },
-          h('input', { type: 'text', value: o, onChange: function (e) { setO(e.target.value); }, placeholder: 'Mật khẩu khách hiện tại', 'aria-label': 'Mật khẩu khách hiện tại', autoComplete: 'off', className: fld + ' font-mono' }),
-          h('input', { type: 'text', value: n, onChange: function (e) { setN(e.target.value); }, placeholder: 'Mật khẩu mới (ít nhất 8 ký tự)', 'aria-label': 'Mật khẩu khách mới', autoComplete: 'off', className: fld + ' font-mono' }),
-          h(Btn, { onClick: change, disabled: !!busy || !o || !n }, busy === 'p' ? 'Đang đổi…' : 'Đổi mật khẩu khách')),
-        h('p', { className: 'mt-2 text-[11.5px] text-[#aaa] leading-relaxed' }, 'Quên mật khẩu hiện tại của khách, hoặc muốn khoá hẳn: vào Firebase Console → Authentication → Users, tìm ' + email + ' rồi chọn Reset password, Disable account hoặc Delete account.')));
+          h('input', { type: 'text', value: AD.n, onChange: function (e) { setAD(Object.assign({}, AD, { n: e.target.value.toLowerCase().replace(/\s+/g, '') })); }, placeholder: 'Tên đăng nhập đã có', 'aria-label': 'Tên đăng nhập đã có', autoComplete: 'off', className: fld }),
+          h('input', { type: 'text', value: AD.p, onChange: function (e) { setAD(Object.assign({}, AD, { p: e.target.value })); }, placeholder: 'Mật khẩu hiện tại của tài khoản đó', 'aria-label': 'Mật khẩu của tài khoản đã có', autoComplete: 'off', className: fld + ' font-mono' }),
+          h(Btn, { onClick: adopt, disabled: !!busy || !AD.n || !AD.p }, busy === 'adopt' ? 'Đang kiểm tra…' : 'Cấp quyền khách')),
+        h('p', { className: 'mt-2 text-[11.5px] text-[#aaa] leading-relaxed' }, 'Danh sách và mật khẩu khách lưu trên trình duyệt này (có trong file sao lưu) để bạn xem lại, đổi và xoá nhanh. Sang máy khác thì dùng ô này để đưa tài khoản vào danh sách.')));
   }
   function AccountPanel(p) {
     var user = Y.auth.currentUser(), isPass = !p.guest && user && (user.providerData || []).some(function (x) { return x.providerId === 'password'; });
@@ -192,12 +300,13 @@
     return h(Section, { title: 'Tài khoản' },
       h('div', { className: 'flex flex-wrap items-center gap-3' }, h('div', { className: 'text-[10.5px] text-zinc-200' }, user ? (user.email || '').replace('@youtrend.user', ' (tài khoản mật khẩu)') : ''), h('span', { className: 'flex-1' }), h(Btn, { onClick: p.onLogout }, 'Đăng xuất')),
       isPass && h('div', { className: 'mt-4 pt-4 border-t border-zinc-900 grid gap-2 md:grid-cols-[1fr_1fr_auto]' }, h(Input, { type: 'password', value: o, onChange: function (e) { setO(e.target.value); }, placeholder: 'Mật khẩu hiện tại' }), h(Input, { type: 'password', value: n, onChange: function (e) { setN(e.target.value); }, placeholder: 'Mật khẩu mới (≥ 8 ký tự)' }), h(Btn, { onClick: change, disabled: !o || !n }, 'Đổi mật khẩu')),
+      p.guest && h('p', { className: 'mt-3 text-[12px] text-[#c8c8c8] leading-relaxed' }, 'Bạn đang dùng tài khoản khách. Chủ web xem được lúc bạn online và lịch sử thao tác của tài khoản này (mục đã mở, nút đã bấm, lần gọi AI). Nội dung bạn gõ và API key của bạn không được ghi lại.'),
       msg && h('div', { className: 'text-[10.5px] text-zinc-400 mt-2' }, msg));
   }
   function DataPanel() {
     var inp = React.useRef(null);
     function backup() {
-      var data = { app: 'youtrend', v: 4, at: new Date().toISOString(), keys: Y.keys.getPool(), saved: store.saved(), channels: store.channels(), ideas: store.ideas(), explore: st.json('yt4_explore_hist', []), channelHist: st.json('yt4_channel_hist', []), projects: store.projects(), briefs: store.briefs(), compare: store.compare(), nicheMarks: st.json('tn3_marks', {}), nichePresets: st.json('tn3_presets', []), countryGroups: st.json('tn3_cgroups', []), dreamGroups: st.json('yt4_groups', []), myPrompts: st.json('yt4_pr_mine', []) };
+      var data = { app: 'youtrend', v: 4, at: new Date().toISOString(), keys: Y.keys.getPool(), saved: store.saved(), channels: store.channels(), ideas: store.ideas(), explore: st.json('yt4_explore_hist', []), channelHist: st.json('yt4_channel_hist', []), projects: store.projects(), briefs: store.briefs(), compare: store.compare(), nicheMarks: st.json('tn3_marks', {}), nichePresets: st.json('tn3_presets', []), countryGroups: st.json('tn3_cgroups', []), dreamGroups: st.json('yt4_groups', []), myPrompts: st.json('yt4_pr_mine', []), guests: st.json('yt4_guests', []) };
       U.download('youtrend-sao-luu-' + new Date().toISOString().slice(0, 10) + '.json', new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
     }
     function restore(e) {
@@ -213,6 +322,7 @@
           if (Array.isArray(d.briefs)) { var cb = store.briefs(), bi = {}; cb.forEach(function (x) { bi[x.id] = 1; }); st.put('yt4_briefs', cb.concat(d.briefs.filter(function (x) { return x && x.id && !bi[x.id]; })).slice(0, 30)); Y.emit('briefs'); }
           if (d.nicheMarks && typeof d.nicheMarks === 'object') st.put('tn3_marks', Object.assign({}, d.nicheMarks, st.json('tn3_marks', {})));
           if (Array.isArray(d.nichePresets)) { var pp = st.json('tn3_presets', []) || [], pn = {}; pp.forEach(function (x) { pn[x[0]] = 1; }); st.put('tn3_presets', pp.concat(d.nichePresets.filter(function (x) { return Array.isArray(x) && !pn[x[0]]; })).slice(0, 12)); }
+          if (Array.isArray(d.guests)) { var gg = st.json('yt4_guests', []) || [], gi = {}; gg.forEach(function (x) { gi[x.n] = 1; }); st.put('yt4_guests', gg.concat(d.guests.filter(function (x) { return x && typeof x.n === 'string' && !gi[x.n]; })).slice(0, 200)); }
           if (Array.isArray(d.dreamGroups)) { var dg = st.json('yt4_groups', []) || []; d.dreamGroups.forEach(function (x) { if (typeof x === 'string' && x && dg.indexOf(x) < 0) dg.push(x.slice(0, 60)); }); st.put('yt4_groups', dg.slice(0, 40)); }
           if (Array.isArray(d.myPrompts)) { var mp = st.json('yt4_pr_mine', []) || [], mi = {}; mp.forEach(function (x) { mi[x.id || x.title] = 1; }); st.put('yt4_pr_mine', mp.concat(d.myPrompts.filter(function (x) { return x && (x.id || x.title) && !mi[x.id || x.title]; })).slice(0, 60)); }
           if (Array.isArray(d.countryGroups)) { var cg = st.json('tn3_cgroups', []) || [], ci = {}; cg.forEach(function (x) { ci[x.id] = 1; }); st.put('tn3_cgroups', cg.concat(d.countryGroups.filter(function (x) { return x && x.id && Array.isArray(x.mks) && !ci[x.id]; })).slice(0, 30)); }

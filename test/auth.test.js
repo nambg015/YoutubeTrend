@@ -61,29 +61,35 @@ describe('verifyIdToken', () => {
 });
 
 describe('quyền: chủ, khách, người lạ', () => {
-  const { requireUser, requireAdmin, roleOf, limitFor, guestList } = require('../api/_lib/auth');
+  process.env.GUEST_SECRET = 'bi-mat-de-test';
+  const { requireUser, requireAdmin, roleOf, limitFor, guestList, guestTag } = require('../api/_lib/auth');
+  const guests = require('../api/_lib/guests');
   const mkRes = () => ({ statusCode: 200, body: null, status(c) { this.statusCode = c; return this; }, json(d) { this.body = d; return this; } });
   const req = claims => ({ headers: { authorization: 'Bearer ' + makeToken(claims) } });
-  const pw = email => ({ email, firebase: { sign_in_provider: 'password' } });
+  const pw = (email, name) => ({ email, name, firebase: { sign_in_provider: 'password' } });
+  const signed = email => pw(email, guestTag(email));
   test('chủ đăng nhập bằng tên đăng nhập: vào được, role admin', async () => {
     const r = await requireUser(req(pw('adminh@youtrend.user')), mkRes(), opts);
     assert.strictEqual(r.role, 'admin');
   });
-  test('khách: vào được API dùng chung, role guest, không qua được requireAdmin', async () => {
-    const r = await requireUser(req(pw('khach@youtrend.user')), mkRes(), opts);
+  test('khách được chủ ký: vào được API dùng chung, role guest, không qua được requireAdmin', async () => {
+    const r = await requireUser(req(signed('lan@youtrend.user')), mkRes(), opts);
     assert.strictEqual(r.role, 'guest');
     const res = mkRes();
-    assert.strictEqual(await requireAdmin(req(pw('khach@youtrend.user')), res, opts), null);
+    assert.strictEqual(await requireAdmin(req(signed('lan@youtrend.user')), res, opts), null);
     assert.strictEqual(res.statusCode, 403);
   });
-  test('tài khoản lạ: 403 NOT_ALLOWED', async () => {
-    const res = mkRes();
-    assert.strictEqual(await requireUser(req(pw('ai-do@youtrend.user')), res, opts), null);
-    assert.strictEqual(res.statusCode, 403);
-    assert.strictEqual(res.body.code, 'NOT_ALLOWED');
+  test('tự đăng ký tên bất kỳ, không có chữ ký: 403 NOT_ALLOWED (kể cả tên "khach")', async () => {
+    for (const c of [pw('khach@youtrend.user'), pw('ai-do@youtrend.user', 'ytg:gia-mao-chu-ky-000000000000000000'), pw('x@youtrend.user', guestTag('lan@youtrend.user'))]) {
+      const res = mkRes();
+      assert.strictEqual(await requireUser(req(c), res, opts), null);
+      assert.strictEqual(res.statusCode, 403);
+      assert.strictEqual(res.body.code, 'NOT_ALLOWED');
+    }
   });
-  test('tên khách đăng nhập kiểu Google (không phải mật khẩu) bị từ chối', () => {
-    assert.strictEqual(roleOf({ sub: 'x', email: 'khach@youtrend.user', email_verified: true, firebase: { sign_in_provider: 'google.com' } }), '');
+  test('chữ ký chỉ hợp lệ với đăng nhập bằng mật khẩu và không áp dụng cho email của chủ', () => {
+    assert.strictEqual(roleOf({ sub: 'x', email: 'lan@youtrend.user', name: guestTag('lan@youtrend.user'), email_verified: true, firebase: { sign_in_provider: 'google.com' } }), '');
+    assert.strictEqual(roleOf(signed('adminh@youtrend.user')), 'admin');
   });
   test('Gmail chủ chưa xác minh bị từ chối', () => {
     assert.strictEqual(roleOf({ sub: 'x', email: 'tranminh1135@gmail.com', email_verified: false, firebase: { sign_in_provider: 'password' } }), '');
@@ -93,15 +99,40 @@ describe('quyền: chủ, khách, người lạ', () => {
     assert.strictEqual(limitFor({ role: 'guest' }, 100), 30);
     assert.strictEqual(limitFor({ role: 'guest' }, 1), 1);
   });
-  test('GUEST_EMAILS rỗng thì tắt tài khoản khách; email chủ không bao giờ thành khách', () => {
-    const old = process.env.GUEST_EMAILS;
-    process.env.GUEST_EMAILS = '';
+  test('GUEST_EMAILS: danh sách cố định; GUESTS_DISABLED tắt mọi tài khoản khách', () => {
     assert.deepStrictEqual(guestList(), []);
-    assert.strictEqual(roleOf(pw('khach@youtrend.user')), '');
     process.env.GUEST_EMAILS = 'ban@youtrend.user, adminh@youtrend.user';
     assert.deepStrictEqual(guestList(), ['ban@youtrend.user']);
+    assert.strictEqual(roleOf(pw('ban@youtrend.user')), 'guest');
     assert.strictEqual(roleOf(pw('adminh@youtrend.user')), 'admin');
-    if (old === undefined) delete process.env.GUEST_EMAILS; else process.env.GUEST_EMAILS = old;
+    process.env.GUESTS_DISABLED = '1';
+    assert.strictEqual(roleOf(pw('ban@youtrend.user')), '');
+    assert.strictEqual(roleOf(signed('lan@youtrend.user')), '');
+    delete process.env.GUESTS_DISABLED; delete process.env.GUEST_EMAILS;
+  });
+  test('đổi khoá bí mật thì chữ ký cũ hết hiệu lực', () => {
+    const c = signed('lan@youtrend.user');
+    process.env.GUEST_SECRET = 'khoa-khac';
+    assert.strictEqual(roleOf(c), '');
+    process.env.GUEST_SECRET = 'bi-mat-de-test';
+    assert.strictEqual(roleOf(c), 'guest');
+  });
+  test('online, lịch sử thao tác, khoá và xoá dấu vết', async () => {
+    const e = 'lan@youtrend.user';
+    await guests.ping(e, 'uid_lan', { route: 'niche', events: [{ t: Date.now(), a: 'nav', d: 'niche', r: 'niche' }, { a: 'click', d: 'Quét nhanh', r: 'niche' }, { a: 'la', d: '' }] }, 'Mozilla/5.0 (Windows NT 10.0) Chrome/130');
+    let l = await guests.list();
+    assert.strictEqual(l[0].email, e); assert.strictEqual(l[0].online, true); assert.strictEqual(l[0].route, 'niche'); assert.strictEqual(l[0].ua, 'Windows · Chrome');
+    const log = await guests.log(e);
+    assert.strictEqual(log.length, 2); assert.strictEqual(log[0].d, 'Quét nhanh');
+    await guests.setBlocked(e, true);
+    const res = mkRes();
+    assert.strictEqual(await requireUser(req(signed(e)), res, opts), null);
+    assert.strictEqual(res.body.code, 'BLOCKED');
+    assert.strictEqual((await guests.list())[0].online, false);
+    await guests.setBlocked(e, false);
+    assert.strictEqual((await requireUser(req(signed(e)), mkRes(), opts)).role, 'guest');
+    await guests.forget(e);
+    assert.strictEqual((await guests.list()).length, 0); assert.strictEqual((await guests.log(e)).length, 0);
   });
   test('401 khi không gửi token', async () => {
     const res = mkRes();

@@ -127,7 +127,8 @@
         'auth/popup-closed-by-user': 'Bạn đã đóng cửa sổ đăng nhập Google.', 'auth/popup-blocked': 'Trình duyệt chặn cửa sổ đăng nhập. Cho phép popup rồi thử lại.',
         'auth/unauthorized-domain': 'Tên miền chưa được thêm vào Firebase (Authentication → Settings → Authorized domains).',
         'auth/network-request-failed': 'Lỗi mạng, kiểm tra kết nối.',
-        'auth/email-already-in-use': 'Tài khoản này đã có sẵn. Muốn đổi mật khẩu thì dùng ô Đổi mật khẩu khách.',
+        'auth/email-already-in-use': 'Tên đăng nhập này đã có trong Firebase. Chọn tên khác, hoặc dùng "Thêm tài khoản đã có" nếu bạn biết mật khẩu của nó.',
+        'auth/requires-recent-login': 'Firebase yêu cầu đăng nhập lại trước khi làm việc này, thử lại lần nữa.',
         'auth/weak-password': 'Mật khẩu quá yếu, cần ít nhất 8 ký tự.',
         'auth/operation-not-allowed': 'Firebase đang tắt đăng nhập bằng mật khẩu hoặc tắt tạo tài khoản mới. Tạo tài khoản trong Firebase Console theo hướng dẫn bên dưới.',
         'auth/admin-restricted-operation': 'Firebase đang chặn tạo tài khoản mới từ web. Tạo tài khoản trong Firebase Console theo hướng dẫn bên dưới.'
@@ -160,8 +161,13 @@
       try { return await fn(a); } catch (e) { var er = new Error(this.mapError(e)); er.code = (e && e.code) || ''; throw er; }
       finally { try { await a.signOut(); } catch (e) { } }
     },
-    createGuest: function (name, pass) { var em = this.toEmail(name); return this.guestRun(function (a) { return a.createUserWithEmailAndPassword(em, pass); }); },
-    changeGuestPassword: function (name, oldPass, newPass) { var em = this.toEmail(name); return this.guestRun(async function (a) { var c = await a.signInWithEmailAndPassword(em, oldPass); await c.user.updatePassword(newPass); }); },
+    // Máy chủ cấp "chữ ký" cho tên khách; chữ ký được ghi vào tên hiển thị của tài khoản thì máy chủ mới cho vào.
+    guestSign: async function (name) { var r = await api('/api/me', { action: 'guestSign', name: name }); return r.tag; },
+    createGuest: async function (name, pass) { var em = this.toEmail(name), tag = await this.guestSign(name); return this.guestRun(async function (a) { var c = await a.createUserWithEmailAndPassword(em, pass); await c.user.updateProfile({ displayName: tag }); }); },
+    // Tài khoản đã có sẵn trong Firebase (tạo tay hoặc tạo từ máy khác): kiểm tra mật khẩu rồi cấp quyền khách
+    adoptGuest: async function (name, pass) { var em = this.toEmail(name), tag = await this.guestSign(name); return this.guestRun(async function (a) { var c = await a.signInWithEmailAndPassword(em, pass); await c.user.updateProfile({ displayName: tag }); }); },
+    changeGuestPassword: async function (name, oldPass, newPass) { var em = this.toEmail(name), tag = await this.guestSign(name); return this.guestRun(async function (a) { var c = await a.signInWithEmailAndPassword(em, oldPass); await c.user.updatePassword(newPass); try { await c.user.updateProfile({ displayName: tag }); } catch (e) { } }); },
+    deleteGuest: function (name, pass) { var em = this.toEmail(name); return this.guestRun(async function (a) { var c = await a.signInWithEmailAndPassword(em, pass); await c.user.delete(); }); },
     signOut: async function () { try { if (this.init()) await firebase.auth().signOut(); } catch (e) { } },
     onChange: function (fn) { if (!this.init()) { fn(null); return function () { }; } return firebase.auth().onAuthStateChanged(fn); },
     // Hỏi máy chủ: tài khoản này là chủ (admin), khách (guest) hay không được vào
@@ -177,8 +183,45 @@
   W.ytAuth = ytAuth;
 
   // ---------- gọi API máy chủ (có token admin) ----------
+  // ---------- Khách: báo online + ghi lịch sử thao tác (mục đã mở, nút đã bấm, lần gọi AI) cho chủ web xem ----------
+  // Chỉ ghi nhãn của nút / tên mục, không bao giờ ghi nội dung gõ trong ô nhập.
+  var TQ = [], tOn = false, tLast = '', tSoon = 0, lastAuth = '';
+  function curRoute() { return (location.hash || '').replace(/^#\/?/, '').split(/[?&]/)[0].slice(0, 30) || 'today'; }
+  function track(a, d) {
+    if (!tOn) return; d = String(d || '').replace(/\s+/g, ' ').trim().slice(0, 80); if (!d) return;
+    var r = curRoute(), k = a + '|' + d + '|' + r; if (k === tLast && a !== 'ai') return; tLast = k;
+    TQ.push({ t: Date.now(), a: a, d: d, r: r }); if (TQ.length > 80) TQ.shift();
+    // gửi sớm sau khi có thao tác (gom trong 8 giây) để chủ thấy gần như ngay
+    if (!tSoon) tSoon = setTimeout(function () { tSoon = 0; beat(); }, 8000);
+  }
+  async function beat() {
+    if (!tOn || document.hidden) return;
+    var ev = TQ.splice(0, 40);
+    try { var j = await api('/api/me', { action: 'ping', route: curRoute(), events: ev }); if (j && j.blocked) throw Object.assign(new Error('blocked'), { code: 'BLOCKED' }); }
+    catch (e) { if (e && e.code === 'BLOCKED') { tOn = false; try { await ytAuth.signOut(); } catch (x) { } location.reload(); return; } TQ = ev.concat(TQ).slice(-80); }
+  }
+  function trackStart() {
+    if (tOn) return; tOn = true;
+    track('login', 'Mở web'); track('nav', curRoute());
+    setTimeout(beat, 1500); setInterval(beat, 60000);
+    window.addEventListener('hashchange', function () { track('nav', curRoute()); });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) beat(); });
+    // đóng tab / tải lại trang: gửi nốt phần chưa kịp gửi
+    window.addEventListener('pagehide', function () {
+      if (!TQ.length || !lastAuth) return; var ev = TQ.splice(0, 40);
+      try { fetch('/api/me', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: lastAuth }, body: JSON.stringify({ action: 'ping', route: curRoute(), events: ev }) }); } catch (e) { }
+    });
+    document.addEventListener('click', function (e) {
+      var b = e.target && e.target.closest && e.target.closest('button, a[href], [role="tab"], summary'); if (!b) return;
+      var t = b.getAttribute('aria-label') || b.innerText || b.getAttribute('title') || '';
+      track('click', t.replace(/[▾▴▼▲×✕]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60));
+    }, true);
+  }
+
   async function api(path, body) {
+    if (tOn && path === '/api/research' && body && body.action) track('ai', body.action);
     var hd = Object.assign({ 'Content-Type': 'application/json' }, await ytAuth.authHeaders());
+    if (hd.Authorization) lastAuth = hd.Authorization;
     var r = await fetch(path, { method: 'POST', headers: hd, body: JSON.stringify(body || {}) });
     var j = await r.json().catch(function () { return {}; });
     if (!r.ok || j.success === false) { var e = new Error(j.message || ('Lỗi máy chủ ' + r.status)); e.status = r.status; e.code = j.code; throw e; }
@@ -378,5 +421,5 @@
     el.__monoObs = mo;
   }
 
-  W.YT4 = { claude: claude, st: st, yt: yt, keys: ytKeyManager, auth: ytAuth, api: api, U: U, store: store, on: on, emit: emit, resolveChannel: resolveChannel, uploads: uploads, videoDetails: videoDetails, channelStats: channelStats, watchMono: watchMono, stripEmoji: strip };
+  W.YT4 = { claude: claude, st: st, yt: yt, keys: ytKeyManager, auth: ytAuth, api: api, track: track, trackStart: trackStart, U: U, store: store, on: on, emit: emit, resolveChannel: resolveChannel, uploads: uploads, videoDetails: videoDetails, channelStats: channelStats, watchMono: watchMono, stripEmoji: strip };
 })();
