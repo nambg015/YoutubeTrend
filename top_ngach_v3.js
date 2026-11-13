@@ -212,11 +212,13 @@
     var byN = {}; Object.keys(A).forEach(function (id) { var a = A[id]; if (a.n) (byN[CH[id].nc] = byN[CH[id].nc] || []).push(a.medOut); });
     var nMed = {}; Object.keys(byN).forEach(function (k) { nMed[k] = median(byN[k]); });
     // video
-    var vids = [];
+    var vids = [], topBy = {};
     Object.keys(store.videos).forEach(function (id) {
       var v = store.videos[id], c = CH[v.ch]; if (!c || !A[v.ch]) return;
-      if (lastCut && !((v.fs || 0) >= lastCut)) return;
       var isS = v.du <= SHORT_MAX; if (short !== isS) return;
+      // video nhiều view nhất của kênh, không phụ thuộc khung thời gian đang lọc (để bảng kênh luôn có ảnh bìa)
+      (topBy[v.ch] = topBy[v.ch] || []).push({ id: id, title: v.ti, t: v.t, views: v.vw, dur: v.du, out: v.vw / Math.max(c.s, 1) });
+      if (lastCut && !((v.fs || 0) >= lastCut)) return;
       var hrs = Math.max(1, (now - v.t) / HOUR); if (hrs > f.hours) return;
       var out = v.vw / Math.max(c.s, 1); if (v.vw < f.minView || out < f.minOut) return;
       if (f.minDur && v.du < f.minDur) return;
@@ -235,7 +237,7 @@
       if (f.niche && c.nc !== f.niche) return;
       if (text && !vv.length && (c.n + ' ' + c.nc).toLowerCase().indexOf(text) < 0) return;
       var best = vv[0] || null, bestOut = best ? best.out : (a.max || 0) / Math.max(c.s, 1);
-      chans.push({ id: id, name: c.n, subs: c.s, mk: c.mk, niche: c.nc, cat: c.cat, cr: c.cr, country: c.c || '', vc: c.vc || 0, fs: c.fs || 0, isNew: !!(c.fs && now - c.fs <= newMs), a: a, vids: vv, best: best, bestOut: bestOut, peer: a.n && nMed[c.nc] ? a.medOut / Math.max(nMed[c.nc], 0.01) : null });
+      chans.push({ id: id, name: c.n, subs: c.s, mk: c.mk, niche: c.nc, cat: c.cat, cr: c.cr, country: c.c || '', vc: c.vc || 0, fs: c.fs || 0, isNew: !!(c.fs && now - c.fs <= newMs), a: a, vids: vv, top: (topBy[id] || []).sort(function (x, y) { return y.views - x.views; }).slice(0, 3), best: best, bestOut: bestOut, peer: a.n && nMed[c.nc] ? a.medOut / Math.max(nMed[c.nc], 0.01) : null });
     });
     var stats = { channels: chans.length, farm: 0, rise: 0, unk: 0, fluke: 0, fresh: chans.filter(function (c) { return c.isNew; }).length, videos: vids.length, markets: new Set(chans.map(function (c) { return c.mk; })).size };
     chans.forEach(function (c) { if (stats[c.a.v] != null) stats[c.a.v]++; });
@@ -988,6 +990,7 @@
     var mini = function (t, tone) { return h('span', { className: 'inline-flex items-center h-[1.6em] px-[0.5em] rounded text-[0.82em] font-semibold whitespace-nowrap ' + CHIP[tone || 'cham'] }, t); };
     var chGrid = function () {
       var G = UI.Grid, GT = UI.GThumb; if (!G) return chTable();
+      var top3 = function (c) { var seen = {}, out = []; (c.vids || []).concat(c.top || []).forEach(function (v) { if (!seen[v.id]) { seen[v.id] = 1; out.push(v); } }); return out.sort(function (x, y) { return y.views - x.views; }).slice(0, 3); };
       var cols = [
         { k: 'name', t: 'Kênh', w: 'min-w-[220px] max-w-[300px]', v: function (c) { return c.name.toLowerCase(); }, r: function (c) {
           var m = marks[c.id] || {};
@@ -1002,8 +1005,8 @@
         { k: 'vpm', t: 'Video/tháng', right: true, v: function (c) { return c.a.cad || 0; }, r: function (c) { return c.a.n ? Math.round(c.a.cad * 4.35) : '–'; } },
         { k: 'mk', t: 'Nước', v: function (c) { return code(c.mk); } },
         { k: 'age', t: 'Tuổi kênh', right: true, v: function (c) { return c.cr ? Date.now() - c.cr : 9e15; }, r: function (c) { if (!c.cr) return '–'; var d = Math.round((Date.now() - c.cr) / 864e5); return d < 365 ? d + ' ngày' : (d / 365).toFixed(1) + ' năm'; } },
-        { k: 'th', t: 'Video nổ nhất', r: function (c) { return h('div', { className: 'flex gap-1.5' }, c.vids.slice(0, 3).map(function (v) { return h(GT, { key: v.id, id: v.id, title: v.title, tl: fx(v.out), br: N(v.views) }); })); } },
-        { k: 'best', t: 'Tiêu đề video nổ', w: 'min-w-[220px] max-w-[340px]', r: function (c) { var v = c.vids[0]; return v ? h('div', null, h('a', { href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer', className: 'text-[#f1f1f1] hover:text-[#7cc3ff] line-clamp-2 leading-snug', title: v.title }, v.title), tr[v.id] && h('div', { className: 'text-[0.9em] text-[#aaa] line-clamp-1', title: tr[v.id] }, tr[v.id])) : '–'; } },
+        { k: 'th', t: 'Video nhiều view nhất', r: function (c) { var l = top3(c); return l.length ? h('div', { className: 'flex gap-1.5' }, l.map(function (v) { return h(GT, { key: v.id, id: v.id, title: v.title + ' · ' + N(v.views) + ' view', tl: fx(v.out), br: N(v.views) }); })) : h('span', { className: 'text-[#717171]', title: 'Kho chưa lưu video nào của kênh này. Bấm tên kênh để xem chi tiết.' }, 'chưa có video'); } },
+        { k: 'best', t: 'Tiêu đề video nổ', w: 'min-w-[220px] max-w-[340px]', r: function (c) { var v = top3(c)[0]; return v ? h('div', null, h('a', { href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer', className: 'text-[#f1f1f1] hover:text-[#7cc3ff] line-clamp-2 leading-snug', title: v.title }, v.title), tr[v.id] && h('div', { className: 'text-[0.9em] text-[#aaa] line-clamp-1', title: tr[v.id] }, tr[v.id])) : '–'; } },
         { k: 'score', t: 'Điểm farm', right: true, tone: 'g', v: function (c) { return c.a.score || 0; }, r: function (c) { return c.a.n ? h('b', null, c.a.score) : '–'; } },
         { k: 'hr', t: 'Video đạt', right: true, v: function (c) { return c.a.hr || 0; }, r: function (c) { return c.a.n ? c.a.hits + '/' + c.a.n : '–'; } },
         { k: 'med', t: 'View trung vị', right: true, v: function (c) { return c.a.med || 0; }, r: function (c) { return c.a.n ? N(c.a.med) : '–'; } },
