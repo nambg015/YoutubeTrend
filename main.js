@@ -9,24 +9,30 @@
 
   var NAV = [['today', 'Hôm nay', 0, '#f1f1f1'], ['explore', 'Khám phá', 0, '#3ea6ff'], ['niche', 'Top Ngách', 0, '#ff4e45'], ['channels', 'Kênh', 0, '#a970ff'], ['resource', 'Tạo tài nguyên', 'Tài nguyên', '#f5c451'], ['tools', 'Công cụ', 0, '#22c3b5'], ['library', 'Thư viện', 0, '#4bc167'], ['settings', 'Cài đặt', 0, '#aaaaaa']];
   var OLD = { search: 'explore', keywords: 'explore', niche: 'explore', rpm: 'niche', competitors: 'channels', spy: 'channels', studio_chart: 'channels', wiki: 'library' };
-  // Lộ trình 5 bước nghiên cứu một ngách: mỗi bước dẫn tới đúng công cụ. [số, tên, route, tham số, mô tả, màu]
+  // Lộ trình 5 bước nghiên cứu một ngách. Mỗi bước là một ô vuông bo nhẹ, dùng đúng tên, biểu tượng và màu của mục bên trái mà nó mở.
+  // [số, tên bước, route, tham số, mô tả ngắn]
   var FLOW = [
-    [1, 'Tìm ngách', 'niche', null, 'Quét kênh nhỏ đang ăn view', '#ff4e45'],
-    [2, 'Chân dung', 'tools', { sub: 'cm' }, 'Đọc bình luận để biết ai đang xem', '#22c3b5'],
-    [3, 'Đối thủ', 'channels', { sub: 'track' }, 'Theo dõi Dream 100', '#a970ff'],
-    [4, 'Công thức', 'explore', { sub: 'titles' }, 'Khuôn tiêu đề và ảnh bìa đang thắng', '#3ea6ff'],
-    [5, 'Xu hướng', 'today', null, 'Video đang nổ hôm nay', '#f5c451']
+    [1, 'Tìm ngách', 'niche', null, 'Quét kênh nhỏ ăn view'],
+    [2, 'Chân dung khán giả', 'tools', { sub: 'cm' }, 'AI đọc bình luận'],
+    [3, 'Đối thủ', 'channels', { sub: 'track' }, 'Bảng Dream 100'],
+    [4, 'Công thức', 'explore', { sub: 'titles' }, 'Khuôn tiêu đề thắng'],
+    [5, 'Xu hướng', 'today', null, 'Video đang nổ']
   ];
   function Flow(p) {
     var cur = FLOW.findIndex(function (x) { return x[2] === p.route; });
-    return h('nav', { 'aria-label': 'Lộ trình nghiên cứu', className: 'mb-4 flex items-center gap-1 overflow-x-auto pb-1' }, FLOW.map(function (x, i) {
-      var on = i === cur;
-      return h(React.Fragment, { key: x[0] },
-        i > 0 && h('span', { 'aria-hidden': true, className: 'shrink-0 w-5 sm:w-8 border-t-2 border-dotted', style: { borderColor: i <= cur ? x[5] : '#3a3a3a' } }),
-        h('button', { onClick: function () { if (x[2] === 'channels') { try { localStorage.setItem('yt4_track_view', JSON.stringify('list')); } catch (e) { } } p.goto(x[2], x[3] || {}); }, 'aria-current': on ? 'step' : null, title: x[4],
-          className: cx('shrink-0 inline-flex items-center gap-2 h-8 pl-1 pr-3 rounded-full text-[11.5px] font-semibold whitespace-nowrap transition cursor-pointer border', on ? 'text-[#0f0f0f] border-transparent' : 'bg-[#181818]/90 text-[#aaa] border-[#303030] hover:text-white hover:border-[#555]'), style: on ? { background: x[5] } : null },
-          h('span', { className: cx('w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold', on ? 'bg-[#0f0f0f] text-white' : 'bg-[#272727]'), style: on ? null : { color: x[5] } }, x[0]), x[1]));
-    }), cur >= 0 && h('span', { className: 'hidden md:inline shrink-0 ml-3 text-[11px] text-[#aaa]' }, 'Bước ' + FLOW[cur][0] + ': ' + FLOW[cur][4]));
+    return h('nav', { 'aria-label': 'Lộ trình nghiên cứu', className: 'mb-5 overflow-x-auto pb-1' },
+      h('ol', { className: 'grid grid-flow-col auto-cols-[minmax(210px,1fr)] gap-2' }, FLOW.map(function (x, i) {
+        var on = i === cur, nav = NAV.filter(function (n) { return n[0] === x[2]; })[0] || [x[2], x[1], 0, '#aaaaaa'], col = nav[3];
+        return h('li', { key: x[0], className: 'min-w-0' },
+          h('button', { onClick: function () { if (x[2] === 'channels') { try { localStorage.setItem('yt4_track_view', JSON.stringify('list')); } catch (e) { } } p.goto(x[2], x[3] || {}); }, 'aria-current': on ? 'step' : null,
+            className: cx('w-full h-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition cursor-pointer', on ? 'bg-[#212121]' : 'bg-[#181818]/90 border-[#303030] hover:bg-[#212121] hover:border-[#4a4a4a]'), style: on ? { borderColor: col, boxShadow: 'inset 0 -3px 0 ' + col } : null },
+            h('span', { className: 'shrink-0 w-9 h-9 rounded-md grid place-items-center text-[14px] font-bold tabular-nums', style: on ? { background: col, color: '#0f0f0f' } : { background: '#272727', color: col } }, x[0]),
+            h('span', { className: 'min-w-0 flex-1' },
+              h('span', { className: cx('block text-[13.5px] font-semibold leading-5 truncate', on ? 'text-white' : 'text-[#e6e6e6]') }, x[1]),
+              h('span', { className: 'flex items-center gap-1.5 text-[11.5px] leading-4 text-[#aaa] min-w-0' },
+                h('span', { className: 'shrink-0 inline-flex items-center gap-1 font-medium', style: { color: col } }, h(K.Icon, { name: nav[0], size: 13, stroke: 2 }), nav[1]),
+                h('span', { className: 'truncate' }, '· ' + x[4])))));
+      })));
   }
   function readRoute() { var hsh = (location.hash || '').replace(/^#\/?/, '').split('/')[0]; if (NAV.some(function (n) { return n[0] === hsh; })) return hsh; var q = new URLSearchParams(location.search).get('tab'); return OLD[q] || 'today'; }
 
