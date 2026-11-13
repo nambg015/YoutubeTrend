@@ -858,6 +858,12 @@
         var cat = CATS[g.topCat], th = [];
         g.chans.forEach(function (c) { (c.vids || []).forEach(function (v) { th.push(Object.assign({}, v, { _subs: c.subs, title: v.title + ' · ' + c.name })); }); });
         th.sort(function (a, b) { return b.out - a.out; }); th = th.slice(0, 4);
+        // chưa đủ 4 ảnh (video của ngách nằm ngoài khung thời gian đang lọc): lấy thêm video nhiều view nhất của các kênh trong ngách
+        if (th.length < 4) {
+          var have = {}, more = []; th.forEach(function (v) { have[v.id] = 1; });
+          g.chans.forEach(function (c) { (c.top || []).forEach(function (v) { if (!have[v.id]) { have[v.id] = 1; more.push(Object.assign({}, v, { _subs: c.subs, title: v.title + ' · ' + c.name })); } }); });
+          more.sort(function (a, b) { return b.views - a.views; }); th = th.concat(more.slice(0, 4 - th.length));
+        }
         var nb = 'inline-flex items-center justify-center h-7 px-2 rounded-full bg-[#323232] text-[11.5px] font-medium text-[#f1f1f1] hover:bg-[#424242] transition cursor-pointer whitespace-nowrap min-w-0 truncate';
         return h('article', { key: g.name, className: 'yt-card p-2.5 flex flex-col gap-1.5 relative overflow-hidden' },
           g.farm > 0 && h('span', { className: 'absolute top-0 left-0 w-[62px] h-[62px] overflow-hidden pointer-events-none z-10', title: g.farm + ' kênh farm tiền trong ngách này' },
@@ -872,7 +878,7 @@
             h('span', null, h('b', { className: 'text-cham-50' }, N(g.chans.length)), ' kênh'), g.rise > 0 && h('span', { className: 'text-[#f5c451]' }, g.rise + ' đang lên'), h('span', null, 'view÷sub ', h('b', { className: 'text-cham-50' }, fx(g.medOut))),
             g.fresh > 0 && h('span', { className: 'px-1.5 rounded bg-[#ff4e45] text-white font-semibold' }, '+' + g.fresh + ' mới')),
           h('div', { className: 'flex justify-between gap-2 text-[10.5px] text-cham-400 tabular-nums' }, h('span', null, 'RPM ~$' + g.rpmHi.toFixed(1)), h('span', null, N(g.v30) + ' view/30 ngày')),
-          th.length > 0 && samples(th),
+          th.length > 0 ? samples(th) : h('div', { className: 'rounded-md border border-dashed border-[#3a3a3a] px-2 py-3 text-center text-[11px] text-[#888] leading-snug' }, 'Kho chưa lưu video nào của ngách này. Bấm Video hoặc quét sâu hơn để lấy ảnh bìa.'),
           h('div', { className: 'grid grid-cols-2 gap-1 mt-auto pt-0.5' },
             h('button', { onClick: function () { set('niche', g.name); setTab('ch'); }, className: nb }, 'Xem ' + g.chans.length + ' kênh'),
             h('button', { onClick: function () { set('niche', g.name); setTab('vid'); }, className: nb }, 'Video'),
