@@ -596,6 +596,7 @@
     function persist(n) { lsSet('tn3_filters', Object.assign({}, n, { text: '', niche: '' })); }
     function setMany(patch) { setF(function (o) { var n = Object.assign({}, o, patch); persist(n); return n; }); }
     var pp = useState(''), pop = pp[0], setPop = pp[1];
+    var co = useState(false), cOpen = co[0], setCOpen = co[1], cqS = useState(''), cQ = cqS[0], setCQ = cqS[1];
     var cgS = useState(function () { return lsGet('tn3_cgroups', []) || []; }), cgroups = cgS[0], setCgroups0 = cgS[1], ce = useState(null), cgEdit = ce[0], setCgEdit = ce[1];
     function setCgroups(a) { setCgroups0(a); lsSet('tn3_cgroups', a); }
     function set(k, v) { setF(function (o) { var n = Object.assign({}, o); n[k] = v; if (k === 'mode') { n.country = ''; n.niche = ''; n.mks = null; n.grp = ''; } if (k === 'fmt' && v === 'short') n.minDur = 0; persist(n); return n; }); }
@@ -655,6 +656,9 @@
     var bar = function (val, color) { return h('div', { className: 'h-1.5 rounded-md bg-[#3f3f3f] overflow-hidden' }, h('div', { className: 'h-full rounded-md ' + (color || 'bg-[#3ea6ff]'), style: { width: Math.max(3, Math.min(100, val)) + '%' } })); };
     var group = function (kids) { kids = kids.filter(Boolean); return kids.length ? h('div', { className: 'pt-4 first:pt-0 border-t first:border-t-0 border-cham-800 space-y-3' }, kids) : null; };
     var mkOpts = [['', f.mode === 'rpm' ? 'Cả 12 nước RPM cao' : 'Tất cả quốc gia']].concat((f.mode === 'rpm' ? E.RPM_MK : E.RPM_MK.concat(E.ALL_MK.filter(function (k) { return E.RPM_MK.indexOf(k) < 0; }))).map(function (k) { return [k, M[k][1] + ' (' + M[k][2] + ')' + (E.RPM_MK.indexOf(k) >= 0 ? '  ·  RPM ~$' + M[k][4][0] + '–' + M[k][4][1] : '')]; }));
+    // Cờ dạng ảnh (emoji cờ không hiện trên Windows). Ảnh lỗi thì tự ẩn, tên nước vẫn còn.
+    var flagImg = function (k, cls) { var c = M[k] && M[k][2]; return c ? h('img', { src: 'https://flagcdn.com/w40/' + c.toLowerCase() + '.png', alt: '', width: 20, height: 15, loading: 'lazy', onError: function (e) { e.target.style.visibility = 'hidden'; }, className: cx('w-5 h-[15px] rounded-[2px] object-cover shrink-0 bg-[#303030]', cls) }) : null; };
+    var plain = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); };
     var tierOf = function (k) { var hi = M[k][4][1]; return hi >= 6 ? 0 : hi >= 2.5 ? 1 : 2; };
     var MKEYS = Object.keys(M).sort(function (a, b) { return tierOf(a) - tierOf(b) || M[b][4][1] - M[a][4][1] || M[a][1].localeCompare(M[b][1], 'vi'); });
     // hộp tạo / sửa nhóm nước
@@ -673,7 +677,7 @@
             var ks = MKEYS.filter(function (k) { return tierOf(k) === t && (!lq || (M[k][1] + ' ' + M[k][2]).toLowerCase().indexOf(lq) >= 0); }); if (!ks.length) return null;
             return h('div', { key: t }, h('div', { className: 'flex items-center gap-2 mb-2' }, h('span', { className: cx('text-[12px] font-bold', ['text-[#6fcf85]', 'text-[#f5c451]', 'text-[#aaa]'][t]) }, ['RPM cao', 'RPM vừa', 'RPM thấp'][t] + ' · ' + ks.length + ' nước'),
               h('button', { onClick: function () { var s2 = Object.assign({}, cgEdit.sel), all = ks.every(function (k) { return s2[k]; }); ks.forEach(function (k) { s2[k] = all ? 0 : 1; }); setCgEdit(Object.assign({}, cgEdit, { sel: s2 })); }, className: 'text-[11.5px] text-[#7cc3ff] hover:underline cursor-pointer' }, 'Chọn / bỏ cả nhóm')),
-              h('div', { className: 'grid gap-1.5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4' }, ks.map(function (k) { var on = !!cgEdit.sel[k]; return h('button', { key: k, type: 'button', role: 'checkbox', 'aria-checked': on, onClick: function () { var s3 = Object.assign({}, cgEdit.sel); s3[k] = on ? 0 : 1; setCgEdit(Object.assign({}, cgEdit, { sel: s3 })); }, className: cx('h-8 px-2.5 rounded-lg text-left text-[12px] truncate cursor-pointer transition', on ? 'bg-[#f1f1f1] text-[#0f0f0f] font-semibold' : 'bg-[#181818] text-[#e6e6e6] hover:bg-[#323232]') }, M[k][1] + ' ', h('span', { className: 'opacity-60' }, M[k][2])); })));
+              h('div', { className: 'grid gap-1.5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4' }, ks.map(function (k) { var on = !!cgEdit.sel[k]; return h('button', { key: k, type: 'button', role: 'checkbox', 'aria-checked': on, onClick: function () { var s3 = Object.assign({}, cgEdit.sel); s3[k] = on ? 0 : 1; setCgEdit(Object.assign({}, cgEdit, { sel: s3 })); }, className: cx('h-8 px-2.5 rounded-lg text-left text-[12px] flex items-center gap-2 min-w-0 cursor-pointer transition', on ? 'bg-[#f1f1f1] text-[#0f0f0f] font-semibold' : 'bg-[#181818] text-[#e6e6e6] hover:bg-[#323232]') }, flagImg(k), h('span', { className: 'truncate' }, M[k][1] + ' ', h('span', { className: 'opacity-60' }, M[k][2]))); })));
           })),
           h('div', { className: 'p-4 border-t border-[#303030] flex flex-wrap items-center gap-2' },
             h('span', { className: 'flex-1 min-w-[180px] text-[11.5px] text-[#aaa]' }, 'Đã chọn ' + n.length + ' nước. Mỗi lần quét chia quota cho các nước này, nên nhóm càng nhiều nước thì mỗi nước càng được quét ít.'),
@@ -706,11 +710,33 @@
               }))),
           h('div', { key: 'c' }, label('Quốc gia'),
             h('div', { className: 'grid grid-cols-[minmax(0,1fr)_auto] gap-2' },
-              h('select', { value: f.grp ? 'g:' + f.grp : f.country, 'aria-label': 'Quốc gia', onChange: function (e) { var v = e.target.value; if (v.indexOf('g:') === 0) { var g = cgroups.filter(function (x) { return x.id === v.slice(2); })[0]; if (g) setMany({ grp: g.id, mks: g.mks, country: '', niche: '' }); } else setMany({ grp: '', mks: null, country: v, niche: '' }); }, className: cx(B.field, 'w-full min-w-0 cursor-pointer') },
-                h('option', { value: '' }, f.mode === 'rpm' ? 'Cả 12 nước RPM cao' : '19 thị trường chính'),
-                cgroups.length > 0 && h('optgroup', { label: 'Nhóm của bạn' }, cgroups.map(function (g) { return h('option', { key: g.id, value: 'g:' + g.id }, g.name + ' (' + g.mks.length + ' nước)'); })),
-                [0, 1, 2].map(function (t) { return h('optgroup', { key: t, label: ['RPM cao', 'RPM vừa', 'RPM thấp'][t] + ' (ước tính)' }, MKEYS.filter(function (k) { return tierOf(k) === t; }).map(function (k) { return h('option', { key: k, value: k }, M[k][1] + ' (' + M[k][2] + ') · ~$' + M[k][4][0] + '–' + M[k][4][1]); })); })),
-              h('button', { onClick: function () { var g = f.grp && cgroups.filter(function (x) { return x.id === f.grp; })[0]; var sel0 = {}; (g ? g.mks : []).forEach(function (k) { sel0[k] = 1; }); setCgEdit({ id: g ? g.id : '', name: g ? g.name : '', sel: sel0, q: '' }); }, title: 'Tạo hoặc sửa nhóm nước của riêng bạn', className: 'h-9 px-3 rounded-lg bg-[#1d3a2a] text-[#9fe0ad] hover:bg-[#25492f] text-[12px] font-semibold cursor-pointer whitespace-nowrap' }, f.grp ? 'Sửa nhóm' : '+ Nhóm')))
+              (function () {
+                var g0 = f.grp && cgroups.filter(function (x) { return x.id === f.grp; })[0];
+                return h('button', { type: 'button', 'aria-label': 'Quốc gia', 'aria-haspopup': 'listbox', 'aria-expanded': cOpen, onClick: function () { setCOpen(!cOpen); setCQ(''); }, className: cx('h-9 px-2.5 rounded-lg border text-[12px] text-[#f1f1f1] flex items-center gap-2 min-w-0 cursor-pointer transition', cOpen ? 'bg-[#272727] border-[#f1f1f1]' : 'bg-[#121212] border-[#303030] hover:border-[#555]') },
+                  !g0 && f.country && M[f.country] ? flagImg(f.country) : null,
+                  h('span', { className: 'flex-1 min-w-0 truncate text-left' }, g0 ? g0.name : f.country && M[f.country] ? M[f.country][1] : f.mode === 'rpm' ? 'Cả 12 nước' : '19 nước chính'),
+                  h('span', { 'aria-hidden': true, className: 'text-[10px] opacity-70' }, cOpen ? '▲' : '▼'));
+              })(),
+              h('button', { onClick: function () { var g = f.grp && cgroups.filter(function (x) { return x.id === f.grp; })[0]; var sel0 = {}; (g ? g.mks : []).forEach(function (k) { sel0[k] = 1; }); setCgEdit({ id: g ? g.id : '', name: g ? g.name : '', sel: sel0, q: '' }); }, title: 'Tạo hoặc sửa nhóm nước của riêng bạn', className: 'h-9 px-3 rounded-lg bg-[#1d3a2a] text-[#9fe0ad] hover:bg-[#25492f] text-[12px] font-semibold cursor-pointer whitespace-nowrap' }, f.grp ? 'Sửa nhóm' : '+ Nhóm')),
+            cOpen && (function () {
+              var q = plain(cQ.trim());
+              var pick = function (v) { if (v.indexOf('g:') === 0) { var g = cgroups.filter(function (x) { return x.id === v.slice(2); })[0]; if (g) setMany({ grp: g.id, mks: g.mks, country: '', niche: '' }); } else setMany({ grp: '', mks: null, country: v, niche: '' }); setCOpen(false); setCQ(''); };
+              var row = function (key, on, v, left, name, right) { return h('button', { key: key, type: 'button', role: 'option', 'aria-selected': on, onClick: function () { pick(v); }, className: cx('w-full h-8 px-2.5 flex items-center gap-2 text-left text-[12px] cursor-pointer', on ? 'bg-[#3a3a3a] text-white font-semibold' : 'text-[#e6e6e6] hover:bg-[#272727]') }, left, h('span', { className: 'flex-1 min-w-0 truncate' }, name), right && h('span', { className: 'shrink-0 text-[11px] tabular-nums text-[#aaa]' }, right)); };
+              var head = function (t, cls) { return h('div', { key: 'h' + t, className: cx('px-2.5 pt-2 pb-1 text-[10.5px] font-bold uppercase tracking-wide', cls) }, t); };
+              var out = [];
+              if (!q) out.push(row('all', !f.grp && !f.country, '', null, f.mode === 'rpm' ? 'Cả 12 nước RPM cao' : '19 thị trường chính'));
+              var gs = cgroups.filter(function (g) { return !q || plain(g.name).indexOf(q) >= 0; });
+              if (gs.length) { out.push(head('Nhóm của bạn', 'text-[#8ab4f8]')); gs.forEach(function (g) { out.push(row('g' + g.id, f.grp === g.id, 'g:' + g.id, h('span', { className: 'flex -space-x-1.5 shrink-0' }, g.mks.slice(0, 3).map(function (k) { return h('span', { key: k }, flagImg(k)); })), g.name, g.mks.length + ' nước')); }); }
+              [0, 1, 2].forEach(function (t) {
+                var ks = MKEYS.filter(function (k) { return tierOf(k) === t && (!q || plain(M[k][1]).indexOf(q) >= 0 || M[k][2].toLowerCase() === q); });
+                if (!ks.length) return;
+                out.push(head(['RPM cao', 'RPM vừa', 'RPM thấp'][t] + ' (ước tính)', ['text-[#6fcf85]', 'text-[#f5c451]', 'text-[#aaa]'][t]));
+                ks.forEach(function (k) { out.push(row(k, !f.grp && f.country === k, k, flagImg(k), M[k][1], '$' + M[k][4][0] + '–' + M[k][4][1])); });
+              });
+              return h('div', { className: 'mt-2 rounded-lg bg-[#121212] border border-[#303030] overflow-hidden' },
+                h('input', { value: cQ, onChange: function (e) { setCQ(e.target.value); }, autoFocus: true, placeholder: 'Tìm nước…', 'aria-label': 'Tìm quốc gia', className: 'w-full h-8 px-2.5 bg-[#181818] border-b border-[#303030] text-[12px] text-[#f1f1f1] placeholder:text-[#777] outline-none' }),
+                h('div', { role: 'listbox', 'aria-label': 'Danh sách quốc gia', className: 'max-h-[340px] overflow-y-auto pb-1' }, out.length ? out : h('div', { className: 'px-2.5 py-3 text-[12px] text-[#aaa]' }, 'Không có nước nào khớp.')));
+            })())
         ]),
         group([
           h('div', { key: 's' }, label('Quy mô kênh'), h('div', { className: 'grid grid-cols-2 gap-1.5' }, [[5000, 'Dưới 5K sub'], [20000, 'Dưới 20K sub']].map(function (o) { return h('button', { key: o[0], 'aria-pressed': f.maxSub === o[0], onClick: function () { set('maxSub', o[0]); }, className: pill(f.maxSub === o[0]) }, o[1]); }))),
