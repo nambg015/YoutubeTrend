@@ -1082,10 +1082,10 @@
               h('div', null, h('dt', { className: 'text-cham-400' }, 'View'), h('dd', { className: 'text-cham-50 font-semibold tabular-nums' }, N(v.views))),
               h('div', null, h('dt', { className: 'text-cham-400' }, 'View/giờ'), h('dd', { className: 'text-[#f5c451] font-semibold tabular-nums' }, N(v.vph))),
               h('div', { className: 'text-right' }, h('dt', { className: 'text-cham-400' }, 'Đăng'), h('dd', { className: 'text-cham-200 tabular-nums' }, age(v.hrs) + ' trước'))),
-            h('div', { className: 'flex gap-1.5 pt-1.5' },
-              p.onToggleSave && h('button', { onClick: function () { p.onToggleSave(toApp(v)); }, 'aria-pressed': !!saved, className: cx(B.sm, saved && '!bg-[#f1f1f1] !text-[#0f0f0f]') }, saved ? 'Đã lưu' : 'Lưu'),
-              p.onAddCompetitor && h('button', { onClick: function () { p.onAddCompetitor(toApp(v)); }, className: B.sm }, 'Theo dõi kênh'),
-              p.onSelectKeywordForSearch && h('button', { onClick: function () { p.onSelectKeywordForSearch(v.title); }, className: B.sm + ' ml-auto' }, 'Tương tự'))));
+            h('div', { className: 'grid grid-cols-3 gap-1 pt-1.5' },
+              p.onToggleSave && h('button', { onClick: function () { p.onToggleSave(toApp(v)); }, 'aria-pressed': !!saved, title: 'Lưu video này', className: cx(B.sm, '!px-1 min-w-0 truncate', saved && '!bg-[#f1f1f1] !text-[#0f0f0f]') }, saved ? 'Đã lưu' : 'Lưu'),
+              p.onAddCompetitor && h('button', { onClick: function () { p.onAddCompetitor(toApp(v)); }, title: 'Theo dõi kênh này', className: B.sm + ' !px-1 min-w-0 truncate' }, 'Theo dõi'),
+              p.onSelectKeywordForSearch && h('button', { onClick: function () { p.onSelectKeywordForSearch(v.title); }, title: 'Tìm video tương tự', className: B.sm + ' !px-1 min-w-0 truncate' }, 'Tương tự'))));
       })),
       more(D.videos.length), lock(D.videos.length));
 
