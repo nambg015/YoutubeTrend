@@ -540,7 +540,8 @@
     var sb = useState(function () { return lsGet('tn3_presets', []) || []; }), presets = sb[0], setPresets = sb[1];
     var sc = useState(null), detail = sc[0], setDetail = sc[1];
     var sd = useState(null), send = sd[0], setSend = sd[1];
-    var se = useState(function () { try { return localStorage.getItem('tn3_view') === 'card' ? 'card' : 'row'; } catch (e) { return 'row'; } }), view = se[0], setView0 = se[1];
+    var se = useState(function () { try { var v0 = localStorage.getItem('tn3_view'); return v0 === 'card' || v0 === 'wall' ? v0 : 'row'; } catch (e) { return 'row'; } }), view = se[0], setView0 = se[1];
+    var sa = useState({ q: '', busy: false, ans: '', ids: null, only: false, kind: '', err: '' }), ai = sa[0], setAi = sa[1];
     function setView(v) { setView0(v); try { localStorage.setItem('tn3_view', v); } catch (e) { } }
     // bản dịch tiêu đề sang tiếng Việt (nhớ trong máy)
     var st0 = useState(function () { return lsGet('tn3_tr', {}); }), tr = st0[0], setTr = st0[1], st1 = useState(''), trBusy = st1[0], setTrBusy = st1[1];
@@ -719,7 +720,7 @@
         tab === 'ch' && toggle(f.hideSeen, 'Ẩn kênh đã xem', function () { set('hideSeen', !f.hideSeen); }),
         f.niche && h('button', { onClick: function () { set('niche', ''); }, title: 'Bỏ lọc ngách', className: 'inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-transparent bg-[#f1f1f1] text-[#0f0f0f] text-[12px] font-medium cursor-pointer hover:bg-white max-w-full' }, h('span', { className: 'truncate' }, 'Ngách: ' + f.niche), ic('x')),
         h('div', { className: 'ml-auto inline-flex items-center gap-2' },
-          tab !== 'niche' && h('div', { className: 'inline-flex gap-1' }, toggle(view === 'row', 'Hàng', function () { setView('row'); }), toggle(view === 'card', 'Thẻ', function () { setView('card'); })),
+          tab !== 'niche' && h('div', { className: 'inline-flex gap-1' }, toggle(view === 'row' || (view === 'wall' && tab !== 'vid'), 'Hàng', function () { setView('row'); }), toggle(view === 'card', 'Thẻ', function () { setView('card'); }), tab === 'vid' && toggle(view === 'wall', 'Tường ảnh bìa', function () { setView('wall'); })),
           h('button', { onClick: exportCsv, className: B.sm + ' h-8' }, 'Tải CSV'))));
 
     function exportCsv() {
@@ -830,6 +831,56 @@
       ];
       return h('div', { className: 'yt-card p-2' }, h(T, { cols: cols, rows: D.channels, rowKey: function (c) { return c.id; }, limit: isPro ? lim : FREE }));
     };
+    // ---------- Trợ lý AI: hỏi bằng tiếng Việt về các dòng đang hiện, AI trả lời và chọn ra dòng khớp ----------
+    var aiKind = tab === 'ch' ? 'channel' : 'video';
+    function aiRows() {
+      return aiKind === 'channel' ? D.channels.slice(0, 200).map(function (c) { return { id: c.id, name: c.name, sub: c.subs, mk: code(c.mk), n: c.niche, age: c.cr ? Math.round((Date.now() - c.cr) / 864e5) : null, vids: c.vc || null, v30: c.a.n ? c.a.v30 : null, vpm: c.a.n ? Math.round(c.a.cad * 4.35) : null, score: c.a.n ? c.a.score : null, verdict: c.a.v, x: c.a.n ? +c.a.medOut.toFixed(1) : null }; })
+        : D.videos.slice(0, 220).map(function (v) { return { id: v.id, ch: v.chName, sub: v.subs, t: v.title.slice(0, 90), v: v.views, vph: v.vph, x: +v.out.toFixed(1), h: Math.round(v.hrs), d: v.dur, mk: code(v.mk), n: v.niche, farm: v.a.v === 'farm' }; });
+    }
+    async function askAI(question) {
+      var api = window.YT4 && window.YT4.api, q = String(question || ai.q).trim(), rows = aiRows();
+      if (q.length < 3 || ai.busy) return;
+      if (!api || !rows.length) { setAi(Object.assign({}, ai, { q: q, err: rows.length ? 'Bạn cần đăng nhập để dùng trợ lý AI.' : 'Chưa có dòng nào để hỏi. Hãy quét dữ liệu trước.' })); return; }
+      setAi({ q: q, busy: true, ans: '', ids: null, only: false, kind: aiKind, err: '' });
+      try { var r = await api('/api/research', { action: 'ask', data: { q: q, kind: aiKind, rows: rows } }), ids = r.ids || []; setAi({ q: q, busy: false, ans: r.answer || '', ids: ids, only: ids.length > 0, kind: aiKind, err: '', total: rows.length }); }
+      catch (e) { setAi({ q: q, busy: false, ans: '', ids: null, only: false, kind: aiKind, err: (e && e.message) || 'AI lỗi, thử lại sau.' }); }
+    }
+    var aiSet = null; if (ai.ids && ai.ids.length && ai.kind === aiKind) { aiSet = {}; ai.ids.forEach(function (id) { aiSet[id] = 1; }); }
+    var chRows = aiSet && ai.only && tab === 'ch' ? D.channels.filter(function (c) { return aiSet[c.id]; }) : D.channels;
+    var vidRows = aiSet && ai.only && tab === 'vid' ? D.videos.filter(function (v) { return aiSet[v.id]; }) : D.videos;
+    var aiRow = function (id) { return aiSet && !ai.only && aiSet[id] ? '!bg-[#2a2140] shadow-[inset_3px_0_0_#a970ff]' : ''; };
+    function copyTable() {
+      var rows = aiRows(), keys = rows.length ? Object.keys(rows[0]) : [];
+      var text = 'Đây là bảng ' + (aiKind === 'channel' ? 'kênh' : 'video') + ' YouTube tôi quét được bằng YouTrend (' + rows.length + ' dòng, cách nhau bằng dấu tab).\nCột: ' + (aiKind === 'channel' ? 'id, tên kênh, sub, nước, ngách, tuổi kênh (ngày), tổng video, view 30 ngày, video/tháng, điểm farm 0–100, xếp loại, view trung vị ÷ sub' : 'id, kênh, sub, tiêu đề, view, view/giờ, view ÷ sub, số giờ từ lúc đăng, thời lượng (giây), nước, ngách, kênh farm') + '.\nHãy: [GÕ CÂU HỎI CỦA BẠN, ví dụ: chọn 10 kênh đáng clone nhất và giải thích]\n\n' + keys.join('\t') + '\n' + rows.map(function (r) { return keys.map(function (k) { return r[k] == null ? '' : String(r[k]).replace(/\s+/g, ' '); }).join('\t'); }).join('\n');
+      (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { p.showToast && p.showToast('Đã chép ' + rows.length + ' dòng kèm lời dẫn. Dán vào Claude rồi sửa câu hỏi.'); }, function () { p.showToast && p.showToast('Trình duyệt chặn sao chép.'); });
+    }
+    var AI_HINT = aiKind === 'channel' ? ['Kênh nào dưới 2K sub mà view/tháng cao nhất?', 'Kênh dưới 90 ngày tuổi đang làm tốt', 'Ngách nào có nhiều kênh farm nhất?'] : ['Video đăng 48 giờ qua trên 1.000 view/giờ', 'Video của kênh dưới 1K sub có view cao nhất', 'Tiêu đề nào dùng con số hoặc câu hỏi?'];
+    var aiBar = tab !== 'niche' && h('div', { className: 'yt-card p-3 space-y-2 !border-[#a970ff]/40' },
+      h('div', { className: 'flex flex-wrap items-center gap-2' },
+        h('span', { className: 'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[#2a2140] text-[#c9a7ff] text-[11.5px] font-semibold whitespace-nowrap' }, ic('bolt', 13), 'Trợ lý AI'),
+        h('input', { value: ai.q, onChange: function (e) { setAi(Object.assign({}, ai, { q: e.target.value })); }, onKeyDown: function (e) { if (e.key === 'Enter') askAI(); }, 'aria-label': 'Câu hỏi cho trợ lý AI', placeholder: 'Hỏi về ' + (aiKind === 'channel' ? 'các kênh' : 'các video') + ' đang hiện, ví dụ: ' + AI_HINT[0], className: cx(B.field, 'h-8 text-[11.5px] flex-1 min-w-[220px]') }),
+        h('button', { disabled: ai.busy || ai.q.trim().length < 3, onClick: function () { askAI(); }, className: 'h-8 px-4 rounded-full bg-[#a970ff] hover:bg-[#b98aff] text-[12px] font-semibold text-[#0f0f0f] disabled:opacity-40 cursor-pointer whitespace-nowrap' }, ai.busy ? 'AI đang đọc bảng…' : 'Hỏi AI'),
+        h('button', { onClick: copyTable, title: 'Chép các dòng đang hiện kèm lời dẫn để dán vào Claude', className: B.sm + ' h-8' }, 'Chép bảng cho Claude')),
+      !(ai.ans && ai.kind === aiKind) && !ai.err && !ai.busy && h('div', { className: 'flex flex-wrap gap-1.5' }, AI_HINT.map(function (x) { return h('button', { key: x, onClick: function () { askAI(x); }, className: 'h-7 px-2.5 rounded-lg bg-[#272727] hover:bg-[#3a3a3a] text-[11px] text-[#d6d6d6] cursor-pointer' }, x); })),
+      ai.err && h('div', { role: 'alert', className: 'text-[11.5px] text-[#ff8a83]' }, ai.err),
+      ai.ans && ai.kind === aiKind && h('div', { className: 'rounded-lg bg-[#1b1626] px-3 py-2 space-y-1.5' },
+        h('p', { className: 'text-[12.5px] text-[#f1f1f1] leading-relaxed' }, ai.ans),
+        h('div', { className: 'flex flex-wrap items-center gap-2' },
+          ai.ids && ai.ids.length > 0 ? h('span', { className: 'text-[11.5px] text-[#c9a7ff] font-semibold' }, 'AI chọn ' + ai.ids.length + '/' + (ai.total || 0) + ' dòng') : h('span', { className: 'text-[11.5px] text-[#aaa]' }, 'AI không chọn dòng nào'),
+          ai.ids && ai.ids.length > 0 && toggle(ai.only, 'Chỉ hiện các dòng này', function () { setAi(Object.assign({}, ai, { only: !ai.only })); }),
+          h('button', { onClick: function () { setAi({ q: '', busy: false, ans: '', ids: null, only: false, kind: '', err: '' }); }, className: 'text-[11.5px] text-[#aaa] hover:text-white underline cursor-pointer' }, 'Xoá câu trả lời'),
+          h('span', { className: 'text-[10.5px] text-[#717171]' }, 'AI đọc tối đa ' + (aiKind === 'channel' ? 200 : 220) + ' dòng đầu; kiểm tra lại số liệu trước khi quyết định.'))));
+    var wall = function () {
+      return h('div', { className: 'grid gap-2 grid-cols-[repeat(auto-fill,minmax(210px,1fr))]' }, cut(vidRows).map(function (v) {
+        return h('div', { key: v.id, className: cx('rounded-lg overflow-hidden bg-[#181818]', aiRow(v.id) && 'ring-2 ring-[#a970ff]') },
+          h('a', { href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer', title: v.title, className: 'relative block' },
+            h('img', { src: thumb(v.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover' }),
+            h('span', { className: cx('absolute top-1 left-1 px-1.5 py-0.5 rounded text-[11px] font-bold tabular-nums', hotCls(v.out)) }, fx(v.out)),
+            h('span', { className: 'absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[11px] font-semibold text-[#6fcf85] tabular-nums' }, N(v.views)),
+            h('span', { className: 'absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[11px] text-white tabular-nums' }, dur(v.dur))),
+          h('div', { className: 'px-2 py-1.5' }, h('div', { className: 'text-[11.5px] text-[#f1f1f1] line-clamp-1', title: v.title }, v.title), h('button', { onClick: function () { openCh(v.ch); }, className: 'text-[11px] text-[#aaa] hover:text-[#7cc3ff] truncate max-w-full text-left cursor-pointer' }, v.chName + ' · ' + N(v.subs) + ' sub')));
+      }));
+    };
     var rowBtn = 'inline-flex items-center justify-center h-[2.1em] px-[0.9em] rounded-full bg-[#323232] hover:bg-[#424242] text-[0.92em] font-medium text-[#f1f1f1] whitespace-nowrap cursor-pointer';
     var seenRow = function (id) { var m = marks[id]; return justSeen(m) ? '!bg-[#12304a] shadow-[inset_3px_0_0_#3ea6ff]' : m && m.seen && !m.s ? 'opacity-60 hover:opacity-100' : ''; };
     var mini = function (t, tone) { return h('span', { className: 'inline-flex items-center h-[1.6em] px-[0.5em] rounded text-[0.82em] font-semibold whitespace-nowrap ' + CHIP[tone || 'cham'] }, t); };
@@ -863,8 +914,8 @@
           iconBtn('star', m.s, m.s ? 'Bỏ sao' : 'Gắn sao', function () { mark(c.id, { s: m.s ? 0 : 1 }); }),
           iconBtn('hide', false, 'Ẩn kênh', function () { mark(c.id, { h: 1, n: c.name }); })); } }
       ];
-      return h(G, { storeKey: 'tn_ch', cols: cols, rows: D.channels, rowKey: function (c) { return c.id; }, limit: isPro ? lim : FREE, rowClass: function (c) { return seenRow(c.id); },
-        left: h('span', { className: 'text-[11.5px] text-[#aaa]' }, N(D.channels.length) + ' kênh · bấm tên kênh để xem chi tiết, bấm tiêu đề cột để xếp') });
+      return h(G, { storeKey: 'tn_ch', cols: cols, rows: chRows, rowKey: function (c) { return c.id; }, limit: isPro ? lim : FREE, rowClass: function (c) { return aiRow(c.id) || seenRow(c.id); },
+        left: h('span', { className: 'text-[11.5px] text-[#aaa]' }, N(chRows.length) + ' kênh · bấm tên kênh để xem chi tiết, bấm tiêu đề cột để xếp') });
     };
     var VNTZ = { timeZone: 'Asia/Ho_Chi_Minh' };
     var vidGrid = function () {
@@ -894,9 +945,9 @@
           p.onAddCompetitor && h('button', { onClick: function () { p.onAddCompetitor(toApp(v)); }, className: rowBtn }, 'Theo dõi'),
           p.onSelectKeywordForSearch && h('button', { onClick: function () { p.onSelectKeywordForSearch(v.title); }, className: rowBtn }, 'Tương tự')); } }
       ];
-      var shownV = cut(D.videos), todo = shownV.filter(function (v) { return !tr[v.id]; }).length;
-      return h(G, { storeKey: 'tn_vid', cols: cols, rows: D.videos, rowKey: function (v) { return v.id; }, limit: isPro ? lim : FREE, rowClass: function (v) { return justSeen(marks[v.ch]) ? '!bg-[#12304a] shadow-[inset_3px_0_0_#3ea6ff]' : ''; },
-        left: h('span', { className: 'inline-flex flex-wrap items-center gap-2' }, h('span', { className: 'text-[11.5px] text-[#aaa]' }, N(D.videos.length) + ' video'),
+      var shownV = cut(vidRows), todo = shownV.filter(function (v) { return !tr[v.id]; }).length;
+      return h(G, { storeKey: 'tn_vid', cols: cols, rows: vidRows, rowKey: function (v) { return v.id; }, limit: isPro ? lim : FREE, rowClass: function (v) { return aiRow(v.id) ? aiRow(v.id) : justSeen(marks[v.ch]) ? '!bg-[#12304a] shadow-[inset_3px_0_0_#3ea6ff]' : ''; },
+        left: h('span', { className: 'inline-flex flex-wrap items-center gap-2' }, h('span', { className: 'text-[11.5px] text-[#aaa]' }, N(vidRows.length) + ' video'),
           h('button', { disabled: !!trBusy || !todo, onClick: function () { translate(shownV); }, title: 'AI dịch tiêu đề các video đang hiện sang tiếng Việt, mỗi 40 tiêu đề dùng 1 lượt AI', className: 'h-7 px-3 rounded-full bg-[#263850] hover:bg-[#2f4666] text-[11.5px] font-medium text-[#b0daff] disabled:opacity-40 cursor-pointer whitespace-nowrap' }, trBusy || (todo ? 'Dịch ' + todo + ' tiêu đề sang tiếng Việt' : 'Đã dịch hết'))) });
     };
     // lọc nhanh kiểu "bắt trend" cho tab Video
@@ -904,13 +955,13 @@
     var trendBar = tab === 'vid' && h('div', { className: 'flex flex-wrap items-center gap-1.5' }, h('span', { className: 'text-[11.5px] text-[#aaa] mr-1' }, 'Lọc trend:'),
       TREND.map(function (t) { var on = Object.keys(t[1]).every(function (k) { return f[k] === t[1][k]; }); return toggle(on, t[0], function () { Object.keys(t[1]).forEach(function (k) { set(k, t[1][k]); }); }); }),
       h('button', { onClick: function () { ['hours', 'vSort', 'minOut', 'maxAge'].forEach(function (k) { set(k, DEF[k]); }); }, className: 'h-8 px-3 rounded-lg text-[11.5px] font-medium text-[#ff8a83] bg-[#3a1f1d] hover:bg-[#4a2624] cursor-pointer' }, 'Bỏ lọc trend'));
-    var chView = !D.channels.length ? empty('Chưa có kênh nào qua bộ lọc') : h('div', { className: 'space-y-3' },
-      view !== 'card' ? chGrid() : h('div', { className: 'grid gap-3 grid-cols-[repeat(auto-fill,minmax(310px,1fr))]' }, cut(D.channels).map(chCard)),
+    var chView = !D.channels.length ? empty('Chưa có kênh nào qua bộ lọc') : h('div', { className: 'space-y-3' }, aiBar,
+      view !== 'card' ? chGrid() : h('div', { className: 'grid gap-3 grid-cols-[repeat(auto-fill,minmax(310px,1fr))]' }, cut(chRows).map(chCard)),
       more(D.channels.length), lock(D.channels.length));
 
     // ---------- Tab Video ----------
-    var vidView = !D.videos.length ? h('div', { className: 'space-y-3' }, trendBar, empty('Chưa có video nào qua bộ lọc')) : h('div', { className: 'space-y-3' }, trendBar,
-      view !== 'card' ? vidGrid() : h('div', { className: 'grid gap-3 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]' }, cut(D.videos).map(function (v) {
+    var vidView = !D.videos.length ? h('div', { className: 'space-y-3' }, trendBar, empty('Chưa có video nào qua bộ lọc')) : h('div', { className: 'space-y-3' }, trendBar, aiBar,
+      view === 'wall' ? wall() : view !== 'card' ? vidGrid() : h('div', { className: 'grid gap-3 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]' }, cut(vidRows).map(function (v) {
         var saved = p.isSaved && p.isSaved(v.id), farm = v.a.v === 'farm', chip = 'absolute text-[11px] font-semibold px-1.5 py-0.5 rounded-md tabular-nums';
         return h('article', { key: v.id, className: 'group flex flex-col gap-2.5 rounded-xl bg-[#181818]/95 p-2 hover:bg-[#212121] transition' },
           h('a', { href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer', className: 'relative block rounded-xl overflow-hidden bg-[#272727]' },

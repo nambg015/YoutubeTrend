@@ -9,6 +9,25 @@
 
   var NAV = [['today', 'Hôm nay', 0, '#f1f1f1'], ['explore', 'Khám phá', 0, '#3ea6ff'], ['niche', 'Top Ngách', 0, '#ff4e45'], ['channels', 'Kênh', 0, '#a970ff'], ['resource', 'Tạo tài nguyên', 'Tài nguyên', '#f5c451'], ['tools', 'Công cụ', 0, '#22c3b5'], ['library', 'Thư viện', 0, '#4bc167'], ['settings', 'Cài đặt', 0, '#aaaaaa']];
   var OLD = { search: 'explore', keywords: 'explore', niche: 'explore', rpm: 'niche', competitors: 'channels', spy: 'channels', studio_chart: 'channels', wiki: 'library' };
+  // Lộ trình 5 bước nghiên cứu một ngách: mỗi bước dẫn tới đúng công cụ. [số, tên, route, tham số, mô tả, màu]
+  var FLOW = [
+    [1, 'Tìm ngách', 'niche', null, 'Quét kênh nhỏ đang ăn view', '#ff4e45'],
+    [2, 'Chân dung', 'tools', { sub: 'cm' }, 'Đọc bình luận để biết ai đang xem', '#22c3b5'],
+    [3, 'Đối thủ', 'channels', { sub: 'track' }, 'Theo dõi Dream 100', '#a970ff'],
+    [4, 'Công thức', 'explore', { sub: 'titles' }, 'Khuôn tiêu đề và ảnh bìa đang thắng', '#3ea6ff'],
+    [5, 'Xu hướng', 'today', null, 'Video đang nổ hôm nay', '#f5c451']
+  ];
+  function Flow(p) {
+    var cur = FLOW.findIndex(function (x) { return x[2] === p.route; });
+    return h('nav', { 'aria-label': 'Lộ trình nghiên cứu', className: 'mb-4 flex items-center gap-1 overflow-x-auto pb-1' }, FLOW.map(function (x, i) {
+      var on = i === cur;
+      return h(React.Fragment, { key: x[0] },
+        i > 0 && h('span', { 'aria-hidden': true, className: 'shrink-0 w-5 sm:w-8 border-t-2 border-dotted', style: { borderColor: i <= cur ? x[5] : '#3a3a3a' } }),
+        h('button', { onClick: function () { if (x[2] === 'channels') { try { localStorage.setItem('yt4_track_view', JSON.stringify('list')); } catch (e) { } } p.goto(x[2], x[3] || {}); }, 'aria-current': on ? 'step' : null, title: x[4],
+          className: cx('shrink-0 inline-flex items-center gap-2 h-8 pl-1 pr-3 rounded-full text-[11.5px] font-semibold whitespace-nowrap transition cursor-pointer border', on ? 'text-[#0f0f0f] border-transparent' : 'bg-[#181818]/90 text-[#aaa] border-[#303030] hover:text-white hover:border-[#555]'), style: on ? { background: x[5] } : null },
+          h('span', { className: cx('w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold', on ? 'bg-[#0f0f0f] text-white' : 'bg-[#272727]'), style: on ? null : { color: x[5] } }, x[0]), x[1]));
+    }), cur >= 0 && h('span', { className: 'hidden md:inline shrink-0 ml-3 text-[11px] text-[#aaa]' }, 'Bước ' + FLOW[cur][0] + ': ' + FLOW[cur][4]));
+  }
   function readRoute() { var hsh = (location.hash || '').replace(/^#\/?/, '').split('/')[0]; if (NAV.some(function (n) { return n[0] === hsh; })) return hsh; var q = new URLSearchParams(location.search).get('tab'); return OLD[q] || 'today'; }
 
   // ---------- ĐĂNG NHẬP ----------
@@ -126,7 +145,7 @@
       h('nav', { 'aria-label': 'Mục chính', className: 'lg:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-8 bg-[#0f0f0f] border-t border-[#272727]' }, NAV.map(function (n) { return navItem(n, true); })),
       h('div', { className: 'pt-14 lg:pl-[72px]' },
         noKey && route !== 'settings' && h('div', { className: 'mx-4 sm:mx-6 mt-3 rounded-xl bg-[#272727] px-4 py-2.5 flex items-center gap-3 text-[12px] text-[#f1f1f1]' }, 'Chưa có YouTube API key nên các mục tìm kiếm chưa chạy được.', h('button', { onClick: function () { goto('settings'); }, className: K.C.sm }, 'Thêm key')),
-        h('main', { className: 'max-w-[1760px] mx-auto px-4 sm:px-6 py-5 pb-24 lg:pb-12' }, h(ErrorBoundary, { key: route }, page))),
+        h('main', { className: 'max-w-[1760px] mx-auto px-4 sm:px-6 py-5 pb-24 lg:pb-12' }, FLOW.some(function (x) { return x[2] === route; }) && h(Flow, { route: route, goto: goto }), h(ErrorBoundary, { key: route }, page))),
       pal && h(Palette, { goto: goto, onClose: function () { setPal(false); } }),
       h(K.Toaster));
   }

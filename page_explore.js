@@ -202,8 +202,9 @@
   }
 
   function Explore(p) {
-    var s = useState(p.params && p.params.sub || 'kw'), sub = s[0], setSub = s[1];
-    useEffect(function () { if (p.params && p.params.sub) setSub(p.params.sub); else if (p.params && p.params.q) setSub('kw'); }, [p.params]);
+    var okSub = function (v) { return ['kw', 'ai', 'titles', 'thumb'].indexOf(v) >= 0 ? v : ''; };
+    var s = useState(okSub(p.params && p.params.sub) || 'kw'), sub = s[0], setSub = s[1];
+    useEffect(function () { if (p.params && okSub(p.params.sub)) setSub(p.params.sub); else if (p.params && p.params.q) setSub('kw'); }, [p.params]);
     var W = window.YT4Workshop;
     return h('div', { className: 'space-y-5' },
       h('div', null, h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Khám phá'), h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, 'Phân tích một từ khoá, để AI đề xuất ngách, viết tiêu đề theo khuôn đang thắng và thử thumbnail giữa đối thủ.')),

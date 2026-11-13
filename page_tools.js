@@ -228,7 +228,8 @@
   }
 
   function Tools(p) {
-    var s = useState((p.params && p.params.sub) || st.json('yt4_tools_tab', 'cm')), sub = s[0], setSub0 = s[1];
+    var ok = function (v) { return ['cm', 'up', 'pr'].indexOf(v) >= 0 ? v : ''; };
+    var s = useState(ok(p.params && p.params.sub) || ok(st.json('yt4_tools_tab', 'cm')) || 'cm'), sub = s[0], setSub0 = s[1];
     function setSub(v) { setSub0(v); st.put('yt4_tools_tab', v); }
     return h('div', { className: 'space-y-5' },
       h('div', null, h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Công cụ'), h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, 'Quét bình luận để biết khán giả muốn gì, tạo bộ thông tin đăng video và dùng câu lệnh AI soạn sẵn.')),

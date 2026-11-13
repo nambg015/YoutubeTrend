@@ -164,7 +164,7 @@
     K.useBus('channels'); K.useBus('saved');
     var chans = store.channels();
     var s0 = useState(st.json('yt4_feed', { at: 0, items: [] })), feed = s0[0], setFeed = s0[1], s1 = useState(''), busy = s1[0], setBusy = s1[1], s2 = useState(''), q = s2[0], setQ = s2[1];
-    var s3 = useState('feed'), view = s3[0], setView = s3[1], s4 = useState(false), onlyHot = s4[0], setOnlyHot = s4[1], s5 = useState(14), days = s5[0], setDays = s5[1], s6 = useState(''), err = s6[0], setErr = s6[1];
+    var s3 = useState(function () { return st.json('yt4_track_view', 'feed') === 'list' ? 'list' : 'feed'; }), view = s3[0], setView0 = s3[1], setView = function (v) { setView0(v); st.put('yt4_track_view', v); }, s4 = useState(false), onlyHot = s4[0], setOnlyHot = s4[1], s5 = useState(14), days = s5[0], setDays = s5[1], s6 = useState(''), err = s6[0], setErr = s6[1];
     async function add() {
       if (!q.trim()) return; setBusy('Tìm kênh…'); setErr('');
       try { var c = await Y.resolveChannel(q); var ok = store.addChannel({ id: c.id, title: c.snippet.title, subs: c.statistics.hiddenSubscriberCount ? 0 : +c.statistics.subscriberCount, videoCount: +c.statistics.videoCount, viewCount: +c.statistics.viewCount, avatar: ((c.snippet.thumbnails || {}).default || {}).url || '', country: c.snippet.country || '' }); K.toast(ok ? 'Đã theo dõi ' + c.snippet.title : 'Kênh đã có trong danh sách'); setQ(''); }
@@ -260,11 +260,12 @@
             : h(K.VideoList, { rows: items, cols: feedCols, ratio: function (v) { return v.rel; }, ratioLabel: 'So với TB kênh', hotAt: 2, defSort: 't', onChannel: p.analyze, sorts: [['t', 'Mới nhất', function (v) { return v.t; }], ['rel', 'Vượt trung vị kênh', function (v) { return v.rel || 0; }], ['views', 'View cao nhất', function (v) { return v.views; }]] })));
   }
 
+  var SUBS = ['track', 'lab', 'compare', 'spy', 'studio'];
   function Channels(p) {
-    var s = useState((p.params && p.params.analyze) ? 'lab' : (p.params && p.params.sub) || 'track'), sub = s[0], setSub = s[1];
+    var s = useState((p.params && p.params.analyze) ? 'lab' : (p.params && SUBS.indexOf(p.params.sub) >= 0 ? p.params.sub : 'track')), sub = s[0], setSub = s[1];
     var s1 = useState({ target: p.params && p.params.analyze, key: p.params && p.params._k, tab: p.params && p.params.tab }), tg = s1[0], setTg = s1[1];
     K.useBus('compare');
-    useEffect(function () { if (p.params && p.params.analyze) { setSub('lab'); setTg({ target: p.params.analyze, key: p.params._k, tab: p.params.tab }); } else if (p.params && p.params.sub) setSub(p.params.sub); }, [p.params && p.params._k]);
+    useEffect(function () { if (p.params && p.params.analyze) { setSub('lab'); setTg({ target: p.params.analyze, key: p.params._k, tab: p.params.tab }); } else if (p.params && SUBS.indexOf(p.params.sub) >= 0) setSub(p.params.sub); }, [p.params && p.params._k]);
     function analyze(id) { setSub('lab'); setTg({ target: id, key: Date.now() }); }
     var key = Y.keys.getActiveKey();
     return h('div', { className: 'space-y-5' },

@@ -573,4 +573,33 @@ Return ONLY JSON: {"titles":["5 options"],"description":"...","tags":["15-22 tag
   return { seo: { titles: A(j.titles, 6, 120), description: String(j.description || '').slice(0, 2500), tags: A(j.tags, 25, 60), hashtags: A(j.hashtags, 5, 40), file_name: String(j.file_name || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80), pinned_comment: String(j.pinned_comment || '').slice(0, 500) } };
 }
 
-module.exports = { doTranslate, doAudience, doSeo, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+// ---------- Trợ lý AI trên bảng: trả lời câu hỏi về các dòng đang hiện và chọn ra dòng khớp ----------
+const ASK_LEGEND = {
+  video: 'id, ch = channel name, sub = subscribers, t = title, v = views, vph = views per hour since upload, x = views divided by subscribers, h = hours since upload, d = duration in seconds, mk = country, n = niche, farm = channel is rated a money-farm channel',
+  channel: 'id, name, sub = subscribers, mk = country, n = niche, age = channel age in days, vids = total videos, v30 = views in the last 30 days, vpm = videos per month, score = farm score 0-100, verdict (farm / rise / fluke / cold / unk), x = median views divided by subscribers'
+};
+async function doAsk(key, d) {
+  d = d || {};
+  const q = String(d.q || '').trim().slice(0, 400), kind = d.kind === 'channel' ? 'channel' : 'video';
+  const rows = (Array.isArray(d.rows) ? d.rows : []).filter(r => r && r.id).slice(0, 240);
+  if (q.length < 3 || !rows.length) { const e = new Error('Hãy gõ câu hỏi và quét dữ liệu trước.'); e.code = 'NO_DATA'; throw e; }
+  const j = await askJson(key, `You are the data assistant inside a YouTube research tool. Today is ${new Date().toISOString().slice(0, 10)}.
+The user asks a question (usually in Vietnamese) about the table of ${kind} rows below.
+Fields: ${ASK_LEGEND[kind]}.
+Rules:
+- Use ONLY these rows. Never invent rows or numbers.
+- "ids": the ids of the rows that match what the user asked for, best first, at most 80. Use [] when the question is not about selecting rows.
+- "answer": 1-4 Vietnamese sentences. Name the top 3 matches with their key numbers. Do NOT state how many rows matched (the app counts the ids itself).
+- If the question cannot be answered from these fields, say so in "answer" and suggest which column or filter to use instead.
+Return ONLY JSON: {"answer":"...","ids":["..."]}
+
+QUESTION: """${q}"""
+
+ROWS:
+${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
+  const ok = new Set(rows.map(r => String(r.id)));
+  const ids = (Array.isArray(j.ids) ? j.ids : []).map(String).filter(id => ok.has(id)).slice(0, 80);
+  return { answer: String(j.answer || '').slice(0, 900), ids };
+}
+
+module.exports = { doAsk, doTranslate, doAudience, doSeo, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
