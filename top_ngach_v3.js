@@ -800,12 +800,13 @@
     var cell = function (l, v, tone) { return h('div', { className: 'yt-cell px-2 py-1.5 min-w-0' }, h('dt', { className: 'text-[11px] text-cham-400 truncate' }, l), h('dd', { className: 'text-[11.5px] font-semibold truncate tabular-nums ' + (tone || 'text-cham-50') }, v)); };
 
     var NS = D.niches.slice().sort(function (a, b) { return f.nSort === 'score' ? b.score - a.score : f.nSort === 'v30' ? b.v30 - a.v30 : f.nSort === 'farm' ? (b.farm - a.farm) || (b.score - a.score) : f.nSort === 'fresh' ? (b.fresh - a.fresh) || (b.score - a.score) : (b.medOut - a.medOut) || (b.score - a.score); });
-    var samples = function (list) { return h('div', { className: 'grid grid-cols-3 gap-1.5' }, list.map(function (x) {
-      return h('a', { key: x.id, href: 'https://www.youtube.com/watch?v=' + x.id, target: '_blank', rel: 'noopener noreferrer', title: x.title + ' · ' + N(x.views) + ' view · ' + N(x._subs) + ' sub', className: 'relative block rounded-md overflow-hidden bg-black' },
-        h('img', { src: thumb(x.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover' }),
-        h('span', { className: 'absolute top-1 left-1 text-[10px] font-semibold px-1 rounded bg-black/80 text-[#f1f1f1] tabular-nums' }, N(x._subs) + ' sub'),
-        h('span', { className: 'absolute top-1 right-1 text-[10px] font-bold px-1 rounded tabular-nums ' + hotCls(x.out) }, '×' + Math.round(x.out)),
-        h('span', { className: 'absolute bottom-1 left-1 text-[10px] font-semibold px-1 rounded bg-black/80 text-[#f1f1f1] tabular-nums' }, N(x.views) + ' view'));
+    var samples = function (list) { return h('div', { className: 'grid grid-cols-2 gap-x-2 gap-y-2' }, list.map(function (x) {
+      return h('a', { key: x.id, href: 'https://www.youtube.com/watch?v=' + x.id, target: '_blank', rel: 'noopener noreferrer', title: x.title + ' · ' + N(x.views) + ' view · ' + N(x._subs) + ' sub', className: 'block min-w-0 group' },
+        h('img', { src: thumb(x.id), loading: 'lazy', alt: '', className: 'w-full aspect-video object-cover rounded-md bg-black group-hover:opacity-85' }),
+        h('span', { className: 'mt-1 flex items-center gap-1 text-[11px] leading-4 tabular-nums' },
+          h('span', { className: 'font-bold px-1 rounded ' + (x.out >= 5 ? hotCls(x.out) : 'bg-[#3a3a3a] text-[#f1f1f1]') }, '×' + Math.round(x.out)),
+          h('span', { className: 'font-semibold text-[#f1f1f1] truncate' }, N(x.views) + ' view')),
+        h('span', { className: 'block text-[10.5px] leading-4 text-[#aaa] tabular-nums truncate' }, N(x._subs) + ' sub'));
     })); };
 
     // ---------- Tab Ngách ----------
@@ -813,7 +814,7 @@
       h('div', { className: 'grid gap-2.5 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6' }, cut(NS).map(function (g, i) {
         var cat = CATS[g.topCat], th = [];
         g.chans.forEach(function (c) { (c.vids || []).forEach(function (v) { th.push(Object.assign({}, v, { _subs: c.subs, title: v.title + ' · ' + c.name })); }); });
-        th.sort(function (a, b) { return b.out - a.out; }); th = th.slice(0, 6);
+        th.sort(function (a, b) { return b.out - a.out; }); th = th.slice(0, 4);
         var nb = 'inline-flex items-center justify-center h-7 px-2 rounded-full bg-[#323232] text-[11.5px] font-medium text-[#f1f1f1] hover:bg-[#424242] transition cursor-pointer whitespace-nowrap min-w-0 truncate';
         return h('article', { key: g.name, className: 'yt-card p-2.5 flex flex-col gap-1.5 relative overflow-hidden' },
           g.farm > 0 && h('span', { className: 'absolute top-0 left-0 w-[62px] h-[62px] overflow-hidden pointer-events-none z-10', title: g.farm + ' kênh farm tiền trong ngách này' },
