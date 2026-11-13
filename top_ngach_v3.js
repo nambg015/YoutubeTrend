@@ -811,7 +811,7 @@
 
     // ---------- Tab Ngách ----------
     var nicheView = !D.niches.length ? empty('Chưa có ngách nào qua bộ lọc') : h('div', { className: 'space-y-3' },
-      h('div', { className: 'grid gap-2.5 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6' }, cut(NS).map(function (g, i) {
+      h('div', { className: 'grid gap-2.5 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5' }, cut(NS).map(function (g, i) {
         var cat = CATS[g.topCat], th = [];
         g.chans.forEach(function (c) { (c.vids || []).forEach(function (v) { th.push(Object.assign({}, v, { _subs: c.subs, title: v.title + ' · ' + c.name })); }); });
         th.sort(function (a, b) { return b.out - a.out; }); th = th.slice(0, 4);
