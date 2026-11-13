@@ -61,7 +61,7 @@
     markSuspended: function (key) { return this.markQuotaExceeded(key, 'suspended'); },
     // key sai / chưa bật YouTube Data API / bị giới hạn: gạt sang một bên, dùng key khác
     markInvalid: function (key, why) { var nx = this.markQuotaExceeded(key, 'invalid'); var pool = this.getPool(); pool.forEach(function (p) { if (p.key === key) p.why = String(why || '').slice(0, 200); }); this.savePool(pool); return nx; },
-    markOk: function (key) { var pool = this.getPool(), ch = false; pool.forEach(function (p) { if (p.key === key && p.status === 'invalid') { p.status = 'standby'; delete p.why; ch = true; } }); if (ch) this.savePool(pool); },
+    markOk: function (key) { var pool = this.getPool(), ch = false; pool.forEach(function (p) { if (p.key === key && (p.status === 'invalid' || p.status === 'suspended' || p.status === 'quota_exceeded')) { p.status = 'standby'; delete p.why; ch = true; } }); if (ch) this.savePool(pool); },
     markQuotaExceeded: function (key, status) {
       var pool = this.getPool(), next = null;
       pool.forEach(function (p) { if (p.key === key) p.status = status || 'quota_exceeded'; });
@@ -76,6 +76,28 @@
     }
   };
   W.ytKeyManager = ytKeyManager;
+  // Phân loại lỗi Google trả về cho một key: 'suspended' | 'quota' | 'invalid' (kèm lý do) | '' (lỗi khác)
+  function keyProblem(j, httpStatus) {
+    var er = (j && j.error) || {}, reason = (er.errors && er.errors[0] && er.errors[0].reason) || '', em = (er.message || '') + ' ' + JSON.stringify(er.details || '');
+    if (/has been suspended|CONSUMER_SUSPENDED/i.test(em)) return { kind: 'suspended', why: 'Google đã khoá (suspend) project Google Cloud chứa key này' };
+    if (/quotaExceeded|dailyLimitExceeded|rateLimitExceeded/.test(reason)) return { kind: 'quota', why: 'hết quota hôm nay' };
+    if (reason === 'keyInvalid' || /API key not valid|API_KEY_INVALID/i.test(em)) return { kind: 'invalid', why: 'Google không nhận key này (sai, thiếu ký tự hoặc đã bị xoá)' };
+    if (/API_KEY_HTTP_REFERRER_BLOCKED|referer/i.test(em)) return { kind: 'invalid', why: 'key bị giới hạn theo trang web, không cho web này dùng' };
+    if (reason === 'accessNotConfigured' || /API_KEY_SERVICE_BLOCKED|has not been used in project|it is disabled|are blocked/i.test(em)) return { kind: 'invalid', why: 'key này chưa bật YouTube Data API v3 (ví dụ key Gemini lấy ở AI Studio)' };
+    if (/has been (deleted|closed)|project.*(deleted|not found)|billing/i.test(em)) return { kind: 'invalid', why: 'project chứa key đã bị xoá hoặc đóng' };
+    if (httpStatus === 403) return { kind: 'invalid', why: 'Google từ chối key này (403): ' + (er.message || reason || 'không rõ lý do').slice(0, 140) };
+    return { kind: '', why: (er.message || reason || ('HTTP ' + httpStatus)).slice(0, 160) };
+  }
+  // Thử một key (tốn 1 quota) rồi cập nhật trạng thái của nó trong danh sách
+  ytKeyManager.probe = async function (key) {
+    var r, j;
+    try { r = await fetch('https://www.googleapis.com/youtube/v3/videos?part=id&chart=mostPopular&maxResults=1&key=' + encodeURIComponent(key)); j = await r.json().catch(function () { return {}; }); }
+    catch (e) { return { ok: false, kind: 'network', why: 'lỗi mạng, chưa kết luận được' }; }
+    if (r.ok) { ytKeyManager.trackUnits(key, 1); ytKeyManager.markOk(key); return { ok: true, kind: 'ok', why: 'Hoạt động' }; }
+    var pr = keyProblem(j, r.status);
+    if (pr.kind === 'suspended') ytKeyManager.markSuspended(key); else if (pr.kind === 'quota') ytKeyManager.markQuotaExceeded(key); else if (pr.kind === 'invalid') ytKeyManager.markInvalid(key, pr.why);
+    return { ok: false, kind: pr.kind, why: pr.why };
+  };
 
   // ---------- gọi YouTube Data API v3 (tự xoay key khi hết quota) ----------
   var COST = { search: 100 };
@@ -99,18 +121,14 @@
       j = await r.json().catch(function () { return {}; });
       if (r.ok) { ytKeyManager.trackUnits(k, COST[path] || 1); return j; }
       var reason = (j.error && j.error.errors && j.error.errors[0] && j.error.errors[0].reason) || ('HTTP' + r.status);
-      if (/has been suspended|CONSUMER_SUSPENDED/i.test(((j.error || {}).message || '') + JSON.stringify((j.error || {}).details || ''))) { susp++; var ns = ytKeyManager.markSuspended(k); if (ns && !tried[ns]) cands.push(ns); continue; }
-      if (/quotaExceeded|dailyLimitExceeded|rateLimitExceeded/.test(reason)) { quota++; var nx = ytKeyManager.markQuotaExceeded(k); if (nx && !tried[nx]) cands.push(nx); continue; }
-      var em = ((j.error || {}).message || '') + ' ' + JSON.stringify((j.error || {}).details || '');
-      // key sai, hoặc key đúng nhưng không dùng được cho YouTube (chưa bật YouTube Data API v3, bị giới hạn API / trang web): bỏ qua key này, thử key khác
-      if (reason === 'keyInvalid' || reason === 'accessNotConfigured' || /API key not valid|API_KEY_INVALID|API_KEY_SERVICE_BLOCKED|API_KEY_HTTP_REFERRER_BLOCKED|has not been used in project|it is disabled|are blocked/i.test(em)) {
-        var why = /API key not valid|API_KEY_INVALID/i.test(em) || reason === 'keyInvalid' ? 'Google không nhận key này (sai, thiếu ký tự hoặc đã bị xoá)' : /REFERRER/i.test(em) ? 'key bị giới hạn theo trang web, không cho web này dùng' : 'key này chưa bật YouTube Data API v3 (ví dụ key Gemini lấy ở AI Studio)';
-        bad++; badMsg = 'Key ' + k.slice(0, 8) + '…' + k.slice(-4) + ' không dùng được cho YouTube: ' + why + '.';
-        var nb = ytKeyManager.markInvalid(k, why); if (nb && !tried[nb]) cands.push(nb); continue;
-      }
+      var pr = keyProblem(j, r.status);
+      if (pr.kind === 'suspended') { susp++; var ns = ytKeyManager.markSuspended(k); if (ns && !tried[ns]) cands.push(ns); continue; }
+      if (pr.kind === 'quota') { quota++; var nx = ytKeyManager.markQuotaExceeded(k); if (nx && !tried[nx]) cands.push(nx); continue; }
+      // key sai, hoặc key đúng nhưng không dùng được cho YouTube: bỏ qua key này, thử key khác
+      if (pr.kind === 'invalid') { bad++; badMsg = 'Key ' + k.slice(0, 8) + '…' + k.slice(-4) + ' không dùng được cho YouTube: ' + pr.why + '.'; var nb = ytKeyManager.markInvalid(k, pr.why); if (nb && !tried[nb]) cands.push(nb); continue; }
       throw { code: reason, msg: (j.error && j.error.message) || reason, raw: j };
     }
-    if (bad && !susp && !quota) throw { code: 'keyInvalid', msg: badMsg + ' Vào Cài đặt xoá key này và thêm key YouTube đúng (console.cloud.google.com → bật YouTube Data API v3 → Credentials → Create API key).' };
+    if (bad && !quota) throw { code: 'keyInvalid', msg: badMsg + ' Vào Cài đặt xoá key này và thêm key YouTube đúng (console.cloud.google.com → bật YouTube Data API v3 → Credentials → Create API key).' };
     if (susp && !quota) throw { code: 'suspended', msg: 'Google đã tạm khoá (suspend) project Google Cloud chứa API key này, nên mọi key của project đó đều bị từ chối. Tạo key mới từ một project khác rồi thêm trong Cài đặt.' };
     throw { code: 'quotaExceeded', msg: 'Tất cả API key đã hết quota hôm nay (reset khoảng 14–15h giờ VN). Thêm key mới trong Cài đặt.' };
   }
