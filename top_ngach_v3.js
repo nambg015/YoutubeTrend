@@ -771,11 +771,12 @@
     var st = D.stats;
     var kpi = function (val, lbl, tone, fn) { return h(fn ? 'button' : 'div', { onClick: fn || null, title: fn ? 'Bấm để xem danh sách' : null, className: cx('bg-[#212121] px-3.5 py-2.5 min-w-0 text-left', fn && 'hover:bg-[#2a2a2a] cursor-pointer transition') }, h('div', { className: cx('font-display text-[16.5px] leading-7 font-bold tabular-nums tracking-tight', tone || 'text-cham-50') }, N(val)), h('div', { className: 'text-[10.5px] text-cham-400 leading-tight' }, lbl)); };
     var goCh = function (v) { return function () { set('verdict', v); setTab('ch'); }; };
-    var stat = function (val, lbl, tone, fn) { return h('button', { onClick: fn, title: 'Bấm để xem danh sách', className: 'inline-flex items-baseline gap-1.5 h-8 px-3 rounded-lg bg-[#212121]/95 hover:bg-[#2e2e2e] cursor-pointer transition whitespace-nowrap' }, h('b', { className: cx('text-[14px] tabular-nums', tone || 'text-[#f1f1f1]') }, N(val)), h('span', { className: 'text-[11.5px] text-[#c8c8c8]' }, lbl)); };
+    var stat = function (val, lbl, tone, fn) { return h('button', { key: lbl, onClick: fn, title: 'Bấm để xem danh sách', className: 'group min-w-[88px] px-4 py-1.5 text-left hover:bg-[#262626] cursor-pointer transition whitespace-nowrap' }, h('b', { className: cx('block text-[19px] leading-6 font-bold tabular-nums', tone || 'text-white') }, N(val)), h('span', { className: 'block text-[11px] leading-4 font-medium uppercase tracking-wide text-[#a8a8a8] group-hover:text-[#e6e6e6]' }, lbl)); };
     var head = h('div', { className: 'space-y-2.5' },
-      h('div', { className: 'flex flex-wrap items-center gap-1.5 pr-28' },
-        stat(st.channels, 'kênh nhỏ', null, goCh('all')), stat(st.farm, 'farm', 'text-[#4bc167]', goCh('farm')), stat(st.rise, 'đang lên', 'text-[#f5c451]', goCh('rise')),
-        stat(st.videosShown, 'video nổ', 'text-[#ff6b63]', function () { setTab('vid'); }), stat(D.niches.length, 'ngách', 'text-[#c9a7ff]', function () { setTab('niche'); }), stat(st.fresh, 'kênh mới 24 giờ', 'text-[#5fdccf]', goCh('new')),
+      h('div', { className: 'flex flex-wrap items-center gap-2 pr-28' },
+        h('div', { className: 'inline-flex max-w-full overflow-x-auto no-scrollbar rounded-xl border border-[#333] bg-[#171717]/95 divide-x divide-[#2e2e2e]' },
+          stat(st.channels, 'Kênh nhỏ', null, goCh('all')), stat(st.farm, 'Farm', 'text-[#4bc167]', goCh('farm')), stat(st.rise, 'Đang lên', 'text-[#f5c451]', goCh('rise')),
+          stat(st.videosShown, 'Video nổ', 'text-[#ff6b63]', function () { setTab('vid'); }), stat(D.niches.length, 'Ngách', 'text-[#c9a7ff]', function () { setTab('niche'); }), stat(st.fresh, 'Mới 24 giờ', 'text-[#5fdccf]', goCh('new'))),
         h('button', { onClick: function () { setSide(!side); }, 'aria-expanded': side, className: B.btn + ' lg:hidden' }, side ? 'Ẩn bộ lọc' : 'Bộ lọc & quét')),
       busy && h('div', { role: 'status', className: 'rounded-lg border border-hoe-600/50 bg-hoe-950 px-3.5 py-2.5 text-[11.5px] text-hoe-100 flex items-center gap-2.5' }, h('span', { className: 'inline-block w-3.5 h-3.5 rounded-full border-2 border-hoe-800 border-t-hoe-300 animate-spin shrink-0' }), busy),
       err && h('div', { role: 'alert', className: 'rounded-lg border border-dieu-500/50 bg-dieu-950 px-3.5 py-2.5 text-[11.5px] text-dieu-100' }, err),
