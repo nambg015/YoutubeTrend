@@ -182,7 +182,7 @@
     return h('div', { className: 'space-y-5 max-w-5xl' },
       h('div', null, h('h1', { className: 'font-display text-[19px] leading-8 font-bold text-cham-50 tracking-tight' }, 'Cài đặt'), h('p', { className: 'text-[11px] text-cham-400 mt-1.5' }, 'API key YouTube, Claude, tài khoản và sao lưu dữ liệu.')),
       h(K.Help, { id: 'settings', title: 'Thiết lập lần đầu', steps: ['Thêm YouTube API key: vào console.cloud.google.com, bật YouTube Data API v3, tạo API key rồi dán vào ô bên dưới. Nên có nhiều key để quét được nhiều hơn.', 'Gemini (cho Tạo tài nguyên và Nhận định AI) đặt trên Vercel, ô Máy chủ & AI cho biết đã có chưa.', 'Claude API key là tuỳ chọn: chỉ cần khi muốn Claude viết kịch bản ngay trong web.', 'Thỉnh thoảng bấm Tải file sao lưu để giữ dữ liệu khi đổi máy.'] }),
-      h(KeysPanel), h(ClaudePanel), h(ServerPanel, { me: p.me }), h(AccountPanel, { onLogout: p.onLogout }), h(DataPanel));
+      h(KeysPanel), h(ClaudePanel), window.YT4Mcp ? h(window.YT4Mcp.Box) : null, h(ServerPanel, { me: p.me }), h(AccountPanel, { onLogout: p.onLogout }), h(DataPanel));
   }
 
   window.YT4Pages = window.YT4Pages || {};

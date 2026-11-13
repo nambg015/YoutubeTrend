@@ -108,6 +108,7 @@
     }, []);
     useEffect(function () { var f = function () { setRoute(readRoute()); }; window.addEventListener('hashchange', f); return function () { window.removeEventListener('hashchange', f); }; }, []);
     useEffect(function () { if (location.search) history.replaceState(null, '', location.pathname + '#' + route); }, []);
+    useEffect(function () { if (window.YT4Mcp) { try { window.YT4Mcp.auto(); } catch (e) { } } }, [route]);
     function goto(r, prm) { setParams(Object.assign({ _k: Date.now() }, prm || {})); if (r !== route) { location.hash = r; setRoute(r); } window.scrollTo(0, 0); }
     var key = Y.keys.getActiveKey(), noKey = !Y.keys.getPool().length;
     var common = { apiKey: key, yt: Y.yt, ytKeyManager: Y.keys, showToast: K.toast, onOpenApiModal: function () { goto('settings'); } };

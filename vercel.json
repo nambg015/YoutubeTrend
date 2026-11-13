@@ -5,21 +5,36 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
       ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/(.*)\\.(js|css|png|jpg|jpeg|gif|svg|ico)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=60, stale-while-revalidate=120" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=60, stale-while-revalidate=120"
+        }
       ]
     }
   ],
@@ -27,5 +42,11 @@
     "api/*.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/mcp/:t",
+      "destination": "/api/mcp?t=:t"
+    }
+  ]
 }
