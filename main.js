@@ -105,6 +105,8 @@
       !S.total ? 'Chưa có key' : !S.ok ? (S.susp === S.total ? 'Key bị khoá' : 'Hết quota') : h(Frag, null, h('span', { className: 'sm:hidden' }, N(S.left)), h('span', { className: 'hidden sm:inline' }, 'Quota ' + N(S.left) + ' · ' + S.ok + '/' + S.total + ' key')));
   }
   function Shell(p) {
+    var w0 = useState(function () { try { return localStorage.getItem('yt4_nav_wide') === '1'; } catch (e) { return false; } }), wide = w0[0], setWide0 = w0[1], w1 = useState(false), drawer = w1[0], setDrawer = w1[1];
+    function setWide(v) { setWide0(v); try { localStorage.setItem('yt4_nav_wide', v ? '1' : '0'); } catch (e) { } }
     var s0 = useState(readRoute()), route = s0[0], setRoute = s0[1], s1 = useState({}), params = s1[0], setParams = s1[1];
     K.useBus('keys'); K.useBus('feed'); K.useBus('alerts');
     var sp = useState(false), pal = sp[0], setPal = sp[1];
@@ -135,22 +137,32 @@
     else if (route === 'resource') page = P.studio ? h(P.studio, { goto: goto, params: params, common: common }) : h(K.Missing, { name: 'Tạo tài nguyên', file: 'page_studio.js' });
     var user = Y.auth.currentUser(), label = user ? (user.email || '').replace('@youtrend.user', '') : '';
     var alertN = route !== 'today' && window.YT4Today ? window.YT4Today.unseenCount() : 0;
-    var navItem = function (n, mobile) {
-      var on = route === n[0];
-      return h('a', { key: n[0], href: '#' + n[0], onClick: function (e) { e.preventDefault(); goto(n[0]); }, 'aria-current': on ? 'page' : null, title: n[1],
-        className: cx('flex flex-col items-center justify-center gap-1 rounded-xl transition text-center', mobile ? 'h-14 px-1' : 'w-16 py-3.5', on ? 'bg-[#323232] text-[#f1f1f1]' : 'text-[#aaaaaa] hover:bg-[#272727] hover:text-[#f1f1f1]'), style: on ? { boxShadow: 'inset 0 -2px 0 ' + n[3] } : null },
-        h('span', { className: 'relative', style: { color: n[3] } }, h(K.Icon, { name: n[0], size: 22, stroke: on ? 2.2 : 1.7 }), n[0] === 'today' && alertN > 0 && h('span', { className: 'absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-[#ff4e45] text-white text-[10px] font-bold leading-4 text-center tabular-nums', title: alertN + ' video nổ mới từ kênh đang theo dõi' }, alertN > 9 ? '9+' : alertN)), h('span', { className: cx('leading-tight', mobile ? 'text-[9.5px]' : 'text-[10px]', on && 'font-medium') }, n[2] || n[1]));
+    var badge = function (n) { return n[0] === 'today' && alertN > 0 && h('span', { className: 'absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-[#ff4e45] text-white text-[10px] font-bold leading-4 text-center tabular-nums', title: alertN + ' video nổ mới từ kênh đang theo dõi' }, alertN > 9 ? '9+' : alertN); };
+    // mode: 'rail' = thanh hẹp (biểu tượng trên, chữ dưới) · 'row' = thanh rộng (biểu tượng + chữ một hàng) · 'mobile' = thanh đáy điện thoại
+    var navItem = function (n, mode) {
+      var on = route === n[0], row = mode === 'row';
+      return h('a', { key: n[0], href: '#' + n[0], onClick: function (e) { e.preventDefault(); setDrawer(false); goto(n[0]); }, 'aria-current': on ? 'page' : null, title: n[1],
+        className: cx('flex items-center rounded-xl transition', row ? 'w-full h-12 px-4 gap-5' : 'flex-col justify-center gap-1.5 text-center ' + (mode === 'mobile' ? 'h-14 px-1' : 'w-[76px] py-3.5'), on ? 'bg-[#323232] text-[#f1f1f1]' : 'text-[#aaaaaa] hover:bg-[#272727] hover:text-[#f1f1f1]'), style: on ? { boxShadow: (row ? 'inset 3px 0 0 ' : 'inset 0 -2px 0 ') + n[3] } : null },
+        h('span', { className: 'relative shrink-0', style: { color: n[3] } }, h(K.Icon, { name: n[0], size: mode === 'mobile' ? 22 : 25, stroke: on ? 2.2 : 1.7 }), badge(n)),
+        h('span', { className: cx(row ? 'text-[14.5px] truncate' : 'leading-tight ' + (mode === 'mobile' ? 'text-[9.5px]' : 'text-[11.5px]'), on && (row ? 'font-semibold' : 'font-medium')) }, row ? n[1] : n[2] || n[1]));
     };
+    var burger = h('button', { type: 'button', onClick: function () { if (window.innerWidth >= 1024) setWide(!wide); else setDrawer(!drawer); }, 'aria-label': wide ? 'Thu gọn thanh bên trái' : 'Mở rộng thanh bên trái', 'aria-expanded': wide || drawer, className: 'shrink-0 w-10 h-10 -ml-1 rounded-full grid place-items-center text-[#f1f1f1] hover:bg-[#272727] cursor-pointer' }, h(K.Icon, { name: 'menu', size: 24, stroke: 1.8 }));
     return h('div', { className: 'min-h-screen' },
-      h('header', { className: 'fixed top-0 inset-x-0 z-40 h-14 bg-[#0f0f0f]/90 backdrop-blur-md flex items-center gap-4 pl-4 lg:pl-6 pr-4' },
+      h('header', { className: 'fixed top-0 inset-x-0 z-40 h-14 bg-[#0f0f0f]/90 backdrop-blur-md flex items-center gap-3 pl-4 lg:pl-5 pr-4' },
+        burger,
         h('button', { onClick: function () { goto('today'); }, 'aria-label': 'YouTrend, về trang Hôm nay', className: 'cursor-pointer shrink-0' }, h(Mark)),
         h('div', { className: 'flex-1 flex justify-center min-w-0' }, h('button', { onClick: function () { setPal(true); }, 'aria-label': 'Tìm nhanh', className: 'hidden md:flex items-center gap-2.5 w-full max-w-[520px] h-9 px-4 rounded-full border border-[#303030] bg-[#121212] text-[12.5px] text-[#aaaaaa] hover:border-[#4a4a4a] cursor-text transition' }, h(K.Icon, { name: 'search', size: 15 }), h('span', { className: 'flex-1 text-left truncate' }, 'Tìm kênh, video đã lưu, ý tưởng hoặc gõ từ khoá'), h('kbd', { className: 'text-[10.5px] px-1.5 py-0.5 rounded bg-[#272727] text-[#aaaaaa] font-sans' }, 'Ctrl K'))),
         h('button', { onClick: function () { setPal(true); }, 'aria-label': 'Tìm nhanh', className: 'md:hidden h-9 w-9 rounded-full bg-[#272727] text-[#f1f1f1] inline-flex items-center justify-center cursor-pointer' }, h(K.Icon, { name: 'search', size: 16 })),
         h('div', { className: 'flex items-center gap-2 shrink-0' }, h(QuotaChip, { onClick: function () { goto('settings'); } }),
           h('button', { onClick: function () { goto('settings'); }, title: user ? user.email : '', 'aria-label': 'Tài khoản và cài đặt', className: 'h-8 w-8 rounded-full bg-[#5e35b1] text-white text-[13px] font-medium cursor-pointer hover:brightness-110' }, (label || '?').charAt(0).toUpperCase()))),
-      h('nav', { 'aria-label': 'Mục chính', className: 'hidden lg:flex fixed left-0 top-14 bottom-0 z-30 w-[72px] flex-col items-center gap-1 pt-1 bg-[#0f0f0f]/85 backdrop-blur-md' }, NAV.map(function (n) { return navItem(n); })),
-      h('nav', { 'aria-label': 'Mục chính', className: 'lg:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-8 bg-[#0f0f0f] border-t border-[#272727]' }, NAV.map(function (n) { return navItem(n, true); })),
-      h('div', { className: 'pt-14 lg:pl-[72px]' },
+      h('nav', { 'aria-label': 'Mục chính', className: cx('hidden lg:flex fixed left-0 top-14 bottom-0 z-30 flex-col gap-1 pt-2 bg-[#0f0f0f]/85 backdrop-blur-md overflow-y-auto', wide ? 'w-[236px] px-3 items-stretch' : 'w-[84px] items-center') }, NAV.map(function (n) { return navItem(n, wide ? 'row' : 'rail'); })),
+      h('nav', { 'aria-label': 'Mục chính', className: 'lg:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-8 bg-[#0f0f0f] border-t border-[#272727]' }, NAV.map(function (n) { return navItem(n, 'mobile'); })),
+      drawer && h('div', { className: 'lg:hidden fixed inset-0 z-50' },
+        h('div', { className: 'absolute inset-0 bg-black/60', onClick: function () { setDrawer(false); } }),
+        h('nav', { 'aria-label': 'Mục chính', className: 'absolute left-0 top-0 bottom-0 w-[264px] bg-[#0f0f0f] flex flex-col gap-1 px-3 pb-4 overflow-y-auto' },
+          h('div', { className: 'h-14 flex items-center gap-3 pl-1' }, burger, h(Mark)),
+          NAV.map(function (n) { return navItem(n, 'row'); }))),
+      h('div', { className: cx('pt-14 transition-[padding] duration-150', wide ? 'lg:pl-[236px]' : 'lg:pl-[84px]') },
         noKey && route !== 'settings' && h('div', { className: 'mx-4 sm:mx-6 mt-3 rounded-xl bg-[#272727] px-4 py-2.5 flex items-center gap-3 text-[12px] text-[#f1f1f1]' }, 'Chưa có YouTube API key nên các mục tìm kiếm chưa chạy được.', h('button', { onClick: function () { goto('settings'); }, className: K.C.sm }, 'Thêm key')),
         h('main', { className: 'max-w-[1760px] mx-auto px-4 sm:px-6 py-5 pb-24 lg:pb-12' }, FLOW.some(function (x) { return x[2] === route; }) && h(Flow, { route: route, goto: goto }), h(ErrorBoundary, { key: route }, page))),
       pal && h(Palette, { goto: goto, onClose: function () { setPal(false); } }),
