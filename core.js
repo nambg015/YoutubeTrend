@@ -42,13 +42,13 @@
       return single ? [{ id: 'k_main', name: 'Key 1', key: single, status: 'active', addedAt: Date.now() }] : [];
     },
     savePool: function (pool, silent) {
-      var active = pool.find(function (p) { return p.status === 'active' && p.key; }) || pool.find(function (p) { return p.status !== 'quota_exceeded' && p.status !== 'suspended' && p.key; });
+      var active = pool.find(function (p) { return p.status === 'active' && p.key; }) || pool.find(function (p) { return p.status !== 'quota_exceeded' && p.status !== 'suspended' && p.status !== 'invalid' && p.key; });
       if (active) active.status = 'active';
       st.put('yt_key_pool', pool); st.set('yt_key', active ? active.key : '');
       if (!silent) { emit('keys'); try { W.dispatchEvent(new CustomEvent('yt-keys-updated', { detail: { pool: pool, activeKey: active ? active.key : '' } })); } catch (e) { } }
       return active ? active.key : '';
     },
-    getActiveKey: function () { var p = this.getPool(), a = p.find(function (x) { return x.status === 'active' && x.key; }) || p.find(function (x) { return x.status !== 'quota_exceeded' && x.status !== 'suspended' && x.key; }); return a ? a.key : ''; },
+    getActiveKey: function () { var p = this.getPool(), a = p.find(function (x) { return x.status === 'active' && x.key; }) || p.find(function (x) { return x.status !== 'quota_exceeded' && x.status !== 'suspended' && x.status !== 'invalid' && x.key; }); return a ? a.key : ''; },
     addKey: function (name, key) {
       key = String(key || '').trim(); if (!key) return false; var pool = this.getPool(); if (pool.some(function (p) { return p.key === key; })) return false;
       pool.push({ id: 'k_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: String(name || '').trim() || 'Key ' + (pool.length + 1), key: key, status: pool.length ? 'standby' : 'active', addedAt: Date.now() });
@@ -59,15 +59,18 @@
     rename: function (id, name) { var pool = this.getPool(); pool.forEach(function (p) { if (p.id === id) p.name = name; }); this.savePool(pool); },
     resetStatus: function (id) { var pool = this.getPool(); pool.forEach(function (p) { if ((p.id === id || !id) && p.status === 'quota_exceeded') p.status = 'standby'; }); this.savePool(pool); },
     markSuspended: function (key) { return this.markQuotaExceeded(key, 'suspended'); },
+    // key sai / chưa bật YouTube Data API / bị giới hạn: gạt sang một bên, dùng key khác
+    markInvalid: function (key, why) { var nx = this.markQuotaExceeded(key, 'invalid'); var pool = this.getPool(); pool.forEach(function (p) { if (p.key === key) p.why = String(why || '').slice(0, 200); }); this.savePool(pool); return nx; },
+    markOk: function (key) { var pool = this.getPool(), ch = false; pool.forEach(function (p) { if (p.key === key && p.status === 'invalid') { p.status = 'standby'; delete p.why; ch = true; } }); if (ch) this.savePool(pool); },
     markQuotaExceeded: function (key, status) {
       var pool = this.getPool(), next = null;
       pool.forEach(function (p) { if (p.key === key) p.status = status || 'quota_exceeded'; });
       pool.forEach(function (p) { if (p.status === 'active') p.status = 'standby'; });
-      var n = pool.find(function (p) { return p.status !== 'quota_exceeded' && p.status !== 'suspended' && p.key; }); if (n) { n.status = 'active'; next = n.key; }
+      var n = pool.find(function (p) { return p.status !== 'quota_exceeded' && p.status !== 'suspended' && p.status !== 'invalid' && p.key; }); if (n) { n.status = 'active'; next = n.key; }
       this.savePool(pool); return next;
     },
     stats: function () {
-      var pool = this.getPool(), use = this.usage(), ok = pool.filter(function (k) { return k.status !== 'quota_exceeded' && k.status !== 'suspended' && k.key; });
+      var pool = this.getPool(), use = this.usage(), ok = pool.filter(function (k) { return k.status !== 'quota_exceeded' && k.status !== 'suspended' && k.status !== 'invalid' && k.key; });
       var left = ok.reduce(function (a, k) { return a + Math.max(0, 1e4 - (use[k.key] || 0)); }, 0);
       return { total: pool.length, ok: ok.length, susp: pool.filter(function (k) { return k.status === 'suspended'; }).length, left: left, used: pool.reduce(function (a, k) { return a + (use[k.key] || 0); }, 0) };
     }
@@ -79,13 +82,13 @@
   async function yt(path, params, key) {
     var cands = [], first = key || ytKeyManager.getActiveKey();
     if (first) cands.push(first);
-    ytKeyManager.getPool().forEach(function (p) { if (p.key && p.status !== 'quota_exceeded' && p.status !== 'suspended' && cands.indexOf(p.key) < 0) cands.push(p.key); });
+    ytKeyManager.getPool().forEach(function (p) { if (p.key && p.status !== 'quota_exceeded' && p.status !== 'suspended' && p.status !== 'invalid' && cands.indexOf(p.key) < 0) cands.push(p.key); });
     if (!cands.length) {
       var pool = ytKeyManager.getPool();
       if (pool.length && pool.every(function (p) { return p.status === 'suspended'; })) throw { code: 'suspended', msg: 'Google đã tạm khoá (suspend) project Google Cloud chứa API key này, nên mọi key của project đó đều bị từ chối. Tạo key mới từ một project khác rồi thêm trong Cài đặt.' };
       throw pool.length ? { code: 'quotaExceeded', msg: 'Tất cả API key đã hết quota hôm nay (reset khoảng 14–15h giờ VN). Thêm key mới trong Cài đặt.' } : { code: 'MISSING', msg: 'Chưa có YouTube API key. Thêm key trong Cài đặt.' };
     }
-    var tried = {}, susp = 0, quota = 0;
+    var tried = {}, susp = 0, quota = 0, bad = 0, badMsg = '';
     for (var i = 0; i < cands.length; i++) {
       var k = cands[i]; if (tried[k]) continue; tried[k] = 1;
       var u = new URL('https://www.googleapis.com/youtube/v3/' + path);
@@ -98,9 +101,16 @@
       var reason = (j.error && j.error.errors && j.error.errors[0] && j.error.errors[0].reason) || ('HTTP' + r.status);
       if (/has been suspended|CONSUMER_SUSPENDED/i.test(((j.error || {}).message || '') + JSON.stringify((j.error || {}).details || ''))) { susp++; var ns = ytKeyManager.markSuspended(k); if (ns && !tried[ns]) cands.push(ns); continue; }
       if (/quotaExceeded|dailyLimitExceeded|rateLimitExceeded/.test(reason)) { quota++; var nx = ytKeyManager.markQuotaExceeded(k); if (nx && !tried[nx]) cands.push(nx); continue; }
-      if (reason === 'keyInvalid' || /API key not valid/i.test((j.error || {}).message || '')) throw { code: 'keyInvalid', msg: 'API key không hợp lệ: ' + k.slice(0, 8) + '…' };
+      var em = ((j.error || {}).message || '') + ' ' + JSON.stringify((j.error || {}).details || '');
+      // key sai, hoặc key đúng nhưng không dùng được cho YouTube (chưa bật YouTube Data API v3, bị giới hạn API / trang web): bỏ qua key này, thử key khác
+      if (reason === 'keyInvalid' || reason === 'accessNotConfigured' || /API key not valid|API_KEY_INVALID|API_KEY_SERVICE_BLOCKED|API_KEY_HTTP_REFERRER_BLOCKED|has not been used in project|it is disabled|are blocked/i.test(em)) {
+        var why = /API key not valid|API_KEY_INVALID/i.test(em) || reason === 'keyInvalid' ? 'Google không nhận key này (sai, thiếu ký tự hoặc đã bị xoá)' : /REFERRER/i.test(em) ? 'key bị giới hạn theo trang web, không cho web này dùng' : 'key này chưa bật YouTube Data API v3 (ví dụ key Gemini lấy ở AI Studio)';
+        bad++; badMsg = 'Key ' + k.slice(0, 8) + '…' + k.slice(-4) + ' không dùng được cho YouTube: ' + why + '.';
+        var nb = ytKeyManager.markInvalid(k, why); if (nb && !tried[nb]) cands.push(nb); continue;
+      }
       throw { code: reason, msg: (j.error && j.error.message) || reason, raw: j };
     }
+    if (bad && !susp && !quota) throw { code: 'keyInvalid', msg: badMsg + ' Vào Cài đặt xoá key này và thêm key YouTube đúng (console.cloud.google.com → bật YouTube Data API v3 → Credentials → Create API key).' };
     if (susp && !quota) throw { code: 'suspended', msg: 'Google đã tạm khoá (suspend) project Google Cloud chứa API key này, nên mọi key của project đó đều bị từ chối. Tạo key mới từ một project khác rồi thêm trong Cài đặt.' };
     throw { code: 'quotaExceeded', msg: 'Tất cả API key đã hết quota hôm nay (reset khoảng 14–15h giờ VN). Thêm key mới trong Cài đặt.' };
   }
