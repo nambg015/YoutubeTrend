@@ -135,11 +135,58 @@
   function ServerPanel(p) {
     var me = p.me || {};
     return h(Section, { title: 'Máy chủ & AI' },
-      h('div', { className: 'grid gap-4 sm:grid-cols-3' }, h(Stat, { label: 'Gemini (Tạo tài nguyên, nhận định AI)', value: me.gemini ? 'Đã cấu hình' : 'Chưa có GEMINI_API_KEY', sub: me.model || '' }), h(Stat, { label: 'Quyền', value: 'Admin', sub: me.email || '' }), h(Stat, { label: 'Phiên bản', value: 'YouTrend v4' })),
-      !me.gemini && h(Note, { className: 'mt-3' }, 'Thêm GEMINI_API_KEY ở Vercel → Settings → Environment Variables (lấy miễn phí tại aistudio.google.com/apikey), rồi Redeploy.'));
+      h('div', { className: 'grid gap-4 sm:grid-cols-3' }, h(Stat, { label: 'Gemini (Tạo tài nguyên, nhận định AI)', value: me.gemini ? 'Đã cấu hình' : 'Chưa có GEMINI_API_KEY', sub: me.model || '' }), h(Stat, { label: 'Quyền', value: me.role === 'guest' ? 'Khách' : 'Chủ (admin)', sub: (me.email || '').replace('@youtrend.user', '') }), h(Stat, { label: 'Phiên bản', value: 'YouTrend v4' })),
+      !me.gemini && me.role !== 'guest' && h(Note, { className: 'mt-3' }, 'Thêm GEMINI_API_KEY ở Vercel → Settings → Environment Variables (lấy miễn phí tại aistudio.google.com/apikey), rồi Redeploy.'));
+  }
+  // Tài khoản khách: chủ tạo và đổi mật khẩu ngay trong Cài đặt (máy chủ chỉ cho các tên trong danh sách khách vào)
+  function GuestPanel(p) {
+    var names = ((p.me && p.me.guests) || []).map(function (e) { return String(e).replace('@youtrend.user', ''); });
+    var s0 = useState(names[0] || ''), name = s0[0], setName = s0[1], s1 = useState(''), pw = s1[0], setPw = s1[1], s2 = useState(''), busy = s2[0], setBusy = s2[1], s3 = useState(null), msg = s3[0], setMsg = s3[1];
+    var s4 = useState(''), o = s4[0], setO = s4[1], s5 = useState(''), n = s5[0], setN = s5[1], s6 = useState(''), made = s6[0], setMade = s6[1];
+    var email = name.indexOf('@') >= 0 ? name : name + '@youtrend.user';
+    function rnd() { var A = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789', b = new Uint32Array(12), out = ''; (window.crypto || window.msCrypto).getRandomValues(b); for (var i = 0; i < b.length; i++) out += A[b[i] % A.length]; setPw(out); setMsg(null); }
+    var needConsole = function (e) { return /operation-not-allowed|admin-restricted|phiên phụ/.test((e.code || '') + ' ' + (e.message || '')); };
+    async function create() {
+      if (pw.length < 8) { setMsg({ err: 1, t: 'Mật khẩu cần ít nhất 8 ký tự.' }); return; }
+      setBusy('c'); setMsg(null);
+      try { await Y.auth.createGuest(name, pw); setMade(pw); setMsg({ t: 'Đã tạo tài khoản khách "' + name + '". Gửi tên đăng nhập và mật khẩu cho khách là họ vào được ngay.' }); }
+      catch (e) { setMsg({ err: 1, t: e.message, console: needConsole(e) }); }
+      setBusy('');
+    }
+    async function change() {
+      if (n.length < 8) { setMsg({ err: 1, t: 'Mật khẩu mới cần ít nhất 8 ký tự.' }); return; }
+      setBusy('p'); setMsg(null);
+      try { await Y.auth.changeGuestPassword(name, o, n); setMade(n); setO(''); setN(''); setMsg({ t: 'Đã đổi mật khẩu của "' + name + '". Mật khẩu cũ không còn dùng được.' }); }
+      catch (e) { setMsg({ err: 1, t: e.message }); }
+      setBusy('');
+    }
+    function copyInfo() { var t = 'Web: ' + location.origin + '\nTên đăng nhập: ' + name + '\nMật khẩu: ' + made; U.copy(t).then(function () { K.toast('Đã sao chép thông tin đăng nhập của khách'); }, function () { K.toast('Trình duyệt chặn sao chép, hãy bôi đen rồi Ctrl+C.'); }); }
+    if (!names.length) return h(Section, { title: 'Tài khoản khách' }, h(Note, null, 'Tài khoản khách đang tắt (biến GUEST_EMAILS trên Vercel đang để trống). Xoá biến đó rồi Redeploy để bật lại tên mặc định "khach".'));
+    var fld = 'h-9 bg-[#121212] border border-[#303030] rounded-lg px-3 text-[12.5px] text-[#f1f1f1] placeholder:text-[#717171] min-w-0';
+    return h(Section, { title: 'Tài khoản khách' },
+      h('p', { className: 'text-[12px] text-[#c8c8c8] leading-relaxed' }, 'Một tài khoản riêng để đưa cho người khác dùng web. Khách dùng được mọi công cụ; dữ liệu của họ lưu trên máy của họ, không thấy dữ liệu của bạn. Khách phải tự nhập YouTube API key ở Cài đặt, lượt AI mỗi ngày bằng khoảng 30% của bạn, và không đổi được mật khẩu trong web.'),
+      h('div', { className: 'mt-3 grid gap-2 md:grid-cols-[170px_minmax(0,1fr)_auto_auto] items-center' },
+        names.length > 1 ? h('select', { value: name, 'aria-label': 'Tên đăng nhập của khách', onChange: function (e) { setName(e.target.value); setMade(''); setMsg(null); }, className: fld + ' cursor-pointer' }, names.map(function (x) { return h('option', { key: x, value: x }, x); }))
+          : h('div', { className: 'h-9 px-3 rounded-lg bg-[#181818] border border-[#303030] flex items-center gap-2 text-[12.5px]' }, h('span', { className: 'text-[#aaa]' }, 'Tên đăng nhập'), h('b', { className: 'text-white' }, name)),
+        h('input', { type: 'text', value: pw, onChange: function (e) { setPw(e.target.value); }, placeholder: 'Mật khẩu cho khách (ít nhất 8 ký tự)', 'aria-label': 'Mật khẩu cho khách', autoComplete: 'off', spellCheck: false, className: fld + ' font-mono' }),
+        h(Btn, { onClick: rnd, disabled: !!busy }, 'Tạo ngẫu nhiên'),
+        h(Btn, { primary: true, onClick: create, disabled: !!busy || !pw }, busy === 'c' ? 'Đang tạo…' : 'Tạo tài khoản khách')),
+      msg && h('div', { role: msg.err ? 'alert' : 'status', className: cx('mt-3 rounded-lg border px-3.5 py-2.5 text-[12px] leading-relaxed', msg.err ? 'border-[#ff4e45]/50 bg-[#2a1614] text-[#ffb4ae]' : 'border-[#2ba640]/50 bg-[#14261a] text-[#9fe0ad]') }, msg.t,
+        !msg.err && made && h('button', { onClick: copyInfo, className: 'ml-3 h-7 px-3 rounded-full bg-[#1d3a2a] hover:bg-[#25492f] text-[11.5px] font-semibold text-[#9fe0ad] cursor-pointer' }, 'Sao chép thông tin gửi khách')),
+      msg && msg.console && h('ol', { className: 'mt-2 list-decimal pl-5 space-y-1 text-[12px] text-[#d0d0d0] leading-relaxed' },
+        h('li', null, 'Mở console.firebase.google.com, chọn dự án của web, vào Authentication → Users.'),
+        h('li', null, 'Bấm Add user. Email: ', h('b', { className: 'text-white select-all' }, email), ' · Password: mật khẩu bạn muốn đưa cho khách.'),
+        h('li', null, 'Bấm Add user là xong. Khách đăng nhập bằng tên "' + name + '" và mật khẩu đó.')),
+      h('details', { className: 'mt-4 pt-3 border-t border-[#2a2a2a]' },
+        h('summary', { className: 'text-[12px] font-medium text-[#c8c8c8] cursor-pointer hover:text-white' }, 'Đổi mật khẩu khách (khi muốn thu lại quyền của người cũ)'),
+        h('div', { className: 'mt-2.5 grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]' },
+          h('input', { type: 'text', value: o, onChange: function (e) { setO(e.target.value); }, placeholder: 'Mật khẩu khách hiện tại', 'aria-label': 'Mật khẩu khách hiện tại', autoComplete: 'off', className: fld + ' font-mono' }),
+          h('input', { type: 'text', value: n, onChange: function (e) { setN(e.target.value); }, placeholder: 'Mật khẩu mới (ít nhất 8 ký tự)', 'aria-label': 'Mật khẩu khách mới', autoComplete: 'off', className: fld + ' font-mono' }),
+          h(Btn, { onClick: change, disabled: !!busy || !o || !n }, busy === 'p' ? 'Đang đổi…' : 'Đổi mật khẩu khách')),
+        h('p', { className: 'mt-2 text-[11.5px] text-[#aaa] leading-relaxed' }, 'Quên mật khẩu hiện tại của khách, hoặc muốn khoá hẳn: vào Firebase Console → Authentication → Users, tìm ' + email + ' rồi chọn Reset password, Disable account hoặc Delete account.')));
   }
   function AccountPanel(p) {
-    var user = Y.auth.currentUser(), isPass = user && (user.providerData || []).some(function (x) { return x.providerId === 'password'; });
+    var user = Y.auth.currentUser(), isPass = !p.guest && user && (user.providerData || []).some(function (x) { return x.providerId === 'password'; });
     var s0 = useState(''), o = s0[0], setO = s0[1], s1 = useState(''), n = s1[0], setN = s1[1], s2 = useState(''), msg = s2[0], setMsg = s2[1];
     async function change() { setMsg(''); if (n.length < 8) { setMsg('Mật khẩu mới tối thiểu 8 ký tự'); return; } try { await Y.auth.changePassword(o, n); setMsg('Đã đổi mật khẩu'); setO(''); setN(''); } catch (e) { setMsg(e.message); } }
     return h(Section, { title: 'Tài khoản' },
@@ -185,7 +232,7 @@
     return h('div', { className: 'space-y-5 max-w-5xl' },
       h('div', null, h('h1', { className: 'font-display text-[25px] leading-9 font-bold text-white tracking-tight' }, 'Cài đặt'), h('p', { className: 'text-[13.5px] text-[#d0d0d0] mt-1 leading-relaxed' }, 'API key YouTube, Claude, tài khoản và sao lưu dữ liệu.')),
       h(K.Help, { id: 'settings', title: 'Thiết lập lần đầu', steps: ['Thêm YouTube API key: vào console.cloud.google.com, bật YouTube Data API v3, tạo API key rồi dán vào ô bên dưới. Nên có nhiều key để quét được nhiều hơn.', 'Gemini (cho Tạo tài nguyên và Nhận định AI) đặt trên Vercel, ô Máy chủ & AI cho biết đã có chưa.', 'Claude API key là tuỳ chọn: chỉ cần khi muốn Claude viết kịch bản ngay trong web.', 'Thỉnh thoảng bấm Tải file sao lưu để giữ dữ liệu khi đổi máy.'] }),
-      h(KeysPanel), h(ClaudePanel), window.YT4Mcp ? h(window.YT4Mcp.Box) : null, h(ServerPanel, { me: p.me }), h(AccountPanel, { onLogout: p.onLogout }), h(DataPanel));
+      h(KeysPanel), h(ClaudePanel), window.YT4Mcp ? h(window.YT4Mcp.Box) : null, h(ServerPanel, { me: p.me }), p.me && p.me.admin ? h(GuestPanel, { me: p.me }) : null, h(AccountPanel, { onLogout: p.onLogout, guest: !!(p.me && p.me.role === 'guest') }), h(DataPanel));
   }
 
   window.YT4Pages = window.YT4Pages || {};

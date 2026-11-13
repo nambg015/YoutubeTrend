@@ -88,15 +88,56 @@ function adminList() {
     uids: (process.env.ADMIN_UIDS || '').split(',').map(s => s.trim()).filter(Boolean)
   };
 }
+// Email có trong danh sách và đúng kiểu đăng nhập (tài khoản "tên đăng nhập" → mật khẩu; Gmail → đã xác minh).
+function emailIn(claims, list) {
+  const email = String((claims && claims.email) || '').toLowerCase();
+  if (!email || !list.includes(email)) return false;
+  const provider = (claims.firebase && claims.firebase.sign_in_provider) || '';
+  if (email.endsWith('@youtrend.user')) return provider === 'password' || provider === '';
+  return claims.email_verified === true;
+}
 function isAdmin(claims) {
   if (!claims) return false;
   const L = adminList();
   if (L.uids.includes(claims.sub)) return true;
-  const email = String(claims.email || '').toLowerCase();
-  if (!email || !L.emails.includes(email)) return false;
-  const provider = (claims.firebase && claims.firebase.sign_in_provider) || '';
-  if (email.endsWith('@youtrend.user')) return provider === 'password' || provider === '';
-  return claims.email_verified === true;
+  return emailIn(claims, L.emails);
+}
+
+// ===== TÀI KHOẢN KHÁCH =====
+// Khách dùng được công cụ nhưng không phải chủ: lượt AI mỗi ngày thấp hơn, không quản lý tài khoản.
+// Đặt GUEST_EMAILS trên Vercel để đổi danh sách; đặt GUEST_EMAILS rỗng để tắt hẳn tài khoản khách.
+const DEFAULT_GUESTS = 'khach@youtrend.user';
+function guestList() {
+  const raw = process.env.GUEST_EMAILS !== undefined ? process.env.GUEST_EMAILS : DEFAULT_GUESTS;
+  const admins = adminList().emails;
+  return String(raw).split(',').map(s => s.trim().toLowerCase()).filter(Boolean).filter(e => !admins.includes(e));
+}
+function roleOf(claims) {
+  if (!claims) return '';
+  if (isAdmin(claims)) return 'admin';
+  return emailIn(claims, guestList()) ? 'guest' : '';
+}
+// Hạn mức ngày của khách = một phần của chủ (mặc định 30%).
+function limitFor(claims, n) {
+  if (!claims || claims.role !== 'guest') return n;
+  const f = Number(process.env.GUEST_LIMIT_FACTOR); const k = f > 0 && f <= 1 ? f : 0.3;
+  return Math.max(1, Math.ceil(n * k));
+}
+async function requireUser(req, res, opts = {}) {
+  let claims;
+  try {
+    claims = await verifyIdToken(bearer(req), opts);
+  } catch (e) {
+    res.status(401).json({ success: false, code: e.code || 'UNAUTHORIZED', message: e.message || 'Chưa đăng nhập' });
+    return null;
+  }
+  const role = roleOf(claims);
+  if (!role) {
+    res.status(403).json({ success: false, code: 'NOT_ALLOWED', message: 'Tài khoản này không có quyền dùng web.' });
+    return null;
+  }
+  claims.uid = claims.sub; claims.role = role;
+  return claims;
 }
 async function requireAdmin(req, res, opts = {}) {
   let claims;
@@ -110,11 +151,11 @@ async function requireAdmin(req, res, opts = {}) {
     res.status(403).json({ success: false, code: 'NOT_ADMIN', message: 'Tài khoản này không có quyền dùng web.' });
     return null;
   }
-  claims.uid = claims.sub;
+  claims.uid = claims.sub; claims.role = 'admin';
   return claims;
 }
-// Giữ tên cũ để các API cũ (trend-v2-ai, extract-clues, research) tự động chỉ cho admin.
-const requirePhoneVerified = requireAdmin;
+// Giữ tên cũ: các API dùng chung (research, trend-v2-ai, extract-clues, mcp) cho cả chủ lẫn khách.
+const requirePhoneVerified = requireUser;
 
 // CORS: chỉ phản hồi cho đúng domain của mình (gọi cùng domain thì không cần CORS).
 function applyCors(req, res, extraHeaders = '') {
@@ -127,4 +168,4 @@ function applyCors(req, res, extraHeaders = '') {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization' + (extraHeaders ? ', ' + extraHeaders : ''));
 }
 
-module.exports = { verifyIdToken, requireAdmin, requirePhoneVerified, isAdmin, adminList, applyCors, bearer, ALLOWED_ORIGINS };
+module.exports = { verifyIdToken, requireAdmin, requireUser, requirePhoneVerified, isAdmin, roleOf, guestList, limitFor, adminList, applyCors, bearer, ALLOWED_ORIGINS };

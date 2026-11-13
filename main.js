@@ -55,13 +55,13 @@
         h(Mark, { big: true }),
         h('p', { className: 'text-[10.5px] text-cham-300 mt-3 mb-6 leading-relaxed' }, 'Bàn làm việc riêng: săn kênh nhỏ đang farm view, gom tài nguyên, viết kịch bản.'),
         h('button', { onClick: function () { go('g'); }, disabled: !!busy, className: cx(K.C.pri, 'w-full h-9') }, busy === 'g' ? 'Đang mở Google…' : 'Đăng nhập với Google'),
-        h('div', { className: 'flex items-center gap-3 my-5 text-[10.5px] text-cham-400' }, h('span', { className: 'flex-1 h-px bg-cham-800' }), 'hoặc tài khoản quản trị', h('span', { className: 'flex-1 h-px bg-cham-800' })),
+        h('div', { className: 'flex items-center gap-3 my-5 text-[10.5px] text-cham-400' }, h('span', { className: 'flex-1 h-px bg-cham-800' }), 'hoặc tên đăng nhập được cấp', h('span', { className: 'flex-1 h-px bg-cham-800' })),
         h('form', { onSubmit: function (e) { e.preventDefault(); if (id && pw) go('p'); }, className: 'space-y-2.5' },
           h(K.Field, { label: 'Tên đăng nhập' }, h(Input, { value: id, onChange: function (e) { setId(e.target.value); }, autoComplete: 'username', className: 'h-9' })),
           h(K.Field, { label: 'Mật khẩu' }, h(Input, { type: 'password', value: pw, onChange: function (e) { setPw(e.target.value); }, autoComplete: 'current-password', className: 'h-9' })),
           h('button', { type: 'submit', disabled: !!busy || !id || !pw, className: cx(K.C.btn, 'w-full h-9 mt-1') }, busy === 'p' ? 'Đang đăng nhập…' : 'Đăng nhập')),
         err && h(Note, { error: true, className: 'mt-4' }, err),
-        h('p', { className: 'mt-6 text-[10.5px] text-cham-400' }, 'Web nội bộ, chỉ tài khoản quản trị vào được.')));
+        h('p', { className: 'mt-6 text-[10.5px] text-cham-400' }, 'Web nội bộ, chỉ tài khoản được cấp mới vào được.')));
   }
 
   // ---------- TÌM NHANH (Ctrl+K hoặc phím /) ----------
@@ -160,6 +160,7 @@
         h('div', { className: 'flex-1 flex justify-center min-w-0' }, h('button', { onClick: function () { setPal(true); }, 'aria-label': 'Tìm nhanh', className: 'hidden md:flex items-center gap-2.5 w-full max-w-[520px] h-9 px-4 rounded-full border border-[#303030] bg-[#121212] text-[12.5px] text-[#aaaaaa] hover:border-[#4a4a4a] cursor-text transition' }, h(K.Icon, { name: 'search', size: 15 }), h('span', { className: 'flex-1 text-left truncate' }, 'Tìm kênh, video đã lưu, ý tưởng hoặc gõ từ khoá'), h('kbd', { className: 'text-[10.5px] px-1.5 py-0.5 rounded bg-[#272727] text-[#aaaaaa] font-sans' }, 'Ctrl K'))),
         h('button', { onClick: function () { setPal(true); }, 'aria-label': 'Tìm nhanh', className: 'md:hidden h-9 w-9 rounded-full bg-[#272727] text-[#f1f1f1] inline-flex items-center justify-center cursor-pointer' }, h(K.Icon, { name: 'search', size: 16 })),
         h('div', { className: 'flex items-center gap-2 shrink-0' }, h(QuotaChip, { onClick: function () { goto('settings'); } }),
+          p.me && p.me.role === 'guest' && h('span', { title: 'Bạn đang dùng tài khoản khách', className: 'hidden sm:inline-flex items-center h-6 px-2 rounded-md bg-[#3a3214] text-[#f5c451] text-[11px] font-semibold' }, 'Khách'),
           h('button', { onClick: function () { goto('settings'); }, title: user ? user.email : '', 'aria-label': 'Tài khoản và cài đặt', className: 'h-8 w-8 rounded-full bg-[#5e35b1] text-white text-[13px] font-medium cursor-pointer hover:brightness-110' }, (label || '?').charAt(0).toUpperCase()))),
       h('nav', { 'aria-label': 'Mục chính', className: cx('fixed left-0 top-14 bottom-0 z-30 flex-col gap-1 pt-2 bg-[#0f0f0f]/85 backdrop-blur-md overflow-y-auto', navOff ? 'hidden' : 'hidden lg:flex', wide ? 'w-[236px] px-3 items-stretch' : 'w-[84px] items-center') }, NAV.map(function (n) { return navItem(n, wide ? 'row' : 'rail'); })),
       h('button', { onClick: function () { setNavOff(!navOff); }, title: navOff ? 'Hiện thanh bên trái' : 'Ẩn thanh bên trái', 'aria-label': navOff ? 'Hiện thanh bên trái' : 'Ẩn thanh bên trái', className: 'hidden lg:grid fixed top-1/2 -translate-y-1/2 z-40 w-7 h-7 rounded-full bg-[#272727] border border-[#4a4a4a] text-[#f1f1f1] hover:bg-[#3a3a3a] place-items-center cursor-pointer shadow-lg transition-[left] duration-150', style: { left: (navOff ? 6 : (wide ? 236 : 84) - 14) + 'px' } }, h(K.Icon, { name: navOff ? 'right' : 'left', size: 15, stroke: 2.2 })),
@@ -196,7 +197,7 @@
         set({ s: 'loading' });
         try {
           var me = await Y.auth.checkAdmin();
-          if (me.admin) set({ s: 'ready', me: me });
+          if (me.admin || me.role === 'guest') { Y.role = me.role || 'admin'; set({ s: 'ready', me: me }); }
           else { var m = (u.email || '') + ': ' + (me.message || 'không có quyền.'); await Y.auth.signOut(); set({ s: 'login', msg: m, denied: m }); }
         } catch (e) { set({ s: 'error', msg: 'Không kiểm tra được quyền đăng nhập (' + e.message + ').' }); }
       });

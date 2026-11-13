@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
   // Mỗi hồ sơ tính 1 lượt (đếm ở bước search — kể cả khi AI lỗi và chuyển sang chế độ miễn phí)
   const bucket = action === 'search' ? 'research' : action === 'insight' || action === 'titles' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' || action === 'topics' || action === 'images' || action === 'translate' || action === 'audience' || action === 'seo' || action === 'script' || action === 'ask' ? 'research_aux' : '';
   if (bucket) {
-    const limit = bucket === 'research' ? (Number(process.env.RESEARCH_DAILY_LIMIT) || 100) : bucket === 'insight' ? (Number(process.env.INSIGHT_DAILY_LIMIT) || 150) : 300;
+    const limit = auth.limitFor(claims, bucket === 'research' ? (Number(process.env.RESEARCH_DAILY_LIMIT) || 100) : bucket === 'insight' ? (Number(process.env.INSIGHT_DAILY_LIMIT) || 150) : 300);
     try {
       const q = await consumeDaily(claims.uid || claims.sub, bucket, limit);
       if (!q.allowed) return res.status(429).json({ success: false, code: 'QUOTA_EXCEEDED', message: 'Bạn đã dùng hết ' + q.limit + ' lượt ' + (bucket === 'insight' ? 'AI phân tích' : 'tạo tài nguyên') + ' hôm nay. Quay lại vào ngày mai nhé!' });

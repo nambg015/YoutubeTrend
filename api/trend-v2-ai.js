@@ -29,7 +29,7 @@ module.exports = async (req, res) => {
   // Bắt buộc đăng nhập + đã xác minh SĐT, và giới hạn số lần gọi mỗi ngày theo tài khoản.
   const claims = await auth.requirePhoneVerified(req, res);
   if (!claims) return;
-  const DAILY_LIMIT = Number(process.env.AI_DAILY_LIMIT) || 30;
+  const DAILY_LIMIT = auth.limitFor(claims, Number(process.env.AI_DAILY_LIMIT) || 30);
   try {
     const q = await consumeDaily(claims.uid || claims.sub, 'ai', DAILY_LIMIT);
     if (!q.allowed) {

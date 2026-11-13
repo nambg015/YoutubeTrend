@@ -126,7 +126,11 @@
         'auth/invalid-email': 'Tên đăng nhập không hợp lệ.', 'auth/too-many-requests': 'Thử sai quá nhiều lần, đợi vài phút rồi thử lại.',
         'auth/popup-closed-by-user': 'Bạn đã đóng cửa sổ đăng nhập Google.', 'auth/popup-blocked': 'Trình duyệt chặn cửa sổ đăng nhập. Cho phép popup rồi thử lại.',
         'auth/unauthorized-domain': 'Tên miền chưa được thêm vào Firebase (Authentication → Settings → Authorized domains).',
-        'auth/network-request-failed': 'Lỗi mạng, kiểm tra kết nối.'
+        'auth/network-request-failed': 'Lỗi mạng, kiểm tra kết nối.',
+        'auth/email-already-in-use': 'Tài khoản này đã có sẵn. Muốn đổi mật khẩu thì dùng ô Đổi mật khẩu khách.',
+        'auth/weak-password': 'Mật khẩu quá yếu, cần ít nhất 8 ký tự.',
+        'auth/operation-not-allowed': 'Firebase đang tắt đăng nhập bằng mật khẩu hoặc tắt tạo tài khoản mới. Tạo tài khoản trong Firebase Console theo hướng dẫn bên dưới.',
+        'auth/admin-restricted-operation': 'Firebase đang chặn tạo tài khoản mới từ web. Tạo tài khoản trong Firebase Console theo hướng dẫn bên dưới.'
       };
       return m[c] || (e && e.message) || 'Đăng nhập thất bại.';
     },
@@ -145,9 +149,22 @@
       try { var cred = firebase.auth.EmailAuthProvider.credential(u.email, oldPass); await u.reauthenticateWithCredential(cred); await u.updatePassword(newPass); }
       catch (e) { throw new Error(this.mapError(e)); }
     },
+    // --- Tài khoản khách: dùng một phiên Firebase phụ để không đụng tới phiên đăng nhập của chủ ---
+    guestRun: async function (fn) {
+      if (!this.init()) throw new Error('Không tải được Firebase. Tải lại trang.');
+      var app = null;
+      try { app = firebase.app('guest'); } catch (e) { try { app = firebase.initializeApp(W.FIREBASE_CONFIG, 'guest'); } catch (x) { app = null; } }
+      if (!app || typeof app.auth !== 'function') throw new Error('Trình duyệt này không mở được phiên phụ của Firebase. Tạo tài khoản trong Firebase Console theo hướng dẫn bên dưới.');
+      var a = app.auth();
+      try { if (firebase.auth.Auth && firebase.auth.Auth.Persistence) await a.setPersistence(firebase.auth.Auth.Persistence.NONE); } catch (e) { }
+      try { return await fn(a); } catch (e) { var er = new Error(this.mapError(e)); er.code = (e && e.code) || ''; throw er; }
+      finally { try { await a.signOut(); } catch (e) { } }
+    },
+    createGuest: function (name, pass) { var em = this.toEmail(name); return this.guestRun(function (a) { return a.createUserWithEmailAndPassword(em, pass); }); },
+    changeGuestPassword: function (name, oldPass, newPass) { var em = this.toEmail(name); return this.guestRun(async function (a) { var c = await a.signInWithEmailAndPassword(em, oldPass); await c.user.updatePassword(newPass); }); },
     signOut: async function () { try { if (this.init()) await firebase.auth().signOut(); } catch (e) { } },
     onChange: function (fn) { if (!this.init()) { fn(null); return function () { }; } return firebase.auth().onAuthStateChanged(fn); },
-    // Hỏi máy chủ: tài khoản này có phải admin không
+    // Hỏi máy chủ: tài khoản này là chủ (admin), khách (guest) hay không được vào
     checkAdmin: async function () {
       var hd = await this.authHeaders();
       var r = await fetch('/api/me', { headers: hd, cache: 'no-store' });

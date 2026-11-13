@@ -5,7 +5,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { verifyIdToken, requirePhoneVerified } = require('../api/_lib/auth');
+const { verifyIdToken } = require('../api/_lib/auth');
 
 // Tạo cặp khoá RSA bằng built-in crypto của Node (chạy mượt trên cả Windows, Linux, macOS mà không cần cài openssl ngoài).
 const { publicKey: certPem, privateKey } = crypto.generateKeyPairSync('rsa', {
@@ -60,24 +60,52 @@ describe('verifyIdToken', () => {
   });
 });
 
-describe('requirePhoneVerified', () => {
+describe('quyền: chủ, khách, người lạ', () => {
+  const { requireUser, requireAdmin, roleOf, limitFor, guestList } = require('../api/_lib/auth');
   const mkRes = () => ({ statusCode: 200, body: null, status(c) { this.statusCode = c; return this; }, json(d) { this.body = d; return this; } });
-  test('403 PHONE_REQUIRED khi token hợp lệ nhưng chưa có SĐT', async () => {
-    const res = mkRes();
-    const r = await requirePhoneVerified({ headers: { authorization: 'Bearer ' + makeToken() } }, res, opts);
-    assert.strictEqual(r, null);
-    assert.strictEqual(res.statusCode, 403);
-    assert.strictEqual(res.body.code, 'PHONE_REQUIRED');
+  const req = claims => ({ headers: { authorization: 'Bearer ' + makeToken(claims) } });
+  const pw = email => ({ email, firebase: { sign_in_provider: 'password' } });
+  test('chủ đăng nhập bằng tên đăng nhập: vào được, role admin', async () => {
+    const r = await requireUser(req(pw('adminh@youtrend.user')), mkRes(), opts);
+    assert.strictEqual(r.role, 'admin');
   });
-  test('trả claims khi đã có SĐT', async () => {
+  test('khách: vào được API dùng chung, role guest, không qua được requireAdmin', async () => {
+    const r = await requireUser(req(pw('khach@youtrend.user')), mkRes(), opts);
+    assert.strictEqual(r.role, 'guest');
     const res = mkRes();
-    const r = await requirePhoneVerified({ headers: { authorization: 'Bearer ' + makeToken({ phone_number: '+84912345678' }) } }, res, opts);
-    assert.strictEqual(r.sub, 'uid_123');
+    assert.strictEqual(await requireAdmin(req(pw('khach@youtrend.user')), res, opts), null);
+    assert.strictEqual(res.statusCode, 403);
+  });
+  test('tài khoản lạ: 403 NOT_ALLOWED', async () => {
+    const res = mkRes();
+    assert.strictEqual(await requireUser(req(pw('ai-do@youtrend.user')), res, opts), null);
+    assert.strictEqual(res.statusCode, 403);
+    assert.strictEqual(res.body.code, 'NOT_ALLOWED');
+  });
+  test('tên khách đăng nhập kiểu Google (không phải mật khẩu) bị từ chối', () => {
+    assert.strictEqual(roleOf({ sub: 'x', email: 'khach@youtrend.user', email_verified: true, firebase: { sign_in_provider: 'google.com' } }), '');
+  });
+  test('Gmail chủ chưa xác minh bị từ chối', () => {
+    assert.strictEqual(roleOf({ sub: 'x', email: 'tranminh1135@gmail.com', email_verified: false, firebase: { sign_in_provider: 'password' } }), '');
+  });
+  test('hạn mức ngày của khách thấp hơn chủ', () => {
+    assert.strictEqual(limitFor({ role: 'admin' }, 100), 100);
+    assert.strictEqual(limitFor({ role: 'guest' }, 100), 30);
+    assert.strictEqual(limitFor({ role: 'guest' }, 1), 1);
+  });
+  test('GUEST_EMAILS rỗng thì tắt tài khoản khách; email chủ không bao giờ thành khách', () => {
+    const old = process.env.GUEST_EMAILS;
+    process.env.GUEST_EMAILS = '';
+    assert.deepStrictEqual(guestList(), []);
+    assert.strictEqual(roleOf(pw('khach@youtrend.user')), '');
+    process.env.GUEST_EMAILS = 'ban@youtrend.user, adminh@youtrend.user';
+    assert.deepStrictEqual(guestList(), ['ban@youtrend.user']);
+    assert.strictEqual(roleOf(pw('adminh@youtrend.user')), 'admin');
+    if (old === undefined) delete process.env.GUEST_EMAILS; else process.env.GUEST_EMAILS = old;
   });
   test('401 khi không gửi token', async () => {
     const res = mkRes();
-    const r = await requirePhoneVerified({ headers: {} }, res, opts);
-    assert.strictEqual(r, null);
+    assert.strictEqual(await requireUser({ headers: {} }, res, opts), null);
     assert.strictEqual(res.statusCode, 401);
   });
 });
