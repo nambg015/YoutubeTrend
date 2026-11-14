@@ -960,6 +960,7 @@
       try {
         var news = [];
         try { var nr = await api({ action: 'news', queries: (cur.scan.news_queries || []).slice(0, 6), hours: 336 }); news = (nr.items || []).slice(0, 40).map(function (x) { return { title: x.title, source: x.source, link: x.link, days: x.t ? Math.round((Date.now() - x.t) / 864e5) : 0 }; }); } catch (e) { }
+        setCh(function (x) { return (!x.channel || x.channel.id !== cur.channel.id) ? x : Object.assign({}, x, { nNews: news.length, busy: 'AI đang chọn đề tài từ ' + cur.videos.length + ' video của kênh' + (news.length ? ' và ' + news.length + ' tiêu đề tin' : '') + '… (có thể mất 20–40 giây)' }); });
         var send = cur.videos.map(function (v) { return { id: v.id, title: v.title, views: v.views, ratio: v.ratio, days: v.days, min: v.min }; });
         var r = await api({ action: 'chanIdeas', data: { channel: cur.channel, scan: cur.scan, videos: send, news: news, n: 6, avoid: more ? (cur.ideas || []).map(function (x) { return x.title; }) : [] } });
         setCh(function (x) { if (!x.channel || x.channel.id !== cur.channel.id) return x; var n = Object.assign({}, x, { busy: '', ideas: more ? (x.ideas || []).concat(r.ideas) : r.ideas, nNews: news.length, ideasErr: '' }); chKeep(n); return n; });
@@ -1050,6 +1051,7 @@
       try {
         var news = [];
         try { var nr = await api({ action: 'news', queries: cur.topic.news_queries.slice(0, 3), hours: 336 }); news = (nr.items || []).slice(0, 40).map(function (x) { return { title: x.title, source: x.source, link: x.link, days: x.t ? Math.round((Date.now() - x.t) / 864e5) : 0 }; }); } catch (e) { }
+        setDp(function (x) { return (!x.video || x.video.id !== cur.video.id) ? x : Object.assign({}, x, { nNews: news.length }); });
         var r = await api({ action: 'dupIdeas', data: { video: { title: cur.video.title, channel: cur.video.channel, views: cur.video.views, days: cur.video.days }, topic: cur.topic, candidates: cur.items.map(function (v) { return { title: v.title, channel: v.channel, views: v.views, days: v.days }; }), news: news, n: 5, avoid: more ? (cur.ideas || []).map(function (x) { return x.title; }) : [] } });
         setDp(function (x) { if (!x.video || x.video.id !== cur.video.id) return x; var n = Object.assign({}, x, { busy: '', same: more && x.same ? x.same : mk(r.same || []), sameBy: 'ai', ideas: more ? (x.ideas || []).concat(r.ideas) : r.ideas, nNews: news.length, ideasErr: '' }); dpKeep(n); return n; });
       } catch (e) {

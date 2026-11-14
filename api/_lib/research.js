@@ -15,7 +15,8 @@ let LAST = '';
 const MODEL = () => LAST || MODELS()[0];
 const UA = 'Mozilla/5.0 (compatible; YouTrendResearch/1.0; +https://youtubetrend-rho.vercel.app)';
 
-async function gemini(key, body, timeoutMs, lite) {
+// slice: số mili giây tối đa cho MỘT model. Có slice thì model trả lời chậm bị bỏ để thử model kế tiếp, thay vì ngồi chờ hết cả quỹ thời gian.
+async function gemini(key, body, timeoutMs, lite, slice) {
   if (!key) { const e = new Error('NO_API_KEY'); e.code = 'NO_API_KEY'; throw e; }
   const t0 = Date.now(), total = timeoutMs || 24000;
   let last = null;
@@ -25,11 +26,18 @@ async function gemini(key, body, timeoutMs, lite) {
   if (round) { if (total - (Date.now() - t0) < 7000) break; await new Promise(r => setTimeout(r, 1500)); }
   for (const m of MODELS(lite)) {
     const left = total - (Date.now() - t0); if (left < 3000) break;
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify(body), signal: AbortSignal.timeout(left)
-    });
-    const j = await r.json().catch(() => ({}));
+    let r, j;
+    try {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify(body), signal: AbortSignal.timeout(slice ? Math.min(left, slice) : left)
+      });
+      j = await r.json().catch(() => ({}));
+    } catch (err) {
+      // quá thời gian chờ hoặc rớt mạng tới Google: không ném lỗi thô ra ngoài, thử model kế tiếp nếu còn thời gian
+      busy++; if (!last || last.code !== 'GEMINI_LIMIT') last = Object.assign(new Error('AI trả lời quá lâu (' + m + ').'), { code: 'GEMINI_SLOW' });
+      continue;
+    }
     if (!r.ok) {
       const msg = ((j.error && j.error.message) || '').slice(0, 300);
       const e = new Error('Gemini ' + r.status + ': ' + msg);
@@ -50,7 +58,7 @@ async function gemini(key, body, timeoutMs, lite) {
   }
   throw last || Object.assign(new Error('Gemini quá thời gian chờ'), { code: 'GEMINI_ERROR' });
 }
-const askJson = async (key, text, ms, lite) => parseJson((await gemini(key, { contents: [{ parts: [{ text }] }], generationConfig: { temperature: 0.3, responseMimeType: 'application/json' } }, ms, lite)).text);
+const askJson = async (key, text, ms, lite, slice) => parseJson((await gemini(key, { contents: [{ parts: [{ text }] }], generationConfig: { temperature: 0.3, responseMimeType: 'application/json' } }, ms, lite, slice)).text);
 
 // Gắn [n] vào câu theo groundingSupports → mỗi ý trong báo cáo đều trỏ về nguồn thật
 function annotate(text, meta) {
@@ -876,7 +884,7 @@ Return ONLY JSON:
  "groups":[{"name_vi":"tên nhóm đề tài","videos":[1,4,7],"note_vi":"nhóm này lên hay không lên, vì sao (dựa trên số liệu)"}],
  "winners_vi":"điểm chung của các video vượt xa mức trung vị",
  "losers_vi":"điểm chung của các video dưới mức trung vị",
- "news_queries":["4-6 truy vấn tin tức ngắn, bằng ngôn ngữ của kênh, để tìm vụ việc MỚI cùng dạng với nhóm đề tài đang lên"]}`, 40000);
+ "news_queries":["4-6 truy vấn tin tức ngắn, bằng ngôn ngữ của kênh, để tìm vụ việc MỚI cùng dạng với nhóm đề tài đang lên"]}`, 50000, true, 22000);
   const S = (x, n) => String(x == null ? '' : x).trim().slice(0, n), byI = {}; vs.forEach(v => { byI[v.i] = v; });
   const groups = (Array.isArray(j.groups) ? j.groups : []).slice(0, 8).map(g => {
     const idx = [...new Set((Array.isArray(g && g.videos) ? g.videos : []).map(Number).filter(n => byI[n]))];
@@ -914,7 +922,7 @@ Three kinds of topic:
 Prefer "tin mới" when the headlines allow it. Every topic must cite 1-3 channel videos of the same kind in "like" and the reason must COMPARE with them using their numbers (for example: the channel's 3 videos about X run at 2.4x median, this is the same kind and the channel has not done it). Do not propose a topic the channel already published.
 Titles: in the channel's language (${String(sc.lang_name || 'the channel language').slice(0, 30)}), 100 characters or fewer, following one of the channel's title patterns, truthful. Everything ending in _vi in Vietnamese.
 Return ONLY JSON:
-{"ideas":[{"title":"...","title_vi":"nghĩa tiếng Việt","topic_vi":"1-2 câu: vụ việc / đề tài là gì","kind":"tin mới|ăn theo video thắng|khoảng trống","group":"tên nhóm đề tài","news":[2],"like":[3,9],"why_vi":"2-3 câu: lý do nên chọn, so với các video cùng dạng trên kênh, có số liệu","gap_vi":"kênh đã làm đề tài này chưa, làm tới đâu","risk_vi":"rủi ro hoặc điều cần kiểm tra, có thể rỗng","search_query":"truy vấn ngắn bằng ngôn ngữ gốc của vụ việc để gom tin"}]}`, 45000);
+{"ideas":[{"title":"...","title_vi":"nghĩa tiếng Việt","topic_vi":"1-2 câu: vụ việc / đề tài là gì","kind":"tin mới|ăn theo video thắng|khoảng trống","group":"tên nhóm đề tài","news":[2],"like":[3,9],"why_vi":"2-3 câu: lý do nên chọn, so với các video cùng dạng trên kênh, có số liệu","gap_vi":"kênh đã làm đề tài này chưa, làm tới đâu","risk_vi":"rủi ro hoặc điều cần kiểm tra, có thể rỗng","search_query":"truy vấn ngắn bằng ngôn ngữ gốc của vụ việc để gom tin"}]}`, 52000, true, 23000);
   const S = (x, m) => String(x == null ? '' : x).trim().slice(0, m), byN = {}; news.forEach(x => { byN[x.n] = x; });
   const ideas = (Array.isArray(j.ideas) ? j.ideas : []).slice(0, 12).map(x => {
     x = x || {};
@@ -950,7 +958,7 @@ Return ONLY JSON:
  "names":["2-3 short names of the story in its ORIGINAL language, built from its proper nouns (people, places, organisations), the way other creators would title it"],
  "queries":["2 YouTube search queries in the original language that would find OTHER videos about exactly this story"],
  "news_queries":["3 short news queries in the original language: one for new developments of this story, two for other recent stories of the same kind"],
- "lang":"ISO 639-1 code of the video language","region":"ISO 3166-1 alpha-2 country the story is about, or empty"}`, 30000, true);
+ "lang":"ISO 639-1 code of the video language","region":"ISO 3166-1 alpha-2 country the story is about, or empty"}`, 40000, true, 18000);
   const S = (x, n) => String(x == null ? '' : x).trim().slice(0, n), A = (x, n, m) => (Array.isArray(x) ? x : []).map(q => S(q, m)).filter(Boolean).slice(0, n);
   const out = { event_vi: S(j.event_vi, 400), kind_vi: S(j.kind_vi, 200), names: A(j.names, 3, 100), queries: A(j.queries, 2, 120), news_queries: A(j.news_queries, 3, 100), lang: S(j.lang, 5).toLowerCase(), region: S(j.region, 2).toUpperCase() };
   if (!out.queries.length) out.queries = [title.slice(0, 100)];
@@ -976,7 +984,7 @@ Kinds: "diễn biến mới" = a new development of the same story found in the 
 Titles in the reference video's language, 100 characters or fewer, truthful. Fields ending in _vi in Vietnamese. In "why_vi" compare with the reference video and with how many channels already covered it.
 Return ONLY JSON:
 {"same":[1,4],
- "ideas":[{"title":"...","title_vi":"nghĩa tiếng Việt","topic_vi":"1-2 câu: đề tài là gì","kind":"diễn biến mới|vụ tương tự|góc khác","why_vi":"2 câu: vì sao nên làm","news":[2],"risk_vi":"điều cần kiểm tra, có thể rỗng","search_query":"truy vấn ngắn bằng ngôn ngữ gốc để gom tin và dò YouTube"}]}`, 45000);
+ "ideas":[{"title":"...","title_vi":"nghĩa tiếng Việt","topic_vi":"1-2 câu: đề tài là gì","kind":"diễn biến mới|vụ tương tự|góc khác","why_vi":"2 câu: vì sao nên làm","news":[2],"risk_vi":"điều cần kiểm tra, có thể rỗng","search_query":"truy vấn ngắn bằng ngôn ngữ gốc để gom tin và dò YouTube"}]}`, 52000, true, 23000);
   const S = (x, m) => String(x == null ? '' : x).trim().slice(0, m), byN = {}; news.forEach(x => { byN[x.n] = x; });
   const same = [...new Set((Array.isArray(j.same) ? j.same : []).map(Number).filter(k => k >= 1 && k <= cands.length))];
   const ideas = (Array.isArray(j.ideas) ? j.ideas : []).slice(0, 10).map(x => {
