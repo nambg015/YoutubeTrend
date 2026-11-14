@@ -1479,7 +1479,8 @@
       gp.res && h('div', { role: 'status', className: 'rounded-lg px-3 py-2 text-[11.5px] leading-relaxed ' + (gp.res.ok ? 'bg-[#12261a] text-[#8fe0a1]' : 'bg-[#2a1614] text-[#ffb4ae]') },
         gp.res.ok ? 'Google Search ĐANG DÙNG ĐƯỢC với key này (model ' + gp.res.model + ', ' + gp.res.queries + ' lượt tìm, ' + gp.res.sources + ' nguồn). Bấm Tìm đề tài lại để có kết quả tìm trên Google.'
           : gp.res.error ? 'Google Search CHƯA dùng được. Google trả lời: ' + gp.res.error + (gp.res.code === 'GEMINI_LIMIT' ? ' Lỗi 429 ở đây thường nghĩa là key vẫn ở gói miễn phí (gói này không có Google Search) hoặc đã hết hạn mức.' : '')
-            : 'AI trả lời nhưng không tìm Google (không có nguồn nào kèm theo). Key có thể chưa có quyền dùng Google Search.'),
+            : 'AI trả lời nhưng không tìm Google (không có nguồn nào kèm theo). Key có thể chưa có quyền dùng Google Search.',
+        gp.res.key_tail && h('div', { className: 'mt-1 text-[#e6e6e6]' }, 'Key web đang dùng kết thúc bằng …' + gp.res.key_tail + ' (lấy từ ' + gp.res.key_from + '). Trong Google AI Studio, mục API keys, tìm key có 4 ký tự cuối này: project ghi cùng dòng chính là project cần bật thanh toán.')),
       terr && h('div', { className: 'rounded-xl border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-xs text-rose-200' }, terr),
       tp && tp.list.length > 0 && h('div', { className: 'space-y-2 pt-1' },
         h('div', { className: 'flex flex-wrap items-center gap-2 text-[11px] text-[#aaa]' }, h('span', null, tp.list.length + ' đề tài · ' + tp.label + (tp.forChan ? ' · tìm cùng dạng với kênh ' + tp.forChan : '') + ' · tìm lúc ' + new Date(tp.at).toLocaleString('vi-VN')), h('button', { onClick: function () { setTp(null); try { localStorage.removeItem('res1_topics'); } catch (e) { } }, className: 'text-[#aaa] hover:text-white underline cursor-pointer' }, 'Xoá danh sách')),

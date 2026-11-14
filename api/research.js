@@ -69,7 +69,12 @@ module.exports = async (req, res) => {
     if (action === 'rideStyle') return res.json({ success: true, ...(await R.doRideStyle(key, body.data)) });
     if (action === 'chanScan') return res.json({ success: true, ...(await R.doChanScan(key, body.data)) });
     if (action === 'chanIdeas') return res.json({ success: true, ...(await R.doChanIdeas(key, body.data)) });
-    if (action === 'searchProbe') return res.json({ success: true, ...(await R.doSearchProbe(key)) });
+    if (action === 'searchProbe') {
+      const pr = await R.doSearchProbe(key);
+      // chỉ admin được xem 4 ký tự cuối của key (để đối chiếu với danh sách key trong Google AI Studio); không bao giờ trả cả key
+      if (auth.isAdmin(claims) && key) pr.probe.key_tail = String(key).slice(-4), pr.probe.key_from = req.headers['x-gemini-key'] ? 'trình duyệt' : (process.env.GEMINI_API_KEY ? 'biến GEMINI_API_KEY trên Vercel' : 'biến GOOGLE_API_KEY trên Vercel');
+      return res.json({ success: true, ...pr });
+    }
     if (action === 'rideSheet') return res.json({ success: true, ...(await R.doRideSheet(body.data)) });
     if (action === 'dupScan') return res.json({ success: true, ...(await R.doDupScan(key, body.data)) });
     if (action === 'dupIdeas') return res.json({ success: true, ...(await R.doDupIdeas(key, body.data)) });
