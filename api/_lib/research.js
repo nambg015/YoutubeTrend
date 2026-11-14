@@ -496,6 +496,69 @@ function cleanTopics(j) {
   return list.filter(t => t && (t.title || t.title_vi)).slice(0, 20).map(t => ({ title: S(t.title || t.title_vi, 200), title_vi: S(t.title_vi || t.title, 200), title_en: S(t.title_en, 200), date: S(t.date, 40), place: S(t.place, 120), status_vi: S(t.status_vi, 120), summary_vi: S(t.summary_vi, 700), why_vi: S(t.why_vi, 300), visuals_vi: S(t.visuals_vi, 300), queries: (Array.isArray(t.queries) ? t.queries : []).map(q => S(q, 120)).filter(Boolean).slice(0, 5), brief_en: S(t.brief_en, 1200) }));
 }
 // Gói Gemini miễn phí không có Google Search: tin mới → đọc tiêu đề Google News; vụ kinh điển → kiến thức sẵn có của AI
+// ---------- Tìm đề tài không cần Google Search: lấy vụ việc có thật từ các chuyên mục Wikipedia của nước đó, AI chỉ chọn và tóm tắt ----------
+const WIKI_LANG = { japan: 'ja', 'united states': 'en', 'south korea': 'ko', 'united kingdom': 'en', germany: 'de', france: 'fr', 'spain and latin america': 'es', india: 'en', china: 'zh', vietnam: 'vi' };
+async function wikiApi(lang, params, ms) {
+  const u = 'https://' + lang + '.wikipedia.org/w/api.php?format=json&formatversion=2&origin=*&' + Object.keys(params).map(k => k + '=' + encodeURIComponent(params[k])).join('&');
+  const r = await fetch(u, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(ms || 6000) });
+  if (!r.ok) throw new Error('Wikipedia ' + r.status);
+  return r.json();
+}
+const WIKI_SKIP = /^(list of|lists of|liste |lista |年表|一覧|目录|danh sách)|一覧$|の一覧|\(disambiguation\)|曖昧さ回避|^\d{3,4}年?$|^\d{4}年の/i;
+async function topicsWiki(key, o, budget) {
+  const t0 = Date.now(), left = () => budget - (Date.now() - t0);
+  const lang = WIKI_LANG[String(o.country || '').toLowerCase()] || 'en', where = o.country && !/^(global|all|)$/i.test(o.country) ? o.country : '';
+  // 1) AI gợi ý tên chuyên mục + từ khoá bằng ngôn ngữ của Wikipedia đó (chỉ là gợi ý: cái nào không tồn tại thì Wikipedia trả rỗng)
+  let cats = [], kws = [];
+  try {
+    const j = await askJson(key, `Wikipedia language edition: "${lang}". Topic: "${String(o.cat || '').slice(0, 120)}"${where ? ' in ' + where : ''}.
+Give category names of that Wikipedia edition (written exactly in its language, WITHOUT the "Category:" prefix) whose member pages are individual real events / cases of this topic${where ? ' in ' + where : ''}, and short search phrases in the same language for finding such categories.
+Return ONLY JSON {"categories":["up to 6 category names, most specific first"],"keywords":["3 short phrases"]}`, Math.max(6000, Math.min(12000, left() - 30000)), true, 9000);
+    cats = (Array.isArray(j.categories) ? j.categories : []).map(x => String(x).replace(/^[^:：]{1,12}[:：]/, '').trim().slice(0, 100)).filter(Boolean).slice(0, 6);
+    kws = (Array.isArray(j.keywords) ? j.keywords : []).map(x => String(x).trim().slice(0, 60)).filter(Boolean).slice(0, 3);
+  } catch (e) { if (e.code === 'GEMINI_LIMIT' || e.code === 'NO_API_KEY') throw e; }
+  // 2) chuyên mục có thật khớp từ khoá (tìm trong không gian tên Category)
+  await Promise.all(kws.map(async k => { try { const r = await wikiApi(lang, { action: 'query', list: 'search', srnamespace: 14, srlimit: 5, srsearch: k }, 5000); ((r.query || {}).search || []).forEach(x => cats.push(String(x.title).replace(/^[^:：]+[:：]/, ''))); } catch (e) { } }));
+  cats = [...new Set(cats)].slice(0, 10);
+  if (!cats.length) return null;
+  // 3) trang trong các chuyên mục đó, và trong chuyên mục con cấp 1
+  const pages = new Map(), subs = [];
+  const members = async (c, deep) => { try { const r = await wikiApi(lang, { action: 'query', list: 'categorymembers', cmtitle: 'Category:' + c, cmtype: deep ? 'page|subcat' : 'page', cmlimit: 200 }, 6000); ((r.query || {}).categorymembers || []).forEach(m => { if (m.ns === 14) subs.push(String(m.title).replace(/^[^:：]+[:：]/, '')); else if (m.ns === 0 && !WIKI_SKIP.test(m.title)) pages.set(m.title, c); }); } catch (e) { } };
+  await Promise.all(cats.map(c => members(c, true)));
+  if (pages.size < 60 && subs.length && left() > 34000) await Promise.all([...new Set(subs)].slice(0, 8).map(c => members(c, false)));
+  const skip = new Set((Array.isArray(o.skip) ? o.skip : []).map(x => String(x).toLowerCase()));
+  let titles = [...pages.keys()].filter(t => !skip.has(t.toLowerCase()));
+  if (titles.length < 4) return null;
+  // 4) lượt xem 30 ngày của từng trang: ít lượt xem = ít người biết
+  const views = {};
+  const shuffled = titles.slice().sort(() => Math.random() - 0.5).slice(0, 300);
+  await Promise.all(Array.from({ length: Math.ceil(shuffled.length / 50) }, (_, k) => shuffled.slice(k * 50, k * 50 + 50)).map(async part => { try { const r = await wikiApi(lang, { action: 'query', prop: 'pageviews', pvipdays: 30, titles: part.join('|') }, 6000); ((r.query || {}).pages || []).forEach(p => { if (p.pageviews) views[p.title] = Object.values(p.pageviews).reduce((a, b) => a + (Number(b) || 0), 0); }); } catch (e) { } }));
+  const hasViews = Object.keys(views).length >= 4, n = Math.max(4, Math.min(15, Number(o.n) || 10));
+  let pick;
+  if (hasViews) {
+    const ranked = shuffled.filter(t => views[t] != null).sort((a, b) => views[a] - views[b]);
+    const usable = ranked.filter(t => views[t] >= 40);                      // dưới 40 lượt/tháng thường là trang sơ khai, không đủ tài liệu
+    const base = usable.length >= 8 ? usable : ranked;
+    pick = o.rare ? base.slice(0, 26) : base.slice(Math.floor(base.length / 2)).sort(() => Math.random() - 0.5).slice(0, 14).concat(base.slice(0, Math.floor(base.length / 2)).sort(() => Math.random() - 0.5).slice(0, 12));
+  } else pick = shuffled.slice(0, 26);
+  // 5) đoạn mở đầu của từng trang
+  const info = {};
+  await Promise.all(Array.from({ length: Math.ceil(pick.length / 20) }, (_, k) => pick.slice(k * 20, k * 20 + 20)).map(async part => { try { const r = await wikiApi(lang, { action: 'query', prop: 'extracts', exintro: 1, explaintext: 1, exlimit: 20, titles: part.join('|') }, 7000); ((r.query || {}).pages || []).forEach(p => { if (p.extract && p.extract.length > 80) info[p.title] = String(p.extract).replace(/\s+/g, ' ').slice(0, 650); }); } catch (e) { } }));
+  const cands = pick.filter(t => info[t]);
+  if (cands.length < 4) return null;
+  // 6) AI chọn và tóm tắt, chỉ từ các đoạn trích này
+  const j = await askJson(key, `You research story ideas for a YouTube channel that makes documentary videos about REAL events. Category wanted: "${String(o.cat || '').slice(0, 120)}"${where ? ', concerning ' + where : ''}.
+Below are real Wikipedia (${lang}) articles with their opening paragraph${hasViews ? ' and page views in the last 30 days (fewer views = less known)' : ''}.
+${cands.map((t, k) => `[${k + 1}] ${t}${views[t] != null ? ' (' + views[t] + ' views)' : ''}: ${info[t]}`).join('\n')}
+${o.note ? '\nEXTRA WISHES FROM THE CREATOR: """' + String(o.note).slice(0, 400) + '"""' : ''}
+Pick up to ${n} articles that are single real events / cases fitting the category${o.rare ? ', preferring the LESS viewed ones' : ''}. Skip articles that are people biographies, laws, organisations or general concepts. Use ONLY facts in the paragraphs; if a detail is not there, leave it out.
+Return ONLY a JSON object:
+{"topics":[{"n":1,"title":"the article title exactly as given","title_vi":"tên vụ việc bằng tiếng Việt","title_en":"English name of the story","date":"YYYY-MM-DD, YYYY-MM or YYYY","place":"city / region, country","status_vi":"ví dụ: chưa phá án / đã kết án","summary_vi":"2-3 câu tiếng Việt","why_vi":"1 câu: vì sao hợp làm video","visuals_vi":"hình ảnh có thể tìm","queries":["2-3 search queries in the original language"],"brief_en":"3-4 sentence English brief for a researcher"}]}`, Math.max(12000, left() - 1500), true, 24000);
+  const byN = {}; (Array.isArray(j.topics) ? j.topics : []).forEach(t => { const k = Number(t && t.n); if (cands[k - 1]) { byN[cands[k - 1]] = 1; t.title = cands[k - 1]; } });
+  const topics = cleanTopics(j).filter(t => info[t.title]).map(t => Object.assign(t, { wiki: 'https://' + lang + '.wikipedia.org/wiki/' + encodeURIComponent(t.title.replace(/ /g, '_')), views30: views[t.title] != null ? views[t.title] : null }));
+  if (topics.length < 2) return null;
+  return { topics, sources: topics.map(t => ({ title: t.title, uri: t.wiki })), queries: cats.slice(0, 6), grounded: false, basis: 'wikipedia', wiki_lang: lang, pool: titles.length };
+}
 async function topicsFree(key, o, budget) {
   const t0 = Date.now(), left = () => Math.max(4000, budget - (Date.now() - t0));
   let heads = [], queries = [];
@@ -505,6 +568,9 @@ async function topicsFree(key, o, budget) {
     if (queries.length) heads = (await doNews(queries, o.period === 'd7' ? 168 : o.period === 'd30' ? 720 : 0).catch(() => [])).filter(x => o.period !== 'y1' || !x.t || Date.now() - x.t < 366 * 864e5).slice(0, 45);
   }
   const basis = heads.length >= 4 ? 'news' : 'known';
+  if (basis === 'known') {      // vụ cũ: lấy từ Wikipedia trước; không được mới nhờ AI tự nhớ
+    try { const w = await topicsWiki(key, o, left() - 9000); if (w) return w; } catch (e) { if (e.code === 'GEMINI_LIMIT' || e.code === 'NO_API_KEY') throw e; }
+  }
   const j = await askJson(key, topicsPrompt(o, basis, heads), left(), true);
   const topics = cleanTopics(j);
   if (!topics.length) { const e = new Error('AI không tìm được đề tài phù hợp, thử đổi danh mục hoặc thời gian.'); e.code = 'NO_TOPICS'; throw e; }
@@ -1106,4 +1172,4 @@ ${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
   return { answer: String(j.answer || '').slice(0, 900), ids };
 }
 
-module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, doChanScan, doChanIdeas, doDupScan, doDupIdeas, doRideSheet, storyboardSheets, geoPlaces, doSearchProbe, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, doChanScan, doChanIdeas, doDupScan, doDupIdeas, doRideSheet, storyboardSheets, geoPlaces, topicsWiki, doSearchProbe, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
