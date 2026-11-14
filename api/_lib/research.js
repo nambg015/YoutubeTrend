@@ -840,6 +840,87 @@ Return ONLY JSON:
   return { style };
 }
 
+// ---------- Ăn theo một kênh đang lên: đọc danh sách video của kênh → công thức kênh → đề xuất đề tài kèm lý do ----------
+function chanVideos(d) {
+  return (Array.isArray(d && d.videos) ? d.videos : []).slice(0, 60).map((v, k) => ({ i: k + 1, id: String((v && v.id) || '').slice(0, 11), title: String((v && v.title) || '').slice(0, 160), views: Math.max(0, Math.round(Number(v && v.views) || 0)), ratio: Math.round((Number(v && v.ratio) || 0) * 100) / 100, days: Math.max(0, Math.round(Number(v && v.days) || 0)), min: Math.round((Number(v && v.min) || 0) * 10) / 10 })).filter(v => v.title);
+}
+const chanList = vs => vs.map(v => `#${v.i} | ${v.title} | ${v.views} views | ${v.ratio}x channel median | ${v.days} days ago | ${v.min} min`).join('\n');
+const medianOf = a => { const s = a.filter(x => isFinite(x)).sort((x, y) => x - y); return s.length ? (s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : 0; };
+async function doChanScan(key, d) {
+  d = d || {}; const vs = chanVideos(d), ch = d.channel || {};
+  if (vs.length < 5) { const e = new Error('Kênh có quá ít video để phân tích (cần ít nhất 5).'); e.code = 'NO_DATA'; throw e; }
+  const j = await askJson(key, `A creator wants to make videos for the same audience as a fast-growing YouTube channel. Study the channel's recent uploads and explain its content formula.
+Channel: "${String(ch.title || '').slice(0, 120)}" (${Number(ch.subs) || 0} subscribers, country ${String(ch.country || '?').slice(0, 4)}). Description: ${String(ch.desc || '').slice(0, 500)}
+Recent videos, newest first. "x channel median" compares the video's views with the channel's median views, so 2x means twice a typical video:
+${chanList(vs)}
+
+Use ONLY this list. Group the videos into 3-6 topic groups (every video number in exactly one group). Judge what performs from the "x channel median" numbers, not from guesses.
+Write explanations in Vietnamese. Keep titles and title patterns in the channel's language.
+Return ONLY JSON:
+{"lang":"ISO 639-1 code of the channel's videos","lang_name":"language name in English",
+ "niche_vi":"2 câu: kênh làm về gì, cho ai xem",
+ "formula_vi":"2-3 câu: công thức video của kênh (kiểu đề tài, độ dài, cách đặt vấn đề)",
+ "title_patterns":[{"pattern":"mẫu tiêu đề với chỗ trống, ví dụ: What Happens to the X Who Y","example":3,"note_vi":"vì sao mẫu này kéo người bấm"}],
+ "groups":[{"name_vi":"tên nhóm đề tài","videos":[1,4,7],"note_vi":"nhóm này lên hay không lên, vì sao (dựa trên số liệu)"}],
+ "winners_vi":"điểm chung của các video vượt xa mức trung vị",
+ "losers_vi":"điểm chung của các video dưới mức trung vị",
+ "news_queries":["4-6 truy vấn tin tức ngắn, bằng ngôn ngữ của kênh, để tìm vụ việc MỚI cùng dạng với nhóm đề tài đang lên"]}`, 40000);
+  const S = (x, n) => String(x == null ? '' : x).trim().slice(0, n), byI = {}; vs.forEach(v => { byI[v.i] = v; });
+  const groups = (Array.isArray(j.groups) ? j.groups : []).slice(0, 8).map(g => {
+    const idx = [...new Set((Array.isArray(g && g.videos) ? g.videos : []).map(Number).filter(n => byI[n]))];
+    const rs = idx.map(n => byI[n].ratio);
+    return { name_vi: S(g && g.name_vi, 80), videos: idx, n: idx.length, median_ratio: Math.round(medianOf(rs) * 100) / 100, best: idx.slice().sort((a, b) => byI[b].ratio - byI[a].ratio)[0] || 0, note_vi: S(g && g.note_vi, 300) };
+  }).filter(g => g.name_vi && g.n).sort((a, b) => b.median_ratio - a.median_ratio);
+  return { scan: {
+    lang: S(j.lang, 5).toLowerCase(), lang_name: S(j.lang_name, 30), niche_vi: S(j.niche_vi, 400), formula_vi: S(j.formula_vi, 500),
+    title_patterns: (Array.isArray(j.title_patterns) ? j.title_patterns : []).slice(0, 5).map(p => ({ pattern: S(p && p.pattern, 140), example: byI[Number(p && p.example)] ? Number(p.example) : 0, note_vi: S(p && p.note_vi, 200) })).filter(p => p.pattern),
+    groups, winners_vi: S(j.winners_vi, 400), losers_vi: S(j.losers_vi, 400),
+    news_queries: (Array.isArray(j.news_queries) ? j.news_queries : []).map(q => S(q, 100)).filter(Boolean).slice(0, 6)
+  } };
+}
+async function doChanIdeas(key, d) {
+  d = d || {}; const vs = chanVideos(d), ch = d.channel || {}, sc = d.scan || {}, byI = {}; vs.forEach(v => { byI[v.i] = v; });
+  if (vs.length < 5) { const e = new Error('Thiếu danh sách video của kênh.'); e.code = 'NO_DATA'; throw e; }
+  const news = (Array.isArray(d.news) ? d.news : []).slice(0, 40).map((x, k) => ({ n: k + 1, title: String((x && x.title) || '').slice(0, 200), source: String((x && x.source) || '').slice(0, 60), days: Math.max(0, Math.round(Number(x && x.days) || 0)), link: String((x && x.link) || '').slice(0, 500) })).filter(x => x.title);
+  const n = Math.max(4, Math.min(10, Number(d.n) || 6)), avoid = (Array.isArray(d.avoid) ? d.avoid : []).slice(0, 30).map(x => String(x).slice(0, 120));
+  const groups = (Array.isArray(sc.groups) ? sc.groups : []).slice(0, 8).map(g => `- ${String(g.name_vi || '').slice(0, 80)}: videos ${(g.videos || []).slice(0, 20).map(x => '#' + x).join(' ')} | median ${g.median_ratio}x`).join('\n');
+  const j = await askJson(key, `A creator wants to publish videos that the audience of the YouTube channel "${String(ch.title || '').slice(0, 120)}" would click. Propose ${n} video topics.
+Channel formula: ${String(sc.formula_vi || '').slice(0, 500)}
+What wins on the channel: ${String(sc.winners_vi || '').slice(0, 400)}
+Topic groups (median = views compared with the channel median):
+${groups || '(none)'}
+The channel's recent videos, newest first:
+${chanList(vs)}
+
+Fresh news headlines found with the channel's kind of topics (may be empty):
+${news.map(x => `[N${x.n}] ${x.title} (${x.source}, ${x.days} days ago)`).join('\n') || '(none)'}
+${avoid.length ? '\nDo NOT repeat these topics already proposed:\n' + avoid.map(x => '- ' + x).join('\n') : ''}
+Three kinds of topic:
+- "tin mới": a real story from the headlines above that fits a winning group and that the channel has NOT made yet. Must cite the headline numbers in "news". Never invent a story.
+- "ăn theo video thắng": a follow-up or a different angle on one of the channel's videos at 1.5x median or more. Cite that video in "like".
+- "khoảng trống": an evergreen subject of the same kind that the channel has not covered. Only well-known real subjects; say so in "risk_vi" if the facts need checking.
+Prefer "tin mới" when the headlines allow it. Every topic must cite 1-3 channel videos of the same kind in "like" and the reason must COMPARE with them using their numbers (for example: the channel's 3 videos about X run at 2.4x median, this is the same kind and the channel has not done it). Do not propose a topic the channel already published.
+Titles: in the channel's language (${String(sc.lang_name || 'the channel language').slice(0, 30)}), 100 characters or fewer, following one of the channel's title patterns, truthful. Everything ending in _vi in Vietnamese.
+Return ONLY JSON:
+{"ideas":[{"title":"...","title_vi":"nghĩa tiếng Việt","topic_vi":"1-2 câu: vụ việc / đề tài là gì","kind":"tin mới|ăn theo video thắng|khoảng trống","group":"tên nhóm đề tài","news":[2],"like":[3,9],"why_vi":"2-3 câu: lý do nên chọn, so với các video cùng dạng trên kênh, có số liệu","gap_vi":"kênh đã làm đề tài này chưa, làm tới đâu","risk_vi":"rủi ro hoặc điều cần kiểm tra, có thể rỗng","search_query":"truy vấn ngắn bằng ngôn ngữ gốc của vụ việc để gom tin"}]}`, 45000);
+  const S = (x, m) => String(x == null ? '' : x).trim().slice(0, m), byN = {}; news.forEach(x => { byN[x.n] = x; });
+  const ideas = (Array.isArray(j.ideas) ? j.ideas : []).slice(0, 12).map(x => {
+    x = x || {};
+    const like = [...new Set((Array.isArray(x.like) ? x.like : []).map(Number).filter(k => byI[k]))].slice(0, 3);
+    const nw = [...new Set((Array.isArray(x.news) ? x.news : []).map(Number).filter(k => byN[k]))].slice(0, 3);
+    let kind = /tin/i.test(String(x.kind)) ? 'tin mới' : /ăn theo|thắng/i.test(String(x.kind)) ? 'ăn theo video thắng' : 'khoảng trống';
+    if (kind === 'tin mới' && !nw.length) kind = 'khoảng trống';      // nói là tin mới mà không chỉ ra được tiêu đề tin nào → không coi là tin đã kiểm
+    const rs = like.map(k => byI[k].ratio);
+    return { title: S(x.title, 100), title_vi: S(x.title_vi, 200), topic_vi: S(x.topic_vi, 400), kind, group: S(x.group, 80), why_vi: S(x.why_vi, 600), gap_vi: S(x.gap_vi, 300), risk_vi: S(x.risk_vi, 300), search_query: S(x.search_query, 140),
+      like: like.map(k => ({ i: k, id: byI[k].id, title: byI[k].title, views: byI[k].views, ratio: byI[k].ratio })), like_ratio: Math.round(medianOf(rs) * 100) / 100,
+      news: nw.map(k => ({ title: byN[k].title, source: byN[k].source, days: byN[k].days, link: byN[k].link })) };
+  }).filter(x => x.title && x.like.length);
+  if (!ideas.length) { const e = new Error('AI chưa đề xuất được đề tài nào có đối chiếu với video của kênh. Bấm thử lại.'); e.code = 'NO_DATA'; throw e; }
+  const rank = { 'tin mới': 0, 'ăn theo video thắng': 1, 'khoảng trống': 2 };
+  ideas.sort((a, b) => (rank[a.kind] - rank[b.kind]) || (b.like_ratio - a.like_ratio));
+  return { ideas, used_news: news.length };
+}
+
 // ---------- Bộ thông tin đăng video: tiêu đề, mô tả, thẻ từ khoá ----------
 async function doSeo(key, d) {
   d = d || {};
@@ -883,4 +964,4 @@ ${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
   return { answer: String(j.answer || '').slice(0, 900), ids };
 }
 
-module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, doChanScan, doChanIdeas, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
