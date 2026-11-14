@@ -79,6 +79,8 @@ module.exports = async (req, res) => {
     if (action === 'dupScan') return res.json({ success: true, ...(await R.doDupScan(key, body.data)) });
     if (action === 'dupIdeas') return res.json({ success: true, ...(await R.doDupIdeas(key, body.data)) });
     if (action === 'ask') return res.json({ success: true, ...(await R.doAsk(key, body.data)) });
+    if (action === 'topicsPrompt') return res.json({ success: true, prompt: R.topicsPromptText({ group: body.group, cat: body.cat, country: body.country, period: body.period, n: body.n, note: body.note, skip: body.skip, rare: body.rare === true }) });
+    if (action === 'topicsParse') return res.json({ success: true, topics: R.topicsParse(String(body.text || '').slice(0, 60000)) });
     if (action === 'topics') {
       return res.json({ success: true, ...(await R.doTopics(key, { group: body.group, cat: body.cat, country: body.country, period: body.period, n: body.n, note: body.note, skip: body.skip, rare: body.rare === true })) });
     }

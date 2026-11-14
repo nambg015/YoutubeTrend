@@ -559,6 +559,16 @@ Return ONLY a JSON object:
   if (topics.length < 2) return null;
   return { topics, sources: topics.map(t => ({ title: t.title, uri: t.wiki })), queries: cats.slice(0, 6), grounded: false, basis: 'wikipedia', wiki_lang: lang, pool: titles.length };
 }
+// Đường "dán tay": web đưa câu lệnh để người dùng chạy trong ứng dụng Gemini của họ (gói Pro có sẵn Google Search), rồi dán câu trả lời về đây
+function topicsPromptText(o) { return topicsPrompt(o || {}) + '\n\nIMPORTANT: search the web before answering. Reply with the JSON object only, inside one code block, nothing else.'; }
+function topicsParse(text) {
+  let t = String(text || '').trim(); if (t.length < 20) { const e = new Error('Chưa dán câu trả lời của Gemini.'); e.code = 'NO_DATA'; throw e; }
+  const fence = /```(?:json)?\s*([\s\S]*?)```/i.exec(t); if (fence) t = fence[1];
+  let j; try { j = parseJson(t); } catch (e) { const a = t.indexOf('{'), b = t.lastIndexOf('}'); try { j = JSON.parse(t.slice(a, b + 1)); } catch (e2) { const x = new Error('Không đọc được câu trả lời. Hãy chép nguyên khối JSON mà Gemini trả về (bấm nút chép ở góc khối mã).'); x.code = 'NO_DATA'; throw x; } }
+  const topics = cleanTopics(j);
+  if (!topics.length) { const e = new Error('Câu trả lời không có đề tài nào đúng mẫu. Hãy chạy lại câu lệnh trong Gemini.'); e.code = 'NO_DATA'; throw e; }
+  return topics;
+}
 async function topicsFree(key, o, budget) {
   const t0 = Date.now(), left = () => Math.max(4000, budget - (Date.now() - t0));
   let heads = [], queries = [];
@@ -1172,4 +1182,4 @@ ${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
   return { answer: String(j.answer || '').slice(0, 900), ids };
 }
 
-module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, doChanScan, doChanIdeas, doDupScan, doDupIdeas, doRideSheet, storyboardSheets, geoPlaces, topicsWiki, doSearchProbe, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, doChanScan, doChanIdeas, doDupScan, doDupIdeas, doRideSheet, storyboardSheets, geoPlaces, topicsPromptText, topicsParse, topicsWiki, doSearchProbe, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
