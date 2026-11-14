@@ -761,6 +761,7 @@
     var r6 = useState({ open: false, dur: 0, text: '', err: '' }), wm = r6[0], setWm = r6[1];
     var r7 = useState('all'), chf = r7[0], setChf = r7[1];
     var r8 = useState(null), hb = r8[0], setHb = r8[1], covRef = React.useRef({}), tpRef = React.useRef(null);
+    var r9 = useState({ busy: false, res: null }), gp = r9[0], setGp = r9[1];
     var c1 = useState(function () { var c = lsJson('res1_cover', {}) || {}, now = Date.now(); Object.keys(c).forEach(function (k) { if (!c[k] || now - c[k].at > COVER_TTL) delete c[k]; }); return c; }), cov = c1[0], setCov = c1[1], c2 = useState(null), cb = c2[0], setCb = c2[1], c3 = useState('all'), cf = c3[0], setCf = c3[1];
     var d2 = useState(false), tb = d2[0], setTb = d2[1];
     var d3 = useState(''), terr = d3[0], setTerr = d3[1];
@@ -1473,7 +1474,12 @@
         h('button', { disabled: tb, onClick: function () { findTopics(false); }, className: 'px-5 py-2 rounded-full text-[12.5px] font-semibold bg-[#3ea6ff] hover:bg-[#65b8ff] text-[#0f0f0f] disabled:opacity-40 cursor-pointer' }, tb ? 'AI đang tìm, chờ 20–40 giây…' : 'Tìm đề tài'),
         tp && tp.list.length > 0 && !tb && h('button', { onClick: function () { findTopics(true); }, className: 'px-4 py-2 rounded-full text-[12px] font-medium bg-[#272727] hover:bg-[#3a3a3a] text-[#f1f1f1] cursor-pointer' }, 'Tìm thêm, không lặp lại'),
         h('button', { role: 'switch', 'aria-checked': !!fd.rare, onClick: function () { setF({ rare: !fd.rare }); }, title: 'Bật thì AI tránh các vụ nổi tiếng mà kênh nào cũng làm, ưu tiên vụ ít người biết nhưng vẫn có tài liệu', className: 'px-3 py-2 rounded-full text-[12px] font-medium border cursor-pointer ' + (fd.rare ? 'bg-[#16361f] border-[#2ba640]/60 text-[#8fe0a1]' : 'bg-[#1a1a1a] border-[#303030] text-[#aaa]') }, (fd.rare ? '✓ ' : '') + 'Ưu tiên vụ ít người biết'),
-        h('span', { className: 'text-[10.5px] text-zinc-500' }, 'Mỗi lần tìm dùng 1 lượt AI, không tốn quota YouTube.')),
+        h('span', { className: 'text-[10.5px] text-zinc-500' }, 'Mỗi lần tìm dùng 1 lượt AI, không tốn quota YouTube.'),
+        h('button', { disabled: gp.busy, onClick: async function () { setGp({ busy: true, res: null }); try { var r = await api({ action: 'searchProbe' }); setGp({ busy: false, res: r.probe }); } catch (e) { setGp({ busy: false, res: { ok: false, error: (e && e.message) || 'Không gọi được máy chủ' } }); } }, title: 'Gọi thử Gemini kèm Google Search bằng key của web và cho xem Google trả lời gì', className: 'ml-auto px-3 py-2 rounded-full text-[11.5px] font-medium bg-[#1a1a1a] border border-[#303030] text-[#c8c8c8] hover:text-white disabled:opacity-40 cursor-pointer' }, gp.busy ? 'Đang thử…' : 'Kiểm tra Google Search')),
+      gp.res && h('div', { role: 'status', className: 'rounded-lg px-3 py-2 text-[11.5px] leading-relaxed ' + (gp.res.ok ? 'bg-[#12261a] text-[#8fe0a1]' : 'bg-[#2a1614] text-[#ffb4ae]') },
+        gp.res.ok ? 'Google Search ĐANG DÙNG ĐƯỢC với key này (model ' + gp.res.model + ', ' + gp.res.queries + ' lượt tìm, ' + gp.res.sources + ' nguồn). Bấm Tìm đề tài lại để có kết quả tìm trên Google.'
+          : gp.res.error ? 'Google Search CHƯA dùng được. Google trả lời: ' + gp.res.error + (gp.res.code === 'GEMINI_LIMIT' ? ' Lỗi 429 ở đây thường nghĩa là key vẫn ở gói miễn phí (gói này không có Google Search) hoặc đã hết hạn mức.' : '')
+            : 'AI trả lời nhưng không tìm Google (không có nguồn nào kèm theo). Key có thể chưa có quyền dùng Google Search.'),
       terr && h('div', { className: 'rounded-xl border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-xs text-rose-200' }, terr),
       tp && tp.list.length > 0 && h('div', { className: 'space-y-2 pt-1' },
         h('div', { className: 'flex flex-wrap items-center gap-2 text-[11px] text-[#aaa]' }, h('span', null, tp.list.length + ' đề tài · ' + tp.label + (tp.forChan ? ' · tìm cùng dạng với kênh ' + tp.forChan : '') + ' · tìm lúc ' + new Date(tp.at).toLocaleString('vi-VN')), h('button', { onClick: function () { setTp(null); try { localStorage.removeItem('res1_topics'); } catch (e) { } }, className: 'text-[#aaa] hover:text-white underline cursor-pointer' }, 'Xoá danh sách')),

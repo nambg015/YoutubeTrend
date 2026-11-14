@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
   const key = req.headers['x-gemini-key'] || GEMINI_API_KEY;
 
   // Mỗi hồ sơ tính 1 lượt (đếm ở bước search — kể cả khi AI lỗi và chuyển sang chế độ miễn phí)
-  const bucket = action === 'search' ? 'research' : action === 'insight' || action === 'titles' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' || action === 'topics' || action === 'images' || action === 'translate' || action === 'audience' || action === 'seo' || action === 'script' || action === 'rideScan' || action === 'rideGaps' || action === 'rideThumb' || action === 'rideStyle' || action === 'chanScan' || action === 'chanIdeas' || action === 'dupScan' || action === 'dupIdeas' || action === 'ask' ? 'research_aux' : '';
+  const bucket = action === 'search' ? 'research' : action === 'insight' || action === 'titles' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' || action === 'topics' || action === 'images' || action === 'translate' || action === 'audience' || action === 'seo' || action === 'script' || action === 'rideScan' || action === 'rideGaps' || action === 'rideThumb' || action === 'rideStyle' || action === 'chanScan' || action === 'chanIdeas' || action === 'dupScan' || action === 'dupIdeas' || action === 'searchProbe' || action === 'ask' ? 'research_aux' : '';
   if (bucket) {
     const limit = auth.limitFor(claims, bucket === 'research' ? (Number(process.env.RESEARCH_DAILY_LIMIT) || 100) : bucket === 'insight' ? (Number(process.env.INSIGHT_DAILY_LIMIT) || 150) : 300);
     try {
@@ -69,6 +69,7 @@ module.exports = async (req, res) => {
     if (action === 'rideStyle') return res.json({ success: true, ...(await R.doRideStyle(key, body.data)) });
     if (action === 'chanScan') return res.json({ success: true, ...(await R.doChanScan(key, body.data)) });
     if (action === 'chanIdeas') return res.json({ success: true, ...(await R.doChanIdeas(key, body.data)) });
+    if (action === 'searchProbe') return res.json({ success: true, ...(await R.doSearchProbe(key)) });
     if (action === 'rideSheet') return res.json({ success: true, ...(await R.doRideSheet(body.data)) });
     if (action === 'dupScan') return res.json({ success: true, ...(await R.doDupScan(key, body.data)) });
     if (action === 'dupIdeas') return res.json({ success: true, ...(await R.doDupIdeas(key, body.data)) });

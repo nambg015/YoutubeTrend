@@ -1051,6 +1051,18 @@ async function doRideSheet(d) {
   return { sheets };
 }
 
+// ---------- Thử xem key Gemini này có dùng được Google Search không, và Google trả lời chính xác điều gì ----------
+async function doSearchProbe(key) {
+  try {
+    const r = await gemini(key, { contents: [{ parts: [{ text: 'Use Google Search. What is one major news headline from today? Answer in one short sentence.' }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0 } }, 30000);
+    const m = r.meta || {}, sources = (m.groundingChunks || []).length, queries = (m.webSearchQueries || []).length;
+    if (sources || queries) noSearchUntil = 0;      // dùng được rồi thì bỏ luôn 15 phút tạm ngưng
+    return { probe: { ok: !!(sources || queries), model: LAST, sources, queries, answer: String(r.text || '').slice(0, 200), paused: false } };
+  } catch (e) {
+    return { probe: { ok: false, code: e.code || 'ERROR', error: String(e.message || '').slice(0, 400), paused: Date.now() < noSearchUntil, pause_min: Math.max(0, Math.ceil((noSearchUntil - Date.now()) / 60000)) } };
+  }
+}
+
 // ---------- Bộ thông tin đăng video: tiêu đề, mô tả, thẻ từ khoá ----------
 async function doSeo(key, d) {
   d = d || {};
@@ -1094,4 +1106,4 @@ ${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
   return { answer: String(j.answer || '').slice(0, 900), ids };
 }
 
-module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, doChanScan, doChanIdeas, doDupScan, doDupIdeas, doRideSheet, storyboardSheets, geoPlaces, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, doChanScan, doChanIdeas, doDupScan, doDupIdeas, doRideSheet, storyboardSheets, geoPlaces, doSearchProbe, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
