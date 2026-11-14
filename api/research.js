@@ -69,6 +69,7 @@ module.exports = async (req, res) => {
     if (action === 'rideStyle') return res.json({ success: true, ...(await R.doRideStyle(key, body.data)) });
     if (action === 'chanScan') return res.json({ success: true, ...(await R.doChanScan(key, body.data)) });
     if (action === 'chanIdeas') return res.json({ success: true, ...(await R.doChanIdeas(key, body.data)) });
+    if (action === 'rideSheet') return res.json({ success: true, ...(await R.doRideSheet(body.data)) });
     if (action === 'dupScan') return res.json({ success: true, ...(await R.doDupScan(key, body.data)) });
     if (action === 'dupIdeas') return res.json({ success: true, ...(await R.doDupIdeas(key, body.data)) });
     if (action === 'ask') return res.json({ success: true, ...(await R.doAsk(key, body.data)) });

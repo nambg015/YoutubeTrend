@@ -129,9 +129,11 @@ Return ONLY JSON with this exact shape:
  "unverified": ["claims that are rumors / not confirmed / disputed"],
  "reported_claims": [{"claim": "a claim reported by some outlets/social posts but not officially confirmed", "reported_by": "who reports it", "src": [1], "phrasing_en": "ready-to-read English narration line that hedges it, e.g. Some reports suggest ..., but this has not been officially confirmed."}],
  "sensitivity": "notes about victims, graphic content, legal or privacy care the creator should take",
- "privacy": [{"name": "name of a private individual that appears in the sources", "reason": "why the video should NOT name or show them: minor, victim, bystander, low-ranking person not named by officials, family member ..."}]
+ "privacy": [{"name": "name of a private individual that appears in the sources", "reason": "why the video should NOT name or show them: minor, victim, bystander, low-ranking person not named by officials, family member ...", "src": [2]}],
+ "map_places": [{"name": "place as written in the story", "wiki": "title of its English Wikipedia article (city, base, building, country)", "kind": "scene|base|outlet|other", "country": "country name in English", "lat": 0.0, "lon": 0.0, "why": "why it belongs on a map of this story"}],
+ "key_dates": [{"date": "YYYY-MM-DD", "what": "what happened that day, one short sentence", "src": [1]}]
 }
-Rules: 8-12 youtube_queries covering every type that fits THIS story (press briefings, news reports, on-scene footage, audio recordings, expert analysis, background on the people/objects involved). 6-10 image_queries. Latest and timeline newest information must reflect the report precisely.`;
+Rules: 8-12 youtube_queries covering every type that fits THIS story (press briefings, news reports, on-scene footage, audio recordings, expert analysis, background on the people/objects involved). 6-10 image_queries. map_places: 3-8 places for an animated map - where it happened (kind scene), the headquarters or base of the units and organisations involved (kind base), and the city or country of each foreign outlet that reported it (kind outlet); give your best latitude/longitude, they will be checked. key_dates: the day it happened and every later day with a new development, oldest first, only dates stated in the report. privacy.src: the sources that print that name. Latest and timeline newest information must reflect the report precisely.`;
 }
 
 function parseJson(t) {
@@ -207,8 +209,14 @@ async function searchFree(key, prompt, ctx, hours, budget) {
   return { report: r.text, sources: sources.map(x => ({ n: x.n, title: x.title, uri: x.uri })), queries: nq, grounded: false };
 }
 async function doStructure(key, prompt, report, sources, lang) {
+  const t0 = Date.now();
   const r = await gemini(key, { contents: [{ parts: [{ text: structurePrompt(prompt, report, sources || [], lang) }] }], generationConfig: { temperature: 0.2, responseMimeType: 'application/json' } }, 50000);
-  return parseJson(r.text);
+  const D = parseJson(r.text);
+  if (D && typeof D === 'object' && !Array.isArray(D)) {
+    D.map_places = await geoPlaces(D.map_places, Date.now() - t0 > 46000);   // sắp hết 60 giây thì không tra Wikipedia nữa, giữ toạ độ AI ước lượng
+    D.key_dates = (Array.isArray(D.key_dates) ? D.key_dates : []).slice(0, 12).map(x => ({ date: String((x && x.date) || '').slice(0, 20), what: String((x && x.what) || '').slice(0, 240), src: Array.isArray(x && x.src) ? x.src.slice(0, 4) : [] })).filter(x => x.date && x.what);
+  }
+  return D;
 }
 
 // ---------- Google News RSS (miễn phí) ----------
@@ -724,7 +732,7 @@ async function doRideGaps(key, d) {
   const pick = {}; ['title', 'status', 'summary', 'latest', 'timeline', 'numbers', 'quotes', 'unverified', 'reported_claims', 'angles'].forEach(k => { if (D[k] != null) pick[k] = D[k]; });
   const dj = JSON.stringify(pick).slice(0, 22000);
   if (dj.length < 200) { const e = new Error('Hồ sơ chưa đủ thông tin để so với video gốc.'); e.code = 'NO_DATA'; throw e; }
-  const refMin = Number(d.minutes) || 0, target = Math.max(6, Math.round((refMin || 10) * 1.25));
+  const refMin = Number(d.minutes) || 0, target = Math.max(3, Math.min(90, Math.round(Number(d.target) || Math.ceil(refMin || 10)))), ratio = Math.max(50, Math.min(90, Math.round(Number(d.ratio) || 70)));
   const wpm = Math.max(120, Math.min(220, Number(d.wpm) || 170)), words = Math.round(target * wpm / 50) * 50;
   const lang = String(d.vlang || 'the reference video language').slice(0, 40);
   const chapters = (Array.isArray(d.chapters) ? d.chapters : []).slice(0, 30).map(c => '- ' + String((c && c.t) || '').slice(0, 10) + ' ' + String((c && c.title) || '').slice(0, 140) + (c && c.summary_vi ? ': ' + String(c.summary_vi).slice(0, 400) : '')).join('\n');
@@ -743,7 +751,7 @@ ${dj}
 
 Find what the DOSSIER contains that the reference video did NOT cover: that is the new value for viewers.
 Rules: use ONLY facts in the DOSSIER and keep their src numbers. Never invent. Items taken from "unverified" or "reported_claims" must get confidence "chưa kiểm chứng". If a viewer question in (B) is answered by the dossier, name it in "answers_vi". Viewer questions the dossier cannot answer go to "open_questions".
-Plan of the new video: about ${target} minutes (about ${words} narrated words at ${wpm} words per minute). Roughly 70% of the runtime re-tells the IDEAS of the reference video's chapters - every chapter covered, in a DIFFERENT order, in entirely new wording (never its sentences) - and roughly 30% is the new information the reference video lacks.
+Plan of the new video: about ${target} minutes (about ${words} narrated words at ${wpm} words per minute). Roughly ${ratio}% of the runtime re-tells the IDEAS of the reference video's chapters - every chapter covered, in a DIFFERENT order, in entirely new wording (never its sentences) - and roughly ${100 - ratio}% is the new information the reference video lacks.
 
 Return ONLY JSON:
 {"new_share_pct": 0,
@@ -763,7 +771,7 @@ Return ONLY JSON:
     angle_vi: S(j.angle_vi, 500),
     titles: A(j.titles, 6).map(x => ({ t: S(x && x.t, 100), vi: S(x && x.vi, 200) })).filter(x => x.t),
     outline: A(j.outline, 16).map(x => ({ part: S(x && x.part, 100), minutes: Math.round((Number(x && x.minutes) || 0) * 10) / 10, ref_chapter: S(x && x.ref_chapter, 140), ref_vi: S(x && (x.ref_vi || x.content_vi), 400), new_vi: S(x && x.new_vi, 400), is_new: !!(x && x.is_new) })).filter(x => x.part),
-    titles_note: '', target_minutes: target, target_words: words, wpm, ref_minutes: refMin, basis: d.basis === 'transcript' ? 'transcript' : d.basis === 'chapters' ? 'chapters' : 'description'
+    titles_note: '', target_minutes: target, target_words: words, wpm, ratio, ref_minutes: refMin, basis: d.basis === 'transcript' ? 'transcript' : d.basis === 'chapters' ? 'chapters' : 'description'
   } };
 }
 
@@ -814,6 +822,9 @@ Return ONLY JSON:
  "audio":{"music_vi":"nhạc nền: có liên tục không, thể loại, to nhỏ so với giọng","sfx_vi":"tiếng động: whoosh, hit, tiếng gõ... dùng lúc nào","voice_vi":"giọng đọc: nam/nữ, tốc độ, có ngắt nghỉ dài không"},
  "source_labels_vi":"cách ghi nguồn trên hình (FILE PHOTO, SOURCE...), vị trí; có dùng clip có logo đài không và xử lý logo thế nào",
  "ai_imagery":{"used":false,"note_vi":"có ảnh/cảnh do AI dựng về người thật không, dấu hiệu"},
+ "map":{"used":false,"note_vi":"có bản đồ không; nếu có: màu nền, màu vùng được tô, có zoom, ghim, đường nối không"},
+ "hook_vi":"15-20 giây đầu dựng thế nào: hình gì, chữ gì, hiệu ứng gì, theo thứ tự",
+ "has_music":true,
  "summary_vi":"2 câu tóm tắt phong cách dựng"}`;
   const part = { fileData: { fileUri: 'https://www.youtube.com/watch?v=' + id } };
   if (clip) part.videoMetadata = { startOffset: '0s', endOffset: STYLE_WINDOW + 's' };
@@ -833,6 +844,7 @@ Return ONLY JSON:
     audio: { music_vi: S(au.music_vi, 240), sfx_vi: S(au.sfx_vi, 200), voice_vi: S(au.voice_vi, 200) },
     source_labels_vi: S(j.source_labels_vi, 300),
     ai_imagery: { used: !!ai.used, note_vi: S(ai.note_vi, 240) },
+    map: { used: !!(j.map && j.map.used), note_vi: S(j.map && j.map.note_vi, 300) }, hook_vi: S(j.hook_vi, 500), has_music: j.has_music == null ? null : !!j.has_music,
     summary_vi: S(j.summary_vi, 400),
     window_seconds: clip ? STYLE_WINDOW : secs, whole: !clip, method: 'gemini-video-1fps'
   };
@@ -975,6 +987,49 @@ Return ONLY JSON:
   return { same, ideas, used_news: news.length };
 }
 
+// ---------- Toạ độ cho bản đồ: lấy từ Wikipedia theo tên địa điểm; không có thì giữ số AI ước lượng và ghi rõ ----------
+async function geoPlaces(list, skipLookup) {
+  const S = (x, n) => String(x == null ? '' : x).trim().slice(0, n);
+  const places = (Array.isArray(list) ? list : []).slice(0, 12).map(p => {
+    p = p || {}; const lat = Number(p.lat), lon = Number(p.lon), ok = isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && !(lat === 0 && lon === 0);
+    return { name: S(p.name, 120), wiki: S(p.wiki || p.name, 120), kind: /scene|hiện trường/i.test(p.kind) ? 'scene' : /base|unit|trụ sở/i.test(p.kind) ? 'base' : /outlet|press|báo/i.test(p.kind) ? 'outlet' : 'other', country: S(p.country, 60), why: S(p.why, 200), lat: ok ? Math.round(lat * 1e4) / 1e4 : null, lon: ok ? Math.round(lon * 1e4) / 1e4 : null, coord_src: ok ? 'ai' : '' };
+  }).filter(p => p.name);
+  if (!places.length) return places;
+  if (!skipLookup) try {
+    const r = await fetch('https://en.wikipedia.org/w/api.php?action=query&prop=coordinates&redirects=1&format=json&colimit=50&titles=' + encodeURIComponent(places.map(p => p.wiki).join('|')), { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(4500) });
+    if (r.ok) {
+      const q = (await r.json()).query || {}, map = {}, back = {};
+      (q.normalized || []).concat(q.redirects || []).forEach(x => { back[x.to] = back[x.to] || []; back[x.to].push(x.from); });
+      const all = t => { const out = [t]; (back[t] || []).forEach(f => all(f).forEach(z => out.push(z))); return out; };
+      Object.values(q.pages || {}).forEach(pg => { const c = (pg.coordinates || [])[0]; if (c && isFinite(c.lat) && isFinite(c.lon)) all(pg.title).forEach(t => { map[String(t).toLowerCase()] = c; }); });
+      places.forEach(p => { const c = map[p.wiki.toLowerCase()]; if (c) { p.lat = Math.round(c.lat * 1e4) / 1e4; p.lon = Math.round(c.lon * 1e4) / 1e4; p.coord_src = 'wikipedia'; } });
+    }
+  } catch (e) { }
+  places.forEach(p => { delete p.wiki; });
+  return places.filter(p => p.lat != null);
+}
+
+// ---------- Contact sheet của video gốc: ảnh ghép khung hình (storyboard) mà chính YouTube tạo sẵn. Không đọc được trang video thì bỏ qua ----------
+function storyboardSheets(spec, n) {
+  const parts = String(spec || '').split('|'); if (parts.length < 2 || !/^https:\/\/i\d?\.ytimg\.com\//.test(parts[0])) return [];
+  const levels = parts.slice(1).map((p, i) => { const a = p.split('#'); return { i, w: +a[0], h: +a[1], count: +a[2], cols: +a[3], rows: +a[4], ms: +a[5] || 0, name: a[6] || '', sigh: a[7] || '' }; }).filter(l => l.w && l.cols && l.rows && l.count && l.sigh && /\$M/.test(l.name));
+  if (!levels.length) return [];
+  const L = levels.filter(l => l.w >= 120).sort((a, b) => a.w - b.w)[0] || levels[levels.length - 1];
+  const per = L.cols * L.rows, pages = Math.ceil(L.count / per), want = Math.max(1, Math.min(n || 2, pages));
+  const pick = want === 1 ? [0] : [0, Math.floor(pages / 2)];
+  return [...new Set(pick)].map(pg => ({ url: parts[0].replace('$L', String(L.i)).replace('$N', L.name.replace('$M', String(pg))) + '&sigh=' + L.sigh, page: pg, pages, cols: L.cols, rows: L.rows, frame_w: L.w, frame_h: L.h, from_s: Math.round(pg * per * L.ms / 1000), step_s: Math.round(L.ms / 100) / 10, frames: Math.min(per, L.count - pg * per) }));
+}
+async function doRideSheet(d) {
+  const id = String((d && d.id) || ''); if (!/^[\w-]{11}$/.test(id)) { const e = new Error('Thiếu mã video.'); e.code = 'NO_DATA'; throw e; }
+  let html = '';
+  try { const r = await fetch('https://www.youtube.com/watch?v=' + id + '&hl=en', { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36', 'Accept-Language': 'en-US,en;q=0.9', Cookie: 'CONSENT=YES+1' }, signal: AbortSignal.timeout(9000) }); if (r.ok) html = (await r.text()).slice(0, 3000000); } catch (e) { }
+  const m = /"playerStoryboardSpecRenderer":\{"spec":"((?:[^"\\]|\\.)*)"/.exec(html);
+  let spec = ''; if (m) { try { spec = JSON.parse('"' + m[1] + '"'); } catch (e) { } }
+  const sheets = storyboardSheets(spec, 2);
+  if (!sheets.length) { const e = new Error('YouTube không cho máy chủ đọc bảng khung hình của video này.'); e.code = 'NO_SHEET'; throw e; }
+  return { sheets };
+}
+
 // ---------- Bộ thông tin đăng video: tiêu đề, mô tả, thẻ từ khoá ----------
 async function doSeo(key, d) {
   d = d || {};
@@ -1018,4 +1073,4 @@ ${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
   return { answer: String(j.answer || '').slice(0, 900), ids };
 }
 
-module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, doChanScan, doChanIdeas, doDupScan, doDupIdeas, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, doChanScan, doChanIdeas, doDupScan, doDupIdeas, doRideSheet, storyboardSheets, geoPlaces, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };

@@ -264,7 +264,9 @@
     if ((D.reported_claims || []).length) { sec('TIN ĐANG ĐƯỢC ĐƯA NHƯNG CHƯA CÓ XÁC NHẬN CHÍNH THỨC — CHỈ DÙNG VỚI CÂU DẪN RÀO ĐÓN'); D.reported_claims.forEach(function (x) { L.push('- ' + x.claim + (x.reported_by ? ' (nguồn: ' + x.reported_by + ')' : '') + ' ' + srcLabel(x.src)); if (x.phrasing_en) L.push('  Câu đọc gợi ý: "' + x.phrasing_en + '"'); }); }
     if ((D.unverified || []).length) { sec('CHƯA XÁC MINH — KHÔNG NÓI NHƯ SỰ THẬT'); D.unverified.forEach(function (x) { L.push('- ' + x); }); }
     if (D.sensitivity) { sec('LƯU Ý NHẠY CẢM'); L.push(D.sensitivity); }
-    if ((D.privacy || []).length) { sec('KHÔNG NÊU TÊN, KHÔNG ĐƯA HÌNH (bảo vệ quyền riêng tư)'); D.privacy.forEach(function (x) { if (x && x.name) L.push('- ' + x.name + (x.reason ? ': ' + x.reason : '')); }); L.push('Các nguồn có thể nêu những tên này. Trong kịch bản, chữ trên hình, tiêu đề và mô tả chỉ gọi bằng vai trò (ví dụ "người lính", "một du khách").'); }
+    if ((D.key_dates || []).length) { sec('MỐC NGÀY QUAN TRỌNG'); D.key_dates.forEach(function (x) { L.push('- ' + x.date + ': ' + x.what + ' ' + srcLabel(x.src)); }); }
+    if ((D.map_places || []).length) { sec('ĐỊA ĐIỂM CÓ TOẠ ĐỘ (cho bản đồ)'); D.map_places.forEach(function (x) { L.push('- ' + x.name + (x.country ? ', ' + x.country : '') + ' [' + ({ scene: 'nơi xảy ra', base: 'trụ sở / căn cứ', outlet: 'nơi báo đưa tin', other: 'liên quan' })[x.kind] + '] ' + x.lat + ', ' + x.lon + (x.coord_src === 'wikipedia' ? ' (toạ độ theo Wikipedia)' : ' (toạ độ AI ước lượng, cần kiểm lại)') + (x.why ? ' — ' + x.why : '')); }); }
+    if ((D.privacy || []).length) { sec('KHÔNG NÊU TÊN, KHÔNG ĐƯA HÌNH (bảo vệ quyền riêng tư)'); D.privacy.forEach(function (x) { if (x && x.name) L.push('- ' + x.name + (x.reason ? ': ' + x.reason : '') + ((x.src || []).length ? ' — tên này có in trong nguồn ' + srcLabel(x.src) : '')); }); L.push('Các nguồn có thể nêu những tên này. Trong kịch bản, chữ trên hình, tiêu đề và mô tả chỉ gọi bằng vai trò (ví dụ "người lính", "một du khách").'); }
     if ((R.sources || []).length) {
       sec('NGUỒN (kèm đoạn trích nội dung)');
       L.push('Đoạn trích lấy từ chính bài viết để kịch bản không phải suy từ tiêu đề. Nguồn không có đoạn trích thì chỉ được dùng đúng những gì hồ sơ phía trên đã ghi.');
@@ -275,9 +277,9 @@
   var LV = { official: 'Nguồn chính thức', news: 'Báo chí', social: 'Mạng xã hội — chưa xác minh', other: 'Web khác — chưa xác minh' };
   // 3 khung hình YouTube tự tạo (đầu / giữa / cuối) cho mỗi video liên quan
   function frameList(R) { var out = []; (R.videos || []).filter(function (v) { return v.related; }).slice(0, 16).forEach(function (v) { [['1', 'đầu video (~25%)'], ['2', 'giữa video (~50%)'], ['3', 'cuối video (~75%)']].forEach(function (n) { out.push({ key: v.id + ':' + n[0], id: v.id, n: n[0], label: n[1], title: v.title, channel: v.channel, url: 'https://i.ytimg.com/vi/' + v.id + '/hq' + n[0] + '.jpg', big: 'https://i.ytimg.com/vi/' + v.id + '/maxres' + n[0] + '.jpg' }); }); }); return out; }
-  function buildJson(R, sel) {
+  function buildJson(R, sel, o) {
     return {
-      schema: 'youtrend.resource.v1', created: new Date(R.at).toISOString(), mode: R.mode, brief: R.prompt, reference_video: R.refVideo || null, channel_ride: R.chan || null, ride: R.ride ? { video: Object.assign({}, R.ride.video, { language: rideLang(R.ride).code, language_name: rideLang(R.ride).en, chapters: R.ride.scan.chapters || [], transcript_summary: R.ride.scan.basis === 'transcript' ? (R.ride.scan.chapters || []).map(function (c) { return { t: c.t, title: c.title, summary: c.summary_vi }; }) : 'chưa có lời thoại, chỉ có chapter' }), ride_thumbnail: (packList(R, sel).filter(function (x) { return x.key === 'ride:thumb'; })[0] || {}).id || null, thumbnail_layout: R.ride.thumb || null, edit_style: R.ride.style || null, edit_style_note: R.ride.styleNote || '', covered: R.ride.scan.covered, covered_basis: R.ride.scan.basis, viewers_ask: R.ride.scan.asked, gaps: R.ride.gaps || null } : null,
+      schema: 'youtrend.resource.v1', created: new Date(R.at).toISOString(), mode: R.mode, brief: R.prompt, reference_video: R.refVideo || null, channel_ride: R.chan || null, production_options: o ? prodResolve(R, o) : null, ride: R.ride ? { video: Object.assign({}, R.ride.video, { language: rideLang(R.ride).code, language_name: rideLang(R.ride).en, chapters: R.ride.scan.chapters || [], style: R.ride.style || null, thumbnail: { image: (packList(R, sel).filter(function (x) { return x.key === 'ride:thumb'; })[0] || {}).id || null, layout: R.ride.thumb || null }, transcript_summary: R.ride.scan.basis === 'transcript' ? (R.ride.scan.chapters || []).map(function (c) { return { t: c.t, title: c.title, summary: c.summary_vi }; }) : 'chưa có lời thoại, chỉ có chapter' }), ride_thumbnail: (packList(R, sel).filter(function (x) { return x.key === 'ride:thumb'; })[0] || {}).id || null, thumbnail_layout: R.ride.thumb || null, edit_style: R.ride.style || null, edit_style_note: R.ride.styleNote || '', covered: R.ride.scan.covered, covered_basis: R.ride.scan.basis, viewers_ask: R.ride.scan.asked, gaps: R.ride.gaps || null } : null,
       dossier: R.dossier, sources: R.sources,
       videos: R.videos.filter(function (v) { return sel.v[v.id]; }).map(function (v) { return { id: v.id, url: 'https://www.youtube.com/watch?v=' + v.id, title: v.title, type: v.type, type_label: TYPES[v.type][1], channel: v.channel, channel_id: v.channelId, official: v.gov, published: new Date(v.t).toISOString(), duration_sec: v.dur, views: v.views, chapters: v.chapters, matched_keywords: v.hit, license_note: v.license }; }),
       images: R.images.filter(function (i) { return sel.i[i.key]; }).map(function (i) { return { kind: i.kind, verification: i.level || '', title: i.title, image_url: i.url, page_url: i.page || '', license_note: i.license, author: i.author || '' }; }),
@@ -336,46 +338,194 @@
     add('Nhịp cắt', [pc.avg_shot_seconds ? 'khoảng ' + String(pc.avg_shot_seconds).replace('.', ',') + ' giây mỗi hình (AI ước lượng)' : '', pc.note_vi].filter(Boolean).join('; '));
     add('Nhạc nền', a.music_vi); add('Tiếng động', a.sfx_vi); add('Giọng đọc', a.voice_vi);
     add('Nguồn hình', st.source_labels_vi);
+    if (st.map && (st.map.used || st.map.note_vi)) add('Bản đồ', (st.map.used ? 'có dùng' : 'không dùng') + (st.map.note_vi ? '; ' + st.map.note_vi : ''));
+    add('15–20 giây đầu', st.hook_vi);
+    if (st.has_music === false) add('Nhạc nền (AI nghe)', 'không nghe thấy nhạc nền');
     if (st.ai_imagery && st.ai_imagery.used) add('Ảnh AI', 'video gốc CÓ dùng ảnh/cảnh do AI dựng' + (st.ai_imagery.note_vi ? ' (' + st.ai_imagery.note_vi + ')' : '') + '. Bản của mình không làm theo điểm này.');
     return out;
   }
   function rideLang(rr) { var c = String((rr && rr.scan && rr.scan.lang) || (rr && rr.video && rr.video.language) || '').slice(0, 2).toLowerCase(); return { code: c, en: (rr && rr.scan && rr.scan.lang_name) || LANG_EN[c] || c || 'the language of the reference video', vi: VLANG[c] || ((rr && rr.scan && rr.scan.lang_name) ? 'tiếng ' + rr.scan.lang_name : 'ngôn ngữ của video gốc') }; }
   var VLANG = { vi: 'tiếng Việt', en: 'tiếng Anh', ja: 'tiếng Nhật', ko: 'tiếng Hàn', es: 'tiếng Tây Ban Nha', pt: 'tiếng Bồ Đào Nha', de: 'tiếng Đức', fr: 'tiếng Pháp', hi: 'tiếng Hindi' };
+  // ---------- 30 tuỳ chọn sản xuất: mặc định, cách quy ra giá trị thật theo hồ sơ, và các dòng in vào prompt ----------
+  var PROD_DEF = { plang: 'auto', nlang: 'vi', mode: 'ride', ratio: 70, mins: 0, wpm: 170, tkind: 'ride', tsim: 75, tn: 3, tlang2: [], estyle: 'ride', mystyle: '', hook: true, map: true, typing: true, flash: true, music: 'gen', res: '1080p60', subs: 'srt', voice: 'one', srcpri: 'open', autofind: true, reuse: 3, clipmax: 5, blur: 'kids', names: 'never', approve: 'step', publish: ['title', 'desc', 'tags', 'cat', 'time', 'pin'], links: false, tz: 'ride', lessons: true };
+  var PROD_PUB = [['title', 'tiêu đề'], ['desc', 'mô tả'], ['tags', 'tag'], ['cat', 'danh mục'], ['time', 'giờ đăng'], ['pin', 'bình luận ghim']];
+  var PROD_TZ = [['ride', 'Theo video gốc'], ['America/New_York', 'Mỹ (bờ Đông)'], ['America/Los_Angeles', 'Mỹ (bờ Tây)'], ['Europe/London', 'Anh'], ['Europe/Berlin', 'Châu Âu'], ['Asia/Ho_Chi_Minh', 'Việt Nam'], ['Asia/Tokyo', 'Nhật Bản'], ['Asia/Seoul', 'Hàn Quốc'], ['Asia/Kolkata', 'Ấn Độ'], ['America/Sao_Paulo', 'Brazil'], ['America/Mexico_City', 'Mexico']];
+  var LANG_TZ = { vi: 'Asia/Ho_Chi_Minh', en: 'America/New_York', ja: 'Asia/Tokyo', ko: 'Asia/Seoul', es: 'America/Mexico_City', pt: 'America/Sao_Paulo', de: 'Europe/Berlin', fr: 'Europe/Berlin', hi: 'Asia/Kolkata' };
+  function prodResolve(R, o) {
+    o = Object.assign({}, PROD_DEF, o || {});
+    var rr = R && R.ride, hasRide = !!rr, g = rr && rr.gaps, RL = hasRide ? rideLang(rr) : null;
+    var num = function (v, lo, hi, d) { v = Math.round(+v); return isFinite(v) && v ? Math.max(lo, Math.min(hi, v)) : d; };
+    var auto = !o.plang || o.plang === 'auto', code = !auto ? o.plang : hasRide ? (RL.code || 'vi') : ((R && R.chan && R.chan.lang) || 'vi');
+    var langVi = VLANG[code] || (auto && hasRide ? RL.vi : 'tiếng ' + (LANG_EN[code] || code)), langEn = LANG_EN[code] || (auto && hasRide ? RL.en : code);
+    var refMin = hasRide ? (+rr.video.minutes || 0) : 0;
+    var minsAuto = !(+o.mins > 0), mins = !minsAuto ? num(o.mins, 1, 180, 12) : hasRide ? ((g && g.target_minutes) || Math.max(3, Math.ceil(refMin || 10))) : num(o.vmin, 1, 180, 12);
+    var wpm = num(o.wpm, 100, 240, 170), ride = hasRide && o.mode !== 'fresh';
+    var tkind = o.tkind === 'ride' && !hasRide ? 'free' : (o.tkind || 'ride'), estyle = o.estyle === 'ride' && !hasRide ? 'neutral' : (o.estyle || 'ride');
+    var pub = (Array.isArray(o.publish) ? o.publish : PROD_DEF.publish).filter(function (k) { return PROD_PUB.some(function (x) { return x[0] === k; }); });
+    var tzAuto = !o.tz || o.tz === 'ride', tz = !tzAuto ? o.tz : (LANG_TZ[code] || 'America/New_York');
+    return { hasRide: hasRide, ride: ride, auto: auto, code: code, langVi: langVi, langEn: langEn, nlang: o.nlang === 'en' ? 'en' : 'vi', ratio: num(o.ratio, 50, 90, 70), refMin: refMin, minsAuto: minsAuto, mins: mins, wpm: wpm, words: Math.round(mins * wpm / 50) * 50,
+      tkind: tkind, tsim: num(o.tsim, 50, 90, 75), tn: num(o.tn, 1, 5, 3), tlang2: (Array.isArray(o.tlang2) ? o.tlang2 : []).filter(function (k) { return VLANG[k] && k !== code; }), tstyle: String(o.tstyle || '').trim(),
+      estyle: estyle, mystyle: String(o.mystyle || '').trim(), hook: o.hook !== false, map: o.map !== false, typing: o.typing !== false, flash: o.flash !== false,
+      music: /^(gen|file|none)$/.test(o.music) ? o.music : 'gen', res: /^(1080p30|1080p60|4k30)$/.test(o.res) ? o.res : '1080p60', subs: /^(srt|burn|both|none)$/.test(o.subs) ? o.subs : 'srt', voice: o.voice === 'chapter' ? 'chapter' : 'one',
+      srcpri: o.srcpri === 'press' ? 'press' : 'open', autofind: o.autofind !== false, reuse: num(o.reuse, 1, 5, 3), clipmax: num(o.clipmax, 3, 8, 5), blur: /^(kids|plus|off)$/.test(o.blur) ? o.blur : 'kids', names: o.names === 'dossier' ? 'dossier' : 'never',
+      approve: o.approve === 'straight' ? 'straight' : 'step', publish: pub, links: o.links === true, tzAuto: tzAuto, tz: tz, lessons: o.lessons !== false };
+  }
+  var PROD_T = {
+    tkind: { ride: 'Bắt chước bố cục thumbnail của video gốc', mine: 'Theo kênh mẫu của tôi', free: 'Tự do' },
+    estyle: { ride: 'Bắt chước video gốc (web tự phân tích)', mine: 'Kiểu kênh mẫu của tôi', neutral: 'Tin tức trung tính' },
+    music: { gen: 'Tự tạo nền trầm', file: 'Tôi gửi file nhạc', none: 'Không có nhạc' },
+    res: { '1080p30': '1920×1080, 30fps', '1080p60': '1920×1080, 60fps', '4k30': '3840×2160, 30fps' },
+    subs: { srt: 'SRT rời', burn: 'In lên hình', both: 'Cả SRT rời và in lên hình', none: 'Không làm phụ đề' },
+    voice: { one: '1 file duy nhất', chapter: 'Mỗi chương 1 file' },
+    srcpri: { open: 'Ảnh giấy phép mở trước', press: 'Clip báo chí trước' },
+    blur: { kids: 'Trẻ em và người không liên quan', plus: 'Trẻ em, người không liên quan và cả nhân vật chính', off: 'Tắt' },
+    names: { never: 'Không bao giờ', dossier: 'Theo hồ sơ' },
+    approve: { step: 'Duyệt từng bước', straight: 'Chạy thẳng tới video' }
+  };
+  function prodLines(R, o) {
+    o = Object.assign({}, PROD_DEF, o || {});
+    var p = prodResolve(R, o), on = function (b) { return b ? 'Bật' : 'Tắt'; }, na = ' (không áp dụng: hồ sơ này không có video gốc)';
+    return [
+      'Ngôn ngữ sản phẩm: ' + p.langEn + ' (' + p.langVi + ')' + (p.auto ? (p.hasRide ? ', lấy theo video gốc' : ', mặc định') : ', tôi chọn tay'),
+      'Ngôn ngữ ghi chú cho tôi: ' + (p.nlang === 'en' ? 'English' : 'Tiếng Việt'),
+      'Chế độ nội dung: ' + (p.ride ? 'Ăn theo video gốc' : 'Viết mới hoàn toàn' + (p.hasRide ? ' (có video gốc nhưng tôi chọn không ăn theo)' : '')),
+      'Tỷ lệ ý của video gốc : điểm mới: ' + p.ratio + ' : ' + (100 - p.ratio) + (p.ride ? '' : ' (không áp dụng khi viết mới)'),
+      'Thời lượng mục tiêu: ' + p.mins + ' phút' + (p.minsAuto ? (p.hasRide ? ' (lấy theo video gốc ' + (p.refMin || '?') + ' phút, làm tròn lên)' : '') : ' (tôi chọn tay)'),
+      'Tốc độ giọng đọc: ' + p.wpm + ' từ/phút → khoảng ' + p.words.toLocaleString('vi-VN') + ' từ',
+      'Kiểu thumbnail: ' + PROD_T.tkind[p.tkind] + (o.tkind === 'ride' && !p.hasRide ? na : ''),
+      'Mức giống thumbnail gốc: ' + p.tsim + '%' + (p.tkind === 'ride' ? '' : ' (không áp dụng với kiểu thumbnail đã chọn)'),
+      'Số phương án thumbnail: ' + p.tn,
+      'Ngôn ngữ thumbnail phụ: ' + (p.tlang2.length ? p.tlang2.map(function (k) { return VLANG[k]; }).join(', ') : 'Không'),
+      'Phong cách dựng: ' + PROD_T.estyle[p.estyle] + (o.estyle === 'ride' && !p.hasRide ? na : ''),
+      'Hook mở đầu bằng animation: ' + on(p.hook),
+      'Bản đồ động (zoom, ghim, đường bay): ' + on(p.map),
+      'Chữ hiện từng ký tự: ' + on(p.typing),
+      'Flash trắng + whoosh đầu chương: ' + on(p.flash),
+      'Nhạc nền: ' + PROD_T.music[p.music],
+      'Độ phân giải / khung hình: ' + PROD_T.res[p.res],
+      'Phụ đề: ' + PROD_T.subs[p.subs],
+      'Cách gửi giọng đọc: ' + PROD_T.voice[p.voice],
+      'Nguồn hình ưu tiên: ' + PROD_T.srcpri[p.srcpri],
+      'Tự tìm thêm ảnh khi thiếu: ' + (p.autofind ? 'Bật (Wikimedia Commons và các kho ảnh giấy phép mở)' : 'Tắt'),
+      'Số lần tối đa dùng lại 1 ảnh: ' + p.reuse,
+      'Tối đa giây mỗi đoạn clip báo chí: ' + p.clipmax,
+      'Làm mờ mặt: ' + PROD_T.blur[p.blur],
+      'Nêu tên người chưa được công bố: ' + PROD_T.names[p.names],
+      'Duyệt: ' + PROD_T.approve[p.approve],
+      'Gói đăng video: ' + (p.publish.length ? p.publish.map(function (k) { return PROD_PUB.filter(function (x) { return x[0] === k; })[0][1]; }).join(', ') : 'không làm'),
+      'Chèn link vào mô tả: ' + (p.links ? 'Có' : 'Không'),
+      'Múi giờ khán giả để gợi ý giờ đăng: ' + p.tz + (p.tzAuto ? (p.hasRide ? ' (suy từ ngôn ngữ video gốc)' : ' (suy từ ngôn ngữ sản phẩm)') : ' (tôi chọn tay)'),
+      'Xuất prompt cập nhật sau dự án: ' + on(p.lessons)
+    ].map(function (t, i) { return (i + 1) + '. ' + t; });
+  }
   function claudePrompt(R, sel, o) {
-    o = o || {}; var list = packList(R, sel), nI = list.filter(function (x) { return x.dir === 'anh'; }).length, nF = list.length - nI, L = [];
-    var style = String(o.tstyle || '').trim();
+    o = o || {}; var list = packList(R, sel), nI = list.filter(function (x) { return x.dir === 'anh'; }).length, nF = list.length - nI, L = [], P = prodResolve(R, o), D = R.dossier || {};
     var rr = R.ride, g = rr && rr.gaps, RL = rr ? rideLang(rr) : null;
-    var langVi = rr ? RL.vi : (VLANG[o.vlang] || VLANG.vi), langEn = rr ? RL.en : (LANG_EN[o.vlang] || 'Vietnamese');
-    var wpm = Math.max(120, Math.min(220, +o.wpm || 170)), mins = g ? g.target_minutes : (o.vmin || 12), words = Math.round(mins * wpm / 50) * 50;
+    var langVi = P.langVi, langEn = P.langEn, wpm = P.wpm, mins = P.mins, words = P.words, pk = o._pack || {};
     var thumbId = (list.filter(function (x) { return x.key === 'ride:thumb'; })[0] || {}).id || '';
+    var noteLang = P.nlang === 'en' ? 'tiếng Anh' : 'tiếng Việt', places = D.map_places || [], dates = D.key_dates || [];
+    var has = function (k) { return P.publish.indexOf(k) >= 0; };
     L.push('# VIỆC CẦN LÀM');
-    L.push('Tôi gửi kèm một file zip tài nguyên do YouTrend gom. Trong zip có: `prompt-claude.md` (chính là nội dung này), `ho-so.json`, `danh-sach-anh.md`, `danh-sach-video.md`, thư mục `anh/` (' + nI + ' ảnh, mã I001…)' + (nF ? ' và thư mục `khung-hinh/` (' + nF + ' khung hình, mã F01… / C01…)' : '') + '.');
+    L.push('Tôi gửi kèm một file zip tài nguyên do YouTrend gom. Trong zip có: `prompt-claude.md` (chính là nội dung này), `ho-so.json`, `danh-sach-anh.md`, `danh-sach-video.md`, thư mục `anh/` (' + nI + ' ảnh, mã I001…)' + (nF ? ', thư mục `khung-hinh/` (' + nF + ' khung hình, mã F01… / C01…)' : '') + (pk.sheets ? ', ' + pk.sheets + ' contact sheet của video gốc trong `khung-hinh/` (contact-1.jpg…)' : '') + (pk.map ? ', thư mục `ban-do/` (dữ liệu bản đồ Natural Earth, public domain)' : '') + '.');
     L.push('Nếu tôi chưa gửi zip, hãy nhắc tôi gửi trước khi làm bước 3 và 4.');
-    L.push('', '**Ngôn ngữ sản phẩm: ' + langEn + ' (' + langVi + ').** Lời đọc, chữ trên hình, thumbnail, tiêu đề, mô tả và tag đều dùng ngôn ngữ này' + (rr ? ' vì đó là ngôn ngữ của video gốc' : '') + '. Ghi chú gửi tôi thì viết bằng tiếng Việt, ngắn gọn.');
-    L.push('', 'Làm lần lượt từng bước, xong bước nào gửi bước đó để tôi duyệt rồi mới làm bước sau:');
-    L.push('1. KỊCH BẢN: viết lời đọc bằng ' + langVi + ', dài khoảng ' + mins + ' phút. Giọng đọc của tôi chạy khoảng ' + wpm + ' từ/phút nên số từ mục tiêu = số phút × ' + wpm + ' = khoảng ' + words.toLocaleString('vi-VN') + ' từ; đếm số từ và ghi ở cuối kịch bản. Chỉ dùng thông tin trong hồ sơ bên dưới. 15 giây đầu phải có hook. Giữ đúng tên riêng, ngày tháng, con số. Thông tin ở mục "CHƯA XÁC MINH" và "TIN ĐANG ĐƯỢC ĐƯA" phải nói kèm câu rào đón. Không khẳng định ai có tội khi toà chưa kết luận. Không nêu tên những người ở mục "KHÔNG NÊU TÊN".' + (rr ? ' Tỷ lệ nội dung theo mục "ĂN THEO VIDEO GỐC". Gửi kèm bảng đối chiếu ba cột: chương của video gốc | chương của video mới | điểm mới chèn vào.' : ''));
-    L.push('2. BẢNG PHÂN CẢNH: lập bảng gồm các cột Thời lượng | Lời đọc | Tên file hình | Hình dùng (mã ảnh I…/F…/C…, hoặc video V…/W… kèm giây bắt đầu) | Chữ chèn trên hình | Chuyển động (zoom, pan, khoanh đỏ, mũi tên). Mỗi cảnh 3–6 giây. Cột Lời đọc phải khớp nguyên văn kịch bản: lập bảng xong hãy ghép cột này lại, so tự động với kịch bản và báo tôi nếu lệch chữ nào. Chữ chèn trên hình viết bằng ' + langVi + '. Mỗi ảnh gốc dùng tối đa 3 lần trong video; mỗi đoạn clip [video, giây bắt đầu] chỉ dùng 1 lần. Thiếu hình thì tự tìm thêm ảnh giấy phép mở (Wikimedia Commons, DVIDS, Library of Congress, trang cơ quan nhà nước) và ghi rõ link, tác giả, giấy phép; tìm không ra thì ghi "CẦN TÌM THÊM" kèm từ khoá.');
-    L.push('3. SỬA ẢNH: với các ảnh được dùng, xuất bản 1920×1080 đã thêm chữ, nhãn tên, ngày tháng, khoanh đỏ hoặc mũi tên theo bảng phân cảnh. Chữ và nhãn làm thành lớp overlay nền trong suốt (PNG) đặt đè lên ảnh hoặc video; không dựng đồ hoạ trên nền mờ. Ghi nguồn ở góc ảnh bằng ' + langVi + ' (dạng "Source: …"). Giữ nguyên nội dung ảnh gốc, không ghép hay vẽ thêm chi tiết không có thật. Làm mờ mặt trẻ em, du khách và người không liên quan tới vụ việc.');
-    L.push('4. THUMBNAIL: thiết kế 2–3 phương án 1280×720, mỗi phương án kèm bản thu nhỏ rộng 320px để kiểm tra còn đọc được' + (style ? '. Phong cách: ' + style : '') + '. Chữ bằng ' + langVi + ', to, tối đa 3 dòng. Dùng ảnh thật trong gói; không đặt chữ hay ký hiệu đè lên mặt người.' + (rr ? ' Bố cục giống khoảng 70–80% thumbnail của video gốc' + (thumbId ? ' (file mã ' + thumbId + ' trong `anh/`)' : '') + ', xem mục "Thumbnail của video gốc" bên dưới.' : ''));
-    L.push('5. ĐĂNG VIDEO: 5 tiêu đề (mỗi tiêu đề tối đa 100 ký tự, đúng sự thật' + (rr ? ', ưu tiên dạng "câu hỏi mà video gốc đặt ra + câu trả lời mới"' : '') + '); 1 mô tả tối đa 5.000 ký tự, KHÔNG chèn link, có mục nguồn tin (ghi tên nguồn) và ghi công ảnh, clip theo `danh-sach-anh.md` và `danh-sach-video.md`; 1 bình luận ghim liệt kê đầy đủ các kênh có clip được dùng; tag; danh mục; giờ đăng đề xuất theo múi giờ của khán giả' + (rr ? ' video gốc' : '') + '.');
+    L.push('', '# TUỲ CHỌN ĐÃ CHỌN', 'Làm đúng theo các lựa chọn dưới đây. Chỗ nào trong prompt nhắc "tuỳ chọn N" là nói tới dòng số N.');
+    prodLines(R, o).forEach(function (t) { L.push(t); });
+    L.push('', '**Ngôn ngữ sản phẩm: ' + langEn + ' (' + langVi + ').** Lời đọc, chữ trên hình, thumbnail, tiêu đề, mô tả và tag đều dùng ngôn ngữ này' + (P.auto && P.hasRide ? ' vì đó là ngôn ngữ của video gốc' : '') + '. Ghi chú gửi tôi viết bằng ' + noteLang + ', ngắn gọn.');
+    L.push('', '# QUY TẮC CỐ ĐỊNH');
+    L.push('- Chỉ dùng thông tin trong hồ sơ bên dưới. Giữ đúng tên riêng, ngày tháng, con số. Thông tin ở mục "CHƯA XÁC MINH" và "TIN ĐANG ĐƯỢC ĐƯA" phải nói kèm câu rào đón. Không khẳng định ai có tội khi toà chưa kết luận.');
+    L.push('- Chỉ dùng ảnh thật. Không dựng ảnh AI về người thật trong tình huống bịa' + (P.hasRide ? ', kể cả khi video gốc có làm' : '') + '.');
+    L.push('- Không đặt chữ hay ký hiệu đè lên mặt người.');
+    L.push('- Mỗi ảnh gốc dùng tối đa ' + P.reuse + ' lần trong video. Mỗi đoạn clip (video, giây bắt đầu) chỉ dùng 1 lần, dài tối đa ' + P.clipmax + ' giây.' + (P.autofind ? ' Thiếu hình thì tự tìm thêm ảnh giấy phép mở (Wikimedia Commons, DVIDS, Library of Congress, trang cơ quan nhà nước), ghi rõ link, tác giả, giấy phép; tìm không ra thì ghi "CẦN TÌM THÊM" kèm từ khoá.' : ' Thiếu hình thì KHÔNG tự tìm thêm: ghi "CẦN TÌM THÊM" kèm từ khoá để tôi tìm.'));
+    L.push('- Nguồn hình: ' + (P.srcpri === 'open' ? 'ưu tiên ảnh giấy phép mở; clip báo chí chỉ dùng khi không có ảnh nào thay được.' : 'ưu tiên clip báo chí cho các khoảnh khắc chính; phần còn lại dùng ảnh giấy phép mở.'));
+    L.push('- Làm mờ mặt: ' + (P.blur === 'off' ? 'tôi đã tắt tuỳ chọn này. Nếu thấy mặt trẻ em rõ nét trong hình, hãy báo tôi trước khi dùng.' : P.blur === 'plus' ? 'trẻ em, du khách, người không liên quan và cả nhân vật chính của vụ việc.' : 'trẻ em, du khách và người không liên quan tới vụ việc.'));
+    L.push('- Tên người: ' + (P.names === 'never' ? 'không bao giờ nêu tên người chưa được cơ quan chức năng công bố, kể cả khi có nguồn in tên. ' : 'theo hồ sơ: chỉ nêu tên những người hồ sơ nêu và không nằm trong mục "KHÔNG NÊU TÊN". ') + 'Những người ở mục "KHÔNG NÊU TÊN" thì không nêu tên, không đưa hình.');
+    L.push('- Trong lời đọc, số và năm viết bằng chữ (theo ' + langVi + ') để giọng AI đọc đúng. Trên hình thì vẫn viết bằng số.');
+    L.push('', '# CÁC BƯỚC');
+    L.push(P.approve === 'step' ? 'Làm lần lượt từng bước, xong bước nào gửi bước đó để tôi duyệt rồi mới làm bước sau.' : 'Tôi chọn chạy thẳng: làm liền các bước 1 đến 5 không cần chờ duyệt, chỉ dừng lại hỏi khi thiếu dữ kiện hoặc thiếu hình. Bước 6 làm khi tôi gửi giọng đọc. Cuối cùng gửi tôi một bản tóm tắt những gì đã tự quyết.');
+    L.push('1. KỊCH BẢN: viết lời đọc bằng ' + langVi + ', dài khoảng ' + mins + ' phút. Số từ mục tiêu = số phút × tốc độ giọng = ' + mins + ' × ' + wpm + ' = khoảng ' + words.toLocaleString('vi-VN') + ' từ; đếm số từ và ghi ở cuối kịch bản. Con số ' + wpm + ' từ/phút là tốc độ đo thật của giọng đọc (tiếng Việt và tiếng Anh đều quanh 170), đừng dùng 120.' + (P.hook ? ' 15–20 giây đầu là hook, xem mục "HOOK MỞ ĐẦU".' : ' 15 giây đầu phải có hook bằng lời.') + (P.ride ? ' Tỷ lệ nội dung theo mục "ĂN THEO VIDEO GỐC". Gửi kèm bảng đối chiếu ba cột: chương của video gốc | chương của video mới | điểm mới chèn vào, và ghi tỷ lệ % thực tế (số từ kể lại ý video gốc so với số từ điểm mới).' : (P.hasRide ? ' Viết mới hoàn toàn: không theo bố cục và không cần phủ các chương của video gốc.' : '')));
+    L.push('2. BẢNG PHÂN CẢNH: lập bảng gồm các cột Thời lượng | Lời đọc | Tên file hình | Hình dùng (mã ảnh I…/F…/C…, hoặc video V…/W… kèm giây bắt đầu) | Chữ chèn trên hình | Chuyển động (zoom, pan, khoanh đỏ, mũi tên) | Ghi chú. Mỗi cảnh 3–6 giây. Cột Lời đọc phải khớp nguyên văn kịch bản: lập bảng xong hãy ghép cột này lại, so tự động với kịch bản và báo tôi nếu lệch chữ nào. Chữ chèn trên hình viết bằng ' + langVi + '.' + (P.map || P.hook ? ' Ở cột Ghi chú, đánh dấu ' + [P.map ? 'cảnh dùng bản đồ động (BẢN ĐỒ)' : '', P.hook ? 'cảnh thuộc hook (HOOK)' : ''].filter(Boolean).join(' và ') + '.' : ''));
+    L.push('3. SỬA ẢNH: với các ảnh được dùng, xuất bản ' + (P.res === '4k30' ? '3840×2160' : '1920×1080') + ' theo bảng phân cảnh. Đồ hoạ (nhãn tên, ngày tháng, khoanh đỏ, mũi tên, thẻ số liệu) xuất PNG nền trong suốt để bộ dựng đặt nền tối phía sau. Chữ chú thích tách thành lớp riêng, không in chết vào ảnh' + (P.typing ? ', để chạy hiệu ứng gõ từng ký tự' : '') + '. Ghi nguồn bằng ' + langVi + ' (dạng "Source: …"), đặt ở vị trí không bị cắt mất khi zoom. Giữ nguyên nội dung ảnh gốc, không ghép hay vẽ thêm chi tiết không có thật.');
+    L.push('4. THUMBNAIL: thiết kế ' + P.tn + ' phương án 1280×720, mỗi phương án kèm bản thu nhỏ rộng 320px để kiểm tra còn đọc được. Chữ bằng ' + langVi + ', to, tối đa 3 dòng. Dùng ảnh thật trong gói.' +
+      (P.tkind === 'ride' ? ' Bố cục giống khoảng ' + P.tsim + '% thumbnail của video gốc' + (thumbId ? ' (file mã ' + thumbId + ' trong `anh/`)' : '') + ', xem mục "THUMBNAIL CỦA VIDEO GỐC" bên dưới; đổi ảnh, đổi chữ.' : P.tkind === 'mine' ? ' Làm theo kiểu kênh mẫu của tôi' + (P.tstyle ? ': ' + P.tstyle : ' (tôi chưa mô tả: hỏi tôi trước khi làm)') + '.' : ' Bố cục tự do' + (P.tstyle ? '. Gợi ý của tôi: ' + P.tstyle : '') + '.') +
+      (P.tlang2.length ? ' Sau khi tôi chọn phương án, làm thêm bản chữ ' + P.tlang2.map(function (k) { return VLANG[k]; }).join(', ') + ' của phương án đó.' : ''));
+    if (P.publish.length) L.push('5. ĐĂNG VIDEO: ' + [
+      has('title') ? '5 tiêu đề (mỗi tiêu đề tối đa 100 ký tự, đúng sự thật' + (P.ride ? ', ưu tiên dạng "câu hỏi mà video gốc đặt ra + câu trả lời mới"' : '') + ')' : '',
+      has('desc') ? '1 mô tả tối đa 5.000 ký tự, ' + (P.links ? 'có chèn link nguồn' : 'KHÔNG chèn link') + ', có mục nguồn tin (ghi tên nguồn) và ghi công ảnh, clip theo `danh-sach-anh.md` và `danh-sach-video.md`' : '',
+      has('pin') ? '1 bình luận ghim liệt kê đầy đủ các kênh có clip được dùng' : '',
+      has('tags') ? 'tag' : '', has('cat') ? 'danh mục' : '',
+      has('time') ? 'giờ đăng đề xuất theo múi giờ ' + P.tz + ' (ghi kèm giờ Việt Nam)' : ''].filter(Boolean).join('; ') + '.');
+    else L.push('5. ĐĂNG VIDEO: tôi tự làm, bỏ qua bước này.');
     L.push('6. DỰNG VIDEO (làm khi tôi gửi file giọng đọc):');
     L.push('   - Sau khi tôi duyệt kịch bản, xuất lời đọc thành file txt theo từng chương và 1 file toàn bộ để tôi thu giọng.');
-    L.push('   - Tôi chỉ gửi MỘT file giọng. Căn cảnh bằng nhận dạng giọng có mốc từng từ (faster-whisper, word timestamps). Rút khoảng lặng thừa: còn 0,2–0,4 giây giữa các câu và khoảng 0,85 giây giữa các chương.');
-    if (rr) L.push('   - Dựng theo mục "PHONG CÁCH DỰNG" bên dưới: nền, cách đặt ảnh, font và màu chữ, đồ hoạ, chuyển cảnh, nhịp cắt, nhạc nền.');
-    L.push('   - Render 1920×1080, 60fps. Ảnh tĩnh dùng chuyển động Ken Burns. Clip có nhãn "Source: <tên kênh>". Làm mờ mặt du khách và trẻ em. Xuất kèm phụ đề SRT.');
-    L.push('   - Trước khi giao, soát khung hình giữa của từng cảnh để bắt màn chờ, hình sai nội dung và logo lớn.');
+    L.push('   - ' + (P.voice === 'one' ? 'Tôi gửi MỘT file giọng duy nhất cho cả video.' : 'Tôi gửi mỗi chương một file giọng, đặt tên theo số chương.') + ' Căn cảnh bằng nhận dạng giọng có mốc từng từ (faster-whisper, word timestamps). Rút khoảng lặng thừa: còn 0,2–0,4 giây giữa các câu và khoảng 0,85 giây giữa các chương.');
+    L.push('   - Dựng theo mục "PHONG CÁCH DỰNG" bên dưới.');
+    L.push('   - Render ' + PROD_T.res[P.res] + '. Ảnh tĩnh có chuyển động chậm (Ken Burns). Clip có nhãn "Source: <tên kênh>".');
+    L.push('   - Phụ đề: ' + (P.subs === 'none' ? 'không làm.' : P.subs === 'srt' ? 'xuất file SRT rời, không in lên hình.' : P.subs === 'burn' ? 'in lên hình, không cần file SRT.' : 'vừa in lên hình vừa xuất file SRT rời.'));
+    L.push('   - Nhạc nền: ' + (P.music === 'none' ? 'không dùng nhạc.' : P.music === 'file' ? 'dùng file nhạc tôi gửi; nếu tôi chưa gửi thì nhắc tôi.' : 'tự tạo một lớp nền trầm (ambient) chạy liên tục, không dùng nhạc có bản quyền.') + (P.music === 'none' ? '' : ' Nhạc tự nhỏ đi khi có giọng đọc; tổng âm lượng khoảng -15 LUFS.'));
+    L.push('   - Soát khung hình giữa của từng cảnh trước khi giao để bắt: màn chờ, hình sai nội dung, logo lớn, chữ bị cắt.');
+    if (P.lessons) L.push('7. PROMPT CẬP NHẬT: khi dự án xong, tổng hợp các bài học (chỗ gói tài nguyên thiếu, chỗ prompt này dặn sai hoặc thiếu, số đo thật như từ/phút) thành một prompt cập nhật cho YouTrend, viết bằng tiếng Việt, chia theo 3 phần: tuỳ chọn trên giao diện, dữ liệu gom, mẫu prompt.');
     L.push('', 'Video nguồn: video từ 10 phút trở xuống tải cả bài 720p; video dài hơn chỉ tải từng đoạn quanh mốc dùng (trước và sau 25 giây), mỗi đoạn một file riêng có ghi giây bắt đầu trong tên. Không gộp nhiều --download-sections của yt-dlp vào một file vì mốc sẽ lệch. Các dòng "Lưu ý" ở từng video là suy từ loại video và tiêu đề, phải xem lại hình trước khi dùng.');
     L.push('', 'Ảnh: cột "Nội dung theo trang gốc", "Tác giả", "Ngày chụp" trong `danh-sach-anh.md` cho biết ảnh thật sự chụp gì và khi nào; không đoán nội dung ảnh qua tên file. Cột "Bản quyền" cho biết ảnh nào có giấy phép mở (public domain, Wikimedia, Openverse: dùng được, ghi công theo giấy phép) và ảnh nào của báo chí hoặc kênh khác (chỉ dùng kèm bình luận và ghi nguồn, ưu tiên thay bằng ảnh giấy phép mở khi có). Tải ảnh từ Wikimedia Commons thì chỉ dùng cỡ chuẩn (330, 500, 960, 1280, 1920px) và cách nhau ít nhất 2 giây để không bị lỗi 429.');
     L.push('', '# CÁCH LÀM VIỆC VỚI TÔI');
-    L.push('- Mỗi bước gửi để tôi duyệt; ghi chú bằng tiếng Việt, ngắn gọn.');
+    L.push('- ' + (P.approve === 'step' ? 'Mỗi bước gửi để tôi duyệt' : 'Chạy thẳng, chỉ hỏi khi thật cần') + '; ghi chú bằng ' + noteLang + ', ngắn gọn.');
     L.push('- Tôi thích nhiều hình thật, ít đồ hoạ trên nền mờ, không lặp hình.');
-    L.push('- Không chèn link vào mô tả; vẫn ghi tên nguồn và ghi công.');
-    if (rr) {
-      var sc = rr.scan, chs = sc.chapters || [], th = rr.thumb;
+    L.push('- ' + (P.links ? 'Mô tả có chèn link nguồn' : 'Không chèn link vào mô tả') + '; vẫn ghi tên nguồn và ghi công.');
+    // ----- phong cách dựng (tuỳ chọn 11–16) -----
+    var st = rr && rr.style, sl = P.estyle === 'ride' ? styleLines(st) : [], note = String((rr && rr.styleNote) || '').trim();
+    L.push('', '# PHONG CÁCH DỰNG');
+    if (P.estyle === 'ride') {
+      L.push('Tôi muốn video dựng giống CÁCH EDIT của video gốc, không chỉ giống nội dung. Áp dụng bảng dưới đây ở bước 2, 3 và 6.');
+      if (sl.length) { L.push('Bảng này do AI xem ' + (st.whole ? 'cả video gốc' : Math.round((st.window_seconds || 480) / 60) + ' phút đầu của video gốc') + ' (1 khung hình mỗi giây, có nghe tiếng) rồi tả lại. Đây là mô tả ước lượng, chưa phải số đo.'); sl.forEach(function (x) { L.push('- ' + x[0] + ': ' + x[1]); }); }
+      else L.push('Web CHƯA phân tích được phong cách dựng của video gốc. Trước khi làm bước 2, hãy xem video gốc (hoặc file tôi gửi) và tự lập bảng phong cách theo các mục: nền, ảnh, chữ, đồ hoạ, chuyển cảnh, nhịp cắt, âm thanh, cách ghi nguồn; gửi tôi duyệt.');
+      if (note) L.push('', 'Ghi chú của tôi về phong cách (ưu tiên hơn bảng AI nếu khác nhau):', note);
+      if (pk.sheets == null && o._pack == null) L.push('', 'Contact sheet: nếu trong `khung-hinh/` có `contact-1.jpg`, `contact-2.jpg` thì đó là ảnh ghép khung hình của video gốc do YouTube tạo. Xem để đối chiếu bảng trên; không dùng các khung hình này trong video.');
+      if (pk.sheets) L.push('', 'Contact sheet: `khung-hinh/contact-1.jpg`' + (pk.sheets > 1 ? ' và `contact-2.jpg`' : '') + ' là ảnh ghép khung hình của video gốc do YouTube tạo (' + (pk.sheetStep ? 'mỗi ô cách nhau ' + String(pk.sheetStep).replace('.', ',') + ' giây' : 'các ô cách đều nhau') + '). Xem để đối chiếu bảng trên. Chỉ để tham khảo, không dùng các khung hình này trong video.');
+      L.push('', 'Đo lại cho chính xác: nếu tôi gửi kèm file video gốc, trước bước 2 hãy tự đo bằng ffmpeg rồi sửa bảng trên và gửi tôi duyệt:');
+      L.push('- Dò cắt cảnh (scene detection): số lần cắt và thời lượng cảnh trung vị.');
+      L.push('- Lấy 1 khung hình mỗi 4 giây, ghép thành 1–2 contact sheet, xem để chốt: nền, tỉ lệ ảnh toàn màn so với thẻ ảnh nổi, font, màu chữ (lấy mã hex từ khung hình), các loại đồ hoạ, có bản đồ không, có ảnh AI không.');
+      L.push('- Đo nền âm thanh: tìm khoảng lặng dưới -45 dB để biết nhạc nền có chạy liên tục không.');
+    } else if (P.estyle === 'mine') {
+      L.push('Dựng theo kiểu kênh mẫu của tôi' + (P.mystyle ? ':' : ' (tôi chưa mô tả: hỏi tôi về nền, chữ, đồ hoạ, chuyển cảnh trước khi làm bước 2).'));
+      if (P.mystyle) L.push(P.mystyle);
+    } else {
+      L.push('Kiểu tin tức trung tính:');
+      L.push('- Nền tối, ảnh và clip toàn màn hình, zoom chậm; ít đồ hoạ.');
+      L.push('- Chữ không chân, trắng, một màu nhấn cho từ khoá; chú thích 3–6 chữ ở đáy màn hình.');
+      L.push('- Chuyển cảnh cắt thẳng; không hiệu ứng phô trương.');
+    }
+    L.push('', 'Hiệu ứng theo tuỳ chọn:');
+    L.push('- Chữ: ' + (P.typing ? 'hiện từng ký tự, mỗi dòng khoảng 0,4 giây (tuỳ chọn 14 bật).' : 'hiện cả dòng một lần, mờ dần vào khoảng 0,2 giây (tuỳ chọn 14 tắt).'));
+    L.push('- Đầu mỗi chương: ' + (P.flash ? 'flash trắng ngắn kèm tiếng whoosh nhẹ (tuỳ chọn 15 bật).' : 'cắt thẳng, không flash, không whoosh (tuỳ chọn 15 tắt).'));
+    L.push('- Clip báo chí: phóng to khoảng 1,25 lần để cắt logo và chữ in sẵn; ghi "SOURCE: <tên kênh>" nhỏ ở góc trên phải.');
+    L.push('- Không có đúng font thì dùng font cùng dáng. Ví dụ font hẹp in hoa: Bebas Neue, Oswald; trên Windows dùng Bahnschrift Bold Condensed.');
+    L.push('- Chỉ học cách dựng. Không chép hình, đồ hoạ nguyên bản, logo hay nhạc của video khác.');
+    L.push('- Chỗ nào phong cách ở trên trái với mục "CÁCH LÀM VIỆC VỚI TÔI" (ví dụ quá nhiều đồ hoạ trên nền mờ) thì hỏi tôi trước khi làm theo bên nào.');
+    if (P.map) {
+      L.push('', '## BẢN ĐỒ ĐỘNG (tuỳ chọn 13 bật)');
+      L.push('- Nền tối (xanh than), nước liên quan tô màu nhấn (vàng kim nếu bảng phong cách không nói khác), bang hoặc vùng liên quan tô sáng hơn.');
+      L.push('- Zoom mượt từ thế giới → quốc gia → bang hoặc thành phố. Ghim có vòng sóng lan và thẻ tên. Đường bay màu nhấn nối các điểm (ví dụ nơi các báo nước ngoài đưa tin).');
+      var neUrl = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson và cùng thư mục đó: ne_50m_admin_1_states_provinces.geojson';
+      L.push(pk.map === true ? '- Dữ liệu bản đồ có sẵn trong `ban-do/`: `ne_50m_admin_0_countries.geojson` (quốc gia) và `ne_50m_admin_1_states_provinces.geojson` (bang, tỉnh). Nguồn Natural Earth, public domain.' : pk.map === false ? '- Gói không kèm được dữ liệu bản đồ. Tải Natural Earth 50m (public domain): ' + neUrl : '- Dữ liệu bản đồ: nếu zip có thư mục `ban-do/` thì dùng 2 file geojson ở đó (Natural Earth 50m, public domain); nếu không có thì tải: ' + neUrl);
+      if (places.length) { L.push('- Địa điểm có toạ độ (vĩ độ, kinh độ):'); places.forEach(function (x) { L.push('  - ' + x.name + (x.country ? ', ' + x.country : '') + ' — ' + ({ scene: 'nơi xảy ra', base: 'trụ sở / căn cứ', outlet: 'nơi báo đưa tin', other: 'liên quan' })[x.kind] + ' — ' + x.lat + ', ' + x.lon + (x.coord_src === 'wikipedia' ? ' (theo Wikipedia)' : ' (AI ước lượng, kiểm lại trước khi ghim)') + (x.why ? ' — ' + x.why : '')); }); }
+      else L.push('- Hồ sơ chưa có danh sách địa điểm kèm toạ độ: tự tra toạ độ các địa điểm trong mục "NHÂN VẬT • TỔ CHỨC • ĐỊA ĐIỂM" và ghi nguồn tra.');
+    }
+    if (P.hook) {
+      L.push('', '## HOOK MỞ ĐẦU 15–20 GIÂY (tuỳ chọn 12 bật)');
+      L.push('Dựng bằng animation, chọn các mảnh phù hợp với vụ việc, theo thứ tự:');
+      if (P.map) L.push('- Bản đồ zoom vào và ghim nơi xảy ra.');
+      L.push('- Cảnh thật của khoảnh khắc chính (ảnh hoặc clip trong gói).');
+      L.push('- Câu nói nguyên văn sáng dần từng chữ, kèm sóng âm nhảy theo giọng thật nếu có clip tiếng. Chỉ dùng câu có trong mục "TRÍCH DẪN NGUYÊN VĂN".');
+      L.push('- Bộ đếm số chạy lên (lượt xem, hoặc con số chính của vụ việc trong mục "SỐ LIỆU").');
+      L.push('- Lịch lật ngày nếu có mốc "ngày hôm sau"' + (dates.length ? '. Các mốc ngày của vụ việc: ' + dates.map(function (x) { return x.date + ' (' + x.what + ')'; }).join('; ') + '.' : ' (hồ sơ chưa có danh sách mốc ngày: lấy từ mục "DÒNG THỜI GIAN").'));
+      L.push('- ' + (P.flash ? 'Flash trắng kèm whoosh' : 'Cắt thẳng') + ' vào cú bẻ lái của câu chuyện.');
+    }
+    var th = rr && rr.thumb;
+    if (P.ride) {
+      var sc = rr.scan, chs = sc.chapters || [];
       L.push('', '# ĂN THEO VIDEO GỐC');
       L.push('Video mới làm về cùng vụ việc với video "' + rr.video.title + '" của kênh ' + rr.video.channel + ' (' + rr.video.minutes + ' phút, ngôn ngữ: ' + RL.en + ', https://www.youtube.com/watch?v=' + rr.video.id + ').');
       L.push('Mục tiêu: người vừa xem video đó bấm vào video này vì nó có thêm thông tin.');
-      L.push('Tỷ lệ nội dung: phủ đủ các ý (chương) của video gốc, xáo lại thứ tự và viết bằng lời mới, không chép câu chữ; phần này chiếm khoảng 70% thời lượng. Khoảng 30% còn lại là ĐIỂM MỚI mà video gốc chưa có. Ý nào của video gốc không kiểm được trong hồ sơ thì nói kèm câu rào đón hoặc bỏ.');
+      L.push('Tỷ lệ nội dung: phủ đủ các ý (chương) của video gốc, xáo lại thứ tự và viết bằng lời mới, không chép câu chữ; phần này chiếm khoảng ' + P.ratio + '% thời lượng (tuỳ chọn 4). Khoảng ' + (100 - P.ratio) + '% còn lại là ĐIỂM MỚI mà video gốc chưa có. Ý nào của video gốc không kiểm được trong hồ sơ thì nói kèm câu rào đón hoặc bỏ.');
       L.push('Độ dài mục tiêu: khoảng ' + mins + ' phút, tức khoảng ' + words.toLocaleString('vi-VN') + ' từ ở tốc độ ' + wpm + ' từ/phút' + (g && g.ref_minutes ? ' (video gốc ' + g.ref_minutes + ' phút)' : '') + '.');
       if (chs.length) { L.push('', '## Chương của video gốc' + (sc.basis === 'transcript' ? ' (mốc, tên, tóm tắt ý theo lời thoại)' : ' — CHƯA CÓ LỜI THOẠI, CHỈ CÓ CHAPTER: xem video gốc để biết từng chương nói gì trước khi viết')); chs.forEach(function (c) { L.push('- ' + (c.t ? c.t + ' ' : '') + c.title + (c.summary_vi ? ': ' + c.summary_vi : '')); }); }
       else L.push('', '## Chương của video gốc', 'Video gốc không có chương trong mô tả và chưa có lời thoại. Xem video gốc để tự chia chương trước khi viết.');
@@ -384,8 +534,13 @@
       if (g && g.gaps.length) { L.push('', '## ĐIỂM MỚI: video gốc chưa nói, phải có trong kịch bản'); g.gaps.forEach(function (x, i) { L.push((i + 1) + '. ' + x.point_vi + (x.detail_vi ? ' ' + x.detail_vi : '') + (x.src.length ? ' [nguồn ' + x.src.join(', ') + ']' : '') + (x.confidence === 'có nguồn' ? '' : ' (CHƯA KIỂM CHỨNG: nói kèm câu rào đón)')); }); }
       if (g && g.open_questions.length) { L.push('', '## Câu hỏi của người xem mà hồ sơ chưa trả lời được (không được bịa câu trả lời; nếu nhắc tới thì nói rõ là chưa có thông tin chính thức)'); g.open_questions.forEach(function (x) { L.push('- ' + x); }); }
       if (g && g.angle_vi) L.push('', 'Góc tiếp cận: ' + g.angle_vi);
-      if (g && g.outline.length) { L.push('', '## Dàn ý gợi ý (mỗi chương của video gốc thành một phần)'); g.outline.forEach(function (x, i) { L.push((i + 1) + '. ' + x.part + ' (' + (x.minutes || '?') + ' phút' + (x.is_new ? ', phần hoàn toàn MỚI' : '') + ')' + (x.ref_chapter ? ' — phủ chương gốc: ' + x.ref_chapter : '')); if (x.ref_vi) L.push('   Ý của video gốc: ' + x.ref_vi); if (x.new_vi) L.push('   Điểm mới chèn vào: ' + x.new_vi); }); }
-      L.push('', '## Thumbnail của video gốc' + (thumbId ? ' (ride_thumbnail: ' + thumbId + ')' : ''));
+      var osc = g && g.target_minutes ? mins / g.target_minutes : 1;
+      if (g && g.outline.length) { L.push('', '## Dàn ý gợi ý (mỗi chương của video gốc thành một phần)'); g.outline.forEach(function (x, i) { L.push((i + 1) + '. ' + x.part + ' (' + (x.minutes ? String(Math.max(0.5, Math.round(x.minutes * osc * 2) / 2)).replace('.', ',') : '?') + ' phút' + (x.is_new ? ', phần hoàn toàn MỚI' : '') + ')' + (x.ref_chapter ? ' — phủ chương gốc: ' + x.ref_chapter : '')); if (x.ref_vi) L.push('   Ý của video gốc: ' + x.ref_vi); if (x.new_vi) L.push('   Điểm mới chèn vào: ' + x.new_vi); }); }
+    } else if (P.hasRide) {
+      L.push('', '# VIDEO THAM KHẢO', 'Có video gốc "' + rr.video.title + '" của kênh ' + rr.video.channel + ' (https://www.youtube.com/watch?v=' + rr.video.id + ') nhưng tôi chọn viết mới hoàn toàn (tuỳ chọn 3): không theo bố cục, không cần phủ các chương của nó, và không chép câu chữ.');
+    }
+    if (rr && P.tkind === 'ride') {
+      L.push('', '# THUMBNAIL CỦA VIDEO GỐC' + (thumbId ? ' (ride_thumbnail: ' + thumbId + ')' : ''));
       if (!thumbId) L.push('Ảnh thumbnail video gốc chưa được chọn vào gói: mở https://i.ytimg.com/vi/' + rr.video.id + '/maxresdefault.jpg để xem.');
       if (th) {
         L.push('Bố cục: ' + th.layout_vi);
@@ -397,26 +552,7 @@
         if (th.looks_ai_generated) L.push('- CẢNH BÁO: thumbnail video gốc có dấu hiệu là ảnh do AI dựng hoặc ghép (' + (th.ai_signs_vi || 'AI nhận định') + '). Chỉ học bố cục; không dựng lại cảnh bịa, chỉ dùng ảnh thật trong gói.');
         if (th.text_over_face) L.push('- Thumbnail gốc có chữ đè lên mặt người: bản của mình không làm vậy.');
       } else L.push('Chưa phân tích được bố cục: tự xem ảnh và mô tả vị trí nhân vật chính, số chữ, màu chữ, kiểu chữ, có nhãn hay không trước khi thiết kế.');
-      L.push('Giữ khoảng 70–80% bố cục (vị trí nhân vật, vị trí và số chữ, tông màu); đổi ảnh, đổi chữ. Không sao chép nguyên ảnh.');
-      var st = rr.style, sl = styleLines(st), note = String(rr.styleNote || '').trim();
-      L.push('', '# PHONG CÁCH DỰNG (học theo video gốc)');
-      L.push('Tôi muốn video dựng giống CÁCH EDIT của video gốc, không chỉ giống nội dung. Áp dụng bảng dưới đây ở bước 2 (shot list), bước 3 (sửa ảnh, đồ hoạ) và bước 6 (dựng).');
-      if (sl.length) {
-        L.push('Bảng này do AI xem ' + (st.whole ? 'cả video gốc' : Math.round((st.window_seconds || 480) / 60) + ' phút đầu của video gốc') + ' (1 khung hình mỗi giây, có nghe tiếng) rồi tả lại. Đây là mô tả ước lượng, chưa phải số đo.');
-        sl.forEach(function (x) { L.push('- ' + x[0] + ': ' + x[1]); });
-      } else L.push('Web CHƯA phân tích được phong cách dựng của video gốc. Trước khi làm bước 2, hãy xem video gốc (hoặc file tôi gửi) và tự lập bảng phong cách theo các mục: nền, ảnh, chữ, đồ hoạ, chuyển cảnh, nhịp cắt, âm thanh, cách ghi nguồn; gửi tôi duyệt.');
-      if (note) L.push('', 'Ghi chú của tôi về phong cách (ưu tiên hơn bảng AI nếu khác nhau):', note);
-      L.push('', 'Đo lại cho chính xác: nếu tôi gửi kèm file video gốc, trước bước 2 hãy tự đo bằng ffmpeg rồi sửa bảng trên và gửi tôi duyệt:');
-      L.push('- Dò cắt cảnh (scene detection) để biết số lần cắt và độ dài trung bình mỗi hình.');
-      L.push('- Lấy 1 khung hình mỗi 4 giây, xem lần lượt để chốt: nền, tỉ lệ ảnh toàn màn so với thẻ ảnh nổi, font, màu chữ (lấy mã hex từ khung hình), các loại đồ hoạ.');
-      L.push('- Đo nền âm thanh: tìm khoảng lặng dưới -45 dB để biết nhạc nền có chạy liên tục không.');
-      L.push('', 'Luật cố định khi học phong cách:');
-      L.push('- Chỉ học cách dựng (bố cục, font, màu, nhịp, chuyển cảnh). Không chép hình, đồ hoạ nguyên bản, logo hay nhạc của video gốc.');
-      L.push('- Không dựng ảnh AI về người thật trong tình huống bịa, kể cả khi video gốc có dùng. Chỉ dùng ảnh thật.');
-      L.push('- Không có đúng font của video gốc thì dùng font cùng dáng. Ví dụ font hẹp in hoa: Bebas Neue, Oswald; trên Windows dùng Bahnschrift Bold Condensed.');
-      L.push('- Hạn chế clip có logo đài. Buộc phải dùng thì phóng to khoảng 1,25 lần để cắt logo và chữ in sẵn, ghi "SOURCE: <tên kênh>" nhỏ ở góc. Ảnh tư liệu ghi nhãn nguồn nhỏ theo đúng kiểu video gốc.');
-      L.push('- Nhạc nền và tiếng động: dùng nhạc có giấy phép, cùng không khí với video gốc; tôi sẽ gửi nhạc hoặc bạn đề xuất nguồn nhạc miễn phí bản quyền.');
-      L.push('- Chỗ nào phong cách video gốc trái với mục "CÁCH LÀM VIỆC VỚI TÔI" (ví dụ quá nhiều đồ hoạ trên nền mờ) thì hỏi tôi trước khi làm theo bên nào.');
+      L.push('Giữ khoảng ' + P.tsim + '% bố cục (tuỳ chọn 8): vị trí nhân vật, vị trí và số chữ, tông màu; đổi ảnh, đổi chữ. Không sao chép nguyên ảnh.');
     }
     if (R.chan) {
       var cn = R.chan, idea = cn.idea || {};
@@ -468,7 +604,7 @@
     var e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csize, true); e.setUint32(16, off, true);
     return parts.concat(central, [new Uint8Array(e.buffer)]);
   }
-  return { packList: packList, claudePrompt: claudePrompt, imageSheet: imageSheet, videoSheet: videoSheet, zipParts: zipParts, crc32: crc32, VLANG: VLANG, LANG_EN: LANG_EN, rideLang: rideLang, styleLines: styleLines, chanStats: chanStats, videoFlags: videoFlags, LV: LV, frameList: frameList, TYPES: TYPES, TYPE_ORDER: TYPE_ORDER, iso: iso, dur: dur, fmtN: fmtN, ytId: ytId, keywords: keywords, freeDossier: freeDossier, classify: classify, chapters: chapters, collectVideos: collectVideos, topicLinks: topicLinks, coverScore: coverScore, coverMatch: coverMatch, imageLinks: imageLinks, buildPrompt: buildPrompt, buildJson: buildJson };
+  return { packList: packList, claudePrompt: claudePrompt, imageSheet: imageSheet, videoSheet: videoSheet, zipParts: zipParts, crc32: crc32, VLANG: VLANG, LANG_EN: LANG_EN, rideLang: rideLang, styleLines: styleLines, chanStats: chanStats, PROD_DEF: PROD_DEF, PROD_PUB: PROD_PUB, PROD_TZ: PROD_TZ, PROD_T: PROD_T, prodResolve: prodResolve, prodLines: prodLines, videoFlags: videoFlags, LV: LV, frameList: frameList, TYPES: TYPES, TYPE_ORDER: TYPE_ORDER, iso: iso, dur: dur, fmtN: fmtN, ytId: ytId, keywords: keywords, freeDossier: freeDossier, classify: classify, chapters: chapters, collectVideos: collectVideos, topicLinks: topicLinks, coverScore: coverScore, coverMatch: coverMatch, imageLinks: imageLinks, buildPrompt: buildPrompt, buildJson: buildJson };
 });
 
 // ============================ GIAO DIỆN ============================
@@ -526,6 +662,7 @@
   var COUNTRIES = [['Japan', 'Nhật Bản'], ['United States', 'Mỹ'], ['South Korea', 'Hàn Quốc'], ['United Kingdom', 'Anh'], ['Germany', 'Đức'], ['France', 'Pháp'], ['Spain and Latin America', 'Tây Ban Nha & Mỹ Latinh'], ['India', 'Ấn Độ'], ['China', 'Trung Quốc'], ['Vietnam', 'Việt Nam'], ['global', 'Toàn cầu']];
   var PERIODS = [['d7', 'Tin mới 7 ngày', 168], ['d30', 'Tin mới 30 ngày', 720], ['y1', '1 năm qua', 0], ['classic', 'Vụ kinh điển, mọi thời', 0]];
   // nước → [mã vùng YouTube, ngôn ngữ ưu tiên] để dò video đã có
+  var NE_BASE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/', NE_FILES = ['ne_50m_admin_0_countries.geojson', 'ne_50m_admin_1_states_provinces.geojson'], NE_CACHE = null;
   var YT_LOC = { Japan: ['JP', 'ja'], 'United States': ['US', 'en'], 'South Korea': ['KR', 'ko'], 'United Kingdom': ['GB', 'en'], Germany: ['DE', 'de'], France: ['FR', 'fr'], 'Spain and Latin America': ['MX', 'es'], India: ['IN', 'en'], China: ['', 'zh'], Vietnam: ['VN', 'vi'] };
   var COVER_TTL = 14 * 864e5;
   var FIND0 = { g: 0, c: 0, custom: '', country: 'Japan', period: 'classic', n: 10, note: '' };
@@ -594,7 +731,7 @@
     var p = props || {};
     var a0 = useState(''), prompt = a0[0], setPrompt = a0[1];
     var a1 = useState(''), ref = a1[0], setRef = a1[1];
-    var a2 = useState(function () { try { return Object.assign({ hours: 168, lang: 'vi', nq: 8, vlang: 'vi', vmin: 12, wpm: 170, tstyle: '' }, JSON.parse(localStorage.getItem('res1_opt') || '{}')); } catch (e) { return { hours: 168, lang: 'vi', nq: 8, vlang: 'vi', vmin: 12, wpm: 170, tstyle: '' }; } }), opt = a2[0], setOpt = a2[1];
+    var a2 = useState(function () { try { return Object.assign({ hours: 168, lang: 'vi', nq: 8, vlang: 'vi', vmin: 12, wpm: 170, tstyle: '' }, E.PROD_DEF, JSON.parse(localStorage.getItem('res1_opt') || '{}')); } catch (e) { return Object.assign({ hours: 168, lang: 'vi', nq: 8, vlang: 'vi', vmin: 12, wpm: 170, tstyle: '' }, E.PROD_DEF); } }), opt = a2[0], setOpt = a2[1];
     var a3 = useState(null), R = a3[0], setR = a3[1];
     var a4 = useState({ v: {}, i: {} }), sel = a4[0], setSel = a4[1];
     var a5 = useState(null), prog = a5[0], setProg = a5[1];
@@ -610,6 +747,7 @@
     var r3 = useState({ id: '', busy: false, err: '' }), sty = r3[0], setSty = r3[1], Rref = React.useRef(null);
     var r4 = useState(function () { return Object.assign({ url: '', busy: '', err: '', channel: null, scan: null, videos: [], ideas: [] }, lsJson('res1_chan', null) || {}, { busy: '', err: '' }); }), ch = r4[0], setCh = r4[1];
     var r5 = useState(function () { return Object.assign({ url: '', busy: '', err: '', video: null, topic: null, items: [], same: null, ideas: [] }, lsJson('res1_dup', null) || {}, { busy: '', err: '' }); }), dp = r5[0], setDp = r5[1];
+    var r6 = useState({ open: false, dur: 0, text: '', err: '' }), wm = r6[0], setWm = r6[1];
     var c1 = useState(function () { var c = lsJson('res1_cover', {}) || {}, now = Date.now(); Object.keys(c).forEach(function (k) { if (!c[k] || now - c[k].at > COVER_TTL) delete c[k]; }); return c; }), cov = c1[0], setCov = c1[1], c2 = useState(null), cb = c2[0], setCb = c2[1], c3 = useState('all'), cf = c3[0], setCf = c3[1];
     var d2 = useState(false), tb = d2[0], setTb = d2[1];
     var d3 = useState(''), terr = d3[0], setTerr = d3[1];
@@ -841,7 +979,7 @@
     }
     async function rideGaps(res) {
       var rr = res.ride;
-      var g = await api({ action: 'rideGaps', data: { title: rr.video.title, minutes: rr.video.minutes, wpm: opt.wpm || 170, chapters: rr.scan.chapters || [], covered: rr.scan.covered, asked: rr.scan.asked, basis: rr.scan.basis, vlang: E.rideLang(rr).en, dossier: res.dossier } });
+      var g = await api({ action: 'rideGaps', data: { title: rr.video.title, minutes: rr.video.minutes, target: +opt.mins > 0 ? +opt.mins : Math.max(3, Math.ceil(+rr.video.minutes || 10)), ratio: +opt.ratio || 70, wpm: opt.wpm || 170, chapters: rr.scan.chapters || [], covered: rr.scan.covered, asked: rr.scan.asked, basis: rr.scan.basis, vlang: E.prodResolve({ ride: rr }, opt).langEn, dossier: res.dossier } });
       return g.gaps;
     }
     async function rideRetry() {
@@ -992,12 +1130,28 @@
       }
       async function worker() { while (next < list.length && !stop) { await one(list[next++]); } }
       await Promise.all([worker(), worker(), worker(), worker()]);
+      if (stop) { setPk(null); setErr(stop); return; }
+      // phần kèm theo tuỳ chọn: dữ liệu bản đồ (tuỳ chọn 13) và contact sheet của video gốc (tuỳ chọn 11). Lỗi thì bỏ qua, prompt sẽ ghi rõ.
+      var PRp = E.prodResolve(R, opt), pkInfo = { map: null, sheets: 0 };
+      if (PRp.map) {
+        setPk({ done: done, total: list.length, fail: fail, note: 'Đang tải dữ liệu bản đồ…' });
+        try {
+          if (!NE_CACHE) NE_CACHE = await Promise.all(NE_FILES.map(function (f) { return fetch(NE_BASE + f, { signal: AbortSignal.timeout(40000) }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); }).then(function (b) { return { name: 'ban-do/' + f, data: new Uint8Array(b) }; }); }));
+          NE_CACHE.forEach(function (f) { files.push(f); }); pkInfo.map = true;
+        } catch (e) { NE_CACHE = null; pkInfo.map = false; }
+      }
+      if (R.ride && PRp.estyle === 'ride') {
+        setPk({ done: done, total: list.length, fail: fail, note: 'Đang lấy contact sheet của video gốc…' });
+        try {
+          var sh = (await api({ action: 'rideSheet', data: { id: R.ride.video.id } })).sheets || [];
+          for (var q = 0; q < sh.length; q++) { try { var gs = await apiBin({ action: 'image', url: sh[q].url, ref: 'https://www.youtube.com/' }); files.push({ name: 'khung-hinh/contact-' + (pkInfo.sheets + 1) + '.jpg', data: gs.data }); pkInfo.sheets++; pkInfo.sheetStep = sh[q].step_s; } catch (e) { } }
+        } catch (e) { }
+      }
       setPk(null);
-      if (stop) { setErr(stop); return; }
       files.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
-      var docs = [{ name: 'prompt-claude.md', data: claudeText }, { name: 'danh-sach-anh.md', data: E.imageSheet(list, res) }, { name: 'danh-sach-video.md', data: E.videoSheet(R, sel) }, { name: 'ho-so.json', data: JSON.stringify(E.buildJson(R, sel), null, 2) }];
+      var docs = [{ name: 'prompt-claude.md', data: E.claudePrompt(R, sel, Object.assign({}, opt, { _pack: pkInfo })) }, { name: 'danh-sach-anh.md', data: E.imageSheet(list, res) }, { name: 'danh-sach-video.md', data: E.videoSheet(R, sel) }, { name: 'ho-so.json', data: JSON.stringify(E.buildJson(R, sel, opt), null, 2) }];
       downloadBlob(slug(R.dossier.title) + '-goi-tai-nguyen.zip', new Blob(E.zipParts(docs.concat(files)), { type: 'application/zip' }));
-      toast('Đã đóng gói ' + (list.length - fail) + '/' + list.length + ' ảnh' + (fail ? '. ' + fail + ' ảnh bị trang gốc chặn hoặc quá 4 MB, xem danh-sach-anh.md' : ''));
+      toast('Đã đóng gói ' + (list.length - fail) + '/' + list.length + ' ảnh' + (pkInfo.map === true ? ', kèm dữ liệu bản đồ' : pkInfo.map === false ? ' (không tải được dữ liệu bản đồ)' : '') + (pkInfo.sheets ? ', ' + pkInfo.sheets + ' contact sheet' : '') + (fail ? '. ' + fail + ' ảnh bị trang gốc chặn hoặc quá 4 MB, xem danh-sach-anh.md' : ''));
     }
 
     function copy(text, what) { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { toast('Đã copy ' + what); }).catch(function () { setMsg('Trình duyệt chặn copy — dùng nút tải file.'); }); }
@@ -1256,6 +1410,79 @@
     var D = R.dossier, E2 = D.entities || {};
     var rel = R.videos.filter(function (v) { return v.related; }), shownV = (showAll ? R.videos : rel).filter(function (v) { return !vType || v.type === vType; });
     var nSelV = Object.keys(sel.v).filter(function (k) { return sel.v[k]; }).length, nSelI = Object.keys(sel.i).filter(function (k) { return sel.i[k]; }).length;
+    // ----- khung "Tuỳ chọn sản xuất": 30 lựa chọn, lưu làm mặc định cho lần sau, in vào đầu prompt -----
+    var PR = E.prodResolve(R, opt), hasRide = !!R.ride;
+    var num1 = function (k, lo, hi, ph) { return h('input', { type: 'number', min: lo, max: hi, value: opt[k] || '', placeholder: ph || '', onChange: function (e) { var v = e.target.value === '' ? 0 : Math.max(0, Math.min(hi, Math.round(+e.target.value) || 0)); setO(k, v); }, className: 'w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] text-zinc-200' }); };
+    var rng1 = function (k, lo, hi, step, fmt, off) { var v = +opt[k] || E.PROD_DEF[k]; return h('div', { className: 'flex items-center gap-2 ' + (off ? 'opacity-40' : '') }, h('input', { type: 'range', min: lo, max: hi, step: step, value: v, disabled: !!off, onChange: function (e) { setO(k, +e.target.value); }, className: 'flex-1 accent-[#3ea6ff] cursor-pointer' }), h('span', { className: 'w-[58px] text-right text-[11px] tabular-nums text-zinc-200' }, fmt(v))); };
+    var tog1 = function (k) { var onv = opt[k] !== false && (opt[k] === true || E.PROD_DEF[k] === true); return h('button', { role: 'switch', 'aria-checked': onv, onClick: function () { setO(k, !onv); }, className: 'w-full h-[29px] rounded-lg border text-[11px] font-semibold cursor-pointer ' + (onv ? 'bg-[#16361f] border-[#2ba640]/60 text-[#8fe0a1]' : 'bg-zinc-900 border-zinc-800 text-zinc-400') }, onv ? 'Bật' : 'Tắt'); };
+    var multi1 = function (k, opts) { var cur = Array.isArray(opt[k]) ? opt[k] : E.PROD_DEF[k]; return h('div', { className: 'flex flex-wrap gap-1' }, opts.map(function (x) { var onv = cur.indexOf(x[0]) >= 0; return h('button', { key: x[0], 'aria-pressed': onv, onClick: function () { setO(k, onv ? cur.filter(function (c) { return c !== x[0]; }) : cur.concat([x[0]])); }, className: 'h-[26px] px-2 rounded-full border text-[10.5px] font-medium cursor-pointer ' + (onv ? 'bg-[#1d2c44] border-[#3ea6ff]/60 text-[#8ab4f8]' : 'bg-zinc-900 border-zinc-800 text-zinc-400') }, x[1]); })); };
+    var fld = function (n, label, body, hint) { return h('div', { key: n, className: 'min-w-0' }, h('div', { className: 'text-[10.5px] font-medium text-cham-300 mb-1 leading-tight' }, h('span', { className: 'text-zinc-500 tabular-nums mr-1' }, n + '.'), label), body, hint && h('div', { className: 'text-[10px] text-zinc-500 mt-0.5 leading-tight' }, hint)); };
+    var grp = function (title, kids) { return h('div', { className: 'rounded-lg bg-[#161616] border border-[#2a2a2a] p-3' }, h('div', { className: 'text-[11.5px] font-semibold text-[#f1f1f1] mb-2' }, title), h('div', { className: 'grid gap-x-3 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' }, kids)); };
+    var PT = E.PROD_T, kv = function (m) { return Object.keys(m).map(function (k) { return [k, m[k]]; }); }, capz = function (t) { return t.charAt(0).toUpperCase() + t.slice(1); };
+    var langOpts = Object.keys(E.VLANG).map(function (k) { return [k, capz(E.VLANG[k])]; });
+    function wmFile(e) {
+      var f = e.target.files && e.target.files[0]; if (!f) return;
+      var url = URL.createObjectURL(f), au = new Audio(); au.preload = 'metadata';
+      au.onloadedmetadata = function () { var d = au.duration; URL.revokeObjectURL(url); setWm(function (x) { return Object.assign({}, x, { dur: isFinite(d) && d > 0 ? d : 0, name: f.name, err: isFinite(d) && d > 0 ? '' : 'Không đọc được độ dài file này.' }); }); };
+      au.onerror = function () { URL.revokeObjectURL(url); setWm(function (x) { return Object.assign({}, x, { dur: 0, err: 'Trình duyệt không mở được file âm thanh này (thử mp3, wav hoặc m4a).' }); }); };
+      au.src = url;
+    }
+    var wmWords = (String(wm.text || '').trim().match(/\S+/g) || []).length, wmRate = wm.dur > 3 && wmWords > 5 ? Math.round(wmWords / (wm.dur / 60)) : 0;
+    var prodPanel = h('div', { className: 'pt-1 space-y-2' },
+      h('div', { className: 'flex flex-wrap items-center gap-2' },
+        h('button', { onClick: function () { setO('popen', !opt.popen); }, 'aria-expanded': !!opt.popen, className: 'h-8 px-3 rounded-lg text-[12px] font-semibold bg-[#272727] hover:bg-[#3a3a3a] text-[#f1f1f1] cursor-pointer' }, (opt.popen ? '▾' : '▸') + ' Tuỳ chọn sản xuất (30)'),
+        [PR.langVi, PR.mins + ' phút', PR.wpm + ' từ/phút → ' + PR.words.toLocaleString('vi-VN') + ' từ', PR.ride ? 'ăn theo ' + PR.ratio + ' : ' + (100 - PR.ratio) : 'viết mới', PT.res[PR.res], PR.approve === 'step' ? 'duyệt từng bước' : 'chạy thẳng'].map(function (t, i) { return h('span', { key: i, className: 'h-6 px-2 inline-flex items-center rounded bg-[#212121] border border-[#303030] text-[10.5px] text-[#c8c8c8]' }, t); }),
+        h('span', { className: 'text-[10.5px] text-zinc-500' }, 'Lựa chọn được lưu làm mặc định và in vào đầu prompt.')),
+      opt.popen && h('div', { className: 'space-y-2' },
+        grp('Nội dung', [
+          fld(1, 'Ngôn ngữ sản phẩm', sel1('plang', [['auto', hasRide ? 'Theo video gốc (' + E.rideLang(R.ride).vi + ')' : 'Mặc định (tiếng Việt)']].concat(langOpts))),
+          fld(2, 'Ngôn ngữ ghi chú cho người làm', sel1('nlang', [['vi', 'Tiếng Việt'], ['en', 'English']])),
+          fld(3, 'Chế độ nội dung', hasRide ? sel1('mode', [['ride', 'Ăn theo video gốc'], ['fresh', 'Viết mới hoàn toàn']]) : h('div', { className: 'h-[29px] px-2 flex items-center rounded-lg bg-zinc-900/60 border border-zinc-800 text-[11px] text-zinc-500' }, 'Viết mới (hồ sơ không có video gốc)')),
+          fld(4, 'Tỷ lệ ý video gốc : điểm mới', rng1('ratio', 50, 90, 5, function (v) { return v + ' : ' + (100 - v); }, !PR.ride)),
+          fld(5, 'Thời lượng mục tiêu (phút)', num1('mins', 1, 180, 'tự động: ' + E.prodResolve(R, Object.assign({}, opt, { mins: 0 })).mins), hasRide ? 'Để trống = theo video gốc, làm tròn lên' : 'Để trống = ' + (opt.vmin || 12) + ' phút'),
+          fld(6, 'Tốc độ giọng đọc (từ/phút)', h('div', { className: 'flex gap-1.5' }, num1('wpm', 100, 240, '170'), h('button', { onClick: function () { setWm(function (x) { return Object.assign({}, x, { open: !x.open }); }); }, className: 'shrink-0 h-[29px] px-2 rounded-lg text-[10.5px] font-semibold bg-[#272727] hover:bg-[#3a3a3a] text-[#f1f1f1] cursor-pointer whitespace-nowrap' }, 'Đo từ file giọng')), 'Số từ mục tiêu = phút × tốc độ = ' + PR.words.toLocaleString('vi-VN'))]),
+        wm.open && h('div', { className: 'rounded-lg bg-[#161616] border border-[#3ea6ff]/40 p-3 space-y-2' },
+          h('div', { className: 'text-[11.5px] font-semibold text-[#8ab4f8]' }, 'Đo tốc độ từ file giọng mẫu'),
+          h('div', { className: 'text-[11px] text-zinc-400' }, 'Chọn một file giọng đã thu (file chỉ được đọc trên máy bạn, không gửi đi đâu), rồi dán đúng đoạn lời đã đọc trong file đó.'),
+          h('input', { type: 'file', accept: 'audio/*,video/mp4', onChange: wmFile, 'aria-label': 'File giọng mẫu', className: 'block text-[11px] text-zinc-300' }),
+          h('textarea', { value: wm.text || '', onChange: function (e) { var v = e.target.value; setWm(function (x) { return Object.assign({}, x, { text: v }); }); }, rows: 3, 'aria-label': 'Lời đã đọc trong file', placeholder: 'Dán lời đã đọc trong file giọng', className: 'w-full bg-[#0f0f0f] border border-[#2a2a2a] rounded-lg px-2.5 py-1.5 text-[11.5px] text-[#f1f1f1] placeholder:text-[#666]' }),
+          wm.err && h('div', { className: 'text-[11px] text-[#ffb4ae]' }, wm.err),
+          h('div', { className: 'flex flex-wrap items-center gap-2 text-[11.5px] text-[#e6e6e6]' },
+            wm.dur ? 'File dài ' + Math.floor(wm.dur / 60) + ':' + ('0' + Math.round(wm.dur % 60)).slice(-2) : 'Chưa chọn file', ' · ' + wmWords + ' từ',
+            wmRate > 0 && h('b', { className: 'text-[#6fcf85]' }, ' → ' + wmRate + ' từ/phút'),
+            wmRate > 0 && (wmRate < 100 || wmRate > 240) && h('span', { className: 'text-[#f5c451]' }, 'Số này nằm ngoài khoảng 100–240, kiểm tra lại lời dán có khớp file không.'),
+            wmRate >= 100 && wmRate <= 240 && h('button', { onClick: function () { setO('wpm', wmRate); setWm(function (x) { return Object.assign({}, x, { open: false }); }); toast('Đã đặt tốc độ giọng đọc ' + wmRate + ' từ/phút'); }, className: 'h-7 px-3 rounded-full text-[11px] font-semibold bg-[#3ea6ff] hover:bg-[#65b8ff] text-[#0f0f0f] cursor-pointer' }, 'Dùng số này'))),
+        grp('Thumbnail', [
+          fld(7, 'Kiểu thumbnail', sel1('tkind', [['ride', 'Bắt chước bố cục video gốc'], ['mine', 'Theo kênh mẫu của tôi'], ['free', 'Tự do']]), !hasRide && opt.tkind === 'ride' ? 'Không có video gốc nên sẽ làm tự do' : ''),
+          fld(8, 'Mức giống thumbnail gốc', rng1('tsim', 50, 90, 5, function (v) { return v + '%'; }, PR.tkind !== 'ride')),
+          fld(9, 'Số phương án thumbnail', sel1('tn', [1, 2, 3, 4, 5].map(function (n) { return [n, String(n)]; }))),
+          fld(10, 'Ngôn ngữ thumbnail phụ', multi1('tlang2', langOpts.filter(function (x) { return x[0] !== PR.code; }).slice(0, 8))),
+          h('div', { key: 'ts', className: 'sm:col-span-2 lg:col-span-3 xl:col-span-4' }, h('div', { className: 'text-[10.5px] font-medium text-cham-300 mb-1' }, 'Mô tả thumbnail kênh mẫu của tôi / gợi ý thêm (đưa vào prompt)'), h('input', { value: opt.tstyle || '', onChange: function (e) { setO('tstyle', e.target.value); }, placeholder: 'Ví dụ: ảnh nhân vật bên trái, nhãn đỏ góc trên, chữ vàng viền đen, dải chữ đen trên nền vàng ở đáy', className: 'w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] text-zinc-100' }))]),
+        grp('Dựng video', [
+          fld(11, 'Phong cách dựng', sel1('estyle', [['ride', 'Bắt chước video gốc (tự phân tích)'], ['mine', 'Kiểu kênh mẫu của tôi'], ['neutral', 'Tin tức trung tính']]), !hasRide && opt.estyle === 'ride' ? 'Không có video gốc nên dùng kiểu trung tính' : ''),
+          fld(12, 'Hook mở đầu bằng animation', tog1('hook')),
+          fld(13, 'Bản đồ động (zoom, ghim, đường bay)', tog1('map'), 'Bật thì gói kèm dữ liệu bản đồ (khoảng 5 MB)'),
+          fld(14, 'Chữ hiện từng ký tự', tog1('typing')),
+          fld(15, 'Flash trắng + whoosh đầu chương', tog1('flash')),
+          fld(16, 'Nhạc nền', sel1('music', [['gen', 'Tự tạo nền trầm'], ['file', 'Tôi gửi file'], ['none', 'Không']])),
+          fld(17, 'Độ phân giải / khung hình', sel1('res', [['1080p30', '1080p30'], ['1080p60', '1080p60'], ['4k30', '4K30']])),
+          fld(18, 'Phụ đề', sel1('subs', [['srt', 'SRT rời'], ['burn', 'In lên hình'], ['both', 'Cả hai'], ['none', 'Không']])),
+          fld(19, 'Cách gửi giọng đọc', sel1('voice', [['one', '1 file duy nhất'], ['chapter', 'Mỗi chương 1 file']])),
+          opt.estyle === 'mine' && h('div', { key: 'ms', className: 'sm:col-span-2 lg:col-span-3 xl:col-span-4' }, h('div', { className: 'text-[10.5px] font-medium text-cham-300 mb-1' }, 'Mô tả kiểu dựng của kênh mẫu (nền, chữ, đồ hoạ, chuyển cảnh)'), h('textarea', { defaultValue: opt.mystyle || '', onBlur: function (e) { setO('mystyle', e.target.value.slice(0, 3000)); }, rows: 3, 'aria-label': 'Mô tả kiểu dựng của kênh mẫu', className: 'w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] text-zinc-100' }))]),
+        grp('Hình ảnh và quyền riêng tư', [
+          fld(20, 'Nguồn hình ưu tiên', sel1('srcpri', [['open', 'Ảnh giấy phép mở trước'], ['press', 'Clip báo chí trước']])),
+          fld(21, 'Tự tìm thêm ảnh khi thiếu', tog1('autofind'), 'Wikimedia Commons và kho giấy phép mở'),
+          fld(22, 'Số lần tối đa dùng lại 1 ảnh', sel1('reuse', [1, 2, 3, 4, 5].map(function (n) { return [n, String(n)]; }))),
+          fld(23, 'Tối đa giây mỗi đoạn clip báo chí', sel1('clipmax', [3, 4, 5, 6, 7, 8].map(function (n) { return [n, n + ' giây']; }))),
+          fld(24, 'Làm mờ mặt', sel1('blur', [['kids', 'Trẻ em + người không liên quan'], ['plus', 'Thêm nhân vật chính'], ['off', 'Tắt']])),
+          fld(25, 'Nêu tên người chưa được công bố', sel1('names', [['never', 'Không bao giờ'], ['dossier', 'Theo hồ sơ']]))]),
+        grp('Quy trình và đăng video', [
+          fld(26, 'Duyệt từng bước', sel1('approve', [['step', 'Duyệt từng bước'], ['straight', 'Chạy thẳng tới video']])),
+          fld(27, 'Gói đăng video', multi1('publish', E.PROD_PUB.map(function (x) { return [x[0], capz(x[1])]; }))),
+          fld(28, 'Chèn link vào mô tả', tog1('links'), 'Tắt thì vẫn ghi tên nguồn và ghi công'),
+          fld(29, 'Múi giờ khán giả để gợi ý giờ đăng', sel1('tz', E.PROD_TZ.map(function (x) { return [x[0], x[0] === 'ride' ? (hasRide ? 'Theo video gốc' : 'Theo ngôn ngữ sản phẩm') + ' (' + E.prodResolve(R, Object.assign({}, opt, { tz: 'ride' })).tz + ')' : x[1] + ' (' + x[0] + ')']; }))),
+          fld(30, 'Xuất prompt cập nhật sau dự án', tog1('lessons'), 'Cuối dự án Claude tổng hợp bài học thành prompt cập nhật YouTrend'),
+          h('div', { key: 'rs', className: 'flex items-end' }, h('button', { onClick: function () { setOpt(function (o) { var n = Object.assign({}, o, E.PROD_DEF, { popen: true }); try { localStorage.setItem('res1_opt', JSON.stringify(n)); } catch (e) { } return n; }); toast('Đã đặt lại 30 tuỳ chọn về mặc định'); }, className: 'h-[29px] px-3 rounded-lg text-[11px] font-medium bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white cursor-pointer' }, 'Đặt lại mặc định'))])));
     var head = h('div', { className: 'yt-card border-hoe-600/50 p-4 space-y-2' },
       h('div', { className: 'flex flex-wrap items-center gap-1.5 text-[10px]' },
         h('span', { className: 'px-2 py-0.5 rounded-md font-bold ' + (R.mode === 'ai' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40' : 'bg-zinc-800 text-zinc-300 border border-zinc-700') }, R.mode === 'ai' ? (R.grounded === false ? 'Gemini + Wikipedia + tin tức' : 'Gemini + Google Search') : 'Chế độ miễn phí'),
@@ -1268,17 +1495,13 @@
       h('h3', { className: 'text-lg sm:text-xl font-bold text-cham-50' }, D.title),
       h('div', { className: 'flex flex-wrap gap-2 pt-1' },
         h('button', { onClick: function () { copy(claudeText, 'prompt cho Claude'); }, className: 'px-4 py-2 rounded-xl text-xs font-bold bg-[#3ea6ff] hover:bg-[#65b8ff] text-[#0f0f0f] cursor-pointer' }, 'Copy prompt cho Claude'),
-        h('button', { disabled: !!pk, onClick: function () { pack(); }, title: 'Tải ảnh và khung hình đã chọn, kèm prompt, danh sách ảnh, danh sách video và hồ sơ JSON', className: 'px-4 py-2 rounded-xl text-xs font-bold bg-[#2ba640] hover:bg-[#35b84c] text-white disabled:opacity-60 cursor-pointer tabular-nums' }, pk ? 'Đang tải ảnh ' + pk.done + '/' + pk.total + '…' : 'Tải gói tài nguyên (.zip)'),
-        h('button', { onClick: function () { download(slug(D.title) + '.json', JSON.stringify(E.buildJson(R, sel), null, 2), 'application/json'); }, className: 'px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 text-zinc-950 cursor-pointer' }, 'Tải JSON'),
-        h('button', { onClick: function () { copy(JSON.stringify(E.buildJson(R, sel), null, 2), 'JSON'); }, className: 'px-3 py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-200 cursor-pointer' }, 'Copy JSON'),
+        h('button', { disabled: !!pk, onClick: function () { pack(); }, title: 'Tải ảnh và khung hình đã chọn, kèm prompt, danh sách ảnh, danh sách video và hồ sơ JSON', className: 'px-4 py-2 rounded-xl text-xs font-bold bg-[#2ba640] hover:bg-[#35b84c] text-white disabled:opacity-60 cursor-pointer tabular-nums' }, pk ? (pk.note || 'Đang tải ảnh ' + pk.done + '/' + pk.total + '…') : 'Tải gói tài nguyên (.zip)'),
+        h('button', { onClick: function () { download(slug(D.title) + '.json', JSON.stringify(E.buildJson(R, sel, opt), null, 2), 'application/json'); }, className: 'px-4 py-2 rounded-xl text-xs font-bold bg-zinc-100 text-zinc-950 cursor-pointer' }, 'Tải JSON'),
+        h('button', { onClick: function () { copy(JSON.stringify(E.buildJson(R, sel, opt), null, 2), 'JSON'); }, className: 'px-3 py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-200 cursor-pointer' }, 'Copy JSON'),
         h('button', { onClick: function () { download(slug(D.title) + '.txt', claudeText, 'text/plain;charset=utf-8'); }, className: 'px-3 py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-200 cursor-pointer' }, 'Tải .txt'),
         h('button', { onClick: function () { setR(null); }, className: 'px-3 py-2 rounded-xl text-xs font-bold bg-zinc-900 text-zinc-400 border border-zinc-800 cursor-pointer' }, '＋ Hồ sơ mới'),
         h('span', { className: 'self-center text-[10px] text-zinc-400' }, 'Đang chọn ' + nSelV + ' video • ' + nSelI + ' ảnh • ' + Object.keys(sel.f || {}).filter(function (k) { return sel.f[k]; }).length + ' khung hình • ' + (R.captures || []).length + ' ảnh chụp')),
-      h('div', { className: 'grid gap-2 sm:grid-cols-[150px_130px_150px_minmax(0,1fr)] pt-1' },
-        h('div', null, lab('Video làm bằng'), R.ride ? fixed(E.rideLang(R.ride).vi, 'Theo ngôn ngữ của video gốc') : sel1('vlang', Object.keys(E.VLANG).map(function (k) { return [k, E.VLANG[k].charAt(0).toUpperCase() + E.VLANG[k].slice(1)]; }))),
-        h('div', null, lab('Độ dài video'), R.ride && R.ride.gaps ? fixed(R.ride.gaps.target_minutes + ' phút', 'Tính theo độ dài video gốc') : sel1('vmin', [[5, '5 phút'], [8, '8 phút'], [12, '12 phút'], [17, '17 phút'], [20, '20 phút'], [30, '30 phút'], [45, '45 phút']])),
-        h('div', null, lab('Tốc độ giọng đọc'), sel1('wpm', [[150, '150 từ/phút'], [160, '160 từ/phút'], [170, '170 từ/phút'], [180, '180 từ/phút'], [190, '190 từ/phút']])),
-        h('div', null, lab('Phong cách thumbnail (tuỳ chọn, đưa vào prompt)'), h('input', { value: opt.tstyle || '', onChange: function (e) { setO('tstyle', e.target.value); }, placeholder: 'Ví dụ: ảnh nhân vật bên trái, nhãn đỏ góc trên, chữ vàng viền đen, dải chữ đen trên nền vàng ở đáy', className: 'w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] text-zinc-100' }))),
+      prodPanel,
       p.extraHead && p.extraHead(Object.assign({}, R, { sel: sel }), promptText, function (r2) { setR(r2); return saveHist(r2); }));
 
     var tabs = [['over', 'Tổng quan'], ['vid', 'Video (' + rel.length + ')'], ['img', 'Hình ảnh (' + R.images.length + ')'], ['src', 'Tin & nguồn (' + (R.sources.length + R.news.length) + ')'], ['doc', 'Tài liệu gốc (' + R.links.length + ')'], ['prompt', 'Prompt']];
@@ -1297,7 +1520,7 @@
         !g ? h('div', { className: 'flex flex-wrap items-center gap-2 text-[12px] text-[#ffb4ae]' }, 'Chưa so được hồ sơ với video gốc' + (rr.gapsErr ? ' (' + rr.gapsErr + ')' : '') + '.', h('button', { onClick: rideRetry, disabled: rideBusy, className: 'h-7 px-3 rounded-full bg-[#3a1f1d] hover:bg-[#4a2624] text-[11.5px] font-semibold text-[#ff8a83] cursor-pointer disabled:opacity-50' }, rideBusy ? 'Đang so…' : 'So lại'))
         : h(React.Fragment, null,
           h('div', { className: 'flex flex-wrap items-center gap-2' },
-            [[g.gaps.length, 'điểm video gốc chưa nói', 'text-[#6fcf85]'], [g.new_share_pct + '%', 'thông tin trong hồ sơ là mới (AI ước tính)', 'text-[#f5c451]'], [g.target_minutes, 'phút nên làm (gốc ' + (g.ref_minutes || '?') + ' phút)', 'text-[#7cc3ff]'], [(Math.round(g.target_minutes * (+opt.wpm || g.wpm || 170) / 50) * 50).toLocaleString('vi-VN'), 'từ ở ' + (+opt.wpm || g.wpm || 170) + ' từ/phút', 'text-[#c9a7ff]'], [E.rideLang(rr).vi, 'ngôn ngữ sản phẩm', 'text-[#5fdccf]']].map(function (x) { return h('span', { key: x[1], className: 'inline-flex items-baseline gap-1.5 h-8 px-3 rounded-lg bg-[#212121] border border-[#303030]' }, h('b', { className: 'text-[15px] tabular-nums ' + x[2] }, x[0]), h('span', { className: 'text-[11.5px] text-[#c8c8c8]' }, x[1])); }),
+            [[g.gaps.length, 'điểm video gốc chưa nói', 'text-[#6fcf85]'], [g.new_share_pct + '%', 'thông tin trong hồ sơ là mới (AI ước tính)', 'text-[#f5c451]'], [PR.mins, 'phút nên làm (gốc ' + (g.ref_minutes || '?') + ' phút)', 'text-[#7cc3ff]'], [PR.words.toLocaleString('vi-VN'), 'từ ở ' + PR.wpm + ' từ/phút', 'text-[#c9a7ff]'], [PR.langVi, 'ngôn ngữ sản phẩm', 'text-[#5fdccf]']].map(function (x) { return h('span', { key: x[1], className: 'inline-flex items-baseline gap-1.5 h-8 px-3 rounded-lg bg-[#212121] border border-[#303030]' }, h('b', { className: 'text-[15px] tabular-nums ' + x[2] }, x[0]), h('span', { className: 'text-[11.5px] text-[#c8c8c8]' }, x[1])); }),
             g.basis !== 'transcript' && h('span', { className: 'text-[11px] text-[#f5c451]' }, 'Chưa có phụ đề nên "video đã nói gì" chỉ ' + (g.basis === 'chapters' ? 'suy từ tên chương' : 'là đoán') + ': kiểm lại các điểm dưới đây với video gốc trước khi dùng.')),
           g.angle_vi && h('p', { className: 'text-[12.5px] text-[#f1f1f1] leading-relaxed' }, h('b', { className: 'text-[#c9a7ff]' }, 'Góc của video mới: '), g.angle_vi),
           h('div', { className: 'grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]' },
@@ -1317,7 +1540,7 @@
                 h('div', { className: 'text-[12px] font-semibold text-[#f5c451] mb-2' }, 'Tiêu đề gợi ý'),
                 h('ul', { className: 'space-y-1.5' }, g.titles.map(function (x, i) { return h('li', { key: i, className: 'flex items-start gap-2' }, h('div', { className: 'flex-1 min-w-0' }, h('div', { className: 'text-[12.5px] text-white leading-snug' }, x.t), x.vi && x.vi !== x.t && h('div', { className: 'text-[11px] text-[#aaa]' }, x.vi)), h('button', { onClick: function () { copyT(x.t); }, className: 'shrink-0 h-6 px-2 rounded-full bg-[#323232] hover:bg-[#424242] text-[10.5px] text-[#f1f1f1] cursor-pointer' }, 'Chép')); }))),
               g.outline.length > 0 && h('div', { className: 'rounded-lg bg-[#161616] border border-[#2a2a2a] p-3' },
-                h('div', { className: 'text-[12px] font-semibold text-[#7cc3ff] mb-2' }, 'Dàn ý ' + g.target_minutes + ' phút: khoảng 70% ý video gốc kể lại, 30% điểm mới'),
+                h('div', { className: 'text-[12px] font-semibold text-[#7cc3ff] mb-2' }, 'Dàn ý ' + g.target_minutes + ' phút: khoảng ' + (g.ratio || 70) + '% ý video gốc kể lại, ' + (100 - (g.ratio || 70)) + '% điểm mới'),
                 h('ol', { className: 'space-y-1.5' }, g.outline.map(function (x, i) { return h('li', { key: i, className: 'grid grid-cols-[52px_minmax(0,1fr)] gap-2 text-[12px]' }, h('span', { className: 'tabular-nums text-[#aaa]' }, (x.minutes || '?') + ' ph'), h('span', { className: 'min-w-0' }, h('b', { className: 'text-white' }, x.part), x.is_new && h('span', { className: 'ml-1.5 px-1.5 py-0.5 rounded bg-[#14261a] text-[#6fcf85] text-[10px] font-semibold' }, 'MỚI'), x.ref_chapter && h('span', { className: 'block text-[10.5px] text-[#aaa]' }, 'Chương gốc: ' + x.ref_chapter), (x.ref_vi || x.content_vi) && h('span', { className: 'block text-[11.5px] text-[#c8c8c8] leading-snug' }, 'Ý của video gốc: ' + (x.ref_vi || x.content_vi)), x.new_vi && h('span', { className: 'block text-[11.5px] text-[#6fcf85] leading-snug' }, 'Điểm mới chèn vào: ' + x.new_vi))); }))))),
           stylePanel(rr.video, rr.style || (rd.video && rd.video.id === rr.video.id ? rd.style : null) || null, rr.styleNote || (rd.video && rd.video.id === rr.video.id ? rd.styleNote : '') || ''),
           h('div', { className: 'text-[11px] text-[#aaa]' }, 'Phần so sánh này đã được đưa vào câu lệnh gửi Claude (tab Prompt): phủ đủ ý các chương của video gốc bằng lời mới, không chép câu chữ, và dành khoảng 30% cho điểm mới.')));
