@@ -617,6 +617,99 @@ ${text0}`;
   } };
 }
 
+// ---------- Ăn theo một video: (1) đọc video gốc + bình luận, (2) so với hồ sơ đã gom để tìm phần video gốc chưa nói ----------
+async function doRideScan(key, d) {
+  d = d || {}; const v = d.video || {};
+  const title = String(v.title || '').slice(0, 300);
+  if (!title) { const e = new Error('Thiếu thông tin video gốc.'); e.code = 'NO_DATA'; throw e; }
+  const tr = String(d.transcript || '').replace(/\r/g, '').trim().slice(0, 60000);
+  const cm = (Array.isArray(d.comments) ? d.comments : []).slice(0, 80).map(c => '- ' + String((c && c.t) || '').replace(/\s+/g, ' ').slice(0, 280) + ' | ' + (Number(c && c.l) || 0)).filter(x => x.length > 8).join('\n');
+  const text = `You help a YouTube creator make a BETTER follow-up video about the same real-world story as a reference video, without copying it.
+Use only the material below. Do not add facts about the story from your own memory.
+
+REFERENCE VIDEO
+Title: ${title}
+Channel: ${String(v.channel || '').slice(0, 120)}
+Published: ${String(v.published || '').slice(0, 40)} | Length: ${Number(v.minutes) || '?'} min | Views: ${Number(v.views) || '?'}
+Tags: ${(Array.isArray(v.tags) ? v.tags : []).slice(0, 25).join(', ').slice(0, 600)}
+Description: <<<${String(v.description || '').slice(0, 4000)}>>>
+
+TRANSCRIPT ${tr ? '(given)' : '(NOT given)'}:
+<<<${tr}>>>
+
+TOP VIEWER COMMENTS (text | likes):
+${cm || '(none)'}
+
+Tasks:
+1. Identify the real-world story the video is about.
+2. List what the video ALREADY covers. With a transcript, base it on the transcript ("basis":"transcript", 8-14 points). Without one, infer only from title, description and chapters ("basis":"description", 3-8 cautious points).
+3. From the comments, extract what viewers still ask, want more of, dispute, or say is missing. Keep real informational demand; skip jokes, praise and insults. Most-liked first.
+
+Return ONLY JSON:
+{"event_vi":"1-2 câu tiếng Việt: vụ việc là gì",
+ "event_query":"a precise research brief in the video's ORIGINAL language (who, what, where, when) for finding news about this exact story",
+ "lang":"ISO code of the video's language","when":"date or period, or empty","where":"place or empty","people":["key names"],
+ "basis":"transcript|description",
+ "covered":["điểm video đã nói, tiếng Việt, ngắn"],
+ "asked":[{"q_vi":"điều người xem muốn biết, tiếng Việt","kind":"hỏi|thiếu|phản bác","quote":"short original snippet under 20 words","likes":0}],
+ "hook_vi":"1 câu: tiêu đề và ảnh bìa đang hứa điều gì khiến người ta bấm"}
+Up to 10 items in "asked".`;
+  const j = await askJson(key, text, 50000, true);
+  const A = (x, n) => (Array.isArray(x) ? x : []).slice(0, n), S = (x, n) => String(x == null ? '' : x).slice(0, n);
+  return { scan: {
+    event_vi: S(j.event_vi, 500), event_query: S(j.event_query, 400) || title, lang: S(j.lang, 8), when: S(j.when, 80), where: S(j.where, 120), people: A(j.people, 10).map(x => S(x, 80)).filter(Boolean),
+    basis: tr && j.basis !== 'description' ? 'transcript' : 'description',
+    covered: A(j.covered, 16).map(x => S(x, 260)).filter(Boolean),
+    asked: A(j.asked, 10).map(x => ({ q_vi: S(x && x.q_vi, 260), kind: S(x && x.kind, 12), quote: S(x && x.quote, 200), likes: Number(x && x.likes) || 0 })).filter(x => x.q_vi),
+    hook_vi: S(j.hook_vi, 300)
+  } };
+}
+
+async function doRideGaps(key, d) {
+  d = d || {}; const D = d.dossier || {};
+  const covered = (Array.isArray(d.covered) ? d.covered : []).slice(0, 16).map(x => String(x).slice(0, 260));
+  const asked = (Array.isArray(d.asked) ? d.asked : []).slice(0, 10).map(x => String((x && x.q_vi) || x || '').slice(0, 260)).filter(Boolean);
+  const pick = {}; ['title', 'status', 'summary', 'latest', 'timeline', 'numbers', 'quotes', 'unverified', 'reported_claims', 'angles'].forEach(k => { if (D[k] != null) pick[k] = D[k]; });
+  const dj = JSON.stringify(pick).slice(0, 22000);
+  if (dj.length < 200) { const e = new Error('Hồ sơ chưa đủ thông tin để so với video gốc.'); e.code = 'NO_DATA'; throw e; }
+  const refMin = Number(d.minutes) || 0, target = Math.max(6, Math.round((refMin || 10) * 1.25));
+  const lang = String(d.vlang || 'the reference video language').slice(0, 40);
+  const text = `A creator will make a follow-up video on the same story as a reference video ("${String(d.title || '').slice(0, 200)}", about ${refMin || '?'} minutes).
+(A) What the reference video already covers${d.basis === 'transcript' ? ' (from its transcript)' : ' (INFERRED from its title and description only - treat as uncertain)'}:
+${covered.map(x => '- ' + x).join('\n') || '(unknown)'}
+
+(B) What its viewers ask for in the comments:
+${asked.map(x => '- ' + x).join('\n') || '(nothing useful)'}
+
+(C) DOSSIER researched from news sources. "src" numbers point to sources:
+${dj}
+
+Find what the DOSSIER contains that the reference video did NOT cover: that is the new value for viewers.
+Rules: use ONLY facts in the DOSSIER and keep their src numbers. Never invent. Items taken from "unverified" or "reported_claims" must get confidence "chưa kiểm chứng". If a viewer question in (B) is answered by the dossier, name it in "answers_vi". Viewer questions the dossier cannot answer go to "open_questions".
+The new video should run about ${target} minutes (roughly 25% more than the reference), and about a quarter to a third of it must be information the reference video lacks. Do not reuse the reference video's wording or structure.
+
+Return ONLY JSON:
+{"new_share_pct": 0,
+ "gaps":[{"point_vi":"điểm mới, 1 câu","detail_vi":"1-2 câu có tên, ngày, con số cụ thể","answers_vi":"câu hỏi của người xem mà nó trả lời, hoặc rỗng","src":[1],"confidence":"có nguồn|chưa kiểm chứng"}],
+ "open_questions":["câu hỏi của người xem mà hồ sơ chưa trả lời được"],
+ "angle_vi":"1-2 câu: cùng vụ việc, video mới hứa điều gì khác",
+ "titles":[{"t":"title in ${lang}","vi":"nghĩa tiếng Việt"}],
+ "outline":[{"part":"tên đoạn","minutes":1,"content_vi":"đoạn này nói gì","is_new":true}],
+ "target_minutes": ${target}}
+"new_share_pct" = your estimate (integer) of the share of dossier facts absent from the reference video. Give 6-12 gaps (most valuable to viewers first), exactly 5 titles that promise the NEW information, and 6-9 outline parts whose minutes add up to about ${target}; open with the strongest new point and keep the shared background short.`;
+  const j = await askJson(key, text, 50000, true);
+  const A = (x, n) => (Array.isArray(x) ? x : []).slice(0, n), S = (x, n) => String(x == null ? '' : x).slice(0, n);
+  return { gaps: {
+    new_share_pct: Math.max(0, Math.min(100, Math.round(Number(j.new_share_pct) || 0))),
+    gaps: A(j.gaps, 14).map(x => ({ point_vi: S(x && x.point_vi, 300), detail_vi: S(x && x.detail_vi, 500), answers_vi: S(x && x.answers_vi, 260), src: A(x && x.src, 6).map(Number).filter(n => n > 0 && n < 200), confidence: /chưa/i.test(String(x && x.confidence)) ? 'chưa kiểm chứng' : 'có nguồn' })).filter(x => x.point_vi),
+    open_questions: A(j.open_questions, 10).map(x => S(x, 260)).filter(Boolean),
+    angle_vi: S(j.angle_vi, 500),
+    titles: A(j.titles, 6).map(x => ({ t: S(x && x.t, 140), vi: S(x && x.vi, 200) })).filter(x => x.t),
+    outline: A(j.outline, 10).map(x => ({ part: S(x && x.part, 100), minutes: Math.round((Number(x && x.minutes) || 0) * 10) / 10, content_vi: S(x && x.content_vi, 400), is_new: !!(x && x.is_new) })).filter(x => x.part),
+    target_minutes: target, ref_minutes: refMin, basis: d.basis === 'transcript' ? 'transcript' : 'description'
+  } };
+}
+
 // ---------- Bộ thông tin đăng video: tiêu đề, mô tả, thẻ từ khoá ----------
 async function doSeo(key, d) {
   d = d || {};
@@ -660,4 +753,4 @@ ${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
   return { answer: String(j.answer || '').slice(0, 900), ids };
 }
 
-module.exports = { gemini, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { gemini, doRideScan, doRideGaps, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
