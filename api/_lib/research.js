@@ -37,7 +37,7 @@ async function gemini(key, body, timeoutMs, lite) {
       if (r.status === 404 || /no longer available|is not found|not supported for generateContent/i.test(msg)) { DEAD.add(m); last = last || e; continue; }
       if (r.status === 429) { last = e; continue; }   // lỗi hạn mức được ưu tiên báo ra để phía trên biết đường chuyển sang chế độ dự phòng
       // model đang quá tải / lỗi tạm của Google: thử model kế tiếp thay vì báo lỗi ngay
-      if (r.status === 503 || r.status === 500 || r.status === 502 || r.status === 504 || /high demand|overloaded|unavailable|try again later/i.test(msg)) { busy++; e.code = 'GEMINI_BUSY'; if (!last || last.code !== 'GEMINI_LIMIT') last = e; continue; }
+      if (r.status === 503 || r.status === 500 || r.status === 502 || r.status === 504 || (r.status !== 400 && r.status !== 403 && /high demand|overloaded|unavailable|try again later/i.test(msg))) { busy++; e.code = 'GEMINI_BUSY'; if (!last || last.code !== 'GEMINI_LIMIT') last = e; continue; }
       throw e;
     }
     LAST = m;
@@ -795,6 +795,51 @@ Return ONLY JSON:
   } };
 }
 
+// ---------- Phong cách dựng của video gốc: Gemini xem thẳng video YouTube công khai (hình 1 khung/giây + tiếng) ----------
+const STYLE_WINDOW = 480;   // chỉ xem 8 phút đầu để kịp giới hạn 60 giây của máy chủ
+async function doRideStyle(key, d) {
+  const id = String((d && d.id) || ''); if (!/^[\w-]{11}$/.test(id)) { const e = new Error('Thiếu mã video.'); e.code = 'NO_DATA'; throw e; }
+  const secs = Math.max(0, Math.round(Number(d && d.seconds) || 0)), clip = !secs || secs > STYLE_WINDOW + 30;
+  const text = `You are a video editor studying HOW this YouTube video is edited (not what it says), so another editor can reproduce the same editing style with different pictures.
+Title: "${String((d && d.title) || '').slice(0, 200)}".
+Describe only what you actually see and hear. If you cannot tell something, write "không rõ". Do not invent hex colours you cannot see; give the nearest colour you observe.
+Write every description in Vietnamese. Keep sample on-screen text in its original language.
+Return ONLY JSON:
+{"background_vi":"nền: sáng/tối, độ bão hoà, ảnh và b-roll có bị làm tối phía sau đồ hoạ không (ước lượng %), gam màu chủ đạo",
+ "images_vi":"cách đặt ảnh tĩnh: toàn màn hình hay thẻ ảnh nổi trên nền mờ (ước lượng tỉ lệ mỗi kiểu và cỡ thẻ), zoom/pan, vignette, viền, đổ bóng",
+ "text":{"font_vi":"kiểu chữ (hẹp/rộng, có chân/không chân, in hoa hay thường, giống font nào)","main_color":"màu chữ chính","accent_color":"màu nhấn từ khoá, kèm mã hex gần đúng nếu thấy rõ","caption_vi":"chú thích trên hình: số chữ, vị trí","chapter_title_vi":"tiêu đề chương trông thế nào","animation_vi":"chữ hiện ra kiểu gì, khoảng bao lâu","samples":["2-4 dòng chữ mẫu, nguyên văn"]},
+ "graphics_vi":["từng loại đồ hoạ xuất hiện: thẻ tên, thẻ số liệu, giấy tờ, trích dẫn, dòng thời gian, bản đồ, so sánh... mỗi loại một dòng tả hình dạng và màu"],
+ "transitions_vi":"chuyển cảnh: cắt thẳng, mờ dần, trượt, flash... cái nào là chính, đồ hoạ vào ra thế nào",
+ "pace":{"avg_shot_seconds":0,"note_vi":"nhịp cắt: ước lượng mỗi hình giữ mấy giây, đoạn nào nhanh hơn"},
+ "audio":{"music_vi":"nhạc nền: có liên tục không, thể loại, to nhỏ so với giọng","sfx_vi":"tiếng động: whoosh, hit, tiếng gõ... dùng lúc nào","voice_vi":"giọng đọc: nam/nữ, tốc độ, có ngắt nghỉ dài không"},
+ "source_labels_vi":"cách ghi nguồn trên hình (FILE PHOTO, SOURCE...), vị trí; có dùng clip có logo đài không và xử lý logo thế nào",
+ "ai_imagery":{"used":false,"note_vi":"có ảnh/cảnh do AI dựng về người thật không, dấu hiệu"},
+ "summary_vi":"2 câu tóm tắt phong cách dựng"}`;
+  const part = { fileData: { fileUri: 'https://www.youtube.com/watch?v=' + id } };
+  if (clip) part.videoMetadata = { startOffset: '0s', endOffset: STYLE_WINDOW + 's' };
+  let out;
+  try { out = await gemini(key, { contents: [{ parts: [part, { text }] }], generationConfig: { temperature: 0.2, responseMimeType: 'application/json' } }, 54000); }
+  catch (e) {
+    if (e && e.code === 'GEMINI_ERROR' && !/^Gemini (429|5\d\d)/.test(e.message || '')) { const x = new Error('AI không xem được video này (video riêng tư, không công khai, giới hạn tuổi hoặc quá dài). ' + String(e.message || '').slice(0, 160)); x.code = 'STYLE_FAIL'; throw x; }
+    throw e;
+  }
+  const j = parseJson(out.text), S = (x, n) => String(x == null ? '' : x).trim().slice(0, n), tx = j.text || {}, pc = j.pace || {}, au = j.audio || {}, ai = j.ai_imagery || {};
+  const style = {
+    background_vi: S(j.background_vi, 400), images_vi: S(j.images_vi, 500),
+    text: { font_vi: S(tx.font_vi, 240), main_color: S(tx.main_color, 80), accent_color: S(tx.accent_color, 100), caption_vi: S(tx.caption_vi, 240), chapter_title_vi: S(tx.chapter_title_vi, 300), animation_vi: S(tx.animation_vi, 200), samples: (Array.isArray(tx.samples) ? tx.samples : []).slice(0, 4).map(x => S(x, 80)).filter(Boolean) },
+    graphics_vi: (Array.isArray(j.graphics_vi) ? j.graphics_vi : []).slice(0, 10).map(x => S(x, 220)).filter(Boolean),
+    transitions_vi: S(j.transitions_vi, 400),
+    pace: { avg_shot_seconds: Math.max(0, Math.round((Number(pc.avg_shot_seconds) || 0) * 10) / 10), note_vi: S(pc.note_vi, 240) },
+    audio: { music_vi: S(au.music_vi, 240), sfx_vi: S(au.sfx_vi, 200), voice_vi: S(au.voice_vi, 200) },
+    source_labels_vi: S(j.source_labels_vi, 300),
+    ai_imagery: { used: !!ai.used, note_vi: S(ai.note_vi, 240) },
+    summary_vi: S(j.summary_vi, 400),
+    window_seconds: clip ? STYLE_WINDOW : secs, whole: !clip, method: 'gemini-video-1fps'
+  };
+  if (!style.background_vi && !style.images_vi && !style.text.font_vi && !style.transitions_vi) { const e = new Error('AI không tả được phong cách dựng của video này.'); e.code = 'STYLE_FAIL'; throw e; }
+  return { style };
+}
+
 // ---------- Bộ thông tin đăng video: tiêu đề, mô tả, thẻ từ khoá ----------
 async function doSeo(key, d) {
   d = d || {};
@@ -838,4 +883,4 @@ ${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
   return { answer: String(j.answer || '').slice(0, 900), ids };
 }
 
-module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
