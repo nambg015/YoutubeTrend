@@ -609,6 +609,7 @@
     var r1 = useState(function () { return Object.assign({ url: '', tr: '', open: false, busy: '', err: '', video: null, scan: null }, lsJson('res1_ride', null) || {}, { busy: '', err: '' }); }), rd = r1[0], setRd = r1[1], r2 = useState(false), rideBusy = r2[0], setRideBusy = r2[1];
     var r3 = useState({ id: '', busy: false, err: '' }), sty = r3[0], setSty = r3[1], Rref = React.useRef(null);
     var r4 = useState(function () { return Object.assign({ url: '', busy: '', err: '', channel: null, scan: null, videos: [], ideas: [] }, lsJson('res1_chan', null) || {}, { busy: '', err: '' }); }), ch = r4[0], setCh = r4[1];
+    var r5 = useState(function () { return Object.assign({ url: '', busy: '', err: '', video: null, topic: null, items: [], same: null, ideas: [] }, lsJson('res1_dup', null) || {}, { busy: '', err: '' }); }), dp = r5[0], setDp = r5[1];
     var c1 = useState(function () { var c = lsJson('res1_cover', {}) || {}, now = Date.now(); Object.keys(c).forEach(function (k) { if (!c[k] || now - c[k].at > COVER_TTL) delete c[k]; }); return c; }), cov = c1[0], setCov = c1[1], c2 = useState(null), cb = c2[0], setCb = c2[1], c3 = useState('all'), cf = c3[0], setCf = c3[1];
     var d2 = useState(false), tb = d2[0], setTb = d2[1];
     var d3 = useState(''), terr = d3[0], setTerr = d3[1];
@@ -876,6 +877,61 @@
       setCb(null);
       toast(fail ? 'Dò bị dừng sau ' + done + ' vụ: ' + fail : list.length === 1 ? (all[coverKey(list[0])].n ? 'Đã có ' + all[coverKey(list[0])].n + ' video về vụ này' : 'Chưa thấy video nào về vụ này') : 'Đã dò xong ' + done + ' vụ');
     }
+    // ----- Kiểm tra một video: chỉ kênh này làm hay đã có kênh khác làm; đề xuất đề tài tương tự -----
+    function dpKeep(n) { lsPut('res1_dup', Object.assign({}, n, { busy: '', err: '' })); }
+    async function dupScan() {
+      var id = E.ytId(dp.url); if (!id) { setDp(function (x) { return Object.assign({}, x, { err: 'Dán link một video YouTube (dạng youtube.com/watch?v=… hoặc youtu.be/…).' }); }); return; }
+      if (!p.apiKey && !(p.ytKeyManager && p.ytKeyManager.getActiveKey && p.ytKeyManager.getActiveKey())) { p.onOpenApiModal && p.onOpenApiModal(); return; }
+      var yt = function (path, prm) { return p.yt(path, prm, p.apiKey); }, step = function (t) { setDp(function (x) { return Object.assign({}, x, { busy: t, err: '' }); }); };
+      step('Đang đọc video…');
+      try {
+        var rv = await yt('videos', { part: 'snippet,statistics,contentDetails', id: id }), it = (rv.items || [])[0];
+        if (!it) throw new Error('Không tìm thấy video này (đã xoá, riêng tư hoặc link sai).');
+        var sn = it.snippet || {}, t0 = Date.parse(sn.publishedAt) || 0;
+        var video = { id: id, title: sn.title || '', channel: sn.channelTitle || '', channelId: sn.channelId || '', views: +((it.statistics || {}).viewCount) || 0, t: t0, days: t0 ? Math.max(0, Math.round((Date.now() - t0) / 864e5)) : 0 };
+        step('AI đang xác định vụ việc của video…');
+        var topic = (await api({ action: 'dupScan', data: { video: { title: video.title, channel: video.channel, tags: (sn.tags || []).slice(0, 20), description: String(sn.description || '').slice(0, 1500) } } })).topic;
+        step('Đang tìm trên YouTube xem còn ai làm vụ này…');
+        var seen = {}, ids = []; seen[id] = 1;
+        for (var k = 0; k < Math.min(2, topic.queries.length); k++) {
+          var prm = { part: 'snippet', q: topic.queries[k], type: 'video', maxResults: 25 }; if (topic.region) prm.regionCode = topic.region; if (topic.lang) prm.relevanceLanguage = topic.lang;
+          var sr = await yt('search', prm); (sr.items || []).forEach(function (x) { var vid = x.id && x.id.videoId; if (vid && !seen[vid]) { seen[vid] = 1; ids.push(vid); } });
+        }
+        var items = [];
+        if (ids.length) { var vr = await yt('videos', { part: 'snippet,statistics,contentDetails', id: ids.slice(0, 50).join(',') }); items = (vr.items || []).map(function (v) { var s2 = v.snippet || {}, tt = Date.parse(s2.publishedAt) || 0; return { id: v.id, title: s2.title || '', channel: s2.channelTitle || '', channelId: s2.channelId || '', t: tt, days: tt ? Math.max(0, Math.round((Date.now() - tt) / 864e5)) : 0, views: +((v.statistics || {}).viewCount) || 0, dur: E.iso((v.contentDetails || {}).duration) }; }).sort(function (a, b) { return b.views - a.views; }); }
+        var base = { url: dp.url, busy: '', err: '', video: video, topic: topic, items: items, same: null, ideas: [], ideasErr: '', nNews: 0, at: Date.now() };
+        setDp(Object.assign({}, base, { busy: 'AI đang so từng video và tìm đề tài tương tự…' }));
+        await dupIdeas(base, false);
+      } catch (e) { setDp(function (x) { return Object.assign({}, x, { busy: '', err: (e && (e.msg || e.message)) || 'Không kiểm tra được video.' }); }); }
+    }
+    async function dupIdeas(base, more) {
+      var cur = base || dp; if (!cur.topic) return;
+      setDp(function (x) { return Object.assign({}, x, { busy: more ? 'Đang tìm thêm đề tài tương tự…' : (x.busy || 'Đang tìm đề tài tương tự…'), ideasErr: '' }); });
+      var byName = {}; E.coverMatch(cur.topic.names.concat([cur.video.title]), cur.items).forEach(function (v) { byName[v.id] = 1; });
+      var mk = function (aiIdx) { return cur.items.map(function (v, k) { var ai = aiIdx.indexOf(k + 1) >= 0; return (ai || byName[v.id]) ? Object.assign({}, v, { by: ai && byName[v.id] ? 'AI + khớp tên' : ai ? 'AI nhận định' : 'khớp tên vụ' }) : null; }).filter(Boolean); };
+      try {
+        var news = [];
+        try { var nr = await api({ action: 'news', queries: cur.topic.news_queries.slice(0, 3), hours: 336 }); news = (nr.items || []).slice(0, 40).map(function (x) { return { title: x.title, source: x.source, link: x.link, days: x.t ? Math.round((Date.now() - x.t) / 864e5) : 0 }; }); } catch (e) { }
+        var r = await api({ action: 'dupIdeas', data: { video: { title: cur.video.title, channel: cur.video.channel, views: cur.video.views, days: cur.video.days }, topic: cur.topic, candidates: cur.items.map(function (v) { return { title: v.title, channel: v.channel, views: v.views, days: v.days }; }), news: news, n: 5, avoid: more ? (cur.ideas || []).map(function (x) { return x.title; }) : [] } });
+        setDp(function (x) { if (!x.video || x.video.id !== cur.video.id) return x; var n = Object.assign({}, x, { busy: '', same: more && x.same ? x.same : mk(r.same || []), sameBy: 'ai', ideas: more ? (x.ideas || []).concat(r.ideas) : r.ideas, nNews: news.length, ideasErr: '' }); dpKeep(n); return n; });
+      } catch (e) {
+        // AI lỗi: vẫn trả lời được câu "ai làm rồi" bằng cách khớp tên vụ với tiêu đề
+        setDp(function (x) { if (!x.video || x.video.id !== cur.video.id) return x; var n = Object.assign({}, x, { busy: '', same: x.same || mk([]), sameBy: x.same ? x.sameBy : 'name', ideasErr: (e && (e.msg || e.message)) || 'AI chưa đề xuất được.' }); dpKeep(n); return n; });
+      }
+    }
+    function ideaUse(x) {
+      var text = (x.search_query || x.title) + '\n' + x.title + '. ' + x.topic_vi + ((x.news || []).length ? '\nTin liên quan: ' + x.news.map(function (n) { return n.title + ' (' + n.source + ')'; }).join('; ') : '');
+      var o = Object.assign({}, opt); if (o.hours && o.hours < 720) o.hours = 720;
+      setPrompt(text); setErr(''); run(text, o);
+    }
+    // nút dò YouTube cho một đề xuất (dùng chung cho đề xuất theo kênh và đề xuất tương tự)
+    function ideaTopic(x) { return { title: x.search_query || x.title, title_vi: x.title }; }
+    function ideaCover(x) {
+      var c = cov[coverKey(ideaTopic(x))];
+      return h('span', { className: 'inline-flex flex-wrap items-center gap-2' },
+        h('button', { onClick: function () { coverRun([ideaTopic(x)]); }, disabled: !!cb, title: 'Tìm trên YouTube xem đã có ai làm đề tài này chưa (tốn khoảng 100 quota)', className: 'h-7 px-3 rounded-full text-[11.5px] font-medium bg-[#272727] hover:bg-[#3a3a3a] text-[#f1f1f1] disabled:opacity-40 cursor-pointer' }, c ? 'Dò lại' : 'Dò đã có ai làm chưa'),
+        c && h('span', { className: 'text-[11.5px] font-semibold ' + (c.n ? 'text-[#ff8a83]' : 'text-[#6fcf85]') }, c.n ? 'Đã có ' + c.n + ' video, cao nhất ' + N(c.max) + ' view' + (c.top[0] ? ' (' + c.top[0].channel + ')' : '') : 'Chưa thấy ai làm (đã xem ' + c.seen + ' kết quả)'));
+    }
     function topicBrief(t) {
       return [t.brief_en || t.summary_vi || '', 'Tên vụ việc: ' + t.title + (t.title_vi && t.title_vi !== t.title ? ' (' + t.title_vi + ')' : ''), t.date ? 'Thời gian: ' + t.date : '', t.place ? 'Địa điểm: ' + t.place : '', (t.queries || []).length ? 'Từ khoá gốc: ' + t.queries.join(' | ') : '', 'Cần: diễn biến đầy đủ, mốc thời gian, nhân vật, bằng chứng, tình trạng hiện tại, hình ảnh và video tư liệu.'].filter(Boolean).join('\n');
     }
@@ -1055,10 +1111,66 @@
             x.news.length > 0 && h('div', { className: 'text-[11.5px] text-[#c8c8c8]' }, h('b', { className: 'text-[#8fe0a1]' }, 'Tin làm căn cứ: '), x.news.map(function (nw, k) { return h('span', { key: k }, k ? ' · ' : '', nw.link ? h('a', { href: nw.link, target: '_blank', rel: 'noopener noreferrer', className: 'hover:underline' }, nw.title) : nw.title, h('span', { className: 'text-[#888]' }, ' (' + nw.source + ', ' + nw.days + ' ngày trước)')); })),
             x.kind === 'khoảng trống' && h('div', { className: 'text-[11px] text-[#f5c451]' }, 'Đề tài này do AI gợi ý, không có tiêu đề tin làm căn cứ. Kiểm tra vụ việc có thật trước khi làm.'),
             x.risk_vi && h('div', { className: 'text-[11.5px] text-[#ffb4ae]' }, h('b', null, 'Rủi ro: '), x.risk_vi),
-            h('div', { className: 'flex flex-wrap gap-2 pt-0.5' },
+            h('div', { className: 'flex flex-wrap items-center gap-2 pt-0.5' },
               h('button', { onClick: function () { chanUse(x); }, disabled: !!prog, className: 'h-7 px-3 rounded-full text-[11.5px] font-semibold bg-[#3ea6ff] hover:bg-[#65b8ff] text-[#0f0f0f] disabled:opacity-40 cursor-pointer' }, 'Gom tin đề tài này'),
+              ideaCover(x),
               h('button', { onClick: function () { copy(x.title, 'tiêu đề'); }, className: 'h-7 px-3 rounded-full text-[11.5px] font-medium bg-[#272727] hover:bg-[#3a3a3a] text-[#f1f1f1] cursor-pointer' }, 'Chép tiêu đề'))); })),
           !ch.busy && !(ch.ideas || []).length && !ch.ideasErr && h('div', { className: 'text-[11.5px] text-[#888]' }, 'Chưa có đề xuất.'))));
+    var DKIND = { 'diễn biến mới': ['Diễn biến mới', 'bg-[#16361f] text-[#8fe0a1]'], 'vụ tương tự': ['Vụ tương tự', 'bg-[#1d2c44] text-[#8ab4f8]'], 'góc khác': ['Góc khác', 'bg-[#3a2c05] text-[#f5c451]'] };
+    var dupBox = (function () {
+      var v = dp.video, same = dp.same || [], others = v ? same.filter(function (x) { return x.channelId !== v.channelId; }) : [], own = v ? same.filter(function (x) { return x.channelId === v.channelId; }) : [];
+      var chans = {}; others.forEach(function (x) { chans[x.channelId || x.channel] = 1; }); var nCh = Object.keys(chans).length;
+      var first = others.slice().sort(function (a, b) { return a.t - b.t; })[0], big = others[0];
+      var gap = function (x) { var d = Math.round((x.t - v.t) / 864e5); return !x.t || !v.t ? '' : d === 0 ? 'cùng ngày' : d < 0 ? 'trước ' + (-d) + ' ngày' : 'sau ' + d + ' ngày'; };
+      return h('div', { className: 'yt-card p-4 space-y-3 border-[#c9a7ff]/40' },
+        h('div', null, h('h2', { className: 'text-[13px] font-semibold text-cham-50' }, 'Kiểm tra một video: đã có ai khác làm chưa'),
+          h('div', { className: 'text-[11px] text-zinc-400' }, 'Dán link video. Web xác định vụ việc, tìm trên YouTube xem chỉ kênh đó làm hay đã có kênh khác làm, rồi đề xuất các đề tài tương tự. Mỗi lần kiểm tra tốn khoảng 200 quota YouTube.')),
+        h('div', { className: 'flex flex-wrap gap-2' },
+          h('input', { value: dp.url || '', onChange: function (e) { var u = e.target.value; setDp(function (x) { return Object.assign({}, x, { url: u, err: '' }); }); }, onKeyDown: function (e) { if (e.key === 'Enter') dupScan(); }, placeholder: 'https://www.youtube.com/watch?v=…', 'aria-label': 'Link video cần kiểm tra', className: 'flex-1 min-w-[240px] h-9 bg-[#121212] border border-[#303030] rounded-lg px-3 text-[12.5px] text-[#f1f1f1] placeholder:text-[#666]' }),
+          h('button', { onClick: dupScan, disabled: !!dp.busy || !String(dp.url || '').trim(), className: 'h-9 px-4 rounded-lg text-[12.5px] font-semibold bg-[#c9a7ff] hover:brightness-110 text-[#24123f] disabled:opacity-40 cursor-pointer whitespace-nowrap' }, dp.busy ? 'Đang kiểm tra…' : dp.same ? 'Kiểm tra lại' : 'Kiểm tra')),
+        dp.busy && h('div', { role: 'status', className: 'text-[12px] text-[#c9a7ff]' }, dp.busy),
+        dp.err && h('div', { role: 'alert', className: 'rounded-lg border border-[#ff4e45]/50 bg-[#2a1614] px-3 py-2 text-[12px] text-[#ffb4ae]' }, dp.err),
+        v && dp.topic && h('div', { className: 'space-y-3' },
+          h('div', { className: 'grid grid-cols-[132px_minmax(0,1fr)] gap-3' },
+            h('a', { href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer' }, h('img', { src: 'https://i.ytimg.com/vi/' + v.id + '/mqdefault.jpg', alt: '', className: 'w-full aspect-video object-cover rounded-lg bg-[#272727]' })),
+            h('div', { className: 'min-w-0 space-y-1' },
+              h('div', { className: 'text-[13px] font-semibold text-[#f1f1f1] leading-snug' }, v.title),
+              h('div', { className: 'text-[11.5px] text-[#aaa]' }, v.channel + ' · ' + N(v.views) + ' view · ' + v.days + ' ngày trước'),
+              h('div', { className: 'text-[12px] text-[#e6e6e6] leading-snug' }, h('b', { className: 'text-[#c9a7ff]' }, 'Vụ việc: '), dp.topic.event_vi),
+              dp.topic.kind_vi && h('div', { className: 'text-[11.5px] text-[#c8c8c8]' }, h('b', { className: 'text-[#c9a7ff]' }, 'Dạng nội dung: '), dp.topic.kind_vi))),
+          dp.same && h('div', { className: 'rounded-lg border p-3 ' + (others.length ? 'bg-[#2a1614] border-[#ff4e45]/40' : 'bg-[#12261a] border-[#2ba640]/50') },
+            h('div', { className: 'flex flex-wrap items-center gap-2' },
+              h('span', { className: 'px-2 py-0.5 rounded text-[11px] font-bold tracking-wide ' + (others.length ? 'bg-[#cc0000] text-white' : 'bg-[#2ba640] text-white') }, others.length ? 'ĐÃ CÓ ' + nCh + ' KÊNH KHÁC LÀM' : 'CHƯA THẤY KÊNH NÀO KHÁC LÀM'),
+              h('span', { className: 'text-[12px] text-[#e6e6e6]' }, others.length ? others.length + ' video của kênh khác về cùng vụ này' + (own.length ? ', kênh gốc có thêm ' + own.length + ' video nữa' : '') + '.' : 'Trong ' + dp.items.length + ' kết quả tìm kiếm, không video nào của kênh khác nói về đúng vụ này' + (own.length ? ' (kênh gốc có thêm ' + own.length + ' video cùng vụ)' : '') + '.')),
+            others.length > 0 && h('div', { className: 'text-[11.5px] text-[#e6e6e6] mt-1.5 leading-snug' },
+              first && first.t && v.t ? (first.t < v.t ? 'Người làm đầu tiên: ' + first.channel + ', đăng trước video này ' + Math.max(1, Math.round((v.t - first.t) / 864e5)) + ' ngày. ' : 'Video này đăng trước tất cả các kênh khác. ') : '',
+              big ? 'Video lớn nhất của kênh khác: ' + N(big.views) + ' view (' + big.channel + '), ' + (big.views > v.views ? 'cao hơn' : 'thấp hơn') + ' video này (' + N(v.views) + ').' : ''),
+            h('div', { className: 'text-[10.5px] text-[#aaa] mt-1.5' }, (dp.sameBy === 'name' ? 'AI lỗi nên chỉ so bằng cách khớp tên vụ với tiêu đề. ' : '') + 'Chỉ xem được khoảng 50 kết quả đầu của YouTube với 2 truy vấn: "' + dp.topic.queries.join('", "') + '". Video đặt tiêu đề khác hẳn có thể bị sót.')),
+          others.length > 0 && h('ul', { className: 'grid gap-2 md:grid-cols-2' }, others.slice(0, 8).map(function (x) { return h('li', { key: x.id, className: 'grid grid-cols-[96px_minmax(0,1fr)] gap-2 rounded-lg bg-[#161616] border border-[#2a2a2a] p-2' },
+            h('a', { href: 'https://www.youtube.com/watch?v=' + x.id, target: '_blank', rel: 'noopener noreferrer' }, h('img', { src: 'https://i.ytimg.com/vi/' + x.id + '/mqdefault.jpg', alt: '', loading: 'lazy', className: 'w-24 aspect-video object-cover rounded bg-[#272727]' })),
+            h('div', { className: 'min-w-0' }, h('div', { className: 'text-[12px] text-[#f1f1f1] leading-snug line-clamp-2' }, x.title),
+              h('div', { className: 'text-[11px] text-[#aaa]' }, x.channel + ' · ' + N(x.views) + ' view · ' + gap(x)),
+              h('div', { className: 'text-[10.5px] text-[#888]' }, x.by))); })),
+          h('div', { className: 'rounded-lg bg-[#161616] border border-[#c9a7ff]/30 p-3' },
+            h('div', { className: 'flex flex-wrap items-center gap-2 mb-2' },
+              h('span', { className: 'text-[12.5px] font-semibold text-[#c9a7ff]' }, 'Đề xuất content tương tự (' + (dp.ideas || []).length + ')'),
+              h('span', { className: 'text-[11px] text-[#aaa]' }, dp.nNews ? 'đã đối chiếu ' + dp.nNews + ' tiêu đề tin trong 14 ngày' : ''),
+              (dp.ideas || []).length > 0 && h('button', { onClick: function () { dupIdeas(null, true); }, disabled: !!dp.busy, className: 'ml-auto h-7 px-3 rounded-full text-[11px] font-semibold bg-[#272727] hover:bg-[#3a3a3a] text-[#f1f1f1] disabled:opacity-40 cursor-pointer' }, 'Tìm thêm, không lặp lại')),
+            dp.ideasErr && h('div', { className: 'flex flex-wrap items-center gap-2 text-[12px] text-[#ffb4ae] mb-2' }, 'Chưa đề xuất được: ' + dp.ideasErr, h('button', { onClick: function () { dupIdeas(null, false); }, disabled: !!dp.busy, className: 'h-7 px-3 rounded-full bg-[#3a1d1b] hover:brightness-125 text-[#ffb4ae] text-[11px] font-semibold cursor-pointer disabled:opacity-40' }, 'Thử lại')),
+            h('ol', { className: 'space-y-2.5' }, (dp.ideas || []).map(function (x, i) { var kd = DKIND[x.kind] || DKIND['vụ tương tự']; return h('li', { key: i, className: 'rounded-lg bg-[#1f1f1f] border border-[#2e2e2e] p-3 space-y-1.5' },
+              h('div', { className: 'flex flex-wrap items-start gap-2' },
+                h('div', { className: 'min-w-0 flex-1' }, h('div', { className: 'text-[13px] font-semibold text-[#f1f1f1] leading-snug' }, (i + 1) + '. ' + x.title), x.title_vi && x.title_vi !== x.title && h('div', { className: 'text-[11.5px] text-[#aaa]' }, x.title_vi)),
+                h('span', { className: 'shrink-0 px-2 py-0.5 rounded text-[10.5px] font-semibold ' + kd[1] }, kd[0])),
+              h('div', { className: 'text-[12px] text-[#e6e6e6] leading-snug' }, x.topic_vi),
+              x.why_vi && h('div', { className: 'text-[12px] text-[#e6e6e6] leading-snug' }, h('b', { className: 'text-[#6fcf85]' }, 'Vì sao nên làm: '), x.why_vi),
+              (x.news || []).length > 0 && h('div', { className: 'text-[11.5px] text-[#c8c8c8]' }, h('b', { className: 'text-[#8fe0a1]' }, 'Tin làm căn cứ: '), x.news.map(function (nw, k) { return h('span', { key: k }, k ? ' · ' : '', nw.link ? h('a', { href: nw.link, target: '_blank', rel: 'noopener noreferrer', className: 'hover:underline' }, nw.title) : nw.title, h('span', { className: 'text-[#888]' }, ' (' + nw.source + ', ' + nw.days + ' ngày trước)')); })),
+              !x.grounded && h('div', { className: 'text-[11px] text-[#f5c451]' }, 'Đề tài này do AI gợi ý, không có tiêu đề tin làm căn cứ. Kiểm tra vụ việc có thật trước khi làm.'),
+              x.risk_vi && h('div', { className: 'text-[11.5px] text-[#ffb4ae]' }, h('b', null, 'Cần kiểm tra: '), x.risk_vi),
+              h('div', { className: 'flex flex-wrap items-center gap-2 pt-0.5' },
+                h('button', { onClick: function () { ideaUse(x); }, disabled: !!prog, className: 'h-7 px-3 rounded-full text-[11.5px] font-semibold bg-[#3ea6ff] hover:bg-[#65b8ff] text-[#0f0f0f] disabled:opacity-40 cursor-pointer' }, 'Gom tin đề tài này'),
+                ideaCover(x),
+                h('button', { onClick: function () { copy(x.title, 'tiêu đề'); }, className: 'h-7 px-3 rounded-full text-[11.5px] font-medium bg-[#272727] hover:bg-[#3a3a3a] text-[#f1f1f1] cursor-pointer' }, 'Chép tiêu đề'))); })))));
+    })();
     var rideBox = h('div', { className: 'yt-card p-4 space-y-3 border-[#f5c451]/40' },
       h('div', null, h('h2', { className: 'text-[13px] font-semibold text-cham-50' }, 'Ăn theo một video đang lên'),
         h('div', { className: 'text-[11px] text-zinc-400' }, 'Dán link video. Web đọc video và bình luận để biết nó đã nói gì và người xem còn hỏi gì, rồi gom tin về chính vụ đó và chỉ ra phần video kia chưa nói.')),
@@ -1139,7 +1251,7 @@
     var histBox = hist.length > 0 && h('div', { className: 'rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 space-y-1.5' }, lab('Hồ sơ đã tạo (' + hist.length + ')'),
       hist.map(function (x) { return h('div', { key: x.id, className: cx('flex items-center gap-2 rounded-lg px-2 py-1.5 text-[11px]', R && R.id === x.id ? 'bg-zinc-800' : 'hover:bg-zinc-900') }, h('button', { onClick: function () { openHist(x); }, className: 'flex-1 min-w-0 text-left cursor-pointer' }, h('div', { className: 'font-bold text-zinc-100 truncate' }, (x.dossier && x.dossier.title) || x.prompt.slice(0, 60)), h('div', { className: 'text-[10px] text-zinc-500' }, new Date(x.at).toLocaleString('vi-VN') + ' • ' + x.videos.length + ' video')), h('button', { onClick: function () { delHist(x.id); }, title: 'Xoá', className: 'text-zinc-500 hover:text-rose-400 cursor-pointer' }, '✕')); }));
 
-    if (!R) return h('section', { className: 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px] animate-in fade-in duration-200' }, h('div', { className: 'space-y-4 min-w-0' }, rideBox, chanBox, finder, form), h('div', { className: 'space-y-3' }, histBox || h('div', { className: 'rounded-xl border border-dashed border-zinc-800 p-4 text-[11px] text-zinc-500 leading-relaxed' }, 'Hồ sơ bạn tạo sẽ được lưu ở đây (trên trình duyệt này) để mở lại bất cứ lúc nào.')));
+    if (!R) return h('section', { className: 'grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px] animate-in fade-in duration-200' }, h('div', { className: 'space-y-4 min-w-0' }, rideBox, chanBox, dupBox, finder, form), h('div', { className: 'space-y-3' }, histBox || h('div', { className: 'rounded-xl border border-dashed border-zinc-800 p-4 text-[11px] text-zinc-500 leading-relaxed' }, 'Hồ sơ bạn tạo sẽ được lưu ở đây (trên trình duyệt này) để mở lại bất cứ lúc nào.')));
 
     var D = R.dossier, E2 = D.entities || {};
     var rel = R.videos.filter(function (v) { return v.related; }), shownV = (showAll ? R.videos : rel).filter(function (v) { return !vType || v.type === vType; });

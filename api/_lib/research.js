@@ -921,6 +921,60 @@ Return ONLY JSON:
   return { ideas, used_news: news.length };
 }
 
+// ---------- Kiểm tra một video: đề tài này chỉ mình kênh đó làm hay đã có kênh khác làm; đề xuất đề tài tương tự ----------
+async function doDupScan(key, d) {
+  const v = (d && d.video) || {}, title = String(v.title || '').slice(0, 200);
+  if (title.length < 4) { const e = new Error('Thiếu tiêu đề video.'); e.code = 'NO_DATA'; throw e; }
+  const j = await askJson(key, `A YouTube creator wants to know whether OTHER channels have already made a video about the same story or subject as this video.
+Title: "${title}"
+Channel: ${String(v.channel || '').slice(0, 100)}
+Tags: ${(Array.isArray(v.tags) ? v.tags : []).slice(0, 20).map(t => String(t).slice(0, 40)).join(', ')}
+Description: ${String(v.description || '').slice(0, 1500)}
+
+Work out the specific story / event / subject (not the general category). Use only what the title, tags and description say.
+Return ONLY JSON:
+{"event_vi":"1-2 câu tiếng Việt: video nói về vụ việc / đề tài cụ thể nào",
+ "kind_vi":"dạng nội dung, ví dụ: giải thích một vụ kỷ luật quân nhân đang gây tranh cãi",
+ "names":["2-3 short names of the story in its ORIGINAL language, built from its proper nouns (people, places, organisations), the way other creators would title it"],
+ "queries":["2 YouTube search queries in the original language that would find OTHER videos about exactly this story"],
+ "news_queries":["3 short news queries in the original language: one for new developments of this story, two for other recent stories of the same kind"],
+ "lang":"ISO 639-1 code of the video language","region":"ISO 3166-1 alpha-2 country the story is about, or empty"}`, 30000, true);
+  const S = (x, n) => String(x == null ? '' : x).trim().slice(0, n), A = (x, n, m) => (Array.isArray(x) ? x : []).map(q => S(q, m)).filter(Boolean).slice(0, n);
+  const out = { event_vi: S(j.event_vi, 400), kind_vi: S(j.kind_vi, 200), names: A(j.names, 3, 100), queries: A(j.queries, 2, 120), news_queries: A(j.news_queries, 3, 100), lang: S(j.lang, 5).toLowerCase(), region: S(j.region, 2).toUpperCase() };
+  if (!out.queries.length) out.queries = [title.slice(0, 100)];
+  if (!out.names.length) out.names = [title.slice(0, 100)];
+  return { topic: out };
+}
+async function doDupIdeas(key, d) {
+  d = d || {}; const v = d.video || {}, tp = d.topic || {};
+  const cands = (Array.isArray(d.candidates) ? d.candidates : []).slice(0, 50).map((x, k) => ({ i: k + 1, title: String((x && x.title) || '').slice(0, 160), channel: String((x && x.channel) || '').slice(0, 60), views: Math.max(0, Math.round(Number(x && x.views) || 0)), days: Math.max(0, Math.round(Number(x && x.days) || 0)) })).filter(x => x.title);
+  const news = (Array.isArray(d.news) ? d.news : []).slice(0, 40).map((x, k) => ({ n: k + 1, title: String((x && x.title) || '').slice(0, 200), source: String((x && x.source) || '').slice(0, 60), days: Math.max(0, Math.round(Number(x && x.days) || 0)), link: String((x && x.link) || '').slice(0, 500) })).filter(x => x.title);
+  const n = Math.max(3, Math.min(8, Number(d.n) || 5)), avoid = (Array.isArray(d.avoid) ? d.avoid : []).slice(0, 30).map(x => String(x).slice(0, 120));
+  const j = await askJson(key, `Reference YouTube video: "${String(v.title || '').slice(0, 200)}" by channel "${String(v.channel || '').slice(0, 100)}" (${Number(v.views) || 0} views, ${Number(v.days) || 0} days ago).
+Its story: ${String(tp.event_vi || '').slice(0, 400)}
+Kind of content: ${String(tp.kind_vi || '').slice(0, 200)}
+
+TASK 1. Other YouTube videos found by search. Mark the ones that are about the SAME specific story as the reference video (same people / same event), not merely the same category:
+${cands.map(x => `#${x.i} | ${x.title} | ${x.channel} | ${x.views} views | ${x.days} days ago`).join('\n') || '(none found)'}
+
+TASK 2. Propose ${n} SIMILAR video topics for a creator who wants the same audience. Fresh news headlines (may be empty):
+${news.map(x => `[N${x.n}] ${x.title} (${x.source}, ${x.days} days ago)`).join('\n') || '(none)'}
+${avoid.length ? '\nDo NOT repeat these topics already proposed:\n' + avoid.map(x => '- ' + x).join('\n') : ''}
+Kinds: "diễn biến mới" = a new development of the same story found in the headlines (cite them in "news"); "vụ tương tự" = a DIFFERENT real story of the same kind, from the headlines when possible (cite them) - never invent a story; "góc khác" = the same story from an angle that none of the videos in TASK 1 took.
+Titles in the reference video's language, 100 characters or fewer, truthful. Fields ending in _vi in Vietnamese. In "why_vi" compare with the reference video and with how many channels already covered it.
+Return ONLY JSON:
+{"same":[1,4],
+ "ideas":[{"title":"...","title_vi":"nghĩa tiếng Việt","topic_vi":"1-2 câu: đề tài là gì","kind":"diễn biến mới|vụ tương tự|góc khác","why_vi":"2 câu: vì sao nên làm","news":[2],"risk_vi":"điều cần kiểm tra, có thể rỗng","search_query":"truy vấn ngắn bằng ngôn ngữ gốc để gom tin và dò YouTube"}]}`, 45000);
+  const S = (x, m) => String(x == null ? '' : x).trim().slice(0, m), byN = {}; news.forEach(x => { byN[x.n] = x; });
+  const same = [...new Set((Array.isArray(j.same) ? j.same : []).map(Number).filter(k => k >= 1 && k <= cands.length))];
+  const ideas = (Array.isArray(j.ideas) ? j.ideas : []).slice(0, 10).map(x => {
+    x = x || {}; const nw = [...new Set((Array.isArray(x.news) ? x.news : []).map(Number).filter(k => byN[k]))].slice(0, 3);
+    const kind = /diễn biến/i.test(String(x.kind)) ? 'diễn biến mới' : /góc/i.test(String(x.kind)) ? 'góc khác' : 'vụ tương tự';
+    return { title: S(x.title, 100), title_vi: S(x.title_vi, 200), topic_vi: S(x.topic_vi, 400), kind, why_vi: S(x.why_vi, 500), risk_vi: S(x.risk_vi, 300), search_query: S(x.search_query, 140), grounded: kind === 'góc khác' || nw.length > 0, news: nw.map(k => ({ title: byN[k].title, source: byN[k].source, days: byN[k].days, link: byN[k].link })) };
+  }).filter(x => x.title);
+  return { same, ideas, used_news: news.length };
+}
+
 // ---------- Bộ thông tin đăng video: tiêu đề, mô tả, thẻ từ khoá ----------
 async function doSeo(key, d) {
   d = d || {};
@@ -964,4 +1018,4 @@ ${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
   return { answer: String(j.answer || '').slice(0, 900), ids };
 }
 
-module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, doChanScan, doChanIdeas, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, doRideStyle, doChanScan, doChanIdeas, doDupScan, doDupIdeas, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
