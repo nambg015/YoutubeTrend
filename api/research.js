@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
   const key = req.headers['x-gemini-key'] || GEMINI_API_KEY;
 
   // Mỗi hồ sơ tính 1 lượt (đếm ở bước search — kể cả khi AI lỗi và chuyển sang chế độ miễn phí)
-  const bucket = action === 'search' ? 'research' : action === 'insight' || action === 'titles' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' || action === 'topics' || action === 'images' || action === 'translate' || action === 'audience' || action === 'seo' || action === 'script' || action === 'rideScan' || action === 'rideGaps' || action === 'ask' ? 'research_aux' : '';
+  const bucket = action === 'search' ? 'research' : action === 'insight' || action === 'titles' ? 'insight' : action === 'news' || action === 'enrich' || action === 'structure' || action === 'topics' || action === 'images' || action === 'translate' || action === 'audience' || action === 'seo' || action === 'script' || action === 'rideScan' || action === 'rideGaps' || action === 'rideThumb' || action === 'ask' ? 'research_aux' : '';
   if (bucket) {
     const limit = auth.limitFor(claims, bucket === 'research' ? (Number(process.env.RESEARCH_DAILY_LIMIT) || 100) : bucket === 'insight' ? (Number(process.env.INSIGHT_DAILY_LIMIT) || 150) : 300);
     try {
@@ -56,7 +56,7 @@ module.exports = async (req, res) => {
       return res.json({ success: true, items: await R.doNews(qs, Number(body.hours) || 0) });
     }
     if (action === 'enrich') {
-      const r = await R.doEnrich(Array.isArray(body.urls) ? body.urls.map(String) : [], Array.isArray(body.imageQueries) ? body.imageQueries.map(String) : []);
+      const r = await R.doEnrich(Array.isArray(body.urls) ? body.urls.map(String) : [], Array.isArray(body.imageQueries) ? body.imageQueries.map(String) : [], Array.isArray(body.entityQueries) ? body.entityQueries.map(String) : []);
       return res.json({ success: true, ...r });
     }
     if (action === 'translate') return res.json({ success: true, ...(await R.doTranslate(key, body.items, body.to)) });
@@ -65,6 +65,7 @@ module.exports = async (req, res) => {
     if (action === 'script') return res.json({ success: true, ...(await R.doScript(key, body.data)) });
     if (action === 'rideScan') return res.json({ success: true, ...(await R.doRideScan(key, body.data)) });
     if (action === 'rideGaps') return res.json({ success: true, ...(await R.doRideGaps(key, body.data)) });
+    if (action === 'rideThumb') return res.json({ success: true, ...(await R.doRideThumb(key, body.data)) });
     if (action === 'ask') return res.json({ success: true, ...(await R.doAsk(key, body.data)) });
     if (action === 'topics') {
       return res.json({ success: true, ...(await R.doTopics(key, { group: body.group, cat: body.cat, country: body.country, period: body.period, n: body.n, note: body.note, skip: body.skip })) });

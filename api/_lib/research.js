@@ -128,7 +128,8 @@ Return ONLY JSON with this exact shape:
  "angles": [{"hook": "a strong video title/hook idea", "why": "why viewers care"}],
  "unverified": ["claims that are rumors / not confirmed / disputed"],
  "reported_claims": [{"claim": "a claim reported by some outlets/social posts but not officially confirmed", "reported_by": "who reports it", "src": [1], "phrasing_en": "ready-to-read English narration line that hedges it, e.g. Some reports suggest ..., but this has not been officially confirmed."}],
- "sensitivity": "notes about victims, graphic content, legal or privacy care the creator should take"
+ "sensitivity": "notes about victims, graphic content, legal or privacy care the creator should take",
+ "privacy": [{"name": "name of a private individual that appears in the sources", "reason": "why the video should NOT name or show them: minor, victim, bystander, low-ranking person not named by officials, family member ..."}]
 }
 Rules: 8-12 youtube_queries covering every type that fits THIS story (press briefings, news reports, on-scene footage, audio recordings, expert analysis, background on the people/objects involved). 6-10 image_queries. Latest and timeline newest information must reflect the report precisely.`;
 }
@@ -266,19 +267,50 @@ function level(host) {
   if (NEWS.test(host + '.')) return 'news';
   return 'other';
 }
-const BAD_IMG = /logo|icon|sprite|avatar|favicon|placeholder|blank|pixel|1x1|spacer|badge|button|banner-ad|advert|doubleclick|tracking|gravatar|emoji|\.svg(\?|$)|\.gif(\?|$)|data:/i;
+const BAD_IMG = /logo|icon|sprite|avatar|favicon|placeholder|blank|pixel|1x1|spacer|badge|button|banner|advert|[-_\/]ads?[-_\/.]|sponsor|promo|doubleclick|tracking|gravatar|emoji|payment|visa|mastercard|paypal|amex|app-?store|google-?play|newsletter|subscribe|paywall|share|social|footer|header|masthead|widget|related|recommend|outbrain|taboola|thumb(nail)?s?[-_\/]\d{2,3}x\d{2,3}|\.svg(\?|$)|\.gif(\?|$)|data:/i;
+// chữ thay thế (alt) của ảnh rác: quảng cáo, logo, phương thức thanh toán, nút chia sẻ
+const BAD_ALT = /\b(logo|advertis|sponsored|banner|subscribe|newsletter|sign up|download (the|our) app|app store|google play|visa|mastercard|paypal|payment|follow us|share (on|this)|icon)\b/i;
 function pickSrc(tag) {
   const g = n => { const m = new RegExp('\\s' + n + '\\s*=\\s*["\']([^"\']+)["\']', 'i').exec(tag); return m ? m[1] : ''; };
   const ss = g('srcset') || g('data-srcset');
-  if (ss) { const best = ss.split(',').map(x => x.trim().split(/\s+/)).map(([u, w]) => [u, parseInt(w) || 0]).sort((a, b) => b[1] - a[1])[0]; if (best && best[0]) return { src: best[0], alt: g('alt'), w: +g('width') || 0 }; }
-  return { src: g('data-src') || g('data-lazy-src') || g('data-original') || g('src'), alt: g('alt'), w: +g('width') || 0 };
+  if (ss) { const best = ss.split(',').map(x => x.trim().split(/\s+/)).map(([u, w]) => [u, parseInt(w) || 0]).sort((a, b) => b[1] - a[1])[0]; if (best && best[0]) return { src: best[0], alt: g('alt'), w: +g('width') || 0, h: +g('height') || 0 }; }
+  return { src: g('data-src') || g('data-lazy-src') || g('data-original') || g('src'), alt: g('alt'), w: +g('width') || 0, h: +g('height') || 0 };
+}
+// Thân bài: <article>, <main> hoặc khối có itemprop=articleBody; không có thì trả cả trang đã bỏ nav/aside/footer.
+function mainHtml(body) {
+  const strip = x => x.replace(/<(nav|aside|footer|header|form)\b[\s\S]*?<\/\1>/gi, ' ');
+  const pick = re => { let best = ''; let m; while ((m = re.exec(body))) { if (m[0].length > best.length) best = m[0]; } return best; };
+  const art = pick(/<article\b[\s\S]*?<\/article>/gi) || pick(/<main\b[\s\S]*?<\/main>/gi);
+  return strip(art && art.length > 1500 ? art : body);
+}
+// Trích 3-5 câu chính của bài (tối đa ~650 ký tự) để kịch bản không phải suy từ tiêu đề.
+function excerptFrom(html) {
+  const body = mainHtml(html.replace(/<(script|style|noscript|svg|figure|figcaption)[\s\S]*?<\/\1>/gi, ' '));
+  const ps = (body.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi) || []).map(x => decode(x.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim())
+    .filter(t => t.length >= 70 && !/cookie|subscribe|newsletter|sign up|all rights reserved|advertisement|click here|follow us|©/i.test(t));
+  let out = '';
+  for (const t of ps) { if (out.length >= 520) break; out += (out ? ' ' : '') + t; }
+  if (out.length > 650) { const cut = out.slice(0, 650), k = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('。'), cut.lastIndexOf('! '), cut.lastIndexOf('? ')); out = k > 300 ? cut.slice(0, k + 1) : cut + '…'; }
+  return out;
+}
+// Wikipedia: lấy đoạn trích nguyên văn (CC BY-SA) qua API thay vì đọc HTML
+async function wikiExcerpt(u) {
+  const m = /^([a-z]{2,3})\.(?:m\.)?wikipedia\.org$/.exec(u.hostname), t = /^\/wiki\/(.+)$/.exec(u.pathname); if (!m || !t) return null;
+  try {
+    const api = 'https://' + m[1] + '.wikipedia.org/w/api.php?action=query&format=json&redirects=1&prop=extracts&explaintext=1&exchars=2600&titles=' + encodeURIComponent(decodeURIComponent(t[1]));
+    const j = await (await fetch(api, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(7000) })).json();
+    const pg = Object.values((j.query && j.query.pages) || {})[0];
+    return pg && pg.extract ? String(pg.extract).replace(/\n{3,}/g, '\n\n').slice(0, 2600) : null;
+  } catch (e) { return null; }
 }
 function mediaFrom(html, base) {
   const imgs = [], seen = new Set(), vids = [], vseen = new Set();
   const abs = u => { try { return new URL(decode(u), base).href; } catch (e) { return ''; } };
-  const body = html.replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ');
+  const body0 = html.replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ');
+  // chỉ lấy ảnh trong thân bài (bỏ menu, cột bên, chân trang, khối "bài liên quan") khi trang có đánh dấu thân bài
+  const body = mainHtml(body0);
   (body.match(/<img\b[^>]*>/gi) || []).forEach(tag => {
-    const p = pickSrc(tag); const u = abs(p.src); if (!u || BAD_IMG.test(u) || seen.has(u) || (p.w && p.w < 300)) return;
+    const p = pickSrc(tag); const u = abs(p.src); if (!u || BAD_IMG.test(u) || BAD_ALT.test(p.alt || '') || seen.has(u) || (p.w && p.w < 300) || (p.h && p.h < 160) || (p.w && p.h && (p.w / p.h > 3.2 || p.h / p.w > 2.5))) return;
     seen.add(u); imgs.push({ url: u, alt: decode(p.alt).slice(0, 160) });
   });
   const addV = (kind, url, id) => { const k = kind + ':' + (id || url); if (vseen.has(k)) return; vseen.add(k); vids.push({ kind, url, id: id || '' }); };
@@ -308,7 +340,9 @@ async function openPage(u0) {
     const titleTag = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
     const md = mediaFrom(html, u.href), og = img ? new URL(img, u).href : '';
     if (og && !md.images.some(x => x.url === og)) md.images.unshift({ url: og, alt: 'Ảnh đại diện bài viết' });
+    const wx = await wikiExcerpt(u);
     return {
+      excerpt: wx || excerptFrom(html), excerpt_kind: wx ? 'wikipedia' : 'article',
       url: u.href, site: meta(html, ['og:site_name']) || site, level: level(site),
       title: meta(html, ['og:title', 'twitter:title']) || (titleTag ? decode(titleTag[1]) : ''),
       description: meta(html, ['og:description', 'description']).slice(0, 300),
@@ -318,27 +352,38 @@ async function openPage(u0) {
   }
   return null;
 }
-async function commons(queries, per) {
+const PD_RE = /public domain|^pd\b|cc0|no restrictions/i, GOV_RE = /\b(u\.?s\.? (army|navy|air force|marine|coast guard|government|department)|department of (defense|war|state)|dod|dvids|nasa|noaa|usgs|library of congress|national archives|white house|federal|ministry|government)\b/i;
+async function commons(queries, per, cap) {
   per = Math.max(4, Math.min(30, per || 8));
-  const out = [], seen = new Set();
-  await Promise.all(queries.slice(0, 8).map(async q => {
-    const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=' + per + '&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=640&gsrsearch=' + encodeURIComponent(q);
+  const out = [], seen = new Set(), qs = [...new Set((queries || []).map(q => String(q || '').trim()).filter(q => q.length >= 2))].slice(0, cap || 8);
+  const one = async q => {
+    // iiurlwidth=960: một trong các cỡ thumbnail chuẩn của Commons (330, 500, 960, 1280, 1920…), cỡ lạ dễ bị 429
+    const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=' + per + '&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=960&gsrsearch=' + encodeURIComponent(q);
     try {
-      const j = await (await fetch(u, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(7000) })).json();
+      const j = await (await fetch(u, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) })).json();
       Object.values((j.query && j.query.pages) || {}).forEach(p => {
         const ii = (p.imageinfo || [])[0]; if (!ii || seen.has(p.title)) return; seen.add(p.title);
         if (!/\.(jpe?g|png|webp)$/i.test(p.title)) return;
-        const m = ii.extmetadata || {};
-        out.push({ q, title: p.title.replace(/^File:/, ''), thumb: ii.thumburl || ii.url, url: ii.url, page: ii.descriptionurl, license: decode((m.LicenseShortName || {}).value || ''), author: decode((m.Artist || {}).value || '').slice(0, 80), credit: decode((m.Credit || {}).value || '').slice(0, 120) });
+        if (ii.width && ii.width < 640) return;
+        const m = ii.extmetadata || {}, txt = k => decode(String((m[k] || {}).value || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+        const license = txt('LicenseShortName'), author = txt('Artist').slice(0, 100), credit = txt('Credit').slice(0, 140), desc = txt('ImageDescription').slice(0, 320);
+        const pd = PD_RE.test(license) || PD_RE.test(txt('UsageTerms')), gov = GOV_RE.test(author + ' ' + credit + ' ' + desc);
+        out.push({ q, title: p.title.replace(/^File:/, ''), thumb: ii.thumburl || ii.url, url: ii.url, page: ii.descriptionurl, license, author, credit, desc, date: (txt('DateTimeOriginal') || txt('DateTime')).slice(0, 40), w: ii.width || 0, h: ii.height || 0, pd, gov });
       });
     } catch (e) { }
-  }));
-  return out.slice(0, Math.max(30, per * 6));
+  };
+  for (let i = 0; i < qs.length; i += 4) await Promise.all(qs.slice(i, i + 4).map(one));   // từng đợt 4 truy vấn để không dồn dập vào Commons
+  // ảnh public domain của cơ quan nhà nước lên đầu, rồi public domain khác, rồi CC
+  out.sort((a, b) => (b.pd && b.gov ? 2 : b.pd ? 1 : 0) - (a.pd && a.gov ? 2 : a.pd ? 1 : 0));
+  return out.slice(0, Math.max(30, Math.min(160, per * qs.length)));
 }
-async function doEnrich(urls, imageQueries) {
+async function doEnrich(urls, imageQueries, entityQueries) {
   const list = [...new Set((urls || []).filter(Boolean))].slice(0, 24);
-  const pages = await Promise.all(list.map(u => openPage(u).then(p => p && Object.assign({ from: u }, p)).catch(() => null)));
-  return { pages: pages.filter(Boolean), commons: await commons(imageQueries || [], 12), openverse: await openverse((imageQueries || []).slice(0, 4)) };
+  const iq = (imageQueries || []).slice(0, 10), eq = (entityQueries || []).slice(0, 14);
+  const [pages, cm, ov] = await Promise.all([
+    Promise.all(list.map(u => openPage(u).then(p => p && Object.assign({ from: u }, p)).catch(() => null))),
+    commons(iq.concat(eq), 10, 24), openverse(iq.slice(0, 4))]);
+  return { pages: pages.filter(Boolean), commons: cm, openverse: ov };
 }
 
 // ---------- Openverse: ảnh giấy phép mở (Flickr, bảo tàng...), không cần key ----------
@@ -624,6 +669,7 @@ async function doRideScan(key, d) {
   if (!title) { const e = new Error('Thiếu thông tin video gốc.'); e.code = 'NO_DATA'; throw e; }
   const tr = String(d.transcript || '').replace(/\r/g, '').trim().slice(0, 60000);
   const cm = (Array.isArray(d.comments) ? d.comments : []).slice(0, 80).map(c => '- ' + String((c && c.t) || '').replace(/\s+/g, ' ').slice(0, 280) + ' | ' + (Number(c && c.l) || 0)).filter(x => x.length > 8).join('\n');
+  const chs = (Array.isArray(v.chapters) ? v.chapters : []).slice(0, 30).map(c => ({ t: String((c && c.t) || '').slice(0, 10), label: String((c && c.label) || '').slice(0, 120) })).filter(c => c.label);
   const text = `You help a YouTube creator make a BETTER follow-up video about the same real-world story as a reference video, without copying it.
 Use only the material below. Do not add facts about the story from your own memory.
 
@@ -632,6 +678,8 @@ Title: ${title}
 Channel: ${String(v.channel || '').slice(0, 120)}
 Published: ${String(v.published || '').slice(0, 40)} | Length: ${Number(v.minutes) || '?'} min | Views: ${Number(v.views) || '?'}
 Tags: ${(Array.isArray(v.tags) ? v.tags : []).slice(0, 25).join(', ').slice(0, 600)}
+Declared language: ${String(v.language || '?').slice(0, 12)}
+Chapters (time label): ${chs.map(c => c.t + ' ' + c.label).join(' | ') || '(none in the description)'}
 Description: <<<${String(v.description || '').slice(0, 4000)}>>>
 
 TRANSCRIPT ${tr ? '(given)' : '(NOT given)'}:
@@ -642,14 +690,16 @@ ${cm || '(none)'}
 
 Tasks:
 1. Identify the real-world story the video is about.
-2. List what the video ALREADY covers. With a transcript, base it on the transcript ("basis":"transcript", 8-14 points). Without one, infer only from title, description and chapters ("basis":"description", 3-8 cautious points).
+2. Break the video into its chapters. Use the chapter list when there is one; with a transcript but no chapter list, split the transcript into 5-9 parts yourself with approximate time marks. For each chapter give a 1-2 sentence summary of its IDEAS in Vietnamese (never quote the narration). Without a transcript leave "summary_vi" empty - do not guess what a chapter says from its name.
+   Then list what the video ALREADY covers, built from the chapters and their summaries: with a transcript "basis":"transcript" (8-14 points); with chapters only "basis":"chapters" (one cautious point per chapter); with neither "basis":"description" (3-6 cautious points).
 3. From the comments, extract what viewers still ask, want more of, dispute, or say is missing. Keep real informational demand; skip jokes, praise and insults. Most-liked first.
 
 Return ONLY JSON:
 {"event_vi":"1-2 câu tiếng Việt: vụ việc là gì",
  "event_query":"a precise research brief in the video's ORIGINAL language (who, what, where, when) for finding news about this exact story",
- "lang":"ISO code of the video's language","when":"date or period, or empty","where":"place or empty","people":["key names"],
- "basis":"transcript|description",
+ "lang":"ISO 639-1 code of the language SPOKEN in the video","lang_name":"that language's English name, e.g. English","when":"date or period, or empty","where":"place or empty","people":["key names"],
+ "basis":"transcript|chapters|description",
+ "chapters":[{"t":"0:00","title":"chapter name in the original language","summary_vi":"ý chính của chương, 1-2 câu, hoặc rỗng"}],
  "covered":["điểm video đã nói, tiếng Việt, ngắn"],
  "asked":[{"q_vi":"điều người xem muốn biết, tiếng Việt","kind":"hỏi|thiếu|phản bác","quote":"short original snippet under 20 words","likes":0}],
  "hook_vi":"1 câu: tiêu đề và ảnh bìa đang hứa điều gì khiến người ta bấm"}
@@ -657,8 +707,10 @@ Up to 10 items in "asked".`;
   const j = await askJson(key, text, 50000, true);
   const A = (x, n) => (Array.isArray(x) ? x : []).slice(0, n), S = (x, n) => String(x == null ? '' : x).slice(0, n);
   return { scan: {
-    event_vi: S(j.event_vi, 500), event_query: S(j.event_query, 400) || title, lang: S(j.lang, 8), when: S(j.when, 80), where: S(j.where, 120), people: A(j.people, 10).map(x => S(x, 80)).filter(Boolean),
-    basis: tr && j.basis !== 'description' ? 'transcript' : 'description',
+    event_vi: S(j.event_vi, 500), event_query: S(j.event_query, 400) || title, lang: S(j.lang, 8).toLowerCase() || String(v.language || '').slice(0, 2).toLowerCase(), lang_name: S(j.lang_name, 30),
+    chapters: (A(j.chapters, 30).map(x => ({ t: S(x && x.t, 10), title: S(x && x.title, 140), summary_vi: tr ? S(x && x.summary_vi, 400) : '' })).filter(x => x.title).length ? A(j.chapters, 30).map(x => ({ t: S(x && x.t, 10), title: S(x && x.title, 140), summary_vi: tr ? S(x && x.summary_vi, 400) : '' })).filter(x => x.title) : chs.map(c => ({ t: c.t, title: c.label, summary_vi: '' }))),
+    when: S(j.when, 80), where: S(j.where, 120), people: A(j.people, 10).map(x => S(x, 80)).filter(Boolean),
+    basis: tr ? 'transcript' : chs.length ? 'chapters' : 'description',
     covered: A(j.covered, 16).map(x => S(x, 260)).filter(Boolean),
     asked: A(j.asked, 10).map(x => ({ q_vi: S(x && x.q_vi, 260), kind: S(x && x.kind, 12), quote: S(x && x.quote, 200), likes: Number(x && x.likes) || 0 })).filter(x => x.q_vi),
     hook_vi: S(j.hook_vi, 300)
@@ -673,9 +725,14 @@ async function doRideGaps(key, d) {
   const dj = JSON.stringify(pick).slice(0, 22000);
   if (dj.length < 200) { const e = new Error('Hồ sơ chưa đủ thông tin để so với video gốc.'); e.code = 'NO_DATA'; throw e; }
   const refMin = Number(d.minutes) || 0, target = Math.max(6, Math.round((refMin || 10) * 1.25));
+  const wpm = Math.max(120, Math.min(220, Number(d.wpm) || 170)), words = Math.round(target * wpm / 50) * 50;
   const lang = String(d.vlang || 'the reference video language').slice(0, 40);
+  const chapters = (Array.isArray(d.chapters) ? d.chapters : []).slice(0, 30).map(c => '- ' + String((c && c.t) || '').slice(0, 10) + ' ' + String((c && c.title) || '').slice(0, 140) + (c && c.summary_vi ? ': ' + String(c.summary_vi).slice(0, 400) : '')).join('\n');
+  const basisNote = d.basis === 'transcript' ? ' (from its transcript)' : d.basis === 'chapters' ? ' (from its chapter names only - no transcript, treat as uncertain)' : ' (INFERRED from its title and description only - treat as uncertain)';
   const text = `A creator will make a follow-up video on the same story as a reference video ("${String(d.title || '').slice(0, 200)}", about ${refMin || '?'} minutes).
-(A) What the reference video already covers${d.basis === 'transcript' ? ' (from its transcript)' : ' (INFERRED from its title and description only - treat as uncertain)'}:
+(A) Chapters of the reference video${basisNote}:
+${chapters || '(no chapter list)'}
+What it already covers:
 ${covered.map(x => '- ' + x).join('\n') || '(unknown)'}
 
 (B) What its viewers ask for in the comments:
@@ -686,17 +743,17 @@ ${dj}
 
 Find what the DOSSIER contains that the reference video did NOT cover: that is the new value for viewers.
 Rules: use ONLY facts in the DOSSIER and keep their src numbers. Never invent. Items taken from "unverified" or "reported_claims" must get confidence "chưa kiểm chứng". If a viewer question in (B) is answered by the dossier, name it in "answers_vi". Viewer questions the dossier cannot answer go to "open_questions".
-The new video should run about ${target} minutes (roughly 25% more than the reference), and about a quarter to a third of it must be information the reference video lacks. Do not reuse the reference video's wording or structure.
+Plan of the new video: about ${target} minutes (about ${words} narrated words at ${wpm} words per minute). Roughly 70% of the runtime re-tells the IDEAS of the reference video's chapters - every chapter covered, in a DIFFERENT order, in entirely new wording (never its sentences) - and roughly 30% is the new information the reference video lacks.
 
 Return ONLY JSON:
 {"new_share_pct": 0,
  "gaps":[{"point_vi":"điểm mới, 1 câu","detail_vi":"1-2 câu có tên, ngày, con số cụ thể","answers_vi":"câu hỏi của người xem mà nó trả lời, hoặc rỗng","src":[1],"confidence":"có nguồn|chưa kiểm chứng"}],
  "open_questions":["câu hỏi của người xem mà hồ sơ chưa trả lời được"],
  "angle_vi":"1-2 câu: cùng vụ việc, video mới hứa điều gì khác",
- "titles":[{"t":"title in ${lang}","vi":"nghĩa tiếng Việt"}],
- "outline":[{"part":"tên đoạn","minutes":1,"content_vi":"đoạn này nói gì","is_new":true}],
+ "titles":[{"t":"title in ${lang}, at most 100 characters","vi":"nghĩa tiếng Việt"}],
+ "outline":[{"part":"tên phần của video mới","minutes":1,"ref_chapter":"tên chương video gốc mà phần này phủ, hoặc rỗng nếu phần hoàn toàn mới","ref_vi":"ý của video gốc được kể lại ở phần này","new_vi":"điểm mới chèn vào phần này, hoặc rỗng","is_new":false}],
  "target_minutes": ${target}}
-"new_share_pct" = your estimate (integer) of the share of dossier facts absent from the reference video. Give 6-12 gaps (most valuable to viewers first), exactly 5 titles that promise the NEW information, and 6-9 outline parts whose minutes add up to about ${target}; open with the strongest new point and keep the shared background short.`;
+"new_share_pct" = your estimate (integer) of the share of dossier facts absent from the reference video. Give 6-12 gaps (most valuable to viewers first). Give exactly 5 truthful titles; prefer the form "the question the reference video raises + the new answer". Outline: one part per reference chapter (reordered) plus parts that are entirely new ("is_new": true); minutes add up to about ${target}; open with the strongest new point.`;
   const j = await askJson(key, text, 50000, true);
   const A = (x, n) => (Array.isArray(x) ? x : []).slice(0, n), S = (x, n) => String(x == null ? '' : x).slice(0, n);
   return { gaps: {
@@ -704,9 +761,37 @@ Return ONLY JSON:
     gaps: A(j.gaps, 14).map(x => ({ point_vi: S(x && x.point_vi, 300), detail_vi: S(x && x.detail_vi, 500), answers_vi: S(x && x.answers_vi, 260), src: A(x && x.src, 6).map(Number).filter(n => n > 0 && n < 200), confidence: /chưa/i.test(String(x && x.confidence)) ? 'chưa kiểm chứng' : 'có nguồn' })).filter(x => x.point_vi),
     open_questions: A(j.open_questions, 10).map(x => S(x, 260)).filter(Boolean),
     angle_vi: S(j.angle_vi, 500),
-    titles: A(j.titles, 6).map(x => ({ t: S(x && x.t, 140), vi: S(x && x.vi, 200) })).filter(x => x.t),
-    outline: A(j.outline, 10).map(x => ({ part: S(x && x.part, 100), minutes: Math.round((Number(x && x.minutes) || 0) * 10) / 10, content_vi: S(x && x.content_vi, 400), is_new: !!(x && x.is_new) })).filter(x => x.part),
-    target_minutes: target, ref_minutes: refMin, basis: d.basis === 'transcript' ? 'transcript' : 'description'
+    titles: A(j.titles, 6).map(x => ({ t: S(x && x.t, 100), vi: S(x && x.vi, 200) })).filter(x => x.t),
+    outline: A(j.outline, 16).map(x => ({ part: S(x && x.part, 100), minutes: Math.round((Number(x && x.minutes) || 0) * 10) / 10, ref_chapter: S(x && x.ref_chapter, 140), ref_vi: S(x && (x.ref_vi || x.content_vi), 400), new_vi: S(x && x.new_vi, 400), is_new: !!(x && x.is_new) })).filter(x => x.part),
+    titles_note: '', target_minutes: target, target_words: words, wpm, ref_minutes: refMin, basis: d.basis === 'transcript' ? 'transcript' : d.basis === 'chapters' ? 'chapters' : 'description'
+  } };
+}
+
+// ---------- Phân tích bố cục ảnh bìa (thumbnail) của video gốc bằng AI nhìn ảnh ----------
+async function doRideThumb(key, d) {
+  const id = String((d && d.id) || ''); if (!/^[\w-]{11}$/.test(id)) { const e = new Error('Thiếu mã video.'); e.code = 'NO_DATA'; throw e; }
+  let img = null;
+  for (const n of ['maxresdefault', 'sddefault', 'hqdefault']) { try { img = await fetchImage('https://i.ytimg.com/vi/' + id + '/' + n + '.jpg'); if (img && img.buf && img.buf.length > 8000) break; img = null; } catch (e) { img = null; } }
+  if (!img) { const e = new Error('Không tải được ảnh bìa của video gốc.'); e.code = 'NO_DATA'; throw e; }
+  const text = `This is the thumbnail of a YouTube video titled "${String((d && d.title) || '').slice(0, 200)}". A creator wants to design their own thumbnail with a SIMILAR LAYOUT (not a copy of the picture).
+Describe only what is visible. Write descriptions in Vietnamese; keep the text that appears on the image in its original language.
+Return ONLY JSON:
+{"layout_vi":"2-3 câu tả bố cục tổng thể: ai/cái gì ở đâu, to nhỏ ra sao",
+ "main_subject":{"what_vi":"nhân vật / vật chính","position":"trái|giữa|phải","size":"lớn|vừa|nhỏ"},
+ "others_vi":["nhân vật / chi tiết phụ và vị trí"],
+ "text":{"content":"chữ trên ảnh, nguyên văn, hoặc rỗng","word_count":0,"position_vi":"vị trí chữ","color_vi":"màu chữ và viền","font_vi":"kiểu chữ (ví dụ Impact đậm, có vết rỉ)"},
+ "has_label":false,"label_vi":"nhãn / dải chữ / mũi tên / khoanh đỏ nếu có, hoặc rỗng",
+ "background_vi":"nền: sáng tối, tông màu, bối cảnh",
+ "looks_ai_generated":false,"ai_signs_vi":"dấu hiệu cho thấy ảnh do AI dựng hoặc ghép (nếu có), hoặc rỗng",
+ "text_over_face":false}`;
+  const j = parseJson((await gemini(key, { contents: [{ parts: [{ inline_data: { mime_type: img.type || 'image/jpeg', data: img.buf.toString('base64') } }, { text }] }], generationConfig: { temperature: 0.2, responseMimeType: 'application/json' } }, 40000, true)).text);
+  const S = (x, n) => String(x == null ? '' : x).slice(0, n), ms = j.main_subject || {}, tx = j.text || {};
+  return { thumb: {
+    layout_vi: S(j.layout_vi, 500), main_subject: { what_vi: S(ms.what_vi, 160), position: S(ms.position, 12), size: S(ms.size, 12) },
+    others_vi: (Array.isArray(j.others_vi) ? j.others_vi : []).slice(0, 6).map(x => S(x, 160)).filter(Boolean),
+    text: { content: S(tx.content, 120), word_count: Math.max(0, Math.round(Number(tx.word_count) || 0)), position_vi: S(tx.position_vi, 100), color_vi: S(tx.color_vi, 100), font_vi: S(tx.font_vi, 120) },
+    has_label: !!j.has_label, label_vi: S(j.label_vi, 160), background_vi: S(j.background_vi, 200),
+    looks_ai_generated: !!j.looks_ai_generated, ai_signs_vi: S(j.ai_signs_vi, 240), text_over_face: !!j.text_over_face
   } };
 }
 
@@ -753,4 +838,4 @@ ${JSON.stringify(rows).slice(0, 60000)}`, 30000, true);
   return { answer: String(j.answer || '').slice(0, 900), ids };
 }
 
-module.exports = { gemini, doRideScan, doRideGaps, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };
+module.exports = { gemini, doRideScan, doRideGaps, doRideThumb, mediaFrom, excerptFrom, commons, doAsk, doTranslate, doAudience, doSeo, doScript, scriptStats, model: MODEL, models: MODELS, wiki, bingNews, searchFree, topicsFree, doTopics, topicsPrompt, cleanTopics, doImages, openverse, fetchImage, privateIp, doTitles, titlesPrompt, level, mediaFrom, doInsight, doSearch, doStructure, doNews, doEnrich, annotate, parseRss, parseJson, safeUrl, guessLang, searchPrompt, structurePrompt };

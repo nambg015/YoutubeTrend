@@ -54,6 +54,16 @@
     if (/news|live|report|update|breaking|nbc|cbs|abc|cnn|fox|wsvn|wpbf|wptv|bản tin|tin tức|thời sự/.test(t + ' ' + chTitle.toLowerCase())) return 'news';
     return TYPES[hint] ? hint : 'other';
   }
+// Cảnh báo cho từng video nguồn. Web không xem được hình nên đây là suy từ loại video, tiêu đề và kênh: phải soát khung hình trước khi dùng.
+  function videoFlags(x) {
+    var out = [], t = String(x.title || '');
+    if (x.wasLive || x.live === 'live' || x.live === 'upcoming') out.push('Phát trực tiếp: thường có màn chờ ("Stand by…") hoặc đoạn lặng ở đầu, kiểm tra khung hình trước khi cắt');
+    if (/\btop\s?\d+|\b\d+\s+(best|most|worst|times|things|facts|moments)\b|compilation|best of|tổng hợp|ranking|countdown/i.test(t)) out.push('Video tổng hợp / xếp hạng: nhiều cảnh không thuộc vụ này, chỉ dùng đoạn đã xem và xác nhận đúng nội dung');
+    if (x.type === 'news' || x.type === 'press' || /\b(news|nbc|abc|cbs|cnn|fox|bbc|sky|reuters|ap|afp|nhk|kbs|sbs|ytn|vtv)\b/i.test(x.channel || '')) out.push('Bản tin: thường có chữ chạy và logo đài lớn, cắt khung hoặc chọn đoạn sạch');
+    if (x.type === 'footage' || /visitor|tourist|crowd|ceremony|parade|street|public/i.test(t)) out.push('Cảnh nơi công cộng: làm mờ mặt du khách, người qua đường và trẻ em khi dùng');
+    if (!x.hd) out.push('Chỉ có độ phân giải thấp (SD)');
+    return out;
+  }
   function chapters(desc) {
     var out = [];
     String(desc || '').split('\n').forEach(function (l) {
@@ -90,15 +100,16 @@
     }
     var ids = Object.keys(found), out = [];
     for (var ci = 0, cs = chunk(ids, 50); ci < cs.length; ci++) {
-      var vr = await yt('videos', { part: 'snippet,statistics,contentDetails', id: cs[ci].join(',') }); units += 1;
+      var vr = await yt('videos', { part: 'snippet,statistics,contentDetails,liveStreamingDetails', id: cs[ci].join(',') }); units += 1;
       (vr.items || []).forEach(function (v) {
         var sn = v.snippet || {}, f = found[v.id], chT = sn.channelTitle || '';
         var gov = GOV.test(chT) || orgs.some(function (o2) { return chT.toLowerCase().indexOf(o2) >= 0; });
-        var x = { id: v.id, title: sn.title || '', channel: chT, channelId: sn.channelId, t: Date.parse(sn.publishedAt), views: +(v.statistics || {}).viewCount || 0, dur: iso((v.contentDetails || {}).duration), desc: sn.description || '', live: sn.liveBroadcastContent, gov: gov, qs: f.qs, rank: f.rank };
+        var x = { id: v.id, title: sn.title || '', channel: chT, channelId: sn.channelId, t: Date.parse(sn.publishedAt), views: +(v.statistics || {}).viewCount || 0, dur: iso((v.contentDetails || {}).duration), desc: sn.description || '', live: sn.liveBroadcastContent, wasLive: !!v.liveStreamingDetails, hd: (v.contentDetails || {}).definition === 'hd', gov: gov, qs: f.qs, rank: f.rank };
         x.type = classify(x.title, x.desc, chT, f.hints[0], gov);
         if (!isNaN(evT) && x.t < evT - DAY && x.type !== 'background') x.type = 'background';
         var r = relevance(x, kws); x.rel = r.s; x.hit = r.hit; x.chapters = chapters(x.desc); x.desc = x.desc.slice(0, 500);
         x.related = x.rel >= 2 || (x.rel >= 1 && f.hints.length >= 2) || (!kws.length && f.rank < 5);
+        x.flags = videoFlags(x); x.plan = x.dur && x.dur <= 600 ? 'Tải cả bài, 720p.' : 'Video dài: chỉ tải từng đoạn quanh mốc cần dùng (trước và sau mốc 25 giây), mỗi đoạn một file riêng, tên file ghi giây bắt đầu.';
         x.license = gov ? 'Kênh cơ quan nhà nước — tác phẩm của chính phủ Mỹ thường là public domain, vẫn nên kiểm tra và ghi nguồn' : 'Bản quyền thuộc kênh ' + chT + ' — chỉ dùng trích đoạn ngắn có bình luận, ghi nguồn';
         out.push(x);
       });
@@ -223,9 +234,11 @@
       sec('VIDEO YOUTUBE ĐÃ CHỌN (' + vids.length + ')');
       vids.forEach(function (v, i) {
         L.push('V' + (i + 1) + '. [' + TYPES[v.type][1] + '] ' + v.title);
-        L.push('    Kênh: ' + v.channel + (v.gov ? ' (chính thức)' : '') + ' • ' + dur(v.dur) + ' • ' + fmtN(v.views) + ' view • đăng ' + ymd(v.t));
+        L.push('    Kênh: ' + v.channel + (v.gov ? ' (chính thức)' : '') + ' • ' + dur(v.dur) + ' (' + (v.dur || 0) + ' giây) • ' + (v.hd === false ? 'SD' : 'HD') + ' • ' + fmtN(v.views) + ' view • đăng ' + ymd(v.t));
         L.push('    Link: https://www.youtube.com/watch?v=' + v.id);
         if (v.chapters.length) L.push('    Mốc thời gian: ' + v.chapters.map(function (c) { return c.t + ' ' + c.label; }).join(' | '));
+        if ((v.flags || []).length) L.push('    Lưu ý: ' + v.flags.join('; '));
+        if (v.plan) L.push('    Tải: ' + v.plan);
         L.push('    Bản quyền: ' + v.license);
       });
     }
@@ -241,7 +254,7 @@
     }
     if (imgs.length) {
       sec('HÌNH ẢNH ĐÃ CHỌN (' + imgs.length + ')');
-      imgs.forEach(function (x, i) { L.push('I' + pad(i + 1) + '. [' + x.kind + '] ' + x.title); L.push('    File trong gói zip: anh/I' + pad(i + 1) + '_…  •  Ảnh gốc: ' + x.url + (x.page ? '\n    Trang gốc: ' + x.page : '')); L.push('    Bản quyền: ' + x.license); });
+      imgs.forEach(function (x, i) { L.push('I' + pad(i + 1) + '. [' + x.kind + '] ' + x.title); L.push('    File trong gói zip: anh/I' + pad(i + 1) + '_…  •  Ảnh gốc: ' + x.url + (x.page ? '\n    Trang gốc: ' + x.page : '')); if (x.desc) L.push('    Nội dung theo trang gốc: ' + x.desc); if (x.date) L.push('    Ngày chụp: ' + x.date); L.push('    Bản quyền: ' + x.license); });
     }
     if ((R.imageLinks || []).length) { sec('TÌM THÊM ẢNH (link tìm kiếm)'); R.imageLinks.forEach(function (x) { L.push('- ' + x.q + (x.what ? ' — ' + x.what : '') + ': ' + x.google); }); }
     if ((R.links || []).length) { sec('TÀI LIỆU GỐC & DỮ LIỆU TRA CỨU'); R.links.forEach(function (x) { L.push('- ' + x.group + ' • ' + x.name + ': ' + x.url + (x.what ? ' — ' + x.what : '')); }); }
@@ -251,7 +264,12 @@
     if ((D.reported_claims || []).length) { sec('TIN ĐANG ĐƯỢC ĐƯA NHƯNG CHƯA CÓ XÁC NHẬN CHÍNH THỨC — CHỈ DÙNG VỚI CÂU DẪN RÀO ĐÓN'); D.reported_claims.forEach(function (x) { L.push('- ' + x.claim + (x.reported_by ? ' (nguồn: ' + x.reported_by + ')' : '') + ' ' + srcLabel(x.src)); if (x.phrasing_en) L.push('  Câu đọc gợi ý: "' + x.phrasing_en + '"'); }); }
     if ((D.unverified || []).length) { sec('CHƯA XÁC MINH — KHÔNG NÓI NHƯ SỰ THẬT'); D.unverified.forEach(function (x) { L.push('- ' + x); }); }
     if (D.sensitivity) { sec('LƯU Ý NHẠY CẢM'); L.push(D.sensitivity); }
-    if ((R.sources || []).length) { sec('NGUỒN'); R.sources.forEach(function (s) { L.push('[' + s.n + '] ' + (s.realTitle || s.title) + ' — ' + (s.real || s.uri)); }); }
+    if ((D.privacy || []).length) { sec('KHÔNG NÊU TÊN, KHÔNG ĐƯA HÌNH (bảo vệ quyền riêng tư)'); D.privacy.forEach(function (x) { if (x && x.name) L.push('- ' + x.name + (x.reason ? ': ' + x.reason : '')); }); L.push('Các nguồn có thể nêu những tên này. Trong kịch bản, chữ trên hình, tiêu đề và mô tả chỉ gọi bằng vai trò (ví dụ "người lính", "một du khách").'); }
+    if ((R.sources || []).length) {
+      sec('NGUỒN (kèm đoạn trích nội dung)');
+      L.push('Đoạn trích lấy từ chính bài viết để kịch bản không phải suy từ tiêu đề. Nguồn không có đoạn trích thì chỉ được dùng đúng những gì hồ sơ phía trên đã ghi.');
+      R.sources.forEach(function (s) { L.push('[' + s.n + '] ' + (s.realTitle || s.title) + ' — ' + (s.real || s.uri) + (s.site ? ' (' + s.site + (s.published ? ', ' + String(s.published).slice(0, 10) : '') + ')' : '')); if (s.excerpt) L.push('    ' + (s.excerpt_kind === 'wikipedia' ? 'Trích Wikipedia (CC BY-SA): ' : 'Trích bài: ') + s.excerpt.replace(/\n+/g, '\n    ')); });
+    }
     return L.join('\n');
   }
   var LV = { official: 'Nguồn chính thức', news: 'Báo chí', social: 'Mạng xã hội — chưa xác minh', other: 'Web khác — chưa xác minh' };
@@ -259,7 +277,7 @@
   function frameList(R) { var out = []; (R.videos || []).filter(function (v) { return v.related; }).slice(0, 16).forEach(function (v) { [['1', 'đầu video (~25%)'], ['2', 'giữa video (~50%)'], ['3', 'cuối video (~75%)']].forEach(function (n) { out.push({ key: v.id + ':' + n[0], id: v.id, n: n[0], label: n[1], title: v.title, channel: v.channel, url: 'https://i.ytimg.com/vi/' + v.id + '/hq' + n[0] + '.jpg', big: 'https://i.ytimg.com/vi/' + v.id + '/maxres' + n[0] + '.jpg' }); }); }); return out; }
   function buildJson(R, sel) {
     return {
-      schema: 'youtrend.resource.v1', created: new Date(R.at).toISOString(), mode: R.mode, brief: R.prompt, reference_video: R.refVideo || null, ride: R.ride ? { video: R.ride.video, covered: R.ride.scan.covered, covered_basis: R.ride.scan.basis, viewers_ask: R.ride.scan.asked, gaps: R.ride.gaps || null } : null,
+      schema: 'youtrend.resource.v1', created: new Date(R.at).toISOString(), mode: R.mode, brief: R.prompt, reference_video: R.refVideo || null, ride: R.ride ? { video: Object.assign({}, R.ride.video, { language: rideLang(R.ride).code, language_name: rideLang(R.ride).en, chapters: R.ride.scan.chapters || [], transcript_summary: R.ride.scan.basis === 'transcript' ? (R.ride.scan.chapters || []).map(function (c) { return { t: c.t, title: c.title, summary: c.summary_vi }; }) : 'chưa có lời thoại, chỉ có chapter' }), ride_thumbnail: (packList(R, sel).filter(function (x) { return x.key === 'ride:thumb'; })[0] || {}).id || null, thumbnail_layout: R.ride.thumb || null, covered: R.ride.scan.covered, covered_basis: R.ride.scan.basis, viewers_ask: R.ride.scan.asked, gaps: R.ride.gaps || null } : null,
       dossier: R.dossier, sources: R.sources,
       videos: R.videos.filter(function (v) { return sel.v[v.id]; }).map(function (v) { return { id: v.id, url: 'https://www.youtube.com/watch?v=' + v.id, title: v.title, type: v.type, type_label: TYPES[v.type][1], channel: v.channel, channel_id: v.channelId, official: v.gov, published: new Date(v.t).toISOString(), duration_sec: v.dur, views: v.views, chapters: v.chapters, matched_keywords: v.hit, license_note: v.license }; }),
       images: R.images.filter(function (i) { return sel.i[i.key]; }).map(function (i) { return { kind: i.kind, verification: i.level || '', title: i.title, image_url: i.url, page_url: i.page || '', license_note: i.license, author: i.author || '' }; }),
@@ -277,9 +295,9 @@
     (R.images || []).filter(function (i) { return sel.i[i.key]; }).forEach(function (x, i) {
       var id = 'I' + pad(i + 1), tries = [x.url], sl = fslug(x.title);
       if (/^wc:/.test(x.key) && x.thumb && /\/\d+px-/.test(x.thumb)) tries.push(x.thumb.replace(/\/\d+px-/, '/1920px-'));
-      if (/^yt:/.test(x.key)) tries.push(x.url.replace('maxresdefault', 'hqdefault'));
+      if (/^(yt|ride):/.test(x.key)) tries.push(x.url.replace('maxresdefault', 'sddefault'), x.url.replace('maxresdefault', 'hqdefault'));
       if (x.thumb && tries.indexOf(x.thumb) < 0) tries.push(x.thumb);
-      out.push({ id: id, dir: 'anh', base: id + (sl ? '_' + sl : ''), tries: tries, ref: x.page || '', title: x.title || '', kind: x.kind || '', page: x.page || '', url: x.url, license: x.license || '' });
+      out.push({ id: id, key: x.key, dir: 'anh', base: id + (sl ? '_' + sl : ''), tries: tries, ref: x.page || '', title: x.title || '', kind: x.kind || '', page: x.page || '', url: x.url, license: x.license || '', author: x.author || '', date: x.date || '', desc: x.desc || '' });
     });
     frameList(R).filter(function (f) { return sel.f && sel.f[f.key]; }).forEach(function (f, i) {
       var id = 'F' + pad(i + 1, 2), pg = 'https://www.youtube.com/watch?v=' + f.id;
@@ -291,46 +309,81 @@
     });
     return out;
   }
+  // Ngôn ngữ sản phẩm khi ăn theo một video = ngôn ngữ của video gốc
+  var LANG_EN = { vi: 'Vietnamese', en: 'English', ja: 'Japanese', ko: 'Korean', es: 'Spanish', pt: 'Portuguese', de: 'German', fr: 'French', hi: 'Hindi', zh: 'Chinese', id: 'Indonesian', th: 'Thai', ru: 'Russian', it: 'Italian', ar: 'Arabic', tr: 'Turkish' };
+  function rideLang(rr) { var c = String((rr && rr.scan && rr.scan.lang) || (rr && rr.video && rr.video.language) || '').slice(0, 2).toLowerCase(); return { code: c, en: (rr && rr.scan && rr.scan.lang_name) || LANG_EN[c] || c || 'the language of the reference video', vi: VLANG[c] || ((rr && rr.scan && rr.scan.lang_name) ? 'tiếng ' + rr.scan.lang_name : 'ngôn ngữ của video gốc') }; }
   var VLANG = { vi: 'tiếng Việt', en: 'tiếng Anh', ja: 'tiếng Nhật', ko: 'tiếng Hàn', es: 'tiếng Tây Ban Nha', pt: 'tiếng Bồ Đào Nha', de: 'tiếng Đức', fr: 'tiếng Pháp', hi: 'tiếng Hindi' };
   function claudePrompt(R, sel, o) {
     o = o || {}; var list = packList(R, sel), nI = list.filter(function (x) { return x.dir === 'anh'; }).length, nF = list.length - nI, L = [];
     var style = String(o.tstyle || '').trim();
+    var rr = R.ride, g = rr && rr.gaps, RL = rr ? rideLang(rr) : null;
+    var langVi = rr ? RL.vi : (VLANG[o.vlang] || VLANG.vi), langEn = rr ? RL.en : (LANG_EN[o.vlang] || 'Vietnamese');
+    var wpm = Math.max(120, Math.min(220, +o.wpm || 170)), mins = g ? g.target_minutes : (o.vmin || 12), words = Math.round(mins * wpm / 50) * 50;
+    var thumbId = (list.filter(function (x) { return x.key === 'ride:thumb'; })[0] || {}).id || '';
     L.push('# VIỆC CẦN LÀM');
     L.push('Tôi gửi kèm một file zip tài nguyên do YouTrend gom. Trong zip có: `prompt-claude.md` (chính là nội dung này), `ho-so.json`, `danh-sach-anh.md`, `danh-sach-video.md`, thư mục `anh/` (' + nI + ' ảnh, mã I001…)' + (nF ? ' và thư mục `khung-hinh/` (' + nF + ' khung hình, mã F01… / C01…)' : '') + '.');
     L.push('Nếu tôi chưa gửi zip, hãy nhắc tôi gửi trước khi làm bước 3 và 4.');
-    L.push('', 'Làm lần lượt từng bước, xong bước nào gửi bước đó để tôi duyệt:');
-    L.push('1. KỊCH BẢN: viết lời đọc bằng ' + (VLANG[o.vlang] || VLANG.vi) + ', dài khoảng ' + (o.vmin || 12) + ' phút, chỉ dùng thông tin trong hồ sơ bên dưới. 15 giây đầu phải có hook. Giữ đúng tên riêng, ngày tháng, con số. Thông tin ở mục "CHƯA XÁC MINH" và "TIN ĐANG ĐƯỢC ĐƯA" phải nói kèm câu rào đón. Không khẳng định ai có tội khi toà chưa kết luận.');
-    L.push('2. BẢNG PHÂN CẢNH: lập bảng gồm các cột Thời lượng | Lời đọc | Hình dùng (mã ảnh I…/F…/C…, hoặc video V…/W… kèm mốc thời gian) | Chữ chèn trên hình | Chuyển động (zoom, pan, khoanh đỏ, mũi tên). Mỗi cảnh 3–6 giây. Chỗ nào thiếu hình thì ghi "CẦN TÌM THÊM" kèm từ khoá tìm.');
-    L.push('3. SỬA ẢNH: với các ảnh được dùng, xuất bản 1920×1080 đã thêm chữ, nhãn tên, ngày tháng, khoanh đỏ hoặc mũi tên theo bảng phân cảnh. Giữ nguyên nội dung ảnh gốc, không ghép hay vẽ thêm chi tiết không có thật. Làm mờ mặt trẻ em và người không liên quan tới vụ việc.');
-    L.push('4. THUMBNAIL: thiết kế 3 phương án 1280×720' + (style ? ' theo phong cách: ' + style : '') + '. Chữ to, tối đa 3 dòng, đọc được khi thu nhỏ.');
-    L.push('5. TIÊU ĐỀ VÀ MÔ TẢ: 5 tiêu đề, 1 mô tả có mục nguồn tin và ghi công ảnh theo `danh-sach-anh.md`.');
-    L.push('', 'Bản quyền ảnh: cột "Bản quyền" trong `danh-sach-anh.md` cho biết ảnh nào có giấy phép mở (Wikimedia, Openverse: dùng được nếu ghi công) và ảnh nào của báo chí hoặc kênh khác (chỉ dùng kèm bình luận và ghi nguồn, ưu tiên thay bằng ảnh giấy phép mở khi có).');
-    var rr = R.ride, g = rr && rr.gaps;
+    L.push('', '**Ngôn ngữ sản phẩm: ' + langEn + ' (' + langVi + ').** Lời đọc, chữ trên hình, thumbnail, tiêu đề, mô tả và tag đều dùng ngôn ngữ này' + (rr ? ' vì đó là ngôn ngữ của video gốc' : '') + '. Ghi chú gửi tôi thì viết bằng tiếng Việt, ngắn gọn.');
+    L.push('', 'Làm lần lượt từng bước, xong bước nào gửi bước đó để tôi duyệt rồi mới làm bước sau:');
+    L.push('1. KỊCH BẢN: viết lời đọc bằng ' + langVi + ', dài khoảng ' + mins + ' phút. Giọng đọc của tôi chạy khoảng ' + wpm + ' từ/phút nên số từ mục tiêu = số phút × ' + wpm + ' = khoảng ' + words.toLocaleString('vi-VN') + ' từ; đếm số từ và ghi ở cuối kịch bản. Chỉ dùng thông tin trong hồ sơ bên dưới. 15 giây đầu phải có hook. Giữ đúng tên riêng, ngày tháng, con số. Thông tin ở mục "CHƯA XÁC MINH" và "TIN ĐANG ĐƯỢC ĐƯA" phải nói kèm câu rào đón. Không khẳng định ai có tội khi toà chưa kết luận. Không nêu tên những người ở mục "KHÔNG NÊU TÊN".' + (rr ? ' Tỷ lệ nội dung theo mục "ĂN THEO VIDEO GỐC". Gửi kèm bảng đối chiếu ba cột: chương của video gốc | chương của video mới | điểm mới chèn vào.' : ''));
+    L.push('2. BẢNG PHÂN CẢNH: lập bảng gồm các cột Thời lượng | Lời đọc | Tên file hình | Hình dùng (mã ảnh I…/F…/C…, hoặc video V…/W… kèm giây bắt đầu) | Chữ chèn trên hình | Chuyển động (zoom, pan, khoanh đỏ, mũi tên). Mỗi cảnh 3–6 giây. Cột Lời đọc phải khớp nguyên văn kịch bản: lập bảng xong hãy ghép cột này lại, so tự động với kịch bản và báo tôi nếu lệch chữ nào. Chữ chèn trên hình viết bằng ' + langVi + '. Mỗi ảnh gốc dùng tối đa 3 lần trong video; mỗi đoạn clip [video, giây bắt đầu] chỉ dùng 1 lần. Thiếu hình thì tự tìm thêm ảnh giấy phép mở (Wikimedia Commons, DVIDS, Library of Congress, trang cơ quan nhà nước) và ghi rõ link, tác giả, giấy phép; tìm không ra thì ghi "CẦN TÌM THÊM" kèm từ khoá.');
+    L.push('3. SỬA ẢNH: với các ảnh được dùng, xuất bản 1920×1080 đã thêm chữ, nhãn tên, ngày tháng, khoanh đỏ hoặc mũi tên theo bảng phân cảnh. Chữ và nhãn làm thành lớp overlay nền trong suốt (PNG) đặt đè lên ảnh hoặc video; không dựng đồ hoạ trên nền mờ. Ghi nguồn ở góc ảnh bằng ' + langVi + ' (dạng "Source: …"). Giữ nguyên nội dung ảnh gốc, không ghép hay vẽ thêm chi tiết không có thật. Làm mờ mặt trẻ em, du khách và người không liên quan tới vụ việc.');
+    L.push('4. THUMBNAIL: thiết kế 2–3 phương án 1280×720, mỗi phương án kèm bản thu nhỏ rộng 320px để kiểm tra còn đọc được' + (style ? '. Phong cách: ' + style : '') + '. Chữ bằng ' + langVi + ', to, tối đa 3 dòng. Dùng ảnh thật trong gói; không đặt chữ hay ký hiệu đè lên mặt người.' + (rr ? ' Bố cục giống khoảng 70–80% thumbnail của video gốc' + (thumbId ? ' (file mã ' + thumbId + ' trong `anh/`)' : '') + ', xem mục "Thumbnail của video gốc" bên dưới.' : ''));
+    L.push('5. ĐĂNG VIDEO: 5 tiêu đề (mỗi tiêu đề tối đa 100 ký tự, đúng sự thật' + (rr ? ', ưu tiên dạng "câu hỏi mà video gốc đặt ra + câu trả lời mới"' : '') + '); 1 mô tả tối đa 5.000 ký tự, KHÔNG chèn link, có mục nguồn tin (ghi tên nguồn) và ghi công ảnh, clip theo `danh-sach-anh.md` và `danh-sach-video.md`; 1 bình luận ghim liệt kê đầy đủ các kênh có clip được dùng; tag; danh mục; giờ đăng đề xuất theo múi giờ của khán giả' + (rr ? ' video gốc' : '') + '.');
+    L.push('6. DỰNG VIDEO (làm khi tôi gửi file giọng đọc):');
+    L.push('   - Sau khi tôi duyệt kịch bản, xuất lời đọc thành file txt theo từng chương và 1 file toàn bộ để tôi thu giọng.');
+    L.push('   - Tôi chỉ gửi MỘT file giọng. Căn cảnh bằng nhận dạng giọng có mốc từng từ (faster-whisper, word timestamps). Rút khoảng lặng thừa: còn 0,2–0,4 giây giữa các câu và khoảng 0,85 giây giữa các chương.');
+    L.push('   - Render 1920×1080, 60fps. Ảnh tĩnh dùng chuyển động Ken Burns. Clip có nhãn "Source: <tên kênh>". Làm mờ mặt du khách và trẻ em. Xuất kèm phụ đề SRT.');
+    L.push('   - Trước khi giao, soát khung hình giữa của từng cảnh để bắt màn chờ, hình sai nội dung và logo lớn.');
+    L.push('', 'Video nguồn: video từ 10 phút trở xuống tải cả bài 720p; video dài hơn chỉ tải từng đoạn quanh mốc dùng (trước và sau 25 giây), mỗi đoạn một file riêng có ghi giây bắt đầu trong tên. Không gộp nhiều --download-sections của yt-dlp vào một file vì mốc sẽ lệch. Các dòng "Lưu ý" ở từng video là suy từ loại video và tiêu đề, phải xem lại hình trước khi dùng.');
+    L.push('', 'Ảnh: cột "Nội dung theo trang gốc", "Tác giả", "Ngày chụp" trong `danh-sach-anh.md` cho biết ảnh thật sự chụp gì và khi nào; không đoán nội dung ảnh qua tên file. Cột "Bản quyền" cho biết ảnh nào có giấy phép mở (public domain, Wikimedia, Openverse: dùng được, ghi công theo giấy phép) và ảnh nào của báo chí hoặc kênh khác (chỉ dùng kèm bình luận và ghi nguồn, ưu tiên thay bằng ảnh giấy phép mở khi có). Tải ảnh từ Wikimedia Commons thì chỉ dùng cỡ chuẩn (330, 500, 960, 1280, 1920px) và cách nhau ít nhất 2 giây để không bị lỗi 429.');
+    L.push('', '# CÁCH LÀM VIỆC VỚI TÔI');
+    L.push('- Mỗi bước gửi để tôi duyệt; ghi chú bằng tiếng Việt, ngắn gọn.');
+    L.push('- Tôi thích nhiều hình thật, ít đồ hoạ trên nền mờ, không lặp hình.');
+    L.push('- Không chèn link vào mô tả; vẫn ghi tên nguồn và ghi công.');
     if (rr) {
+      var sc = rr.scan, chs = sc.chapters || [], th = rr.thumb;
       L.push('', '# ĂN THEO VIDEO GỐC');
-      L.push('Video mới làm về cùng vụ việc với video "' + rr.video.title + '" của kênh ' + rr.video.channel + ' (' + rr.video.minutes + ' phút, https://www.youtube.com/watch?v=' + rr.video.id + ').');
-      L.push('Mục tiêu: người vừa xem video đó bấm vào video này vì nó có thêm thông tin. Viết kịch bản mới hoàn toàn từ hồ sơ, không chép lời, ví dụ hay bố cục của video gốc.');
-      if (g) L.push('Độ dài mục tiêu: khoảng ' + g.target_minutes + ' phút (dùng số này thay cho độ dài ở bước 1). Khoảng một phần tư tới một phần ba thời lượng phải là các ĐIỂM MỚI bên dưới; phần bối cảnh trùng với video gốc thì kể gọn.');
-      if (rr.scan.covered.length) { L.push('', '## Video gốc đã nói' + (rr.scan.basis === 'transcript' ? '' : ' (đoán từ tiêu đề và mô tả, chưa chắc đủ)')); rr.scan.covered.forEach(function (x) { L.push('- ' + x); }); }
-      if (rr.scan.asked.length) { L.push('', '## Người xem video gốc còn hỏi'); rr.scan.asked.forEach(function (x) { L.push('- ' + x.q_vi + (x.likes ? ' (' + x.likes + ' thích)' : '')); }); }
+      L.push('Video mới làm về cùng vụ việc với video "' + rr.video.title + '" của kênh ' + rr.video.channel + ' (' + rr.video.minutes + ' phút, ngôn ngữ: ' + RL.en + ', https://www.youtube.com/watch?v=' + rr.video.id + ').');
+      L.push('Mục tiêu: người vừa xem video đó bấm vào video này vì nó có thêm thông tin.');
+      L.push('Tỷ lệ nội dung: phủ đủ các ý (chương) của video gốc, xáo lại thứ tự và viết bằng lời mới, không chép câu chữ; phần này chiếm khoảng 70% thời lượng. Khoảng 30% còn lại là ĐIỂM MỚI mà video gốc chưa có. Ý nào của video gốc không kiểm được trong hồ sơ thì nói kèm câu rào đón hoặc bỏ.');
+      L.push('Độ dài mục tiêu: khoảng ' + mins + ' phút, tức khoảng ' + words.toLocaleString('vi-VN') + ' từ ở tốc độ ' + wpm + ' từ/phút' + (g && g.ref_minutes ? ' (video gốc ' + g.ref_minutes + ' phút)' : '') + '.');
+      if (chs.length) { L.push('', '## Chương của video gốc' + (sc.basis === 'transcript' ? ' (mốc, tên, tóm tắt ý theo lời thoại)' : ' — CHƯA CÓ LỜI THOẠI, CHỈ CÓ CHAPTER: xem video gốc để biết từng chương nói gì trước khi viết')); chs.forEach(function (c) { L.push('- ' + (c.t ? c.t + ' ' : '') + c.title + (c.summary_vi ? ': ' + c.summary_vi : '')); }); }
+      else L.push('', '## Chương của video gốc', 'Video gốc không có chương trong mô tả và chưa có lời thoại. Xem video gốc để tự chia chương trước khi viết.');
+      if (sc.covered.length) { L.push('', '## Video gốc đã nói' + (sc.basis === 'transcript' ? ' (theo lời thoại)' : sc.basis === 'chapters' ? ' (suy từ tên chương, chưa chắc đủ)' : ' (đoán từ tiêu đề và mô tả, chưa chắc đủ)')); sc.covered.forEach(function (x) { L.push('- ' + x); }); }
+      if (sc.asked.length) { L.push('', '## Người xem video gốc còn hỏi'); sc.asked.forEach(function (x) { L.push('- ' + x.q_vi + (x.likes ? ' (' + x.likes + ' thích)' : '')); }); }
       if (g && g.gaps.length) { L.push('', '## ĐIỂM MỚI: video gốc chưa nói, phải có trong kịch bản'); g.gaps.forEach(function (x, i) { L.push((i + 1) + '. ' + x.point_vi + (x.detail_vi ? ' ' + x.detail_vi : '') + (x.src.length ? ' [nguồn ' + x.src.join(', ') + ']' : '') + (x.confidence === 'có nguồn' ? '' : ' (CHƯA KIỂM CHỨNG: nói kèm câu rào đón)')); }); }
       if (g && g.open_questions.length) { L.push('', '## Câu hỏi của người xem mà hồ sơ chưa trả lời được (không được bịa câu trả lời; nếu nhắc tới thì nói rõ là chưa có thông tin chính thức)'); g.open_questions.forEach(function (x) { L.push('- ' + x); }); }
       if (g && g.angle_vi) L.push('', 'Góc tiếp cận: ' + g.angle_vi);
-      if (g && g.outline.length) { L.push('', '## Dàn ý gợi ý'); g.outline.forEach(function (x, i) { L.push((i + 1) + '. ' + x.part + ' (' + (x.minutes || '?') + ' phút' + (x.is_new ? ', MỚI' : '') + '): ' + x.content_vi); }); }
+      if (g && g.outline.length) { L.push('', '## Dàn ý gợi ý (mỗi chương của video gốc thành một phần)'); g.outline.forEach(function (x, i) { L.push((i + 1) + '. ' + x.part + ' (' + (x.minutes || '?') + ' phút' + (x.is_new ? ', phần hoàn toàn MỚI' : '') + ')' + (x.ref_chapter ? ' — phủ chương gốc: ' + x.ref_chapter : '')); if (x.ref_vi) L.push('   Ý của video gốc: ' + x.ref_vi); if (x.new_vi) L.push('   Điểm mới chèn vào: ' + x.new_vi); }); }
+      L.push('', '## Thumbnail của video gốc' + (thumbId ? ' (ride_thumbnail: ' + thumbId + ')' : ''));
+      if (!thumbId) L.push('Ảnh thumbnail video gốc chưa được chọn vào gói: mở https://i.ytimg.com/vi/' + rr.video.id + '/maxresdefault.jpg để xem.');
+      if (th) {
+        L.push('Bố cục: ' + th.layout_vi);
+        L.push('- Nhân vật chính: ' + (th.main_subject.what_vi || '?') + ' — vị trí ' + (th.main_subject.position || '?') + ', cỡ ' + (th.main_subject.size || '?'));
+        if ((th.others_vi || []).length) L.push('- Chi tiết phụ: ' + th.others_vi.join('; '));
+        L.push('- Chữ: ' + (th.text.content ? '"' + th.text.content + '" (' + th.text.word_count + ' từ), ' + th.text.position_vi + ', màu ' + th.text.color_vi + ', kiểu ' + th.text.font_vi : 'không có chữ'));
+        L.push('- Nhãn / dải chữ: ' + (th.has_label ? th.label_vi || 'có' : 'không'));
+        L.push('- Nền: ' + th.background_vi);
+        if (th.looks_ai_generated) L.push('- CẢNH BÁO: thumbnail video gốc có dấu hiệu là ảnh do AI dựng hoặc ghép (' + (th.ai_signs_vi || 'AI nhận định') + '). Chỉ học bố cục; không dựng lại cảnh bịa, chỉ dùng ảnh thật trong gói.');
+        if (th.text_over_face) L.push('- Thumbnail gốc có chữ đè lên mặt người: bản của mình không làm vậy.');
+      } else L.push('Chưa phân tích được bố cục: tự xem ảnh và mô tả vị trí nhân vật chính, số chữ, màu chữ, kiểu chữ, có nhãn hay không trước khi thiết kế.');
+      L.push('Giữ khoảng 70–80% bố cục (vị trí nhân vật, vị trí và số chữ, tông màu); đổi ảnh, đổi chữ. Không sao chép nguyên ảnh.');
     }
     return L.join('\n') + '\n\n---\n\n' + buildPrompt(R, sel);
   }
   function mdCell(s) { return String(s || '').replace(/\|/g, '/').replace(/\s+/g, ' ').trim(); }
   function imageSheet(list, res) {
     res = res || {}; var ok = list.filter(function (x) { return !res[x.id] || res[x.id].file; }), bad = list.filter(function (x) { return res[x.id] && res[x.id].error; });
-    var L = ['# Danh sách ảnh trong gói', '', '| Mã | File | Mô tả | Loại | Trang gốc | Bản quyền |', '|---|---|---|---|---|---|'];
-    ok.forEach(function (x) { L.push('| ' + x.id + ' | ' + ((res[x.id] && res[x.id].file) || x.dir + '/' + x.base) + ' | ' + mdCell(x.title) + ' | ' + mdCell(x.kind) + ' | ' + (x.page || x.url || '') + ' | ' + mdCell(x.license) + ' |'); });
+    var L = ['# Danh sách ảnh trong gói', '', 'Cột "Nội dung theo trang gốc" là mô tả do nơi đăng ảnh ghi. Dùng cột này, không đoán nội dung ảnh qua tên file (ảnh trông giống họp báo có thể là một sự kiện khác).', '', '| Mã | File | Mô tả | Loại | Nội dung theo trang gốc | Tác giả | Ngày chụp | Trang gốc | Bản quyền |', '|---|---|---|---|---|---|---|---|---|'];
+    ok.forEach(function (x) { L.push('| ' + x.id + ' | ' + ((res[x.id] && res[x.id].file) || x.dir + '/' + x.base) + ' | ' + mdCell(x.title) + ' | ' + mdCell(x.kind) + (x.key === 'ride:thumb' ? ' (THUMBNAIL VIDEO GỐC)' : '') + ' | ' + (mdCell(x.desc) || 'không có') + ' | ' + (mdCell(x.author) || 'không rõ') + ' | ' + (mdCell(x.date) || 'không rõ') + ' | ' + (x.page || x.url || '') + ' | ' + mdCell(x.license) + ' |'); });
     if (bad.length) { L.push('', '## Không tải được (' + bad.length + ') — mở link để lưu tay', ''); bad.forEach(function (x) { L.push('- ' + x.id + ' ' + mdCell(x.title) + ': ' + (x.url || x.page) + ' (' + res[x.id].error + ')'); }); }
     return L.join('\n') + '\n';
   }
   function videoSheet(R, sel) {
     var L = ['# Danh sách video tư liệu', '', 'Video không nằm trong zip. Mở link để xem và lấy đúng đoạn cần dùng.', ''];
-    R.videos.filter(function (v) { return sel.v[v.id]; }).forEach(function (v, i) { L.push('- V' + (i + 1) + ' [' + TYPES[v.type][1] + '] ' + v.title + ' — ' + v.channel + ' • ' + dur(v.dur) + ' • https://www.youtube.com/watch?v=' + v.id + (v.chapters && v.chapters.length ? '\n  Mốc: ' + v.chapters.map(function (c) { return c.t + ' ' + c.label; }).join(' | ') : '') + '\n  Bản quyền: ' + v.license); });
+    L.push('Cách tải: video từ 10 phút trở xuống tải cả bài 720p. Video dài hơn chỉ tải từng đoạn quanh mốc dùng (trước và sau 25 giây), MỖI ĐOẠN MỘT FILE RIÊNG có ghi giây bắt đầu trong tên (ví dụ V3_0312s.mp4). Không gộp nhiều --download-sections của yt-dlp vào một file vì mốc thời gian sẽ lệch.', 'Web không xem được hình trong video: các dòng "Lưu ý" là suy từ loại video và tiêu đề. Luôn soát khung hình giữa của từng đoạn trước khi dùng.', '');
+    R.videos.filter(function (v) { return sel.v[v.id]; }).forEach(function (v, i) { L.push('- V' + (i + 1) + ' [' + TYPES[v.type][1] + '] ' + v.title + ' — ' + v.channel + ' • ' + dur(v.dur) + ' (' + (v.dur || 0) + ' giây) • ' + (v.hd === false ? 'SD' : 'HD') + (v.wasLive ? ' • từng phát trực tiếp' : '') + ' • https://www.youtube.com/watch?v=' + v.id + (v.chapters && v.chapters.length ? '\n  Mốc: ' + v.chapters.map(function (c) { return c.t + ' ' + c.label; }).join(' | ') : '\n  Mốc: không có chương trong mô tả') + ((v.flags || []).length ? '\n  Lưu ý: ' + v.flags.join('; ') : '') + (v.plan ? '\n  Tải: ' + v.plan : '') + '\n  Bản quyền: ' + v.license); });
     (R.webVideos || []).filter(function (w) { return sel.w && sel.w[w.key]; }).forEach(function (w, i) { L.push('- W' + (i + 1) + ' [' + (LV[w.level || 'other']) + '] ' + w.url + ' — từ bài: ' + (w.pageTitle || w.site || '') + ' (' + w.page + ')'); });
     return L.join('\n') + '\n';
   }
@@ -351,7 +404,7 @@
     var e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csize, true); e.setUint32(16, off, true);
     return parts.concat(central, [new Uint8Array(e.buffer)]);
   }
-  return { packList: packList, claudePrompt: claudePrompt, imageSheet: imageSheet, videoSheet: videoSheet, zipParts: zipParts, crc32: crc32, VLANG: VLANG, LV: LV, frameList: frameList, TYPES: TYPES, TYPE_ORDER: TYPE_ORDER, iso: iso, dur: dur, fmtN: fmtN, ytId: ytId, keywords: keywords, freeDossier: freeDossier, classify: classify, chapters: chapters, collectVideos: collectVideos, topicLinks: topicLinks, coverScore: coverScore, coverMatch: coverMatch, imageLinks: imageLinks, buildPrompt: buildPrompt, buildJson: buildJson };
+  return { packList: packList, claudePrompt: claudePrompt, imageSheet: imageSheet, videoSheet: videoSheet, zipParts: zipParts, crc32: crc32, VLANG: VLANG, LANG_EN: LANG_EN, rideLang: rideLang, videoFlags: videoFlags, LV: LV, frameList: frameList, TYPES: TYPES, TYPE_ORDER: TYPE_ORDER, iso: iso, dur: dur, fmtN: fmtN, ytId: ytId, keywords: keywords, freeDossier: freeDossier, classify: classify, chapters: chapters, collectVideos: collectVideos, topicLinks: topicLinks, coverScore: coverScore, coverMatch: coverMatch, imageLinks: imageLinks, buildPrompt: buildPrompt, buildJson: buildJson };
 });
 
 // ============================ GIAO DIỆN ============================
@@ -415,7 +468,7 @@
   function lsJson(k, d) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (e) { return d; } }
   function lsPut(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
   var EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif' };
-  function wcItem(c) { return { key: 'wc:' + c.url, kind: 'Wikimedia Commons', title: c.title, url: c.url, page: c.page, thumb: c.thumb, author: c.author, license: (c.license || 'Xem trang gốc') + (c.author ? ' • tác giả: ' + c.author : '') + ' — ghi công theo giấy phép' }; }
+  function wcItem(c) { return { key: 'wc:' + c.url, kind: c.pd ? (c.gov ? 'Wikimedia Commons — public domain, ảnh cơ quan nhà nước' : 'Wikimedia Commons — public domain') : 'Wikimedia Commons', title: c.title, url: c.url, page: c.page, thumb: c.thumb, author: c.author, date: c.date || '', desc: c.desc || '', pd: !!c.pd, license: (c.license || 'Xem trang gốc') + (c.author ? ' • tác giả: ' + c.author : '') + ' — ghi công theo giấy phép' }; }
   function ovItem(o) { return { key: 'ov:' + o.url, kind: 'Openverse (giấy phép mở)', title: o.title, url: o.url, page: o.page, thumb: o.thumb || o.url, author: o.author, license: (o.license || 'CC') + (o.author ? ' • tác giả: ' + o.author : '') + (o.source ? ' • ' + o.source : '') + ' — ghi công theo giấy phép' }; }
   function imgGroup(x) { return /^(wc|ov):/.test(x.key) ? 'free' : /^yt:/.test(x.key) ? 'yt' : x.level === 'official' ? 'official' : 'news'; }
   function download(name, text, type) { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: type })); a.download = name; a.click(); }
@@ -477,7 +530,7 @@
     var p = props || {};
     var a0 = useState(''), prompt = a0[0], setPrompt = a0[1];
     var a1 = useState(''), ref = a1[0], setRef = a1[1];
-    var a2 = useState(function () { try { return Object.assign({ hours: 168, lang: 'vi', nq: 8, vlang: 'vi', vmin: 12, tstyle: '' }, JSON.parse(localStorage.getItem('res1_opt') || '{}')); } catch (e) { return { hours: 168, lang: 'vi', nq: 8, vlang: 'vi', vmin: 12, tstyle: '' }; } }), opt = a2[0], setOpt = a2[1];
+    var a2 = useState(function () { try { return Object.assign({ hours: 168, lang: 'vi', nq: 8, vlang: 'vi', vmin: 12, wpm: 170, tstyle: '' }, JSON.parse(localStorage.getItem('res1_opt') || '{}')); } catch (e) { return { hours: 168, lang: 'vi', nq: 8, vlang: 'vi', vmin: 12, wpm: 170, tstyle: '' }; } }), opt = a2[0], setOpt = a2[1];
     var a3 = useState(null), R = a3[0], setR = a3[1];
     var a4 = useState({ v: {}, i: {} }), sel = a4[0], setSel = a4[1];
     var a5 = useState(null), prog = a5[0], setProg = a5[1];
@@ -551,21 +604,26 @@
         var imgs = [];
         try {
           var urls = res.sources.map(function (s) { return s.uri; });
-          var en = await api({ action: 'enrich', urls: urls, imageQueries: D.image_queries.map(function (x) { return x.q; }).slice(0, 8) });
+          // truy vấn ảnh giấy phép mở theo từng thực thể trong hồ sơ: địa điểm, đơn vị, người, đồ vật
+          var E2q = D.entities || {}, eq = [];
+          [E2q.places, E2q.organizations, E2q.objects, E2q.people].forEach(function (arr) { (arr || []).slice(0, 5).forEach(function (x2) { var nm = String((x2 && x2.name) || '').trim(); if (nm.length >= 3 && eq.indexOf(nm) < 0) eq.push(nm); }); });
+          var en = await api({ action: 'enrich', urls: urls, imageQueries: D.image_queries.map(function (x) { return x.q; }).slice(0, 10), entityQueries: eq.slice(0, 14) });
           var byFrom = {}; (en.pages || []).forEach(function (pg) { byFrom[pg.from] = pg; });
-          res.sources.forEach(function (s) { var pg = byFrom[s.uri]; if (pg) { s.real = pg.url; s.realTitle = pg.title || s.title; s.site = pg.site; s.published = pg.published; s.image = pg.image; } });
+          res.sources.forEach(function (s) { var pg = byFrom[s.uri]; if (pg) { s.real = pg.url; s.realTitle = pg.title || s.title; s.site = pg.site; s.published = pg.published; s.image = pg.image; if (pg.excerpt) { s.excerpt = pg.excerpt; s.excerpt_kind = pg.excerpt_kind || 'article'; } } });
           var KIND = { official: 'Ảnh nguồn chính thức', news: 'Ảnh báo chí', social: 'Ảnh mạng xã hội — chưa xác minh', other: 'Ảnh web — chưa xác minh' }, seenI = {}, wv = [];
           (en.pages || []).forEach(function (pg) {
             var lv = pg.level || 'other';
-            (pg.images || (pg.image ? [{ url: pg.image }] : [])).forEach(function (im) { if (seenI[im.url]) return; seenI[im.url] = 1; imgs.push({ key: 'pg:' + im.url, kind: KIND[lv], level: lv, title: (im.alt || pg.title || pg.site || '').slice(0, 160), url: im.url, page: pg.url, thumb: im.url, license: (lv === 'official' ? 'Tác phẩm của cơ quan nhà nước — thường được dùng, vẫn ghi nguồn ' : 'Có bản quyền của ') + (pg.site || 'trang gốc') + (lv === 'official' ? '' : ' — cần xin phép / dùng có bình luận, ghi nguồn') }); });
+            (pg.images || (pg.image ? [{ url: pg.image }] : [])).forEach(function (im) { if (seenI[im.url]) return; seenI[im.url] = 1; imgs.push({ key: 'pg:' + im.url, kind: KIND[lv], level: lv, title: (im.alt || pg.title || pg.site || '').slice(0, 160), desc: im.alt && im.alt !== 'Ảnh đại diện bài viết' ? im.alt : '', date: String(pg.published || '').slice(0, 10), url: im.url, page: pg.url, thumb: im.url, license: (lv === 'official' ? 'Tác phẩm của cơ quan nhà nước — thường được dùng, vẫn ghi nguồn ' : 'Có bản quyền của ') + (pg.site || 'trang gốc') + (lv === 'official' ? '' : ' — cần xin phép / dùng có bình luận, ghi nguồn') }); });
             (pg.videos || []).forEach(function (vv) { if (wv.some(function (x) { return x.url === vv.url; })) return; wv.push({ key: 'wv:' + vv.url, kind: vv.kind, url: vv.url, id: vv.id, level: vv.kind === 'x' || vv.kind === 'tiktok' ? 'social' : lv, page: pg.url, site: pg.site, pageTitle: pg.title }); });
           });
           res.webVideos = wv;
           (en.commons || []).forEach(function (c) { imgs.push(wcItem(c)); });
           (en.openverse || []).forEach(function (x) { if (!seenI[x.url]) { seenI[x.url] = 1; imgs.push(ovItem(x)); } });
-          mark('media', 'ok', imgs.length + ' ảnh • ' + (res.webVideos || []).length + ' video trong bài báo');
+          var nFree = imgs.filter(function (x2) { return /^(wc|ov):/.test(x2.key); }).length;
+          mark('media', 'ok', imgs.length + ' ảnh (' + nFree + ' giấy phép mở) • ' + (res.webVideos || []).length + ' video trong bài báo');
         } catch (e) { mark('media', 'skip', e.message); }
         res.videos.filter(function (v) { return v.related; }).slice(0, 8).forEach(function (v) { imgs.push({ key: 'yt:' + v.id, kind: 'Thumbnail YouTube', title: v.title, url: 'https://i.ytimg.com/vi/' + v.id + '/maxresdefault.jpg', page: 'https://www.youtube.com/watch?v=' + v.id, thumb: 'https://i.ytimg.com/vi/' + v.id + '/mqdefault.jpg', license: 'Bản quyền của kênh ' + v.channel + ' — chỉ tham khảo bố cục' }); });
+        if (x.ride) imgs.unshift({ key: 'ride:thumb', kind: 'Thumbnail video gốc', title: 'Thumbnail video gốc: ' + x.ride.video.title, desc: 'Ảnh bìa của video đang ăn theo. Chỉ để tham khảo bố cục, không dùng lại ảnh này.', url: 'https://i.ytimg.com/vi/' + x.ride.video.id + '/maxresdefault.jpg', page: 'https://www.youtube.com/watch?v=' + x.ride.video.id, thumb: 'https://i.ytimg.com/vi/' + x.ride.video.id + '/mqdefault.jpg', license: 'Bản quyền của kênh ' + x.ride.video.channel + ' — chỉ tham khảo bố cục' });
         res.images = imgs; res.links = E.topicLinks(D, text); res.imageLinks = E.imageLinks(D);
         // B6 (chỉ khi ăn theo một video): so hồ sơ với video gốc để tìm phần nó chưa nói
         if (x.ride) {
@@ -607,12 +665,14 @@
         var rv = await yt('videos', { part: 'snippet,statistics,contentDetails', id: id }), it = (rv.items || [])[0];
         if (!it) throw new Error('Không tìm thấy video này (đã xoá, riêng tư hoặc link sai).');
         var sn = it.snippet || {}, sx = it.statistics || {}, dur = E.iso((it.contentDetails || {}).duration);
-        var video = { id: id, title: sn.title || '', channel: sn.channelTitle || '', channelId: sn.channelId || '', published: sn.publishedAt || '', minutes: Math.round(dur / 6) / 10, dur: dur, views: +sx.viewCount || 0, likes: +sx.likeCount || 0, nComments: +sx.commentCount || 0, tags: (sn.tags || []).slice(0, 25), description: String(sn.description || '').slice(0, 4000) };
+        var video = { id: id, title: sn.title || '', channel: sn.channelTitle || '', channelId: sn.channelId || '', published: sn.publishedAt || '', minutes: Math.round(dur / 6) / 10, dur: dur, views: +sx.viewCount || 0, likes: +sx.likeCount || 0, nComments: +sx.commentCount || 0, tags: (sn.tags || []).slice(0, 25), description: String(sn.description || '').slice(0, 4000), language: String(sn.defaultAudioLanguage || sn.defaultLanguage || '').slice(0, 10), chapters: E.chapters(sn.description || '') };
         var comments = [];
         try { var cr = await yt('commentThreads', { part: 'snippet', videoId: id, order: 'relevance', maxResults: 100, textFormat: 'plainText' }); comments = (cr.items || []).map(function (c) { var t = ((c.snippet || {}).topLevelComment || {}).snippet || {}; return { t: String(t.textDisplay || t.textOriginal || '').slice(0, 300), l: +t.likeCount || 0 }; }).filter(function (c) { return c.t.length > 12; }).sort(function (a, b) { return b.l - a.l; }).slice(0, 80); } catch (e) { }
         setRd(function (x) { return Object.assign({}, x, { busy: 'AI đang đọc ' + comments.length + ' bình luận' + (rd.tr.trim().length > 300 ? ' và phụ đề' : '') + '…' }); });
-        var r = await api({ action: 'rideScan', data: { video: video, comments: comments, transcript: rd.tr } });
-        var next = { url: rd.url, tr: rd.tr, open: rd.open, busy: '', err: '', video: Object.assign({}, video, { description: undefined }), scan: r.scan, nRead: comments.length, at: Date.now() };
+        // đọc video (chữ) và phân tích ảnh bìa (hình) cùng lúc; ảnh bìa lỗi thì bỏ qua, không chặn việc chính
+        var both = await Promise.all([api({ action: 'rideScan', data: { video: video, comments: comments, transcript: rd.tr } }), api({ action: 'rideThumb', data: { id: id, title: video.title } }).then(function (x) { return x.thumb; }, function () { return null; })]);
+        var r = both[0];
+        var next = { url: rd.url, tr: rd.tr, open: rd.open, busy: '', err: '', video: Object.assign({}, video, { description: undefined, language: r.scan.lang || video.language.slice(0, 2) }), scan: r.scan, thumb: both[1], nRead: comments.length, at: Date.now() };
         setRd(next); lsPut('res1_ride', Object.assign({}, next, { tr: next.tr.slice(0, 60000) }));
       } catch (e) { setRd(function (x) { return Object.assign({}, x, { busy: '', err: (e && (e.msg || e.message)) || 'Không phân tích được video.' }); }); }
     }
@@ -620,11 +680,11 @@
       if (!rd.scan) return;
       var o = Object.assign({}, opt); if (o.hours && o.hours < 720) o.hours = 720;      // vụ việc của video gốc có thể đã diễn ra vài tuần
       setPrompt(rd.scan.event_query); setRef(rd.url);
-      run(rd.scan.event_query, o, { ref: rd.url, ride: { video: rd.video, scan: rd.scan, nRead: rd.nRead } });
+      run(rd.scan.event_query, o, { ref: rd.url, ride: { video: rd.video, scan: rd.scan, thumb: rd.thumb || null, nRead: rd.nRead } });
     }
     async function rideGaps(res) {
-      var rr = res.ride, VL = { vi: 'Vietnamese', en: 'English', ja: 'Japanese', ko: 'Korean', es: 'Spanish', de: 'German', fr: 'French', hi: 'Hindi', pt: 'Portuguese' };
-      var g = await api({ action: 'rideGaps', data: { title: rr.video.title, minutes: rr.video.minutes, covered: rr.scan.covered, asked: rr.scan.asked, basis: rr.scan.basis, vlang: VL[opt.vlang] || VL[rr.scan.lang] || 'the reference video language', dossier: res.dossier } });
+      var rr = res.ride;
+      var g = await api({ action: 'rideGaps', data: { title: rr.video.title, minutes: rr.video.minutes, wpm: opt.wpm || 170, chapters: rr.scan.chapters || [], covered: rr.scan.covered, asked: rr.scan.asked, basis: rr.scan.basis, vlang: E.rideLang(rr).en, dossier: res.dossier } });
       return g.gaps;
     }
     async function rideRetry() {
@@ -692,6 +752,16 @@
       var list = E.packList(R, sel); if (!list.length) { toast('Chưa chọn ảnh nào để tải.'); return; }
       var res = {}, files = [], done = 0, fail = 0, next = 0, stop = '';
       setPk({ done: 0, total: list.length, fail: 0 });
+      var wcLast = 0, wcChain = Promise.resolve();
+      var isWc = function (u) { return /(^|\.)wikimedia\.org\//.test(String(u).replace(/^https?:\/\//, '')); };
+      // Wikimedia chặn (429) khi tải dồn dập: xếp hàng, mỗi lần cách nhau ít nhất 2 giây
+      function wcGate() { var pr = wcChain.then(function () { var wait = Math.max(0, wcLast + 2000 - Date.now()); return new Promise(function (r) { setTimeout(r, wait); }).then(function () { wcLast = Date.now(); }); }); wcChain = pr.catch(function () { }); return pr; }
+      async function getImg(u, ref) {
+        if (!isWc(u)) return apiBin({ action: 'image', url: u, ref: ref });
+        await wcGate();
+        try { return await apiBin({ action: 'image', url: u, ref: ref }); }
+        catch (e) { if (!/429/.test(e.message || '')) throw e; await new Promise(function (r) { setTimeout(r, 6000); }); await wcGate(); return apiBin({ action: 'image', url: u, ref: ref }); }
+      }
       async function one(it) {
         try {
           var type, data;
@@ -700,7 +770,7 @@
             var bin = atob(m[2]); data = new Uint8Array(bin.length); for (var k = 0; k < bin.length; k++) data[k] = bin.charCodeAt(k); type = m[1];
           } else {
             var got = null, last = '';
-            for (var t = 0; t < it.tries.length && !got; t++) { if (!it.tries[t]) continue; try { got = await apiBin({ action: 'image', url: it.tries[t], ref: it.ref }); } catch (e) { last = e.message; if (e.status === 401 || e.status === 403) { stop = 'Bạn cần đăng nhập lại để tải ảnh.'; throw e; } } }
+            for (var t = 0; t < it.tries.length && !got; t++) { if (!it.tries[t]) continue; try { got = await getImg(it.tries[t], it.ref); } catch (e) { last = e.message; if (e.status === 401 || e.status === 403) { stop = 'Bạn cần đăng nhập lại để tải ảnh.'; throw e; } } }
             if (!got) throw new Error(last || 'không tải được');
             type = got.type; data = got.data;
           }
@@ -725,6 +795,7 @@
 
     // ---------- mảnh giao diện ----------
     var lab = function (t) { return h('div', { className: 'text-[10.5px] font-medium text-cham-300 mb-1.5' }, t); };
+    var fixed = function (v, why) { return h('div', { title: why, className: 'w-full bg-zinc-900/60 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] text-[#5fdccf] font-bold truncate' }, v.charAt(0).toUpperCase() + v.slice(1), h('span', { className: 'font-normal text-zinc-500' }, ' · theo gốc')); };
     var sel1 = function (k, opts) { return h('select', { value: opt[k], onChange: function (e) { var v = e.target.value; setO(k, isNaN(+v) ? v : +v); }, className: 'w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] text-zinc-200 cursor-pointer' }, opts.map(function (o) { return h('option', { key: o[0], value: o[0] }, o[1]); })); };
     var src = function (arr) { return (arr || []).length ? h('span', { className: 'ml-1 text-[10px] text-sky-400 font-bold' }, arr.map(function (n) { var s = R.sources[n - 1]; return s ? h('a', { key: n, href: s.real || s.uri, target: '_blank', rel: 'noopener noreferrer', title: s.realTitle || s.title, className: 'hover:underline mr-0.5' }, '[' + n + ']') : null; })) : null; };
     var card = function (title, body, extra) { return h('div', { className: 'yt-card p-3.5 space-y-2 ' + (extra || '') }, h('div', { className: 'text-xs font-semibold text-cham-50' }, title), body); };
@@ -788,19 +859,32 @@
           h('a', { href: 'https://www.youtube.com/watch?v=' + rd.video.id, target: '_blank', rel: 'noopener noreferrer', className: 'shrink-0' }, h('img', { src: 'https://i.ytimg.com/vi/' + rd.video.id + '/mqdefault.jpg', alt: '', className: 'w-44 aspect-video object-cover rounded-lg bg-black' })),
           h('div', { className: 'min-w-0 space-y-1' },
             h('div', { className: 'text-[13px] font-semibold text-white leading-snug' }, rd.video.title),
-            h('div', { className: 'text-[11.5px] text-[#aaa]' }, rd.video.channel + ' · ' + N(rd.video.views) + ' view · ' + rideAgo(rd.video.published) + ' · ' + rd.video.minutes + ' phút · đã đọc ' + (rd.nRead || 0) + ' bình luận'),
+            h('div', { className: 'text-[11.5px] text-[#aaa]' }, rd.video.channel + ' · ' + N(rd.video.views) + ' view · ' + rideAgo(rd.video.published) + ' · ' + rd.video.minutes + ' phút · đã đọc ' + (rd.nRead || 0) + ' bình luận · ', h('b', { className: 'text-[#5fdccf]' }, 'video mới sẽ làm bằng ' + E.rideLang(rd).vi)),
             h('div', { className: 'text-[12px] text-[#e6e6e6] leading-relaxed' }, h('b', { className: 'text-[#f5c451]' }, 'Vụ việc: '), rd.scan.event_vi),
             rd.scan.hook_vi && h('div', { className: 'text-[11.5px] text-[#c8c8c8] leading-relaxed' }, h('b', { className: 'text-[#c9a7ff]' }, 'Vì sao người ta bấm: '), rd.scan.hook_vi))),
         h('div', { className: 'grid gap-3 md:grid-cols-2' },
           h('div', { className: 'rounded-lg bg-[#161616] border border-[#2a2a2a] p-3' },
-            h('div', { className: 'flex items-center gap-2 mb-2' }, h('span', { className: 'text-[12px] font-semibold text-[#7cc3ff]' }, 'Video đã nói (' + rd.scan.covered.length + ')'), h('span', { className: cx('px-1.5 py-0.5 rounded text-[10px] font-semibold', rd.scan.basis === 'transcript' ? 'bg-[#14261a] text-[#6fcf85]' : 'bg-[#3a3214] text-[#f5c451]') }, rd.scan.basis === 'transcript' ? 'theo phụ đề' : 'đoán từ tiêu đề + mô tả')),
+            h('div', { className: 'flex items-center gap-2 mb-2' }, h('span', { className: 'text-[12px] font-semibold text-[#7cc3ff]' }, 'Video đã nói (' + rd.scan.covered.length + ')'), h('span', { className: cx('px-1.5 py-0.5 rounded text-[10px] font-semibold', rd.scan.basis === 'transcript' ? 'bg-[#14261a] text-[#6fcf85]' : 'bg-[#3a3214] text-[#f5c451]') }, rd.scan.basis === 'transcript' ? 'theo phụ đề' : rd.scan.basis === 'chapters' ? 'suy từ tên chương, chưa có lời thoại' : 'đoán từ tiêu đề + mô tả')),
             rd.scan.covered.length ? h('ul', { className: 'space-y-1 list-disc pl-4 text-[12px] text-[#e6e6e6] leading-snug' }, rd.scan.covered.map(function (x, i) { return h('li', { key: i }, x); })) : h('div', { className: 'text-[11.5px] text-[#888]' }, 'Chưa rút ra được. Dán phụ đề rồi phân tích lại.')),
           h('div', { className: 'rounded-lg bg-[#161616] border border-[#2a2a2a] p-3' },
             h('div', { className: 'text-[12px] font-semibold text-[#6fcf85] mb-2' }, 'Người xem còn hỏi (' + rd.scan.asked.length + ')'),
             rd.scan.asked.length ? h('ul', { className: 'space-y-1.5' }, rd.scan.asked.map(function (x, i) { return h('li', { key: i, className: 'text-[12px] text-[#e6e6e6] leading-snug' }, h('span', { className: cx('mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold', /phản/.test(x.kind) ? 'bg-[#2a1614] text-[#ff8a83]' : /thiếu/.test(x.kind) ? 'bg-[#3a3214] text-[#f5c451]' : 'bg-[#1d2f45] text-[#8ab4f8]') }, x.kind || 'hỏi'), x.q_vi, x.likes > 0 && h('span', { className: 'ml-1.5 text-[10.5px] text-[#aaa] tabular-nums' }, N(x.likes) + ' thích'), x.quote && h('div', { className: 'text-[10.5px] text-[#888] italic truncate', title: x.quote }, '"' + x.quote + '"')); })) : h('div', { className: 'text-[11.5px] text-[#888]' }, rd.nRead ? 'Bình luận chưa có câu hỏi nào đáng kể.' : 'Video tắt bình luận hoặc chưa có bình luận.'))),
+        h('div', { className: 'grid gap-3 md:grid-cols-2' },
+          h('div', { className: 'rounded-lg bg-[#161616] border border-[#2a2a2a] p-3' },
+            h('div', { className: 'text-[12px] font-semibold text-[#c9a7ff] mb-2' }, 'Chương của video gốc (' + ((rd.scan.chapters || []).length) + ')'),
+            (rd.scan.chapters || []).length ? h('ol', { className: 'space-y-1 max-h-48 overflow-y-auto' }, rd.scan.chapters.map(function (c, i) { return h('li', { key: i, className: 'grid grid-cols-[44px_minmax(0,1fr)] gap-2 text-[12px]' }, h('span', { className: 'tabular-nums text-[#aaa]' }, c.t || '–'), h('span', { className: 'min-w-0' }, h('span', { className: 'text-[#f1f1f1]' }, c.title), c.summary_vi && h('span', { className: 'block text-[11px] text-[#aaa] leading-snug' }, c.summary_vi))); })) : h('div', { className: 'text-[11.5px] text-[#888]' }, 'Mô tả video không có mốc chương. Dán phụ đề để web tự chia chương.'),
+            rd.scan.basis !== 'transcript' && (rd.scan.chapters || []).length > 0 && h('div', { className: 'text-[10.5px] text-[#f5c451] mt-1.5' }, 'Chưa có lời thoại, chỉ có tên chương. Dán phụ đề để có tóm tắt ý từng chương.')),
+          h('div', { className: 'rounded-lg bg-[#161616] border border-[#2a2a2a] p-3' },
+            h('div', { className: 'text-[12px] font-semibold text-[#f5c451] mb-2' }, 'Bố cục thumbnail của video gốc'),
+            rd.thumb ? h('div', { className: 'space-y-1 text-[12px] text-[#e6e6e6] leading-snug' },
+              h('div', null, rd.thumb.layout_vi),
+              h('div', { className: 'text-[11.5px] text-[#c8c8c8]' }, 'Nhân vật chính: ' + (rd.thumb.main_subject.what_vi || '?') + ' · ' + (rd.thumb.main_subject.position || '?') + ' · ' + (rd.thumb.main_subject.size || '?')),
+              h('div', { className: 'text-[11.5px] text-[#c8c8c8]' }, 'Chữ: ' + (rd.thumb.text.content ? '"' + rd.thumb.text.content + '" · ' + rd.thumb.text.word_count + ' từ · ' + rd.thumb.text.color_vi + ' · ' + rd.thumb.text.font_vi + ' · ' + rd.thumb.text.position_vi : 'không có')),
+              h('div', { className: 'text-[11.5px] text-[#c8c8c8]' }, 'Nhãn / dải chữ: ' + (rd.thumb.has_label ? rd.thumb.label_vi || 'có' : 'không') + ' · Nền: ' + rd.thumb.background_vi),
+              rd.thumb.looks_ai_generated && h('div', { className: 'text-[11.5px] text-[#ff8a83]' }, 'Có dấu hiệu là ảnh do AI dựng' + (rd.thumb.ai_signs_vi ? ': ' + rd.thumb.ai_signs_vi : '') + '. Chỉ học bố cục, không dựng lại cảnh.')) : h('div', { className: 'text-[11.5px] text-[#888]' }, 'Chưa phân tích được ảnh bìa (AI bận hoặc không tải được ảnh). Bấm Phân tích lại để thử.'))),
         h('div', { className: 'flex flex-wrap items-center gap-2' },
           h('button', { onClick: rideGo, disabled: !!prog, className: 'h-9 px-5 rounded-full text-[12.5px] font-semibold bg-[#3ea6ff] hover:bg-[#65b8ff] text-[#0f0f0f] disabled:opacity-40 cursor-pointer' }, prog ? 'Đang gom…' : 'Gom tin và tìm phần video này chưa nói'),
-          h('span', { className: 'text-[11px] text-[#aaa]' }, 'Dùng khoảng 3 lượt AI và quota YouTube như một lần gom hồ sơ thường.'))));
+          h('span', { className: 'text-[11px] text-[#aaa]' }, 'Dùng khoảng 4 lượt AI và quota YouTube như một lần gom hồ sơ thường.'))));
     var finder = h('div', { className: 'yt-card p-4 space-y-3' },
       h('div', null, h('h2', { className: 'text-[13px] font-semibold text-cham-50' }, 'Tìm đề tài bằng AI'),
         h('div', { className: 'text-[11px] text-zinc-400' }, 'Chọn danh mục, nước và thời gian. AI tìm trên Google các vụ việc có thật, bạn bấm một vụ để gom tin, hình và video.')),
@@ -860,9 +944,10 @@
         h('button', { onClick: function () { download(slug(D.title) + '.txt', claudeText, 'text/plain;charset=utf-8'); }, className: 'px-3 py-2 rounded-xl text-xs font-bold bg-zinc-800 text-zinc-200 cursor-pointer' }, 'Tải .txt'),
         h('button', { onClick: function () { setR(null); }, className: 'px-3 py-2 rounded-xl text-xs font-bold bg-zinc-900 text-zinc-400 border border-zinc-800 cursor-pointer' }, '＋ Hồ sơ mới'),
         h('span', { className: 'self-center text-[10px] text-zinc-400' }, 'Đang chọn ' + nSelV + ' video • ' + nSelI + ' ảnh • ' + Object.keys(sel.f || {}).filter(function (k) { return sel.f[k]; }).length + ' khung hình • ' + (R.captures || []).length + ' ảnh chụp')),
-      h('div', { className: 'grid gap-2 sm:grid-cols-[150px_130px_minmax(0,1fr)] pt-1' },
-        h('div', null, lab('Video làm bằng'), sel1('vlang', Object.keys(E.VLANG).map(function (k) { return [k, E.VLANG[k].charAt(0).toUpperCase() + E.VLANG[k].slice(1)]; }))),
-        h('div', null, lab('Độ dài video'), sel1('vmin', [[5, '5 phút'], [8, '8 phút'], [12, '12 phút'], [20, '20 phút'], [30, '30 phút'], [45, '45 phút']])),
+      h('div', { className: 'grid gap-2 sm:grid-cols-[150px_130px_150px_minmax(0,1fr)] pt-1' },
+        h('div', null, lab('Video làm bằng'), R.ride ? fixed(E.rideLang(R.ride).vi, 'Theo ngôn ngữ của video gốc') : sel1('vlang', Object.keys(E.VLANG).map(function (k) { return [k, E.VLANG[k].charAt(0).toUpperCase() + E.VLANG[k].slice(1)]; }))),
+        h('div', null, lab('Độ dài video'), R.ride && R.ride.gaps ? fixed(R.ride.gaps.target_minutes + ' phút', 'Tính theo độ dài video gốc') : sel1('vmin', [[5, '5 phút'], [8, '8 phút'], [12, '12 phút'], [17, '17 phút'], [20, '20 phút'], [30, '30 phút'], [45, '45 phút']])),
+        h('div', null, lab('Tốc độ giọng đọc'), sel1('wpm', [[150, '150 từ/phút'], [160, '160 từ/phút'], [170, '170 từ/phút'], [180, '180 từ/phút'], [190, '190 từ/phút']])),
         h('div', null, lab('Phong cách thumbnail (tuỳ chọn, đưa vào prompt)'), h('input', { value: opt.tstyle || '', onChange: function (e) { setO('tstyle', e.target.value); }, placeholder: 'Ví dụ: ảnh nhân vật bên trái, nhãn đỏ góc trên, chữ vàng viền đen, dải chữ đen trên nền vàng ở đáy', className: 'w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-[11px] text-zinc-100' }))),
       p.extraHead && p.extraHead(Object.assign({}, R, { sel: sel }), promptText, function (r2) { setR(r2); return saveHist(r2); }));
 
@@ -882,8 +967,8 @@
         !g ? h('div', { className: 'flex flex-wrap items-center gap-2 text-[12px] text-[#ffb4ae]' }, 'Chưa so được hồ sơ với video gốc' + (rr.gapsErr ? ' (' + rr.gapsErr + ')' : '') + '.', h('button', { onClick: rideRetry, disabled: rideBusy, className: 'h-7 px-3 rounded-full bg-[#3a1f1d] hover:bg-[#4a2624] text-[11.5px] font-semibold text-[#ff8a83] cursor-pointer disabled:opacity-50' }, rideBusy ? 'Đang so…' : 'So lại'))
         : h(React.Fragment, null,
           h('div', { className: 'flex flex-wrap items-center gap-2' },
-            [[g.gaps.length, 'điểm video gốc chưa nói', 'text-[#6fcf85]'], [g.new_share_pct + '%', 'thông tin trong hồ sơ là mới (AI ước tính)', 'text-[#f5c451]'], [g.target_minutes, 'phút nên làm (gốc ' + (g.ref_minutes || '?') + ' phút)', 'text-[#7cc3ff]']].map(function (x) { return h('span', { key: x[1], className: 'inline-flex items-baseline gap-1.5 h-8 px-3 rounded-lg bg-[#212121] border border-[#303030]' }, h('b', { className: 'text-[15px] tabular-nums ' + x[2] }, x[0]), h('span', { className: 'text-[11.5px] text-[#c8c8c8]' }, x[1])); }),
-            g.basis !== 'transcript' && h('span', { className: 'text-[11px] text-[#f5c451]' }, 'Chưa có phụ đề nên "video đã nói gì" chỉ là đoán: kiểm lại các điểm dưới đây với video gốc trước khi dùng.')),
+            [[g.gaps.length, 'điểm video gốc chưa nói', 'text-[#6fcf85]'], [g.new_share_pct + '%', 'thông tin trong hồ sơ là mới (AI ước tính)', 'text-[#f5c451]'], [g.target_minutes, 'phút nên làm (gốc ' + (g.ref_minutes || '?') + ' phút)', 'text-[#7cc3ff]'], [(Math.round(g.target_minutes * (+opt.wpm || g.wpm || 170) / 50) * 50).toLocaleString('vi-VN'), 'từ ở ' + (+opt.wpm || g.wpm || 170) + ' từ/phút', 'text-[#c9a7ff]'], [E.rideLang(rr).vi, 'ngôn ngữ sản phẩm', 'text-[#5fdccf]']].map(function (x) { return h('span', { key: x[1], className: 'inline-flex items-baseline gap-1.5 h-8 px-3 rounded-lg bg-[#212121] border border-[#303030]' }, h('b', { className: 'text-[15px] tabular-nums ' + x[2] }, x[0]), h('span', { className: 'text-[11.5px] text-[#c8c8c8]' }, x[1])); }),
+            g.basis !== 'transcript' && h('span', { className: 'text-[11px] text-[#f5c451]' }, 'Chưa có phụ đề nên "video đã nói gì" chỉ ' + (g.basis === 'chapters' ? 'suy từ tên chương' : 'là đoán') + ': kiểm lại các điểm dưới đây với video gốc trước khi dùng.')),
           g.angle_vi && h('p', { className: 'text-[12.5px] text-[#f1f1f1] leading-relaxed' }, h('b', { className: 'text-[#c9a7ff]' }, 'Góc của video mới: '), g.angle_vi),
           h('div', { className: 'grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]' },
             h('div', { className: 'space-y-3 min-w-0' },
@@ -902,9 +987,9 @@
                 h('div', { className: 'text-[12px] font-semibold text-[#f5c451] mb-2' }, 'Tiêu đề gợi ý'),
                 h('ul', { className: 'space-y-1.5' }, g.titles.map(function (x, i) { return h('li', { key: i, className: 'flex items-start gap-2' }, h('div', { className: 'flex-1 min-w-0' }, h('div', { className: 'text-[12.5px] text-white leading-snug' }, x.t), x.vi && x.vi !== x.t && h('div', { className: 'text-[11px] text-[#aaa]' }, x.vi)), h('button', { onClick: function () { copyT(x.t); }, className: 'shrink-0 h-6 px-2 rounded-full bg-[#323232] hover:bg-[#424242] text-[10.5px] text-[#f1f1f1] cursor-pointer' }, 'Chép')); }))),
               g.outline.length > 0 && h('div', { className: 'rounded-lg bg-[#161616] border border-[#2a2a2a] p-3' },
-                h('div', { className: 'text-[12px] font-semibold text-[#7cc3ff] mb-2' }, 'Dàn ý ' + g.target_minutes + ' phút'),
-                h('ol', { className: 'space-y-1.5' }, g.outline.map(function (x, i) { return h('li', { key: i, className: 'grid grid-cols-[52px_minmax(0,1fr)] gap-2 text-[12px]' }, h('span', { className: 'tabular-nums text-[#aaa]' }, (x.minutes || '?') + ' ph'), h('span', { className: 'min-w-0' }, h('b', { className: 'text-white' }, x.part), x.is_new && h('span', { className: 'ml-1.5 px-1.5 py-0.5 rounded bg-[#14261a] text-[#6fcf85] text-[10px] font-semibold' }, 'MỚI'), x.content_vi && h('span', { className: 'block text-[11.5px] text-[#c8c8c8] leading-snug' }, x.content_vi))); }))))),
-          h('div', { className: 'text-[11px] text-[#aaa]' }, 'Phần so sánh này đã được đưa vào câu lệnh gửi Claude (tab Prompt). Kịch bản phải viết mới từ hồ sơ, không chép lời hay bố cục của video gốc.')));
+                h('div', { className: 'text-[12px] font-semibold text-[#7cc3ff] mb-2' }, 'Dàn ý ' + g.target_minutes + ' phút: khoảng 70% ý video gốc kể lại, 30% điểm mới'),
+                h('ol', { className: 'space-y-1.5' }, g.outline.map(function (x, i) { return h('li', { key: i, className: 'grid grid-cols-[52px_minmax(0,1fr)] gap-2 text-[12px]' }, h('span', { className: 'tabular-nums text-[#aaa]' }, (x.minutes || '?') + ' ph'), h('span', { className: 'min-w-0' }, h('b', { className: 'text-white' }, x.part), x.is_new && h('span', { className: 'ml-1.5 px-1.5 py-0.5 rounded bg-[#14261a] text-[#6fcf85] text-[10px] font-semibold' }, 'MỚI'), x.ref_chapter && h('span', { className: 'block text-[10.5px] text-[#aaa]' }, 'Chương gốc: ' + x.ref_chapter), (x.ref_vi || x.content_vi) && h('span', { className: 'block text-[11.5px] text-[#c8c8c8] leading-snug' }, 'Ý của video gốc: ' + (x.ref_vi || x.content_vi)), x.new_vi && h('span', { className: 'block text-[11.5px] text-[#6fcf85] leading-snug' }, 'Điểm mới chèn vào: ' + x.new_vi))); }))))),
+          h('div', { className: 'text-[11px] text-[#aaa]' }, 'Phần so sánh này đã được đưa vào câu lệnh gửi Claude (tab Prompt): phủ đủ ý các chương của video gốc bằng lời mới, không chép câu chữ, và dành khoảng 30% cho điểm mới.')));
     })() : null;
     var overview = h('div', { className: 'grid gap-3 xl:grid-cols-2' },
       rideView,
