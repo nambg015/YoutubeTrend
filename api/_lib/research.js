@@ -472,13 +472,14 @@ ${o.note ? 'EXTRA WISHES FROM THE CREATOR: """' + String(o.note).slice(0, 400) +
 Selection rules:
 - Only real, verifiable events covered by reputable sources. No fiction, no urban legends presented as fact.
 - Prefer stories with plenty of public visual material (news photos, footage, maps, court or agency documents) and a clear narrative arc or an open question.
-- Make the list diverse (different years, places, kinds of story). Do not list the same event twice.
+- Make the list diverse (different years, places, kinds of story). Do not list the same event twice.${o.rare ? '\n- IMPORTANT: the creator already knows the famous cases. Do NOT list the most-retold stories of this category (the ones in every "top 10" list, with long English Wikipedia articles, films or TV dramas about them). Pick LESSER-KNOWN but well-documented stories instead: regional cases, cases reported mainly in local media, older cases that are rarely revisited, recent cases that got little follow-up.' : ''}
 - Keep names of people, places and the story title in the ORIGINAL language of the country (e.g. Japanese for Japan), and also give a Vietnamese title.
 
 Return ONLY a JSON object (no prose, no markdown fence) with this exact shape:
 {"topics":[{
  "title": "name of the story in its original language",
  "title_vi": "tên vụ việc bằng tiếng Việt",
+ "title_en": "the name English-language media use for this story",
  "date": "YYYY-MM-DD, YYYY-MM or YYYY of the main event",
  "place": "city / region, country",
  "status_vi": "ví dụ: chưa phá án / đã kết án / đang điều tra / đang diễn ra",
@@ -492,7 +493,7 @@ Return ONLY a JSON object (no prose, no markdown fence) with this exact shape:
 function cleanTopics(j) {
   const list = Array.isArray(j) ? j : (j && Array.isArray(j.topics) ? j.topics : []);
   const S = (v, n) => String(v == null ? '' : v).slice(0, n);
-  return list.filter(t => t && (t.title || t.title_vi)).slice(0, 20).map(t => ({ title: S(t.title || t.title_vi, 200), title_vi: S(t.title_vi || t.title, 200), date: S(t.date, 40), place: S(t.place, 120), status_vi: S(t.status_vi, 120), summary_vi: S(t.summary_vi, 700), why_vi: S(t.why_vi, 300), visuals_vi: S(t.visuals_vi, 300), queries: (Array.isArray(t.queries) ? t.queries : []).map(q => S(q, 120)).filter(Boolean).slice(0, 5), brief_en: S(t.brief_en, 1200) }));
+  return list.filter(t => t && (t.title || t.title_vi)).slice(0, 20).map(t => ({ title: S(t.title || t.title_vi, 200), title_vi: S(t.title_vi || t.title, 200), title_en: S(t.title_en, 200), date: S(t.date, 40), place: S(t.place, 120), status_vi: S(t.status_vi, 120), summary_vi: S(t.summary_vi, 700), why_vi: S(t.why_vi, 300), visuals_vi: S(t.visuals_vi, 300), queries: (Array.isArray(t.queries) ? t.queries : []).map(q => S(q, 120)).filter(Boolean).slice(0, 5), brief_en: S(t.brief_en, 1200) }));
 }
 // Gói Gemini miễn phí không có Google Search: tin mới → đọc tiêu đề Google News; vụ kinh điển → kiến thức sẵn có của AI
 async function topicsFree(key, o, budget) {
@@ -521,7 +522,7 @@ async function doTopics(key, o) {
   try { topics = cleanTopics(parseJson(r.text)); } catch (e) { }
   if (!topics.length) {
     // AI trả về văn xuôi → nhờ chuyển sang JSON (không tìm web lần nữa)
-    const r2 = await gemini(key, { contents: [{ parts: [{ text: 'Convert the following research notes into JSON with the shape {"topics":[{"title","title_vi","date","place","status_vi","summary_vi","why_vi","visuals_vi","queries":[],"brief_en"}]}. Fields ending in _vi must be Vietnamese. Keep only real stories found in the notes.\n\nNOTES:\n"""' + r.text.slice(0, 20000) + '"""' }] }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json' } }, 16000);
+    const r2 = await gemini(key, { contents: [{ parts: [{ text: 'Convert the following research notes into JSON with the shape {"topics":[{"title","title_vi","title_en","date","place","status_vi","summary_vi","why_vi","visuals_vi","queries":[],"brief_en"}]}. Fields ending in _vi must be Vietnamese. Keep only real stories found in the notes.\n\nNOTES:\n"""' + r.text.slice(0, 20000) + '"""' }] }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json' } }, 16000);
     topics = cleanTopics(parseJson(r2.text));
   }
   if (!topics.length) { const e = new Error('AI không tìm được đề tài phù hợp, thử đổi danh mục hoặc thời gian.'); e.code = 'NO_TOPICS'; throw e; }

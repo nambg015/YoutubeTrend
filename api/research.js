@@ -74,7 +74,7 @@ module.exports = async (req, res) => {
     if (action === 'dupIdeas') return res.json({ success: true, ...(await R.doDupIdeas(key, body.data)) });
     if (action === 'ask') return res.json({ success: true, ...(await R.doAsk(key, body.data)) });
     if (action === 'topics') {
-      return res.json({ success: true, ...(await R.doTopics(key, { group: body.group, cat: body.cat, country: body.country, period: body.period, n: body.n, note: body.note, skip: body.skip })) });
+      return res.json({ success: true, ...(await R.doTopics(key, { group: body.group, cat: body.cat, country: body.country, period: body.period, n: body.n, note: body.note, skip: body.skip, rare: body.rare === true })) });
     }
     if (action === 'images') {
       return res.json({ success: true, ...(await R.doImages(Array.isArray(body.queries) ? body.queries : [prompt])) });

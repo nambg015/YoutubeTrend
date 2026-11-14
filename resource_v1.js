@@ -151,6 +151,17 @@
     // đủ mọi tên riêng của vụ là coi như cùng vụ; thiếu thì phải khớp phần lớn các từ còn lại
     return pr === 1 ? Math.max(r, 0.6) : (has(P[0]) ? Math.max(pr, r) * 0.9 : r * 0.5);
   }
+  // Đoán ngôn ngữ của một tiêu đề video (theo bộ chữ, rồi theo vài từ thông dụng). Dùng để hỏi "đã có bản tiếng X chưa".
+  var LATIN_HINT = { en: /\b(the|of|and|who|what|why|how|was|that|this|from|with|case|story|murder|mystery|unsolved)\b/g, es: /\b(el|la|los|las|del|que|una|por|caso|historia|asesinato)\b/g, pt: /\b(o|os|das|dos|que|uma|não|caso|história|assassinato)\b/g, id: /\b(yang|dan|di|ini|itu|kasus|pembunuhan|misteri|dari)\b/g, de: /\b(der|die|das|und|ein|eine|fall|mord|von)\b/g, fr: /\b(le|les|des|une|et|du|affaire|meurtre|histoire)\b/g };
+  function titleLang(t) {
+    t = String(t || '');
+    if (/[\u3040-\u30ff]/.test(t)) return 'ja'; if (/[\uac00-\ud7af]/.test(t)) return 'ko';
+    if (/[ăđơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i.test(t)) return 'vi';
+    if (/[\u0e00-\u0e7f]/.test(t)) return 'th'; if (/[\u0400-\u04ff]/.test(t)) return 'ru'; if (/[\u0900-\u097f]/.test(t)) return 'hi'; if (/[\u0600-\u06ff]/.test(t)) return 'ar';
+    if (/[\u4e00-\u9fff]/.test(t) && !/[a-z]{4,}/i.test(t)) return 'zh';
+    var low = ' ' + t.toLowerCase() + ' ', best = '', bn = 0; Object.keys(LATIN_HINT).forEach(function (k) { var n = (low.match(LATIN_HINT[k]) || []).length; if (n > bn) { bn = n; best = k; } });
+    return best || (/[a-z]/i.test(t) ? 'en' : '');
+  }
   // items: [{id,title,channel,views,t,dur}] → những video cùng vụ, nhiều view trước
   function coverMatch(names, items) {
     names = (Array.isArray(names) ? names : [names]).filter(Boolean);
@@ -604,7 +615,7 @@
     var e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, csize, true); e.setUint32(16, off, true);
     return parts.concat(central, [new Uint8Array(e.buffer)]);
   }
-  return { packList: packList, claudePrompt: claudePrompt, imageSheet: imageSheet, videoSheet: videoSheet, zipParts: zipParts, crc32: crc32, VLANG: VLANG, LANG_EN: LANG_EN, rideLang: rideLang, styleLines: styleLines, chanStats: chanStats, PROD_DEF: PROD_DEF, PROD_PUB: PROD_PUB, PROD_TZ: PROD_TZ, PROD_T: PROD_T, prodResolve: prodResolve, prodLines: prodLines, videoFlags: videoFlags, LV: LV, frameList: frameList, TYPES: TYPES, TYPE_ORDER: TYPE_ORDER, iso: iso, dur: dur, fmtN: fmtN, ytId: ytId, keywords: keywords, freeDossier: freeDossier, classify: classify, chapters: chapters, collectVideos: collectVideos, topicLinks: topicLinks, coverScore: coverScore, coverMatch: coverMatch, imageLinks: imageLinks, buildPrompt: buildPrompt, buildJson: buildJson };
+  return { packList: packList, claudePrompt: claudePrompt, imageSheet: imageSheet, videoSheet: videoSheet, zipParts: zipParts, crc32: crc32, VLANG: VLANG, LANG_EN: LANG_EN, rideLang: rideLang, styleLines: styleLines, chanStats: chanStats, PROD_DEF: PROD_DEF, PROD_PUB: PROD_PUB, PROD_TZ: PROD_TZ, PROD_T: PROD_T, prodResolve: prodResolve, prodLines: prodLines, videoFlags: videoFlags, LV: LV, frameList: frameList, TYPES: TYPES, TYPE_ORDER: TYPE_ORDER, iso: iso, dur: dur, fmtN: fmtN, ytId: ytId, keywords: keywords, freeDossier: freeDossier, classify: classify, chapters: chapters, collectVideos: collectVideos, topicLinks: topicLinks, coverScore: coverScore, coverMatch: coverMatch, titleLang: titleLang, imageLinks: imageLinks, buildPrompt: buildPrompt, buildJson: buildJson };
 });
 
 // ============================ GIAO DIỆN ============================
@@ -749,6 +760,7 @@
     var r5 = useState(function () { return Object.assign({ url: '', busy: '', err: '', video: null, topic: null, items: [], same: null, ideas: [] }, lsJson('res1_dup', null) || {}, { busy: '', err: '' }); }), dp = r5[0], setDp = r5[1];
     var r6 = useState({ open: false, dur: 0, text: '', err: '' }), wm = r6[0], setWm = r6[1];
     var r7 = useState('all'), chf = r7[0], setChf = r7[1];
+    var r8 = useState(null), hb = r8[0], setHb = r8[1], covRef = React.useRef({}), tpRef = React.useRef(null);
     var c1 = useState(function () { var c = lsJson('res1_cover', {}) || {}, now = Date.now(); Object.keys(c).forEach(function (k) { if (!c[k] || now - c[k].at > COVER_TTL) delete c[k]; }); return c; }), cov = c1[0], setCov = c1[1], c2 = useState(null), cb = c2[0], setCb = c2[1], c3 = useState('all'), cf = c3[0], setCf = c3[1];
     var d2 = useState(false), tb = d2[0], setTb = d2[1];
     var d3 = useState(''), terr = d3[0], setTerr = d3[1];
@@ -855,14 +867,15 @@
       var label = (G[2].length ? G[0] + ' › ' + C[0] : FD.custom.trim()) + ' · ' + cn + ' · ' + pn;
       setTerr(''); setTb(true);
       try {
-        var prev = more && tp && tp.label === label ? tp.list : [];
-        var skipX = ov && ov.skip ? ov.skip : (more && tp && tp.label === label && tp.skipX) || [];
-        var r = await api({ action: 'topics', group: G[1], cat: catEn, country: FD.country, period: FD.period, n: FD.n, note: FD.note, skip: prev.map(function (t) { return t.title; }).concat(skipX).slice(0, 40) });
+        var T0 = tpRef.current, prev = more && T0 && T0.label === label ? T0.list : [], out = null;
+        var skipX = ov && ov.skip ? ov.skip : (more && T0 && T0.label === label && T0.skipX) || [];
+        var r = await api({ action: 'topics', group: G[1], cat: catEn, country: FD.country, period: FD.period, n: FD.n, note: FD.note, rare: !!(FD.rare || (ov && ov.rare)), skip: prev.map(function (t) { return t.title; }).concat(skipX).slice(0, 40) });
         var seen = {}; prev.forEach(function (t) { seen[t.title] = 1; });
-        var add = (r.topics || []).filter(function (t) { return !seen[t.title]; }), o = { at: Date.now(), label: label, period: FD.period, country: FD.country, list: prev.concat(add), grounded: r.grounded !== false, basis: r.basis || '', skipX: skipX, forChan: ov && ov.skip ? ch.channel.title : (more && tp && tp.forChan) || '' };
-        setTp(o); lsPut('res1_topics', o); toast(prev.length ? 'Thêm ' + add.length + ' đề tài mới' : 'Tìm được ' + add.length + ' đề tài');
+        var add = (r.topics || []).filter(function (t) { return !seen[t.title]; }), o = { at: Date.now(), label: label, period: FD.period, country: FD.country, list: prev.concat(add), grounded: r.grounded !== false, basis: r.basis || '', skipX: skipX, rare: !!(FD.rare || (ov && ov.rare) || (more && T0 && T0.label === label && T0.rare)), forChan: ov && ov.skip ? ch.channel.title : (more && T0 && T0.label === label && T0.forChan) || '' };
+        o.added = add.length; tpRef.current = o; out = o;
+        setTp(o); lsPut('res1_topics', o); if (!(ov && ov.quiet)) toast(prev.length ? 'Thêm ' + add.length + ' đề tài mới' : 'Tìm được ' + add.length + ' đề tài');
       } catch (e) { setTerr(e.status === 401 || e.status === 403 ? 'Bạn cần đăng nhập để dùng AI tìm đề tài.' : (e.message || 'AI lỗi, thử lại sau ít phút.')); }
-      setTb(false);
+      setTb(false); return out;
     }
     // ----- ăn theo một video: đọc video gốc + bình luận → gom hồ sơ → tìm phần video gốc chưa nói -----
     async function rideScan(u0) {
@@ -1016,31 +1029,62 @@
       setRideBusy(false);
     }
     // ----- dò YouTube: đã có ai làm video về vụ này chưa -----
-    function coverKey(t) { return (t.title || t.title_vi || '').toLowerCase().slice(0, 160); }
+    // Dò theo "mọi ngôn ngữ" (tìm bằng tên gốc của vụ) hoặc chỉ hỏi "đã có bản tiếng Việt / tiếng Anh chưa". Mỗi chế độ lưu kết quả riêng.
+    var ML = fd.mylang === 'vi' || fd.mylang === 'en' ? fd.mylang : '', MLN = ML === 'vi' ? 'TIẾNG VIỆT' : 'TIẾNG ANH';
+    covRef.current = cov; tpRef.current = tp;
+    function coverKey(t) { return (t.title || t.title_vi || '').toLowerCase().slice(0, 160) + (ML ? '|' + ML : ''); }
+    function coverNames(t) {
+      var roman = (/\(([^)]{3,60})\)/.exec(t.title || '') || [])[1] || '';
+      return ML === 'vi' ? [t.title_vi] : ML === 'en' ? [t.title_en, roman, /^[\x00-\x7f]+$/.test(t.title || '') ? t.title : ''] : [t.title, t.title_vi];
+    }
     async function coverOne(t) {
       var yt = function (path, prm) { return p.yt(path, prm, p.apiKey); };
-      var loc = YT_LOC[(tp && tp.country) || ''] || ['', ''], q = t.title || t.title_vi;
+      var T0 = tpRef.current, loc = ML ? (ML === 'vi' ? ['VN', 'vi'] : ['US', 'en']) : (YT_LOC[(T0 && T0.country) || ''] || ['', '']);
+      var names = coverNames(t).filter(Boolean), q = ML ? (names[0] || t.title_vi || t.title) : (t.title || t.title_vi);
       var prm = { part: 'snippet', q: q, type: 'video', maxResults: 25 }; if (loc[0]) prm.regionCode = loc[0]; if (loc[1]) prm.relevanceLanguage = loc[1];
       var sr = await yt('search', prm), ids = (sr.items || []).map(function (x) { return x.id && x.id.videoId; }).filter(Boolean), items = [];
       if (ids.length) {
         var vr = await yt('videos', { part: 'snippet,statistics,contentDetails', id: ids.join(',') });
         items = (vr.items || []).map(function (v) { return { id: v.id, title: (v.snippet || {}).title || '', channel: (v.snippet || {}).channelTitle || '', t: Date.parse((v.snippet || {}).publishedAt) || 0, views: +((v.statistics || {}).viewCount) || 0, dur: E.iso((v.contentDetails || {}).duration) }; });
       }
-      var hit = E.coverMatch([t.title, t.title_vi], items);
-      return { at: Date.now(), q: q, seen: items.length, n: hit.length, max: hit.length ? hit[0].views : 0, newest: hit.reduce(function (m, v) { return Math.max(m, v.t); }, 0), top: hit.slice(0, 3).map(function (v) { return { id: v.id, title: v.title, channel: v.channel, views: v.views, t: v.t }; }) };
+      var hit = E.coverMatch(names.length ? names : [q], items);
+      if (ML) hit = hit.filter(function (v) { return E.titleLang(v.title) === ML; });
+      return { at: Date.now(), q: q, lang: ML, seen: items.length, n: hit.length, max: hit.length ? hit[0].views : 0, newest: hit.reduce(function (m, v) { return Math.max(m, v.t); }, 0), top: hit.slice(0, 3).map(function (v) { return { id: v.id, title: v.title, channel: v.channel, views: v.views, t: v.t }; }) };
     }
-    async function coverRun(list) {
-      if (cb) return;
-      if (!p.apiKey && !(p.ytKeyManager && p.ytKeyManager.getActiveKey && p.ytKeyManager.getActiveKey())) { p.onOpenApiModal && p.onOpenApiModal(); return; }
-      var all = Object.assign({}, cov), done = 0, fail = '';
+    async function coverRun(list, quiet) {
+      if (cb && !quiet) return null;
+      if (!p.apiKey && !(p.ytKeyManager && p.ytKeyManager.getActiveKey && p.ytKeyManager.getActiveKey())) { p.onOpenApiModal && p.onOpenApiModal(); return null; }
+      var all = Object.assign({}, covRef.current), done = 0, fail = '';
       setCb({ done: 0, total: list.length });
       for (var i = 0; i < list.length; i++) {
-        try { all[coverKey(list[i])] = await coverOne(list[i]); done++; setCov(Object.assign({}, all)); lsPut('res1_cover', all); }
+        try { all[coverKey(list[i])] = await coverOne(list[i]); done++; covRef.current = Object.assign({}, all); setCov(covRef.current); lsPut('res1_cover', all); }
         catch (e) { fail = (e && (e.msg || e.message)) || 'YouTube lỗi'; break; }
         setCb({ done: i + 1, total: list.length });
       }
       setCb(null);
-      toast(fail ? 'Dò bị dừng sau ' + done + ' vụ: ' + fail : list.length === 1 ? (all[coverKey(list[0])].n ? 'Đã có ' + all[coverKey(list[0])].n + ' video về vụ này' : 'Chưa thấy video nào về vụ này') : 'Đã dò xong ' + done + ' vụ');
+      if (!quiet || fail) toast(fail ? 'Dò bị dừng sau ' + done + ' vụ: ' + fail : list.length === 1 ? (all[coverKey(list[0])].n ? 'Đã có ' + all[coverKey(list[0])].n + ' video về vụ này' + (ML ? ' bằng ' + MLN.toLowerCase() : '') : 'Chưa thấy video nào về vụ này' + (ML ? ' bằng ' + MLN.toLowerCase() : '')) : 'Đã dò xong ' + done + ' vụ');
+      return { all: all, fail: fail, done: done };
+    }
+    // Săn vụ chưa ai làm: tìm vụ ít người biết → dò YouTube → chưa đủ thì tìm tiếp, tối đa 3 vòng
+    async function hunt() {
+      if (hb || tb || cb) return;
+      if (!p.apiKey && !(p.ytKeyManager && p.ytKeyManager.getActiveKey && p.ytKeyManager.getActiveKey())) { p.onOpenApiModal && p.onOpenApiModal(); return; }
+      var want = 5, free = 0, checked = 0, stopWhy = '';
+      setHb({ round: 1, free: 0 });
+      for (var r = 0; r < 3 && !stopWhy; r++) {
+        setHb({ round: r + 1, free: free, step: 'AI đang tìm vụ ít người biết…' });
+        var o = await findTopics(true, { rare: true, quiet: true });
+        if (!o) { stopWhy = 'AI không tìm thêm được'; break; }
+        var todo = o.list.filter(function (t) { return !covRef.current[coverKey(t)]; });
+        if (!todo.length && !o.added) { stopWhy = 'AI hết vụ mới để gợi ý'; break; }
+        setHb({ round: r + 1, free: free, step: 'Đang dò YouTube ' + todo.length + ' vụ…' });
+        var cr = await coverRun(todo, true); if (!cr) { stopWhy = 'chưa có key YouTube'; break; }
+        checked += cr.done; if (cr.fail) stopWhy = cr.fail;
+        free = o.list.filter(function (t) { var c = covRef.current[coverKey(t)]; return c && !c.n; }).length;
+        if (free >= want) break;
+      }
+      setHb(null); setCf(free ? 'free' : 'all');
+      toast(free ? 'Săn xong: ' + free + ' vụ chưa thấy ai làm' + (ML ? ' bằng ' + MLN.toLowerCase() : '') + ' (đã dò ' + checked + ' vụ)' : 'Đã dò ' + checked + ' vụ, vụ nào cũng có người làm' + (ML ? ' bằng ' + MLN.toLowerCase() : '') + (stopWhy ? '. Dừng vì: ' + stopWhy : ''));
     }
     // ----- Kiểm tra một video: chỉ kênh này làm hay đã có kênh khác làm; đề xuất đề tài tương tự -----
     function dpKeep(n) { lsPut('res1_dup', Object.assign({}, n, { busy: '', err: '' })); }
@@ -1091,7 +1135,7 @@
       setPrompt(text); setErr(''); run(text, o);
     }
     // nút dò YouTube cho một đề xuất (dùng chung cho đề xuất theo kênh và đề xuất tương tự)
-    function ideaTopic(x) { return { title: x.search_query || x.title, title_vi: x.title }; }
+    function ideaTopic(x) { return { title: x.search_query || x.title, title_vi: x.title_vi || x.title, title_en: /^[\x00-\x7f]+$/.test(x.title || '') ? x.title : '' }; }
     function ideaCover(x) {
       var c = cov[coverKey(ideaTopic(x))];
       return h('span', { className: 'inline-flex flex-wrap items-center gap-2' },
@@ -1216,7 +1260,7 @@
     var topicCard = function (t, i) {
       var cv = cov[coverKey(t)], ago = function (ms) { var d = Math.round((Date.now() - ms) / 864e5); return d < 1 ? 'hôm nay' : d < 31 ? d + ' ngày trước' : d < 365 ? Math.round(d / 30) + ' tháng trước' : (d / 365).toFixed(d < 3650 ? 1 : 0).replace('.0', '') + ' năm trước'; };
       return h('article', { key: t.title + i, className: cx('relative overflow-hidden rounded-xl bg-[#181818] border p-3 flex flex-col gap-1.5', cv ? (cv.n ? 'border-[#ff4e45]/45' : 'border-[#2ba640]/50') : 'border-[#303030]') },
-        cv && h('div', { 'aria-hidden': true, className: cx('pointer-events-none absolute top-[37px] -right-[54px] w-[200px] rotate-45 text-center text-[9.5px] leading-[18px] font-bold tracking-wide shadow', cv.n ? 'bg-[#ff4e45] text-white' : 'bg-[#2ba640] text-white') }, cv.n ? 'ĐÃ CÓ NGƯỜI LÀM' : 'CHƯA THẤY AI LÀM'),
+        cv && h('div', { 'aria-hidden': true, className: cx('pointer-events-none absolute top-[37px] -right-[54px] w-[200px] rotate-45 text-center text-[9.5px] leading-[18px] font-bold tracking-wide shadow', cv.n ? 'bg-[#ff4e45] text-white' : 'bg-[#2ba640] text-white') }, ML ? (cv.n ? 'ĐÃ CÓ BẢN ' + MLN : 'CHƯA CÓ BẢN ' + MLN) : (cv.n ? 'ĐÃ CÓ NGƯỜI LÀM' : 'CHƯA THẤY AI LÀM')),
         h('div', { className: cx('flex items-start gap-2', cv && 'pr-24') }, h('span', { className: 'shrink-0 h-6 min-w-6 px-1 rounded-md bg-[#272727] text-[11px] font-bold text-[#aaa] grid place-items-center tabular-nums' }, i + 1),
           h('div', { className: 'min-w-0 flex-1' }, h('h3', { className: 'text-[12.5px] font-semibold text-cham-50 leading-snug' }, t.title_vi || t.title), t.title && t.title !== t.title_vi && h('div', { className: 'text-[11px] text-[#aaa] truncate', title: t.title }, t.title))),
         h('div', { className: 'flex flex-wrap items-center gap-1.5 text-[10.5px] text-[#aaa]' }, t.date && h('span', { className: 'px-1.5 py-0.5 rounded bg-[#272727] tabular-nums' }, t.date), t.place && h('span', { className: 'px-1.5 py-0.5 rounded bg-[#272727]' }, t.place), t.status_vi && h('span', { className: 'px-1.5 py-0.5 rounded bg-[#3a2a12] text-[#f5c451]' }, t.status_vi)),
@@ -1225,7 +1269,7 @@
         t.why_vi && h('p', { className: 'text-[11px] text-[#6fcf85] leading-snug' }, 'Vì sao hợp làm video: ' + t.why_vi),
         t.visuals_vi && h('p', { className: 'text-[11px] text-[#aaa] leading-snug' }, 'Hình có sẵn: ' + t.visuals_vi),
         cv && h('div', { className: cx('rounded-lg px-2.5 py-2 mt-0.5', cv.n ? 'bg-[#2a1614]' : 'bg-[#14261a]') },
-          h('div', { className: cx('text-[11.5px] font-semibold', cv.n ? 'text-[#ff8a83]' : 'text-[#6fcf85]') }, cv.n ? 'YouTube đã có ' + cv.n + (cv.n >= 25 ? '+' : '') + ' video về vụ này · cao nhất ' + N(cv.max) + ' view' + (cv.newest ? ' · mới nhất ' + ago(cv.newest) : '') : 'Chưa thấy video nào trùng tên vụ này trong ' + cv.seen + ' kết quả đầu của YouTube'),
+          h('div', { className: cx('text-[11.5px] font-semibold', cv.n ? 'text-[#ff8a83]' : 'text-[#6fcf85]') }, cv.n ? 'YouTube đã có ' + cv.n + (cv.n >= 25 ? '+' : '') + ' video ' + (ML ? MLN.toLowerCase() + ' ' : '') + 'về vụ này · cao nhất ' + N(cv.max) + ' view' + (cv.newest ? ' · mới nhất ' + ago(cv.newest) : '') : 'Chưa thấy video ' + (ML ? MLN.toLowerCase() + ' ' : '') + 'nào trùng tên vụ này trong ' + cv.seen + ' kết quả đầu của YouTube'),
           cv.n > 0 && h('div', { className: 'mt-1.5 grid grid-cols-[repeat(3,minmax(0,150px))] gap-1.5' }, cv.top.map(function (v) { return h('a', { key: v.id, href: 'https://www.youtube.com/watch?v=' + v.id, target: '_blank', rel: 'noopener noreferrer', title: v.title + ' · ' + v.channel, className: 'block min-w-0 group' }, h('img', { src: 'https://i.ytimg.com/vi/' + v.id + '/mqdefault.jpg', alt: '', loading: 'lazy', className: 'w-full aspect-video object-cover rounded-md bg-black group-hover:opacity-85' }), h('span', { className: 'block mt-0.5 text-[10.5px] text-[#e6e6e6] tabular-nums truncate' }, N(v.views) + ' view · ' + ago(v.t)), h('span', { className: 'block text-[10px] text-[#aaa] truncate' }, v.channel)); })),
           h('div', { className: 'mt-1 text-[10px] text-[#888]' }, 'Dò lúc ' + new Date(cv.at).toLocaleString('vi-VN') + ' · tìm theo "' + cv.q + '"' + (cv.n ? '' : '. Có thể vẫn có video đặt tên khác, bấm Xem trên YouTube để chắc.'))),
         h('div', { className: 'flex flex-wrap gap-1.5 mt-auto pt-1' },
@@ -1298,7 +1342,7 @@
             return h('li', { key: i, className: 'rounded-lg bg-[#1f1f1f] border p-3 space-y-1.5 ' + (cvx ? (cvx.n ? 'border-[#ff4e45]/45' : 'border-[#2ba640]/50') : 'border-[#2e2e2e]') },
             h('div', { className: 'flex flex-wrap items-start gap-2' },
               h('div', { className: 'min-w-0 flex-1' }, h('div', { className: 'text-[13px] font-semibold text-[#f1f1f1] leading-snug' }, (i + 1) + '. ' + x.title), x.title_vi && x.title_vi !== x.title && h('div', { className: 'text-[11.5px] text-[#aaa]' }, x.title_vi)),
-              cvx && h('span', { className: 'shrink-0 px-2 py-0.5 rounded text-[10.5px] font-bold text-white ' + (cvx.n ? 'bg-[#ff4e45]' : 'bg-[#2ba640]') }, cvx.n ? 'ĐÃ CÓ NGƯỜI LÀM' : 'CHƯA THẤY AI LÀM'),
+              cvx && h('span', { className: 'shrink-0 px-2 py-0.5 rounded text-[10.5px] font-bold text-white ' + (cvx.n ? 'bg-[#ff4e45]' : 'bg-[#2ba640]') }, ML ? (cvx.n ? 'ĐÃ CÓ BẢN ' + MLN : 'CHƯA CÓ BẢN ' + MLN) : (cvx.n ? 'ĐÃ CÓ NGƯỜI LÀM' : 'CHƯA THẤY AI LÀM')),
               h('span', { className: 'shrink-0 px-2 py-0.5 rounded text-[10.5px] font-semibold ' + kd[1] }, kd[0]),
               h('span', { title: 'Các video cùng dạng trên kênh đạt gấp mấy lần lượt xem trung vị', className: 'shrink-0 px-2 py-0.5 rounded text-[10.5px] font-semibold bg-[#212121] ' + (x.like_ratio >= 1.2 ? 'text-[#6fcf85]' : 'text-[#c8c8c8]') }, 'cùng dạng: ' + xr(x.like_ratio))),
             h('div', { className: 'text-[12px] text-[#e6e6e6] leading-snug' }, x.topic_vi),
@@ -1428,11 +1472,12 @@
       h('div', { className: 'flex flex-wrap items-center gap-2' },
         h('button', { disabled: tb, onClick: function () { findTopics(false); }, className: 'px-5 py-2 rounded-full text-[12.5px] font-semibold bg-[#3ea6ff] hover:bg-[#65b8ff] text-[#0f0f0f] disabled:opacity-40 cursor-pointer' }, tb ? 'AI đang tìm, chờ 20–40 giây…' : 'Tìm đề tài'),
         tp && tp.list.length > 0 && !tb && h('button', { onClick: function () { findTopics(true); }, className: 'px-4 py-2 rounded-full text-[12px] font-medium bg-[#272727] hover:bg-[#3a3a3a] text-[#f1f1f1] cursor-pointer' }, 'Tìm thêm, không lặp lại'),
+        h('button', { role: 'switch', 'aria-checked': !!fd.rare, onClick: function () { setF({ rare: !fd.rare }); }, title: 'Bật thì AI tránh các vụ nổi tiếng mà kênh nào cũng làm, ưu tiên vụ ít người biết nhưng vẫn có tài liệu', className: 'px-3 py-2 rounded-full text-[12px] font-medium border cursor-pointer ' + (fd.rare ? 'bg-[#16361f] border-[#2ba640]/60 text-[#8fe0a1]' : 'bg-[#1a1a1a] border-[#303030] text-[#aaa]') }, (fd.rare ? '✓ ' : '') + 'Ưu tiên vụ ít người biết'),
         h('span', { className: 'text-[10.5px] text-zinc-500' }, 'Mỗi lần tìm dùng 1 lượt AI, không tốn quota YouTube.')),
       terr && h('div', { className: 'rounded-xl border border-rose-500/40 bg-rose-950/40 px-3 py-2 text-xs text-rose-200' }, terr),
       tp && tp.list.length > 0 && h('div', { className: 'space-y-2 pt-1' },
         h('div', { className: 'flex flex-wrap items-center gap-2 text-[11px] text-[#aaa]' }, h('span', null, tp.list.length + ' đề tài · ' + tp.label + (tp.forChan ? ' · tìm cùng dạng với kênh ' + tp.forChan : '') + ' · tìm lúc ' + new Date(tp.at).toLocaleString('vi-VN')), h('button', { onClick: function () { setTp(null); try { localStorage.removeItem('res1_topics'); } catch (e) { } }, className: 'text-[#aaa] hover:text-white underline cursor-pointer' }, 'Xoá danh sách')),
-        tp.grounded === false && h('div', { className: 'rounded-lg bg-[#3a2a12] text-[#f5c451] px-3 py-2 text-[11px] leading-relaxed' }, 'Key Gemini đang ở gói miễn phí nên không dùng được Google Search. Danh sách này lấy từ ' + (tp.basis === 'news' ? 'tiêu đề Google News mới nhất' : 'kiến thức sẵn có của AI') + ', hãy bấm Xem trên Google để kiểm tra lại trước khi làm.'),
+        tp.grounded === false && h('div', { className: 'rounded-lg bg-[#3a2a12] text-[#f5c451] px-3 py-2 text-[11px] leading-relaxed' }, 'Key Gemini đang ở gói miễn phí nên không dùng được Google Search. Danh sách này lấy từ ' + (tp.basis === 'news' ? 'tiêu đề Google News mới nhất' : 'kiến thức sẵn có của AI') + ', hãy bấm Xem trên Google để kiểm tra lại trước khi làm.' + (tp.rare ? ' Riêng các vụ ít người biết: AI nhớ không chắc, có thể sai chi tiết hoặc không có thật. Vụ nào hiện "chưa thấy ai làm" thì càng phải kiểm tra trước khi gom tin.' : '')),
         (function () {
           var todo = tp.list.filter(function (t) { return !cov[coverKey(t)]; }), nDone = tp.list.length - todo.length, nFree = tp.list.filter(function (t) { var c = cov[coverKey(t)]; return c && !c.n; }).length;
           var chFree = ch.channel ? tp.list.filter(function (t) { return !chanHas(topicNames(t)); }) : [], bothFree = chFree.filter(function (t) { var c = cov[coverKey(t)]; return c && !c.n; });
@@ -1440,13 +1485,18 @@
           return h(React.Fragment, null,
             h('div', { className: 'flex flex-wrap items-center gap-2 rounded-lg bg-[#161616] border border-[#2a2a2a] px-3 py-2' },
               h('button', { disabled: !!cb || !todo.length, onClick: function () { coverRun(todo); }, className: 'h-8 px-4 rounded-full text-[12px] font-semibold bg-[#ff4e45] hover:brightness-110 text-white disabled:opacity-40 cursor-pointer' }, cb ? 'Đang dò ' + cb.done + '/' + cb.total + '…' : todo.length ? 'Dò YouTube ' + todo.length + ' vụ chưa dò' : 'Đã dò hết'),
+              h('button', { disabled: !!hb || !!cb || tb, onClick: hunt, title: 'AI tìm các vụ ít người biết, web dò YouTube từng vụ; chưa đủ 5 vụ trống thì tìm tiếp, tối đa 3 vòng. Mỗi vụ dò tốn 101 quota YouTube, tối đa khoảng 3.000 quota.', className: 'h-8 px-4 rounded-full text-[12px] font-semibold bg-[#2ba640] hover:brightness-110 text-white disabled:opacity-40 cursor-pointer' }, hb ? 'Vòng ' + hb.round + '/3 · ' + (hb.step || '') : 'Săn vụ chưa ai làm'),
+              h('label', { className: 'inline-flex items-center gap-1.5 text-[11px] text-[#c8c8c8]' }, 'Dò theo',
+                h('select', { value: ML, onChange: function (e) { setF({ mylang: e.target.value }); setCf('all'); }, 'aria-label': 'Dò theo ngôn ngữ', className: 'h-8 bg-[#121212] border border-[#303030] rounded-lg px-2 text-[11.5px] text-[#f1f1f1] cursor-pointer' },
+                  h('option', { value: '' }, 'mọi ngôn ngữ (tên gốc của vụ)'), h('option', { value: 'vi' }, 'chỉ bản tiếng Việt'), h('option', { value: 'en' }, 'chỉ bản tiếng Anh'))),
               h('span', { className: 'text-[11px] text-[#aaa]' }, todo.length ? 'Tốn khoảng ' + N(todo.length * 101) + ' quota YouTube (mỗi vụ 101). Kết quả lưu 14 ngày.' : 'Kết quả lưu 14 ngày, bấm Dò lại trên từng thẻ nếu cần.'),
               (nDone > 0 || ch.channel) && h('span', { className: 'flex-1' }),
               (nDone > 0 || ch.channel) && chip(cf === 'all' || ((cf === 'chfree' || cf === 'both') && !ch.channel), 'Tất cả ' + tp.list.length, function () { setCf('all'); }, 'a'),
               ch.channel && chip(cf === 'chfree', 'Kênh ' + (ch.channel.title.length > 18 ? ch.channel.title.slice(0, 17) + '…' : ch.channel.title) + ' chưa làm ' + chFree.length, function () { setCf('chfree'); }, 'c'),
               ch.channel && nDone > 0 && chip(cf === 'both', 'Kênh chưa làm + chưa ai làm ' + bothFree.length, function () { setCf('both'); }, 'b'),
-              nDone > 0 && chip(cf === 'free', 'Chưa thấy ai làm ' + nFree, function () { setCf('free'); }, 'f'),
-              nDone > 0 && chip(cf === 'taken', 'Đã có người làm ' + (nDone - nFree), function () { setCf('taken'); }, 't')),
+              nDone > 0 && chip(cf === 'free', (ML ? 'Chưa có bản ' + MLN.toLowerCase() + ' ' : 'Chưa thấy ai làm ') + nFree, function () { setCf('free'); }, 'f'),
+              nDone > 0 && chip(cf === 'taken', (ML ? 'Đã có bản ' + MLN.toLowerCase() + ' ' : 'Đã có người làm ') + (nDone - nFree), function () { setCf('taken'); }, 't')),
+            nDone > 0 && nFree === 0 && !todo.length && h('div', { className: 'rounded-lg bg-[#1d2c44] text-[#b9d1f7] px-3 py-2 text-[11.5px] leading-relaxed' }, ML ? 'Cả ' + nDone + ' vụ đều đã có bản ' + MLN.toLowerCase() + '. Bấm "Săn vụ chưa ai làm" để AI tìm các vụ ít người biết hơn.' : 'Cả ' + nDone + ' vụ đều đã có người làm. Đây là các vụ nổi tiếng nên kênh bản xứ làm hết rồi. Ba cách tìm chỗ trống: (1) bấm "Săn vụ chưa ai làm" để AI tìm vụ ít người biết hơn; (2) đổi "Dò theo" sang bản tiếng Việt hoặc tiếng Anh: vụ đã có ở nước gốc nhưng chưa ai làm bằng ngôn ngữ của bạn là chỗ trống thật; (3) đổi Thời gian sang tin mới 7 hoặc 30 ngày.'),
             show.length ? h('div', { className: 'grid gap-2.5 md:grid-cols-2' }, show.map(topicCard)) : h('div', { className: 'rounded-lg border border-dashed border-[#3a3a3a] px-4 py-5 text-center text-[12px] text-[#aaa]' }, 'Không có vụ nào ở nhóm này.'));
         })()));
 
